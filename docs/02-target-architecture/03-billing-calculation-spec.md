@@ -43,6 +43,7 @@ DueFees     (AG) = ROUND(|S / Q × (AC − Y)|, 2)             رسوم الخد
 AbsAmount   (AI) = ROUND(Y / Q × AH, 2)                     خصم الغياب من بند الراتب فقط
 OverTime    (AQ) = ROUND(T / (30 × 8) × AP × 1.5, 2)        الافتراضي؛ وسعر/قاعدة الإضافي قابلة للتغيير **لكل مشروع**
 GossiCost   (AT) = لو العقد "Cost Plus": Y × 2%، غير كده 0   (شرط المضاعفة لو S > 31 اتلغى)
+GovFees          = لو العقد "Cost Plus": الرسوم الحكومية المسددة للعامل (إقامة، مقابل مالي، …) بتتفوتر على العميل؛ Total Cost ⇒ 0 (على الشركة)
 
 صافي العامل (AR) = AD + AO + AQ − (AJ + AN + AI + AL) − AK + AM
 مبلغ الفاتورة (AV) = AR + AG + AU + AL + AK + AT − AM
