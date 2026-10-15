@@ -1,0 +1,381 @@
+
+### 10011_09.xaml | 10011|Vacation Request Abdal WF
+  create: taskx16, mw_requestdeportx1
+  update: hr_vicrequestx1, mw_requestdeportx1
+  set[task]: description, new_approvestatus, new_isapprovaltask, new_mandatoryfields, new_manddesc, ownerid, prioritycode, regardingobjectid, scheduledend, subject
+  set[mw_requestdeport]: mw_empid, mw_projectid, mw_requeststatus, new_clinicid, new_enddate, new_existentryoptions, new_exittype, new_iqamadate, new_licensedate, new_licenseprice, new_medicalprice, new_note, new_recfees, new_startcalc, new_startdate, new_totalsalary, new_travelcity, new_vacbalance
+  set[hr_vicrequest]: new_empsettid
+  setstate: hr_vicrequest=0/100000024, hr_vicrequest=0/100000023, hr_vicrequest=0/100000002, hr_vicrequest=0/100000006, hr_vicrequest=0/100000025, hr_vicrequest=0/100000034, hr_vicrequest=0/100000026, hr_vicrequest=0/100000017, hr_vicrequest=0/100000027, hr_vicrequest=0/100000028, hr_vicrequest=0/100000035, hr_vicrequest=0/100000029, hr_vicrequest=0/100000030, hr_vicrequest=0/100000031, hr_vicrequest=0/100000019, hr_vicrequest=0/100000036, hr_vicrequest=0/100000012, hr_vicrequest=0/100000000, hr_vicrequest=0/100000015, hr_vicrequest=0/100000010
+  custom: GetWorkFlowUser.GetWorkFlowUser
+  reads: hr_vicrequest.createdon, hr_vicrequest.hr_empid, hr_vicrequest.hr_reqnumber, hr_vicrequest.hr_vicrequestid, hr_vicrequest.hr_vicstartdate, hr_vicrequest.modifiedon, hr_vicrequest.new_balanceuntilnow, hr_vicrequest.new_deptid, hr_vicrequest.new_enddate, hr_vicrequest.new_exist, hr_vicrequest.new_new_vacationtypeid, hr_vicrequest.new_travelcity, hr_vicrequest.new_vacationtype, hr_vicrequest.ownerid, hr_vicrequest.statuscode, mw_requestdeport.mw_requestdeportid, mw_requestdeport.new_total, new_employee.new_empidnumber, new_employee.new_employeeid, new_employee.new_employeetype, new_employee.new_enterdate, new_employee.new_hospitalcheckid, new_employee.new_iqamaissuedate, new_employee.new_name, new_employee.new_namearabic, new_employee.new_projectid, new_employee.new_projectjoingdate, new_employee.new_receiptdate, new_employee.new_totalsalary, new_project.ownerid, systemuser.parentsystemuserid, systemuser.systemuserid, task.new_approvestatus
+  steps: StageStep247: Type a stage description here. / WaitStep187: Approve\reject / WaitBranchStep188 / EvaluateLogicalCondition / StopWorkflowStep194 / CustomActivityStep153: Operation Manager User / ConvertCrmXrmTypes / WaitStep4 / WaitBranchStep5 / CustomActivityStep266 / WaitStep267 / WaitBranchStep268 / WaitStep277 / WaitBranchStep278 / CustomActivityStep159: Law affairs Manager user / WaitStep91 / WaitBranchStep92 / CustomActivityStep156: Business Accountant user / WaitStep41 / WaitBranchStep42 / ChildWorkflowStep234 / StopWorkflowStep198 / CustomActivityStep212: HR manager / WaitStep214 / WaitBranchStep215 / CustomActivityStep223: مسؤال التصفية / WaitStep225 / WaitBranchStep226 / ChildWorkflowStep259 / StopWorkflowStep260 / WaitStep287 / WaitBranchStep288 / WaitStep297 / WaitBranchStep298 / StageStep248: Type a stage description here. / WaitStep252 / WaitBranchStep253 / StageStep246: Typ
+
+### 10011_10.xaml | 10011|تحديث تاريخ الأجازة 42 يوم قبل نهاية العقد
+  update: hr_vicrequestx2
+  set[hr_vicrequest]: hr_vicstartdate, new_enddate
+  reads: hr_vicrequest.hr_empid, hr_vicrequest.hr_vicstartdate, hr_vicrequest.new_exist, new_employee.new_enterdate
+  steps: EvaluateLogicalCondition
+
+### 10011_11.xaml | 10011|طلب أجازة (تعديل حالة الموظف)
+  setstate: new_employee=0/279640007, new_employee=0/100000001, new_employee=0/279640014
+  waits/timeouts: 16
+  reads: hr_vicrequest.hr_empid, hr_vicrequest.hr_vicstartdate, hr_vicrequest.new_exist, hr_vicrequest.new_vacationtype, hr_vicrequest.statuscode
+  steps: StopWorkflowStep22 / WaitStep3 / WaitBranchStep4 / WaitStep14 / WaitTimeoutStep16
+
+### 10017_12.xaml | 10017|Housing Order Process
+  create: new_laborsbackx1
+  update: new_candidatex3, mw_lodginorderdetailsx4, new_employeex5
+  set[new_candidate]: new_arrived, new_basicsalary, new_borderno, new_enterdate, new_foodallowance, new_otherallowance, new_project, new_totalsalary, transactioncurrencyid
+  set[mw_lodginorderdetails]: mw_empid, new_housingstatus, new_individualcontract, new_leavedate
+  set[new_employee]: new_passportstatus, new_projectid, new_projectjoingdate
+  set[new_laborsback]: new_backreason, new_backstatus, new_basicsalary, new_calllabor, new_carallowance, new_description, new_employeeid, new_foodallowance, new_housingallowance, new_mobileallowance, new_oldstartworkdate, new_overtimeallowance, new_projectid, new_reason, new_rentcontractid, new_returndate, new_returntype, new_stopsalary, new_stopworkingdate, new_totalsalary
+  setstate: new_employee=0/279640001, new_employee=0/100000001, new_employee=0/279640007
+  reads: mw_lodginorderdetails.mw_arrivedate, mw_lodginorderdetails.mw_bordernumber, mw_lodginorderdetails.mw_empid, mw_lodginorderdetails.new_backreason, mw_lodginorderdetails.new_basicsalary, mw_lodginorderdetails.new_entertype, mw_lodginorderdetails.new_foodallowance, mw_lodginorderdetails.new_housingpassport, mw_lodginorderdetails.new_notes, mw_lodginorderdetails.new_otherallowance, mw_lodginorderdetails.new_projectid, mw_lodginorderdetails.new_totalsalary, mw_lodginorderdetails.new_workerid, new_candidate.new_basicsalary, new_candidate.new_employeeid, new_employee.new_basicsalary, new_employee.new_carallowance, new_employee.new_foodallowance_base, new_employee.new_housingallowance, new_employee.new_indivcontract, new_employee.new_mobileallowance, new_employee.new_overtimeallowance, new_employee.new_projectid, new_employee.new_projectjoingdate, new_employee.new_totalsalary, new_employee.statuscode
+  steps: EvaluateLogicalCondition / WaitStep9 / WaitBranchStep10
+
+### 10017_13.xaml | 10017|Housing Status Work Flow
+  create: mw_reportescapex1
+  update: new_employeex1
+  set[mw_reportescape]: mw_reportdate, mw_reportemployee, statuscode
+  set[new_employee]: new_leftdate
+  setstate: new_employee=0/279640007
+  reads: mw_lodginorderdetails.modifiedon, mw_lodginorderdetails.mw_empid, mw_lodginorderdetails.new_housingstatus, mw_lodginorderdetails.new_leavedate
+
+### 10017_14.xaml | 10017|Labor Housig Order Resume Salary
+  update: new_employeex1
+  set[new_employee]: new_stopsalary
+  reads: mw_lodginorderdetails.new_salarystopoption
+
+### 10017_15.xaml | 10017|Labor Housing Order WF
+  create: taskx4
+  update: new_employeex1, taskx1, mw_lodginorderdetailsx2
+  set[new_employee]: new_stopsalary
+  set[task]: description, new_approvestatus, new_isapprovaltask, new_mandatoryfields, new_manddesc, new_reaptedreminder, new_send, ownerid, prioritycode, regardingobjectid, scheduledend, subject
+  set[mw_lodginorderdetails]: new_housingstatus, new_leavedate
+  setstate: mw_lodginorderdetails=0/100000006, mw_lodginorderdetails=0/100000008, mw_lodginorderdetails=0/100000004, mw_lodginorderdetails=0/1, mw_lodginorderdetails=0/100000009
+  reads: mw_lodginorderdetails.createdby, mw_lodginorderdetails.modifiedon, mw_lodginorderdetails.mw_arrivedate, mw_lodginorderdetails.mw_empid, mw_lodginorderdetails.mw_lodginorderdetailsid, mw_lodginorderdetails.mw_name, mw_lodginorderdetails.new_entertype, mw_lodginorderdetails.new_individualcontract, mw_lodginorderdetails.new_workerid, mw_lodginorderdetails.statuscode, new_indvcontract.new_contractnumber, new_indvcontract.new_customername, new_indvcontract.ownerid, new_project.new_nameenglish, new_project.ownerid, task.new_approvestatus
+  steps: EvaluateLogicalCondition / WaitStep57: Wait Approve or Reject / WaitBranchStep58 / ChildWorkflowStep71 / StopWorkflowStep64 / WaitStep18: Wait Sales Man approve or reject / WaitBranchStep19 / ChildWorkflowStep23: Re-Call Workflow / StopWorkflowStep24: Stop Workflow / StopWorkflowStep26 / WaitStep91 / WaitBranchStep92 / StopWorkflowStep97 / WaitStep112 / WaitBranchStep113 / ChildWorkflowStep119 / StopWorkflowStep117 / StopWorkflowStep122
+
+### 10017_16.xaml | 10017|Labor Housing Order إعادة التسويق
+  setstate: new_employee=0/279640012
+  reads: mw_lodginorderdetails.mw_empid, mw_lodginorderdetails.new_entertype, mw_lodginorderdetails.new_finalproposedaction, new_employee.statuscode
+  steps: StopWorkflowStep7 / EvaluateLogicalCondition
+
+### 10017_17.xaml | 10017|Update Individual Contract Based on Customer Request Action
+  create: new_deliverorderx1
+  update: new_deliverorderx1
+  set[new_deliverorder]: new_deliverdate, new_delivertype, new_deliverymethod, new_indvcontract, new_projectid, new_receicename, new_receivejob, new_startworkdate, statuscode
+  setstate: new_indvcontract=0/279640006, new_indvcontract=0/279640017, new_indvcontract=0/279640004
+  reads: mw_lodginorderdetails.mw_arrivedate, mw_lodginorderdetails.mw_name, mw_lodginorderdetails.new_individualcontract, mw_lodginorderdetails.new_returntype, new_employee.new_projectid, new_indvcontract.new_customername, new_indvcontract.new_professionid
+  steps: EvaluateLogicalCondition / ChildWorkflowStep11 / ChildWorkflowStep12
+
+### 10017_18.xaml | 10017|updatelabor
+  update: mw_lodginorderdetailsx2
+  set[mw_lodginorderdetails]: mw_arrivedate, mw_bordernumber, mw_housing, mw_housingapartments, new_entertype, new_workerid
+  reads: mw_lodginorderdetails.mw_arrivedate, mw_lodginorderdetails.new_workerid, new_employee.new_borderno, new_employee.new_candidateild
+
+### 10017_19.xaml | 10017|WF labour Housing change status
+  create: mw_reportescapex1
+  update: new_employeex1
+  set[new_employee]: new_leftdate
+  set[mw_reportescape]: mw_reportdate, mw_reportemployee, new_indvcontractid, ownerid, statuscode
+  setstate: new_employee=0/279640007
+  reads: mw_lodginorderdetails.mw_empid, mw_lodginorderdetails.new_housingstatus, mw_lodginorderdetails.new_individualcontract, mw_lodginorderdetails.new_leavedate, mw_lodginorderdetails.owninguser, new_employee.modifiedon
+
+### 10032_20.xaml | 10032|Agents AutoNumber
+  custom: AutoNumberWF.AutoNumberWorkflow
+  reads: new_agent.createdby
+  steps: CustomActivityStep3 / ConvertCrmXrmTypes
+
+### 10056_21.xaml | 10056|arrive
+  update: new_candidatex1
+  set[new_candidate]: new_arrivaldate, new_arrived
+  reads: new_candidate.createdon, new_candidate.new_sectortype
+  steps: StageStep4: Type a stage description here. / WaitStep5 / WaitBranchStep6
+
+### 10056_22.xaml | 10056|FlightPlan Assigned
+  update: new_candidatex1
+  set[new_candidate]: new_aircompany, new_arrivaldate, new_arrivedcityid, new_depaturetime, new_flightno
+  setstate: new_candidate=0/100000006
+  reads: new_candidate.new_employeeid, new_flightplan.new_arrivaldate, new_flightplan.new_cityid, new_flightplan.new_depaturedate, new_flightplan.new_flightairname, new_flightplan.new_name
+
+### 10056_23.xaml | 10056|إنشاء موظف من عامل
+  create: new_employeex1
+  update: new_candidatex1, new_employeex4
+  set[new_employee]: new_agent, new_basicsalary, new_borderno, new_branchprojectid, new_candidateild, new_cardstatus, new_dateofjoining, new_drivinglicence, new_empexperience, new_employeetype, new_enterdate, new_foodallowance, new_fullpicture, new_gender, new_gossiidnumber, new_gossisalary, new_hardworkallowance, new_hiringmethod, new_housingallowance, new_idnumber, new_insuranceclass, new_ispostedtoajeer, new_isprnitcontract, new_maritalstatus, new_medicalinsdone, new_monthlyincentive, new_name, new_namearabic, new_nationalityid, new_originaliqamareceive, new_otherallowance, new_overtimeallowance, new_passportnumber, new_passportstatus, new_passportvisanumber, new_priceprofessionid, new_professionid, new_professioniniqama, new_projectid, new_propstatus, new_sendtoinsurancecompany, new_sex, new_statuswithcustomer, new_stopsalary, new_totalsalary, new_trasnallowance, ownerid, statuscode, transactioncurrencyid
+  set[new_candidate]: new_employeeid, new_employeenumber
+  setstate: new_candidate=0/100000007
+  reads: new_candidate.new_agentid, new_candidate.new_arrived, new_candidate.new_basicsalary, new_candidate.new_borderno, new_candidate.new_candidateid, new_candidate.new_empexperience, new_candidate.new_employeeid, new_candidate.new_enterdate, new_candidate.new_flightno, new_candidate.new_foodallowance, new_candidate.new_fullnamear, new_candidate.new_fullpicture, new_candidate.new_housingallowance, new_candidate.new_insurancetype, new_candidate.new_montlyincentive, new_candidate.new_name, new_candidate.new_nationality, new_candidate.new_otherallowance, new_candidate.new_overtimeallowance, new_candidate.new_passportnumber, new_candidate.new_passportvisanumber, new_candidate.new_profession, new_candidate.new_project, new_candidate.new_projectallowance, new_candidate.new_sectortype, new_candidate.new_sextype, new_candidate.new_totalsalary, new_candidate.new_transportationallowance, new_employee.new_empidnumber, new_employee.new_employeeid, new_project.new_businesstype, new_project.ownerid, new_visa.new_sex
+  steps: StopWorkflowStep5 / StopWorkflowStep8 / EvaluateLogicalCondition
+
+### 10056_24.xaml | 10056|العمالة تحديث الجوال
+  update: new_employeex2
+  set[new_employee]: new_idnumber, new_mobileno
+  reads: new_candidate.new_employeeid, new_candidate.new_flightno, new_candidate.new_mobilenumber
+  steps: EvaluateLogicalCondition / StopWorkflowStep4
+
+### 10056_25.xaml | 10056|تحويل مباشرة العمل
+  update: new_employeex1
+  set[new_employee]: new_projectjoingdate, new_statuswithcustomer
+  setstate: new_employee=0/100000000
+  reads: new_candidate.new_dateofjoinig, new_candidate.new_employeeid
+  steps: EvaluateLogicalCondition
+
+### 10066_26.xaml | 10066|femfrرياDelivery Order Jsour
+  create: taskx4, emailx2
+  update: taskx1
+  set[task]: description, new_approvestatus, new_isapprovaltask, new_reaptedreminder, new_send, new_validatefunctionalert, new_validatefunctions, ownerid, prioritycode, regardingobjectid, scheduledend, subject
+  set[email]: deliveryprioritycode, description, directioncode, notifications, prioritycode, regardingobjectid, subject, to
+  setstate: new_deliverorder=0/279640009, new_deliverorder=0/279640010, new_deliverorder=0/279640007, new_deliverorder=0/279640003, new_deliverorder=0/279640001
+  custom: GetWorkFlowUser.GetWorkFlowUser
+  email-refs: 18
+  reads: new_deliverorder.createdby, new_deliverorder.modifiedon, new_deliverorder.new_deliverorderid, new_deliverorder.new_deliverymethod, new_deliverorder.new_employeeid, new_deliverorder.new_indvcontract, new_deliverorder.new_number, new_deliverorder.new_projectid, new_deliverorder.statuscode, new_employee.new_sex, new_indvcontract.new_customername, new_indvcontract.new_mobilenumber, new_indvcontract.new_professionid, new_project.ownerid, systemuser.systemuserid, task.new_approvestatus
+  steps: ChildWorkflowStep76 / StopWorkflowStep79 / EvaluateLogicalCondition / CustomActivityStep4: Get Sales Manager / ConvertCrmXrmTypes / CustomActivityStep67: User Individual Manager / ChildWorkflowStep71 / StopWorkflowStep70 / WaitStep5: Wait Approve or Reject / WaitBranchStep6 / WaitStep16: Wait Approve or Reject / WaitBranchStep17 / ChildWorkflowStep23: Re-call Workflow / StopWorkflowStep24: stop Workflow  / StopWorkflowStep38: Stop Workflow / CustomActivityStep51: get Individual Sales coordinator / WaitStep60 / WaitBranchStep61 / StopWorkflowStep86 / CustomActivityStep30: Get Male housing Supervisor / AssignStep84 / CustomActivityStep42: Get Female housing Supervisor / AssignStep41 / WaitStep31: Wait Approve or Reject / WaitBranchStep32
+
+### 10066_27.xaml | 10066|Individual Delivery order
+  create: new_smsnsx2, taskx2, emailx1
+  update: taskx1
+  set[new_smsns]: deliveryprioritycode, leftvoicemail, new_messagetext, prioritycode, regardingobjectid, subject
+  set[task]: description, new_approvestatus, new_isapprovaltask, new_mandatoryfields, new_manddesc, new_send, ownerid, prioritycode, regardingobjectid, subject
+  set[email]: deliveryprioritycode, description, directioncode, notifications, ownerid, prioritycode, regardingobjectid, subject, to
+  setstate: new_deliverorder=0/279640001, new_deliverorder=0/279640003
+  custom: GetWorkFlowUser.GetWorkFlowUser
+  email-refs: 10
+  reads: new_deliverorder.new_deliverorderid, new_deliverorder.new_indvcontract, new_deliverorder.new_number, new_indvcontract.createdby, new_indvcontract.new_cityid, new_indvcontract.new_contractnumber, new_indvcontract.new_mobilenumber, new_indvcontract.new_professionid, systemuser.systemuserid, task.new_approvestatus
+  steps: StageStep1: check Employee Type male Or Female / CustomActivityStep34: Get Female Housing Supervisor / ConvertCrmXrmTypes / EvaluateLogicalCondition / AssignStep39 / WaitStep7 / WaitBranchStep8 / StopWorkflowStep13 / StopWorkflowStep15 / CustomActivityStep35: Get Male Housing Supervisor / WaitStep18 / WaitBranchStep19 / StopWorkflowStep24 / StopWorkflowStep26
+
+### 10066_28.xaml | 10066|Test Approval Emails
+  create: taskx1
+  set[task]: description, new_approvestatus, new_isapprovaltask, ownerid, prioritycode, regardingobjectid, subject
+  reads: new_deliverorder.new_deliverorderid
+
+### 10066_29.xaml | 10066|أمر تسليم (تحديث المباشرة)
+  update: new_employeex1, new_indvcontractx2, new_candidatex1, new_indvstopx1
+  set[new_employee]: new_indivcontract, new_ispostedtoajeer, new_projectjoingdate, new_statuswithcustomer, new_stopsalary
+  set[new_indvcontract]: new_contractenddate, new_deliverdate, new_employeeid
+  set[new_candidate]: new_dateofjoinig
+  set[new_indvstop]: new_enddate
+  setstate: new_employee=0/100000000, new_indvcontract=0/279640001
+  custom: CallPageUrl.CallPage
+  reads: new_deliverorder.new_deliverdate, new_deliverorder.new_employeeid, new_deliverorder.new_enddate, new_deliverorder.new_indvcontract, new_deliverorder.new_laborsnumber, new_deliverorder.new_startworkdate, new_deliverorder.new_stoplabor, new_deliverorder.statuscode, new_indvcontract.statuscode, new_project.new_businesstype
+  steps: WaitStep1: الانتظار حتى يتم التسليم / WaitBranchStep2 / CustomActivityStep31: تحديث عمالة مرتجعة قديمة للموظف / ConvertCrmXrmTypes / EvaluateLogicalCondition / CustomActivityStep68 / StopWorkflowStep3
+
+### 10066_30.xaml | 10066|تحديث عمالة مرتجعة من أمر تسليم
+  custom: CallPageUrl.CallPage
+  reads: new_deliverorder.statuscode
+  steps: WaitStep1 / WaitBranchStep2 / CustomActivityStep3 / ConvertCrmXrmTypes / WaitBranchStep5 / StopWorkflowStep6 / StopWorkflowStep4
+
+### 10079_31.xaml | 10079|AutoNumber Employee
+  update: new_employeex1
+  set[new_employee]: new_sadadworkpermitno
+  custom: AutoNumberWF.AutoNumberWorkflow
+  reads: new_employee.new_empidnumber, new_employee.new_employeetype, new_employee.new_projectid
+  steps: CustomActivityStep8 / ConvertCrmXrmTypes / CustomActivityStep11 / CustomActivityStep17 / CustomActivityStep19
+
+### 10079_32.xaml | 10079|create candidate from employee
+  create: new_candidatex1
+  update: new_employeex1
+  set[new_candidate]: new_agentid, new_arrived, new_basicsalary, new_borderno, new_employeeid, new_enterdate, new_foodallowance, new_fullnamear, new_housingallowance, new_issuedate, new_name, new_nationality, new_passportnumber, new_passportvisanumber, new_profession, new_project, new_totalsalary, statuscode, transactioncurrencyid
+  set[new_employee]: new_candidateild
+  reads: new_candidate.new_candidateid, new_employee.new_basicsalary, new_employee.new_borderno, new_employee.new_candidateild, new_employee.new_dateofjoining, new_employee.new_employeeid, new_employee.new_foodallowance_base, new_employee.new_housingallowance, new_employee.new_idnumber, new_employee.new_name, new_employee.new_namearabic, new_employee.new_nationalityid, new_employee.new_passportnumber, new_employee.new_professionid, new_employee.new_projectid, new_employee.new_totalsalary
+  steps: EvaluateLogicalCondition
+
+### 10079_33.xaml | 10079|CreateEmployeeAudit
+  create: new_employeeauditx1
+  set[new_employeeaudit]: new_changedate, new_employeeid, new_name, new_projectid, new_statuscode
+  reads: new_employee.createdon, new_employee.modifiedon, new_employee.new_employeeid, new_employee.new_name, new_employee.new_projectid, new_employee.statuscode
+
+### 10079_34.xaml | 10079|CreateEmployeeStatues
+  create: new_employeestatuesx17
+  set[new_employeestatues]: new_dateexpectedaction, new_employeeid, new_employeeno, new_nationality, new_numberofdaysdelay, new_numberofhoursdelay, new_profession, new_statuestype, new_statusdelay, new_statusdone
+  reads: new_employee.createdby, new_employee.new_dateofjoining, new_employee.new_empidnumber, new_employee.new_employeeid, new_employee.new_employeetype, new_employee.new_nationalityid, new_employee.new_professionid
+  steps: EvaluateLogicalCondition
+
+### 10079_35.xaml | 10079|Employee Visa Expense
+  create: new_empexpensex1
+  set[new_empexpense]: new_amount, new_bankaccountid, new_employeeid, new_expensedate, new_expensetypeid, new_name, new_number, new_projectid
+  reads: new_employee.new_dateofjoining, new_employee.new_empidnumber, new_employee.new_employeeid, new_employee.new_employeetype, new_employee.new_nationalityid, new_employee.new_projectid
+  steps: EvaluateLogicalCondition
+
+### 10079_36.xaml | 10079|Update Employee Agents From Candidate
+  update: new_employeex1
+  set[new_employee]: new_agent
+  reads: new_candidate.new_agentid
+
+### 10079_37.xaml | 10079|updatecandedate
+  update: new_candidatex1
+  set[new_candidate]: new_employeenumber
+  reads: new_employee.new_empidnumber
+
+### 10079_38.xaml | 10079|إزالة الموظف من أجير
+  custom: CallPageUrl.CallPage
+  reads: new_employee.new_idnumber, new_employee.new_ispostedtoajeer
+  steps: EvaluateLogicalCondition / CustomActivityStep3 / ConvertCrmXrmTypes
+
+### 10079_39.xaml | 10079|إنشاء إقامة
+  create: mw_stayx1
+  set[mw_stay]: mw_borderno1, mw_iqamanumber, new_empid, new_insurancetype, new_iqamadelived, new_iqamapaymenttype, new_isiqamagenerated, new_isiqamapaid, new_medicaldone, new_sendtoinsurance, new_uploadiqmafees, new_uploadsadad, new_workpermitpaid
+  reads: new_employee.new_borderno, new_employee.new_employeeid, new_employee.new_idnumber, new_employee.new_nationalityid
+  steps: EvaluateLogicalCondition
+
+### 10079_40.xaml | 10079|إنشاء عقد موظف عند إضافة موظف
+  create: new_laborcontractx1
+  update: new_employeex1, new_laborcontractx1
+  set[new_laborcontract]: new_annualleave, new_basicsalary, new_candidateid, new_carallowance, new_contractenddate, new_contractstartdate, new_employeeid, new_foodallowance, new_gossisalary, new_hardworkallowance, new_housingallowance, new_mobileallowance, new_monthlyincentive, new_otherallowance, new_overtimeallowance, new_projectid, new_startworkdate, new_totalsalary, new_transportationallowance
+  set[new_employee]: new_empcontractid
+  reads: new_employee.new_annualleave, new_employee.new_basicsalary, new_employee.new_candidateild, new_employee.new_carallowance, new_employee.new_dateofjoining, new_employee.new_empcontractid, new_employee.new_empidnumber, new_employee.new_employeeid, new_employee.new_foodallowance, new_employee.new_gossisalary, new_employee.new_hardworkallowance, new_employee.new_housingallowance, new_employee.new_mobileallowance, new_employee.new_monthlyincentive, new_employee.new_otherallowance, new_employee.new_overtimeallowance, new_employee.new_projectid, new_employee.new_projectjoingdate, new_employee.new_totalsalary, new_employee.new_trasnallowance, new_laborcontract.new_laborcontractid, new_laborcontract.new_totalsalary
+  steps: EvaluateLogicalCondition
+
+### 10079_41.xaml | 10079|الموظف ( عند تغيير الراتب)
+  create: new_laborcontractx1
+  update: new_employeex1, new_laborcontractx1
+  set[new_laborcontract]: new_basicsalary, new_carallowance, new_contractstartdate, new_foodallowance, new_hardworkallowance, new_housingallowance, new_mobileallowance, new_monthlyincentive, new_otherallowance, new_overtimeallowance, new_projectid, new_startworkdate, new_totalsalary, new_transportationallowance
+  set[new_employee]: new_empcontractid
+  reads: new_employee.new_basicsalary, new_employee.new_carallowance, new_employee.new_foodallowance, new_employee.new_hardworkallowance, new_employee.new_housingallowance, new_employee.new_mobileallowance, new_employee.new_monthlyincentive, new_employee.new_otherallowance, new_employee.new_overtimeallowance, new_employee.new_projectid, new_employee.new_projectjoingdate, new_employee.new_totalsalary, new_employee.new_trasnallowance, new_laborcontract.new_laborcontractid, new_laborcontract.new_totalsalary
+
+### 10079_42.xaml | 10079|تغيير حالة الموظف تم نقاله كفالة
+  setstate: new_indvcontract=0/279640017
+  reads: new_employee.modifiedon, new_employee.new_indivcontract, new_employee.statuscode
+  steps: EvaluateLogicalCondition
+
+### 10079_43.xaml | 10079|تغيير مركز التكلفة عند تغيير المشروع
+  update: new_employeex1
+  set[new_employee]: new_costcenterid
+  reads: new_employee.new_projectid, new_project.new_costcenterid
+
+### 10079_44.xaml | 10079|نقل موظف إلى مشروع
+  create: new_projtransferx1
+  update: new_employeex1, new_candidatex1
+  set[new_projtransfer]: new_deliverydate, new_employeeid, new_number, new_oldjoiningdate, new_oldprojectid, new_projectid, new_salesprice, new_transferedby, ownerid
+  set[new_employee]: new_branchprojectid, new_oldprojectid, new_projectid
+  set[new_candidate]: new_project
+  reads: new_employee.modifiedby, new_employee.new_empidnumber, new_employee.new_employeeid, new_employee.new_projectid, new_employee.new_projectjoingdate, new_employee.new_projecttransferdate, new_employee.new_serviceprice, new_employee.new_transferedprojectid, new_projtransfer.new_oldprojectid, new_projtransfer.new_projectid
+
+### 10085_45.xaml | 10085|Housing Reservation
+  setstate: new_employee=0/279640020
+  reads: new_deliverorder.statuscode, new_empwork.new_projectid
+  steps: StageStep1: Type a stage description here. / WaitStep4 / WaitBranchStep5 / WaitBranchStep7 / StopWorkflowStep8
+
+### 10085_46.xaml | 10085|Release Reservation
+  setstate: new_employee=0/279640001
+  reads: new_deliverorder.statuscode, new_employee.statuscode, new_empwork.new_projectid
+  steps: StageStep1: Type a stage description here. / WaitStep4 / WaitBranchStep5 / StopWorkflowStep12 / WaitBranchStep7 / EvaluateLogicalCondition / StopWorkflowStep8
+
+### 10085_47.xaml | 10085|مباشرة الموظف(تأكيد المباشرة)
+  update: new_employeex1
+  set[new_employee]: new_projectjoingdate
+  setstate: new_employee=0/100000000
+  reads: new_empwork.new_startdate, new_empwork.statuscode
+
+### 10105_48.xaml | 10105|Auto Project Invoice Number
+  custom: AutoNumberWF.AutoNumberWorkflow
+  reads: businessunit.new_businessinvoiceserial, new_invoice.new_projectid
+  steps: EvaluateLogicalCondition / CustomActivityStep3 / ConvertCrmXrmTypes
+
+### 10105_49.xaml | 10105|Convert Reject Work To Loans
+  custom: CallPageUrl.CallPage
+  reads: new_invoice.new_projectid
+  steps: CustomActivityStep3 / ConvertCrmXrmTypes
+
+### 10105_50.xaml | 10105|Project Invoice autonumber WF
+  custom: Kaskela.WorkflowElements.Plugins.Activities.QueryForSingleItem, AutoNumberWF.AutoNumberWorkflow
+  reads: new_invoice.new_invoicetype, new_invoice.new_projectid, new_project.new_sectortypeid
+  steps: CustomActivityStep3: Get Invoice Code / ConvertCrmXrmTypes / CustomActivityStep9 / EvaluateLogicalCondition / CustomActivityStep7 / CustomActivityStep14 / CustomActivityStep15 / CustomActivityStep11 / CustomActivityStep13
+
+### 10105_51.xaml | 10105|Project Invoice Collection Status change WF
+  update: new_invoicex1
+  set[new_invoice]: new_fullycollect
+  reads: new_invoice.new_totalamount, new_invoice.new_totalpaidamount
+
+### 10105_52.xaml | 10105|projectinvoicenewworkflow
+  create: taskx5
+  set[task]: description, new_approvestatus, new_isapprovaltask, ownerid, prioritycode, regardingobjectid, subject
+  setstate: new_invoice=0/279640006, new_invoice=0/279640007, new_invoice=0/279640001, new_invoice=0/279640002, new_invoice=0/279640008
+  reads: new_invoice.new_invoiceid, new_invoice.statuscode, new_project.ownerid, task.new_approvestatus
+  steps: WaitStep4 / WaitBranchStep5 / WaitStep12 / WaitBranchStep13 / WaitStep20 / WaitBranchStep21 / WaitStep28 / WaitBranchStep29 / WaitStep36 / WaitBranchStep37 / StopWorkflowStep40
+
+### 10105_53.xaml | 10105|فاتورة مشروع( خصم السلف)
+  custom: CallPageUrl.CallPage
+  reads: new_invoice.new_paidsalary
+  steps: CustomActivityStep3 / ConvertCrmXrmTypes
+
+### 10113_54.xaml | 10113|WF_AutoNumber_LeaveOfAbsence
+  custom: AutoNumberWF.AutoNumberWorkflow
+  reads: new_leaverequest.new_number
+  steps: CustomActivityStep3 / ConvertCrmXrmTypes
+
+### 10113_55.xaml | 10113|WF_LeaveOfAbsenceRequest
+  create: taskx9
+  update: new_leaverequestx2
+  set[task]: description, new_approvestatus, new_isapprovaltask, new_send, ownerid, prioritycode, regardingobjectid, subject
+  set[new_leaverequest]: new_managerapproval, new_managerstatus
+  setstate: new_leaverequest=0/100000005, new_leaverequest=0/100000012, new_leaverequest=0/100000006, new_leaverequest=0/100000002, new_leaverequest=0/100000000, new_leaverequest=0/100000007, new_leaverequest=0/100000010
+  custom: GetWorkFlowUser.GetWorkFlowUser, CallPageUrl.CallPage
+  reads: new_department.new_deptmanager, new_department.new_name, new_employee.ownerid, new_leaverequest.createdby, new_leaverequest.new_employeeid, new_leaverequest.new_leaverequestid, new_leaverequest.new_leavetype, new_leaverequest.new_reason, new_leaverequest.new_starttime, new_leaverequest.new_tasksubject, new_leaverequest.new_to, new_leaverequest.ownerid, new_leaverequest.statuscode, systemuser.parentsystemuserid, systemuser.systemuserid, task.new_approvestatus
+  steps: EvaluateLogicalCondition / WaitStep90: wait / WaitBranchStep91 / StopWorkflowStep98 / WaitStep128 / WaitBranchStep129 / CustomActivityStep123: Send To HR / ConvertCrmXrmTypes / WaitStep10: Wait the response of the manager task / WaitBranchStep11 / StopWorkflowStep31 / WaitStep114 / WaitBranchStep115 / StopWorkflowStep122 / CustomActivityStep70: CEO User / WaitStep72: wait until CEO approve or reject / WaitBranchStep73 / ChildWorkflowStep107 / StopWorkflowStep108 / StopWorkflowStep81 / CustomActivityStep85
+
+### 10136_56.xaml | 10136|AutoNumber Project
+  custom: AutoNumberWF.AutoNumberWorkflow
+  reads: new_project.new_code
+  steps: CustomActivityStep4 / ConvertCrmXrmTypes
+
+### 10136_57.xaml | 10136|Create Customers For Projects
+  create: accountx1
+  update: new_projectx1, accountx1
+  set[account]: accountclassificationcode, accountnumber, accountratingcode, address2_addresstypecode, address2_freighttermscode, address2_shippingmethodcode, businesstypecode, creditonhold, customersizecode, donotbulkemail, donotbulkpostalmail, donotemail, donotfax, donotphone, donotpostalmail, donotsendmm, emailaddress1, industrycode, name, new_cityid, new_custgroupid, new_financenumber, new_mobilenumber, new_nameen, new_regionid, new_responsiblename, preferredcontactmethodcode, shippingmethodcode, statuscode, territorycode, transactioncurrencyid
+  set[new_project]: new_customerid
+  reads: account.accountid, account.new_regionid, account.telephone1, new_project.emailaddress, new_project.new_arabicname, new_project.new_bankcode, new_project.new_city, new_project.new_contractcode, new_project.new_customerid, new_project.new_nameenglish, new_project.new_sectortypeid, new_project.ownerid
+
+### 10136_58.xaml | 10136|عند إضافة مشروع
+  update: accountx3
+  set[account]: new_isvalid, new_laborofficeno, new_noregisterationno
+  reads: new_project.new_customerid, new_project.new_laborofficenumber, new_project.new_registerationno
+
+### 4212_01.xaml | 4212|Approval Task and email
+  create: emailx1
+  set[email]: deliveryprioritycode, description, directioncode, notifications, ownerid, prioritycode, regardingobjectid, subject, to, transactioncurrencyid
+  setstate: task=1/5
+  email-refs: 11
+  reads: task.description, task.new_approvestatus, task.new_isapprovaltask, task.new_send, task.owningteam, task.owninguser, task.regardingobjectid, task.scheduledend, task.statecode, task.subject
+  steps: WaitStep18 / WaitBranchStep19 / WaitStep6 / WaitBranchStep10 / StopWorkflowStep11
+
+### 4212_02.xaml | 4212|Approval Task Close As completed
+  setstate: task=1/5
+  reads: task.new_approvestatus, task.statecode
+  steps: EvaluateLogicalCondition
+
+### 4212_03.xaml | 4212|GetCustomerServiceNotesWF
+  create: annotationx1
+  set[annotation]: isdocument, isprivate, notetext, objectid, stepid, subject
+  reads: new_csindvsector.new_csindvsectorid, task.new_approvestatus, task.new_tskactnotes, task.regardingobjectid
+  steps: WaitStep3: Wait until task approved or reject / WaitBranchStep4 / StopWorkflowStep8: Stop WorkFlow / StopWorkflowStep11: Stop WorkFlow
+
+### 4212_04.xaml | 4212|Task Change Owner
+  reads: task.regardingobjectid
+  steps: ChildWorkflowStep3
+
+### 4212_05.xaml | 4212|Task Reminder
+  create: emailx3
+  update: taskx3
+  set[task]: scheduledend
+  set[email]: deliveryprioritycode, description, directioncode, notifications, prioritycode, subject, to, transactioncurrencyid
+  email-refs: 27
+  waits/timeouts: 51
+  reads: systemuser.parentsystemuserid, task.createdon, task.description, task.new_approvestatus, task.new_esclationdate, task.new_reaptedreminder, task.new_secondreminder, task.ownerid, task.scheduledend, task.subject
+  steps: WaitStep3: Task is approved or rejected / WaitBranchStep7 / StopWorkflowStep8: stop workflow / WaitTimeoutStep5 / ChildWorkflowStep12: Recall workflow / StopWorkflowStep13: Stop Workflow / WaitStep16: Task is approved or rejected / WaitBranchStep17 / StopWorkflowStep18: Stop Workflow / WaitTimeoutStep20 / WaitStep24: Task is approved or rejected / WaitBranchStep27 / StopWorkflowStep28: Stop Workflow / WaitTimeoutStep26 / AssignStep35 / ChildWorkflowStep32: Recall workflow / StopWorkflowStep33
+
+### 4212_06.xaml | 4212|Task Update Employee
+  update: taskx12
+  set[task]: new_empidnumber, new_employeeid
+  reads: hr_vicrequest.hr_empid, new_employee.new_empidnumber, new_hrticket.new_employeeid, new_laborsback.new_employeeid, new_notices.new_empid, new_reqreturnindviual.new_employeeid, new_trafficviolations.new_empid
+
+### 4212_07.xaml | 4212|Task Update On Behalf
+  update: taskx1
+  set[task]: new_onbehalfapproval
+  reads: new_mpreq.new_mpreqid, task.ownerid, task.statecode
+  steps: EvaluateLogicalCondition
+
+### 4212_08.xaml | 4212|Task Workflow User
+  custom: GetWorkFlowUser.GetWorkFlowUser
+  reads: systemuser.systemuserid, task.new_workflowuser
+  steps: CustomActivityStep3 / ConvertCrmXrmTypes / AssignStep4
