@@ -57,6 +57,8 @@
 | 5.6 | 223 كيان custom، **117 منهم فاضيين**، والبوابة بتستخدم ~19 بس | `sys.partitions` | 🟡 | ترحيل الكيانات اللي فيها بيانات حقيقية بس (راجع [01 §6](01-domain-map.md#6-الكيانات-اللي-في-الـ-crm-ومش-ظاهرة-في-البوابة-لازم-تتقرر-في-النطاق)) |
 | 5.7 | التحصيل = رقم واحد `new_totalpaidamount` على الفاتورة (مافيش سندات قبض ولا توزيع دفعات على فواتير؛ `new_paymentreceipt` فيه سجل واحد) | | 🔴 | AR: receipts + allocations + aging من القيود |
 | 5.8 | سطر الفاتورة مش مربوط بالمباشرة/الفترة | `new_invoicdetail` | 🟠 | invoice_line ← period_id |
+| 5.10 | أعمدة قالب التحضير بأسماء مضللة: `DueGovMonthlyCost` = جزء **السكن** من السعر و`Dueprofit` = جزء **النقل**، ومتخزنين في `new_invoicdetail.new_govcost` / `new_profit` ⇒ ربحية العامل في ملف 360 بتطرح جزء السكن على إنه تكلفة حكومية | `NewTS.xlsx` (AE/AF)، `EmployeeInsightService`, `EmployeeComparisonService` | 🟠 | أسماء ومعاني صحيحة للمكونات |
+| 5.11 | **277 سطر فاتورة (4.2% من 2026-06) اتعدل مبلغها يدويًا في الـ Excel** خارج المعادلة، و140 سطر `FeesDays ≠ WorkingDays` | تحقق المعادلات على `new_invoicdetail` | 🔴 | تعديلات بنوع وسبب واعتماد بس |
 | 5.9 | VAT بيتحسب في ملف Excel (عمود `Vat Rate`/`Vat Amount`)، ومافيش ZATCA | `AttendanceInvoiceImportService.GetMappedVatAmount` | 🔴 (امتثال) | محرك ضريبة + ZATCA Phase 2 |
 
 ## 6. هوية العامل والبيانات الأساسية
