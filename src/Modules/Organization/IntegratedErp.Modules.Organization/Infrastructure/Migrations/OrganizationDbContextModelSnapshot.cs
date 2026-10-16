@@ -88,6 +88,86 @@ namespace IntegratedErp.Modules.Organization.Infrastructure.Migrations
                     b.ToTable("audit_log", "organization");
                 });
 
+            modelBuilder.Entity("IntegratedErp.BuildingBlocks.Persistence.NumberSequence", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("SequenceKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("sequence_key");
+
+                    b.Property<string>("ScopeKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("scope_key");
+
+                    b.Property<int>("Period")
+                        .HasColumnType("int")
+                        .HasColumnName("period");
+
+                    b.Property<long>("NextValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_value");
+
+                    b.HasKey("TenantId", "SequenceKey", "ScopeKey", "Period")
+                        .HasName("pk_number_sequence");
+
+                    b.ToTable("number_sequence", "organization", t =>
+                        {
+                            t.HasCheckConstraint("ck_number_sequence_next_value", "next_value >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("IntegratedErp.BuildingBlocks.Persistence.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("processed_at");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_outbox_message");
+
+                    b.HasIndex("ProcessedAt", "OccurredAt")
+                        .HasDatabaseName("ix_outbox_message_processed_at_occurred_at");
+
+                    b.ToTable("outbox_message", "organization");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.LegalEntities.LegalEntity", b =>
                 {
                     b.Property<Guid>("Id")

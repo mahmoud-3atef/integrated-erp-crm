@@ -1,0 +1,8 @@
+# Normalize line endings in the repository (LF), let Git convert on checkout as configured.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.xlsx binary

@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Time;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,7 @@ public static class PlatformServices
 
         services.AddScoped<TenantSessionContextInterceptor>();
         services.AddTransient<DatabaseMigrator>();
+        services.AddScoped<NumberSequenceService>();
 
         return services;
     }

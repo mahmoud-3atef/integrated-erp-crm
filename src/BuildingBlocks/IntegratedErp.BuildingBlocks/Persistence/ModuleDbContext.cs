@@ -43,12 +43,32 @@ public abstract class ModuleDbContext : DbContext
 
     public DbSet<AuditEntry> AuditLog => Set<AuditEntry>();
 
+    public DbSet<OutboxMessage> Outbox => Set<OutboxMessage>();
+
+    /// <summary>
+    /// Queues an integration event in this module's outbox; it is saved with the next
+    /// <c>SaveChanges</c>, in the same transaction as the business change.
+    /// </summary>
+    public void AddIntegrationEvent(IIntegrationEvent integrationEvent)
+    {
+        ArgumentNullException.ThrowIfNull(integrationEvent);
+
+        Outbox.Add(new OutboxMessage(
+            integrationEvent.EventId,
+            _dependencies.Tenant.TenantId,
+            integrationEvent.GetType().FullName!,
+            JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType()),
+            integrationEvent.OccurredAt));
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfiguration(new AuditEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
+        modelBuilder.ApplyConfiguration(new NumberSequenceConfiguration());
         modelBuilder.ApplyConfigurationsFromAssembly(GetType().Assembly, t => t.Namespace?.StartsWith(GetType().Namespace!, StringComparison.Ordinal) == true);
         ApplyTenantFilters(modelBuilder);
         base.OnModelCreating(modelBuilder);
@@ -101,7 +121,8 @@ public abstract class ModuleDbContext : DbContext
     {
         ChangeTracker.DetectChanges();
         var changed = ChangeTracker.Entries()
-            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted && e.Entity is not AuditEntry)
+            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted
+                && e.Entity is not (AuditEntry or OutboxMessage or NumberSequence))
             .ToList();
 
         foreach (var entry in changed)
