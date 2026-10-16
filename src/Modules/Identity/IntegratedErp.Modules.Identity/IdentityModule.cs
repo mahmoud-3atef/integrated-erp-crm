@@ -36,6 +36,7 @@ public sealed class IdentityModule : IModule
         services.AddScoped<SignInService>();
         services.AddScoped<AccessService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IAccessDirectory, AccessDirectory>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddPermissions(IdentityPermissions.All);
 

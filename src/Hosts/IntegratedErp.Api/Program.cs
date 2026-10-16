@@ -9,6 +9,7 @@ using IntegratedErp.Modules.Documents;
 using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Identity.Infrastructure.Ldap;
 using IntegratedErp.Modules.Organization;
+using IntegratedErp.Modules.Workflow;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +27,8 @@ builder.Services.AddModules(
     builder.Configuration,
     new OrganizationModule(),
     new IdentityModule(),
-    new DocumentsModule());
+    new DocumentsModule(),
+    new WorkflowModule());
 
 // Development only: local test accounts (dev.*) for exercising the sign-in UI without real passwords.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Identity:DevDirectory:Enabled", false))

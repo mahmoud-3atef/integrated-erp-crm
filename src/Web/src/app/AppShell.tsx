@@ -1,5 +1,8 @@
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
@@ -10,10 +13,11 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
+import { workflowApi } from '../api/workflow';
 import { LanguageSwitch } from '../auth/AuthLayout';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { Initials } from '../components/ui';
@@ -29,6 +33,10 @@ interface MenuItem {
   permission?: string;
   /** The page belongs to the whole company: a grant for some registrations only does not show it. */
   companyWide?: boolean;
+  /** Any of these permissions shows the item (instead of a single one). */
+  anyOf?: string[];
+  /** Shows the number of tasks waiting for the user. */
+  showTaskCount?: boolean;
 }
 
 interface MenuSection {
@@ -39,6 +47,14 @@ interface MenuSection {
 /** The menu grows with each module; an item without its permission is not shown at all. */
 const menu: MenuSection[] = [
   { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> }] },
+  {
+    titleKey: 'menu.approvals',
+    items: [
+      { path: '/workflow/tasks', labelKey: 'menu.tasks', icon: <TaskAltOutlinedIcon />, showTaskCount: true },
+      { path: '/workflow/requests', labelKey: 'menu.requests', icon: <DescriptionOutlinedIcon />, anyOf: ['workflow.requests.create', 'workflow.requests.view'] },
+      { path: '/workflow/routes', labelKey: 'menu.routes', icon: <AltRouteOutlinedIcon />, permission: 'workflow.routes.view', companyWide: true },
+    ],
+  },
   {
     titleKey: 'menu.companySetup',
     items: [
@@ -74,7 +90,7 @@ function Shell() {
   const location = useLocation();
 
   const sections = menu
-    .map((section) => ({ ...section, items: section.items.filter((item) => !item.permission || can(item.permission, item.companyWide)) }))
+    .map((section) => ({ ...section, items: section.items.filter((item) => (item.anyOf ? item.anyOf.some((code) => can(code)) : !item.permission || can(item.permission, item.companyWide))) }))
     .filter((section) => section.items.length > 0);
   const current = sections.flatMap((s) => s.items).find((item) => isActive(item.path, location.pathname));
 
@@ -115,6 +131,7 @@ function Sidebar({ sections, onNavigate }: { sections: MenuSection[]; onNavigate
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const taskCount = useTaskCount(location.pathname);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: tokens.navy700, color: '#fff' }}>
@@ -166,6 +183,25 @@ function Sidebar({ sections, onNavigate }: { sections: MenuSection[]; onNavigate
                 >
                   {item.icon}
                   {t(item.labelKey)}
+                  {item.showTaskCount && taskCount > 0 && (
+                    <Box
+                      component="span"
+                      aria-label={t('tasks.waiting', { count: taskCount })}
+                      sx={{
+                        marginInlineStart: 'auto',
+                        minWidth: 22,
+                        px: 0.9,
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        bgcolor: active ? tokens.navy700 : '#fff',
+                        color: active ? '#fff' : tokens.navy700,
+                      }}
+                    >
+                      {taskCount}
+                    </Box>
+                  )}
                 </ButtonBase>
               );
             })}
@@ -270,4 +306,16 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
 /** Home matches only itself; other items also match their sub-pages (e.g. a chosen reference list). */
 function isActive(path: string, pathname: string) {
   return path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
+}
+
+/** Tasks waiting for the user: refreshed every minute and on each page change. */
+function useTaskCount(pathname: string) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const load = () => workflowApi.taskCount().then((r) => setCount(r.pending)).catch(() => undefined);
+    void load();
+    const timer = window.setInterval(load, 60_000);
+    return () => window.clearInterval(timer);
+  }, [pathname]);
+  return count;
 }

@@ -150,7 +150,25 @@
     "validation_file_empty": "الملف فارغ أو لم يُختر.",
     "validation_file_too_large": "حجم الملف أكبر من الحد المسموح به.",
     "validation_file_type_not_allowed": "نوع الملف غير مقبول، أو أن محتواه لا يطابق امتداده.",
-    "validation_notes_too_long": "الملاحظات يجب ألا تتجاوز 500 حرف."
+    "validation_notes_too_long": "الملاحظات يجب ألا تتجاوز 500 حرف.",
+    "validation_approval_document_unknown": "نوع مستند غير معروف.",
+    "validation_approval_no_route": "لا يوجد مسار اعتماد مفعّل لهذا النوع من المستندات.",
+    "conflict_approval_in_progress": "المستند قيد الاعتماد بالفعل.",
+    "conflict_approval_changed": "سبقك شخص آخر إلى القرار. حدّث الصفحة وحاول مرة أخرى.",
+    "validation_approval_stage_unassigned": "إحدى المراحل لا يوجد لها معتمد غير مُرسِل المستند. راجع المسار أو حدد المدير المباشر.",
+    "not_found_approval_task": "المهمة غير موجودة.",
+    "conflict_approval_task_closed": "لم تعد هذه المهمة مفتوحة.",
+    "validation_approval_comment_required": "يلزم ذكر السبب عند الرفض أو الإرجاع.",
+    "validation_approval_comment_too_long": "الملاحظة يجب ألا تتجاوز 1000 حرف.",
+    "validation_route_stage_count": "يجب أن يتكون المسار من مرحلة واحدة إلى عشر مراحل.",
+    "validation_route_stage_invalid": "لكل مرحلة اسم بالعربية والإنجليزية ومعتمد.",
+    "validation_route_approver_unknown": "أحد المعتمدين ليس عضوًا أو دورًا في هذه الشركة.",
+    "not_found_approval_route": "المسار غير موجود.",
+    "not_found_internal_request": "الطلب غير موجود.",
+    "conflict_request_locked": "لا يمكن تعديل الطلب أثناء الاعتماد أو بعد القرار.",
+    "validation_request_subject_required": "الموضوع مطلوب، بحد أقصى 200 حرف.",
+    "validation_request_details_too_long": "التفاصيل يجب ألا تتجاوز 4000 حرف.",
+    "validation_request_amount_invalid": "المبلغ غير صحيح."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -163,7 +181,11 @@
     "legalEntities": "السجلات التجارية",
     "branches": "الفروع",
     "referenceLists": "القوائم المرجعية",
-    "modules": "وحدات النظام"
+    "modules": "وحدات النظام",
+    "approvals": "الاعتمادات",
+    "tasks": "مهامي",
+    "requests": "الطلبات الداخلية",
+    "routes": "مسارات الاعتماد"
   },
   "roles": {
     "title": "الأدوار والصلاحيات",
@@ -261,6 +283,10 @@
     "Documents": {
       "name": "المستندات والإشعارات",
       "description": "المرفقات على السجلات، والإشعارات داخل النظام وعبر البريد الإلكتروني."
+    },
+    "Workflow": {
+      "name": "الاعتمادات",
+      "description": "مسارات الاعتماد القابلة للتعديل، ومهامي، والطلبات الداخلية."
     }
   },
   "attachments": {
@@ -284,5 +310,107 @@
     "unread": "{{count}} إشعار غير مقروء",
     "readAll": "تعليم الكل كمقروء",
     "empty": "لا توجد إشعارات."
+  },
+  "approval": {
+    "title": "مسار الاعتماد",
+    "submitted": "أرسله {{name}} للاعتماد",
+    "stage": "المرحلة {{order}}",
+    "decidedBy": "بقرار {{name}}",
+    "with": "بانتظار: {{names}}",
+    "notYet": "لم تبدأ بعد",
+    "notSubmitted": "لم يُرسل للاعتماد بعد.",
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "return": "إرجاع للتعديل",
+    "reason": "السبب",
+    "comment": "ملاحظة (اختيارية)",
+    "status": {
+      "Waiting": "لم تبدأ",
+      "Pending": "قيد الانتظار",
+      "Approved": "معتمد",
+      "Rejected": "مرفوض",
+      "Returned": "مُعاد للتعديل"
+    },
+    "confirm": {
+      "Approve": "اعتماد المستند",
+      "Reject": "رفض المستند",
+      "Return": "إرجاع المستند للتعديل"
+    }
+  },
+  "tasks": {
+    "title": "مهامي",
+    "intro": "المستندات التي تنتظر قرارك، والمستندات التي قررت فيها.",
+    "pending": "بانتظار قراري",
+    "done": "ما قررتُ فيه",
+    "document": "المستند",
+    "stage": "المرحلة",
+    "stageOf": "{{order}} من {{count}}",
+    "submittedBy": "المُرسِل",
+    "waitingSince": "بانتظارك منذ",
+    "decision": "القرار",
+    "open": "فتح",
+    "escalated": "مُصعَّد",
+    "emptyPending": "لا توجد مستندات بانتظار قرارك.",
+    "emptyDone": "لم تتخذ أي قرار بعد.",
+    "waiting": "{{count}} مهمة بانتظارك"
+  },
+  "requests": {
+    "title": "الطلبات الداخلية",
+    "intro": "طلبات ومذكرات داخلية تمر بمسار الاعتماد المحدد للشركة.",
+    "new": "طلب جديد",
+    "newIntro": "اكتب الطلب واحفظه مسودة، ثم أرسله للاعتماد.",
+    "mine": "طلباتي",
+    "all": "جميع الطلبات",
+    "number": "الرقم",
+    "subject": "الموضوع",
+    "details": "التفاصيل",
+    "amount": "المبلغ",
+    "amountSar": "المبلغ (ريال سعودي، اختياري)",
+    "createdBy": "مقدّم الطلب",
+    "empty": "لا توجد طلبات.",
+    "saveDraft": "حفظ كمسودة",
+    "saved": "تم الحفظ.",
+    "sendTitle": "الإرسال للاعتماد",
+    "directManager": "المدير المباشر",
+    "directManagerHint": "يلزم إذا تضمن المسار مرحلة «المدير المباشر».",
+    "noManager": "دون تحديد",
+    "send": "إرسال للاعتماد",
+    "returnedBecause": "أُعيد الطلب للتعديل. السبب: {{reason}}",
+    "status": {
+      "Draft": "مسودة",
+      "InApproval": "قيد الاعتماد",
+      "Approved": "معتمد",
+      "Rejected": "مرفوض",
+      "Returned": "مُعاد للتعديل"
+    }
+  },
+  "routes": {
+    "title": "مسارات الاعتماد",
+    "intro": "لكل نوع مستند مسار من مراحل متتالية. يُحفظ كل تعديل إصدارًا جديدًا، وتكمل المستندات الجارية على إصدارها.",
+    "active": "مفعّل",
+    "inactive": "موقوف",
+    "notDefined": "لم يُحدَّد مسار بعد",
+    "version": "الإصدار {{version}}",
+    "versions": "الإصدارات",
+    "edit": "تعديل المسار",
+    "define": "تحديد المسار",
+    "noStages": "لا توجد مراحل.",
+    "editTitle": "مسار الاعتماد",
+    "editHint": "يعتمد كل مرحلةَ أولُ من يقرر من معتمديها، ولا يعتمد أحد مستندًا أرسله بنفسه.",
+    "approverKind": "المعتمد",
+    "user": "المستخدم",
+    "fromDocument": "من المستند",
+    "anyoneWithRole": "أي مستخدم بدور «{{role}}»",
+    "addStage": "إضافة مرحلة",
+    "removeStage": "حذف المرحلة",
+    "moveUp": "تقديم المرحلة",
+    "moveDown": "تأخير المرحلة",
+    "activeHint": "المسار مفعّل (يمكن إرسال المستندات)",
+    "publish": "حفظ كإصدار جديد",
+    "kind": {
+      "Role": "دور",
+      "User": "مستخدم محدد",
+      "Dynamic": "يحدده المستند"
+    }
   }
 }
