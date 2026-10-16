@@ -246,6 +246,8 @@ public sealed class Membership : ITenantOwned
     public bool IsActive { get; private set; }
 
     public void Deactivate() => IsActive = false;
+
+    public void Activate() => IsActive = true;
 }
 
 /// <summary>Every sign-in attempt (success or failure) — security log and brute-force throttling.</summary>

@@ -26,6 +26,10 @@ export interface Me {
   isPlatformAdmin: boolean;
   company: Company | null;
   companies: Company[];
+  /** Permission codes in the current company (the server checks them again on every call). */
+  permissions: string[];
+  /** Granted for every commercial registration (needed for company-wide screens such as users and roles). */
+  companyWidePermissions: string[];
 }
 
 /** An API failure with a stable code (translated in the UI, never matched on its message). */
@@ -40,13 +44,13 @@ export class ApiError extends Error {
 
 const csrfHeader = { 'X-ERP-CSRF': '1' };
 
-async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+export async function request<T>(method: 'GET' | 'POST' | 'PUT', path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
       method,
       credentials: 'same-origin',
-      headers: { Accept: 'application/json', ...(method === 'POST' ? { 'Content-Type': 'application/json', ...csrfHeader } : {}) },
+      headers: { Accept: 'application/json', ...(method !== 'GET' ? { 'Content-Type': 'application/json', ...csrfHeader } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -69,6 +73,10 @@ async function errorCode(response: Response): Promise<string> {
     // Either the per-user throttle (has a code) or the per-client rate limit (no body).
     const code = await readTitle(response);
     return code ?? 'rate_limited';
+  }
+
+  if (response.status === 403) {
+    return (await readTitle(response)) ?? 'forbidden';
   }
 
   if (response.status === 401) {

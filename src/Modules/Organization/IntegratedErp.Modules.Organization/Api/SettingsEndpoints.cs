@@ -41,7 +41,7 @@ internal static class SettingsEndpoints
             var value = await service.GetEffectiveValueAsync(key, context, date, cancellationToken).ConfigureAwait(false);
 
             return value is null ? Results.NotFound() : Results.Text(value, "application/json");
-        }).WithName("GetEffectiveSetting");
+        }).WithName("GetEffectiveSetting").RequirePermission(OrganizationPermissions.SettingsView);
 
         group.MapPut("/settings", async (SetSettingRequest request, HttpContext http, ExecutionContextAccessor context, SettingsService service, CancellationToken cancellationToken) =>
         {
@@ -79,6 +79,6 @@ internal static class SettingsEndpoints
                     result.Error.Message,
                     statusCode: result.Error.Code.StartsWith("conflict.", StringComparison.Ordinal) ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest,
                     title: result.Error.Code);
-        }).WithName("SetSetting");
+        }).WithName("SetSetting").RequirePermission(OrganizationPermissions.SettingsManage, companyWide: true);
     }
 }

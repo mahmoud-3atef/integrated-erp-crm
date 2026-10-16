@@ -268,11 +268,24 @@ internal sealed class SignInService(
         }
 
         account.GrantPlatformAdmin();
-        if (settings.BootstrapTenantCode is { Length: > 0 } code
-            && await tenants.FindByCodeAsync(code, cancellationToken).ConfigureAwait(false) is { } tenant
-            && !await db.Memberships.AnyAsync(m => m.UserAccountId == account.Id && m.TenantId == tenant.Id, cancellationToken).ConfigureAwait(false))
+        if (settings.BootstrapTenantCode is not { Length: > 0 } code
+            || await tenants.FindByCodeAsync(code, cancellationToken).ConfigureAwait(false) is not { } tenant)
         {
-            db.Memberships.Add(new Membership(account.Id, tenant.Id));
+            return;
+        }
+
+        // First-run access: member of the bootstrap company with the administrator role (for all registrations).
+        var membership = await db.Memberships.FirstOrDefaultAsync(m => m.UserAccountId == account.Id && m.TenantId == tenant.Id, cancellationToken).ConfigureAwait(false);
+        if (membership is null)
+        {
+            membership = new Membership(account.Id, tenant.Id);
+            db.Memberships.Add(membership);
+        }
+
+        var admin = await RoleSeeder.EnsureBuiltInRolesAsync(db, tenant.Id, cancellationToken).ConfigureAwait(false);
+        if (!await db.RoleAssignments.AnyAsync(a => a.MembershipId == membership.Id && a.RoleId == admin.Id && a.LegalEntityId == null, cancellationToken).ConfigureAwait(false))
+        {
+            db.RoleAssignments.Add(new RoleAssignment(membership.Id, admin.Id, null, tenant.Id));
         }
     }
 

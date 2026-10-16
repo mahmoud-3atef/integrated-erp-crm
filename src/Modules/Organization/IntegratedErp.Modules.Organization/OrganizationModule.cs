@@ -33,6 +33,8 @@ public sealed class OrganizationModule : IModule
         services.AddScoped<SettingsService>();
         services.AddScoped<OrganizationService>();
         services.AddScoped<ITenantDirectory, TenantDirectory>();
+        services.AddScoped<ILegalEntityDirectory, LegalEntityDirectory>();
+        services.AddPermissions(OrganizationPermissions.All);
 
         _devEndpoints = configuration.GetValue($"Modules:{Name}:DevEndpoints", defaultValue: false);
     }
@@ -46,7 +48,7 @@ public sealed class OrganizationModule : IModule
 
         if (_devEndpoints)
         {
-            // Signed-in company users only; finer permissions arrive in slice 0.4c.
+            // Signed-in company users; each endpoint adds its own permission.
             var secured = group.MapGroup(string.Empty).RequireAuthorization(PlatformPolicies.CompanyUser);
             secured.MapSettingsEndpoints();
             secured.MapOrganizationEndpoints();

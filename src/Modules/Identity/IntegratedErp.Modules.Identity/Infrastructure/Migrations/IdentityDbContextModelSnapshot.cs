@@ -269,6 +269,128 @@ namespace IntegratedErp.Modules.Identity.Infrastructure.Migrations
                     b.ToTable("recovery_code", "identity");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("code");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name_en");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_role");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_role_tenant_id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_role_tenant_id_code");
+
+                    b.ToTable("role", "identity");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.RoleAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<Guid>("MembershipId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("membership_id");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("role_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_role_assignment");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("ix_role_assignment_role_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_role_assignment_tenant_id");
+
+                    b.HasIndex("MembershipId", "RoleId", "LegalEntityId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_role_assignment_membership_id_role_id_legal_entity_id");
+
+                    b.ToTable("role_assignment", "identity");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.RoleGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("PermissionCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("permission_code");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("role_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_role_permission");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_role_permission_tenant_id");
+
+                    b.HasIndex("RoleId", "PermissionCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_role_permission_role_id_permission_code");
+
+                    b.ToTable("role_permission", "identity");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.SignInAttempt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -399,6 +521,38 @@ namespace IntegratedErp.Modules.Identity.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_recovery_code_users_user_account_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.RoleAssignment", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Identity.Domain.Membership", null)
+                        .WithMany()
+                        .HasForeignKey("MembershipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_role_assignment_membership_membership_id");
+
+                    b.HasOne("IntegratedErp.Modules.Identity.Domain.Role", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("fk_role_assignment_roles_role_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.RoleGrant", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Identity.Domain.Role", null)
+                        .WithMany("Permissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_role_permission_role_role_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.Role", b =>
+                {
+                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Identity.Domain.UserAccount", b =>

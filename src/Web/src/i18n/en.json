@@ -59,12 +59,16 @@
     "welcome": "Welcome, {{name}}",
     "intro": "You are signed in. Modules will appear here as they are delivered.",
     "platformAdmin": "Platform administrator",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "noPermissions": "Your account belongs to this company but has no role yet. Ask the company administrator for the access you need."
   },
   "common": {
     "back": "Back",
     "loading": "Loading…",
-    "startOver": "Start over"
+    "startOver": "Start over",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
   },
   "errors": {
     "validation_invalid_credentials": "Wrong user name or password.",
@@ -76,6 +80,58 @@
     "rate_limited": "Too many requests. Wait a minute.",
     "session_expired": "The sign-in step expired. Please start over.",
     "network": "Cannot reach the server.",
-    "unknown": "Something went wrong."
+    "unknown": "Something went wrong.",
+    "forbidden": "You do not have permission for this.",
+    "validation_role_code_invalid": "Code: letters, digits, - or _ only (up to 50).",
+    "validation_role_name_invalid": "Arabic and English names are required.",
+    "validation_role_built_in": "Built-in roles cannot be changed.",
+    "validation_permission_unknown": "Unknown permission.",
+    "conflict_role_code_taken": "A role with this code already exists.",
+    "not_found_role": "Role not found.",
+    "not_found_member": "User is not in this company.",
+    "validation_user_not_in_directory": "No such active user in Active Directory.",
+    "validation_legal_entity_unknown": "Unknown commercial registration.",
+    "validation_last_administrator": "The company must keep at least one full administrator.",
+    "validation_not_yourself": "You cannot deactivate your own access.",
+    "validation_beyond_own_permissions": "You cannot grant permissions you do not have."
+  },
+  "menu": {
+    "label": "Menu",
+    "open": "Open menu",
+    "home": "Home",
+    "administration": "Administration",
+    "users": "Users",
+    "roles": "Roles and permissions"
+  },
+  "roles": {
+    "title": "Roles and permissions",
+    "intro": "A role is a set of permissions given to users in this company.",
+    "new": "New role",
+    "builtIn": "Built-in",
+    "permissionCount": "{{count}} permissions",
+    "builtInAdmin": "Built-in role: every permission, including any new module automatically. It cannot be changed.",
+    "builtInReadOnly": "Built-in role: every view permission, no changes. It cannot be changed.",
+    "code": "Code",
+    "codeHint": "Letters, digits and - (e.g. accountant-05)",
+    "nameAr": "Arabic name",
+    "nameEn": "English name",
+    "permissions": "Permissions"
+  },
+  "users": {
+    "title": "Users",
+    "intro": "People with access to this company and their roles.",
+    "add": "Add user",
+    "addIntro": "Enter the Active Directory user name. They join the company with no role; then choose their roles.",
+    "addSubmit": "Add",
+    "inactive": "Inactive",
+    "active": "Active in this company",
+    "noRoles": "No roles — sees nothing",
+    "roles": "Roles",
+    "rolesIntro": "Each role applies to all commercial registrations or to one (e.g. accountant for Care-Pro 05 only).",
+    "role": "Role",
+    "scope": "Scope",
+    "allEntities": "All commercial registrations",
+    "addRole": "Add role",
+    "removeRole": "Remove role"
   }
 }

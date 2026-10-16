@@ -60,7 +60,7 @@ export function MfaSetupPage() {
   return (
     <AuthLayout title={t('mfaSetup.title')} subtitle={t('mfaSetup.intro')}>
       <ErrorMessage messageKey={error} />
-      <Stack component="ol" spacing={1} sx={{ ps: 2.5, m: 0, mb: 2 }}>
+      <Stack component="ol" spacing={1} sx={{ pl: 2.5, m: 0, mb: 2 }}>
         <Typography component="li">{t('mfaSetup.step1')}</Typography>
         <Typography component="li">{t('mfaSetup.step2')}</Typography>
         <Typography component="li">{t('mfaSetup.step3')}</Typography>

@@ -21,10 +21,11 @@ export function LanguageSwitch() {
 
 /** Translated error box; renders nothing when there is no error. */
 export function ErrorMessage({ messageKey }: { messageKey: string | null }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return messageKey ? (
     <Alert severity="error" sx={{ mb: 2 }} role="alert">
-      {t(messageKey)}
+      {/* A code without a translation yet still shows a readable message. */}
+      {t(i18n.exists(messageKey) ? messageKey : 'errors.unknown')}
     </Alert>
   ) : null;
 }

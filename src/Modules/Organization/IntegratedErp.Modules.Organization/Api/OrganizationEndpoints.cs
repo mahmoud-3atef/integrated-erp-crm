@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace IntegratedErp.Modules.Organization.Api;
 
-/// <summary>Tenants and legal entities. Development-only until authentication (slice 0.4).</summary>
+/// <summary>Tenants (platform administrators) and the current company's legal entities (by permission).</summary>
 internal static class OrganizationEndpoints
 {
     public sealed record CreateTenantRequest(string Code, string NameAr, string NameEn);
@@ -37,11 +37,11 @@ internal static class OrganizationEndpoints
 
             var result = await service.CreateLegalEntityAsync(request.Code, request.NameAr, request.NameEn, request.CommercialRegistrationNo, request.VatNumber, ct).ConfigureAwait(false);
             return ToHttp(result, StatusCodes.Status201Created);
-        }).WithName("CreateLegalEntity");
+        }).WithName("CreateLegalEntity").RequirePermission(OrganizationPermissions.LegalEntitiesManage);
 
         group.MapGet("/legal-entities", async (OrganizationService service, CancellationToken ct) =>
             Results.Ok(await service.ListLegalEntitiesAsync(ct).ConfigureAwait(false)))
-            .WithName("ListLegalEntities");
+            .WithName("ListLegalEntities").RequirePermission(OrganizationPermissions.LegalEntitiesView);
     }
 
     private static IResult ToHttp<T>(Result<T> result, int successStatus) =>

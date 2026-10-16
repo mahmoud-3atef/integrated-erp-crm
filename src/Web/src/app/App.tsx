@@ -6,12 +6,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { SignInFlowProvider } from '../auth/SignInFlow';
 import { directionOf, type Language } from '../i18n';
 import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
+import { RolesPage } from '../pages/admin/RolesPage';
+import { UsersPage } from '../pages/admin/UsersPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { MfaSetupPage } from '../pages/MfaSetupPage';
 import { MfaVerifyPage } from '../pages/MfaVerifyPage';
 import { NoCompanyPage } from '../pages/NoCompanyPage';
 import { RecoveryCodesPage } from '../pages/RecoveryCodesPage';
+import { AppShell } from './AppShell';
 import { buildTheme, ltrCache, rtlCache } from './theme';
 
 export function App() {
@@ -26,7 +29,12 @@ export function App() {
         <BrowserRouter>
           <SignInFlowProvider>
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              {/* Signed-in area: header + menu by permission. */}
+              <Route element={<AppShell />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/admin/users" element={<UsersPage />} />
+                <Route path="/admin/roles" element={<RolesPage />} />
+              </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />
               <Route path="/login/recovery-codes" element={<RecoveryCodesPage />} />

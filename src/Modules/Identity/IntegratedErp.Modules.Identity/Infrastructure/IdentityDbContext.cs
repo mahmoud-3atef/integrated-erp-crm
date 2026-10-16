@@ -26,6 +26,54 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     public DbSet<Membership> Memberships => Set<Membership>();
 
     public DbSet<SignInAttempt> SignInAttempts => Set<SignInAttempt>();
+
+    public DbSet<Role> Roles => Set<Role>();
+
+    public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
+}
+
+internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
+{
+    public void Configure(EntityTypeBuilder<Role> builder)
+    {
+        builder.ToTable("role");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.Code).HasMaxLength(Role.CodeMaxLength).IsRequired();
+        builder.Property(r => r.NameAr).HasMaxLength(Role.NameMaxLength).IsRequired();
+        builder.Property(r => r.NameEn).HasMaxLength(Role.NameMaxLength).IsRequired();
+        builder.Property(r => r.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Ignore(r => r.IsBuiltIn);
+        builder.HasIndex(r => new { r.TenantId, r.Code }).IsUnique();
+        builder.HasMany(r => r.Permissions).WithOne().HasForeignKey(p => p.RoleId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(r => r.Permissions).UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+internal sealed class RoleGrantConfiguration : IEntityTypeConfiguration<RoleGrant>
+{
+    public void Configure(EntityTypeBuilder<RoleGrant> builder)
+    {
+        builder.ToTable("role_permission");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.PermissionCode).HasMaxLength(100).IsRequired();
+        builder.HasIndex(p => new { p.RoleId, p.PermissionCode }).IsUnique();
+    }
+}
+
+internal sealed class RoleAssignmentConfiguration : IEntityTypeConfiguration<RoleAssignment>
+{
+    public void Configure(EntityTypeBuilder<RoleAssignment> builder)
+    {
+        builder.ToTable("role_assignment");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        // One row per role and scope; NULL (all registrations) counts as one value in a SQL Server unique index.
+        builder.HasIndex(a => new { a.MembershipId, a.RoleId, a.LegalEntityId }).IsUnique().HasFilter(null);
+        builder.HasOne<Membership>().WithMany().HasForeignKey(a => a.MembershipId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Role>().WithMany().HasForeignKey(a => a.RoleId).OnDelete(DeleteBehavior.NoAction);
+    }
 }
 
 internal sealed class UserAccountConfiguration : IEntityTypeConfiguration<UserAccount>

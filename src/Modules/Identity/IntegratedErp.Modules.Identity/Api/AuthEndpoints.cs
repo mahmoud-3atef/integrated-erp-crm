@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegratedErp.Modules.Identity.Api;
 
@@ -34,7 +35,7 @@ internal static class AuthEndpoints
         IReadOnlyList<CompanyOption>? Companies,
         CompanyOption? Company);
 
-    public sealed record MeResponse(Guid UserId, string DisplayName, bool IsPlatformAdmin, CompanyOption? Company, IReadOnlyList<CompanyOption> Companies);
+    public sealed record MeResponse(Guid UserId, string DisplayName, bool IsPlatformAdmin, CompanyOption? Company, IReadOnlyList<CompanyOption> Companies, IReadOnlyList<string> Permissions, IReadOnlyList<string> CompanyWidePermissions);
 
     public static void MapAuthEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -88,18 +89,30 @@ internal static class AuthEndpoints
             return await ContinueAsync(http, result).ConfigureAwait(false);
         }).AllowAnonymous();
 
-        group.MapGet("/me", async (HttpContext http, SignInService service, CancellationToken ct) =>
+        group.MapGet("/me", async (HttpContext http, IServiceScopeFactory scopes, IPermissionService permissions, CancellationToken ct) =>
         {
             var user = http.User;
             var userId = user.GetUserAccountId()!.Value;
-            var companies = await service.CompaniesAsync(userId, ct).ConfigureAwait(false);
+
+            // Listing companies reads across tenants (a system operation): done in its own scope so this
+            // request keeps the user's own tenant and identity for everything else.
+            IReadOnlyList<CompanyOption> companies;
+            using (var scope = scopes.CreateScope())
+            {
+                companies = await scope.ServiceProvider.GetRequiredService<SignInService>().CompaniesAsync(userId, ct).ConfigureAwait(false);
+            }
+
             var tenantId = user.FindFirstValue(ErpClaims.TenantId);
+            var mine = await permissions.GetCurrentAsync(ct).ConfigureAwait(false);
+            var codes = mine.Codes.Order(StringComparer.Ordinal).ToList();
             return Results.Ok(new MeResponse(
                 userId,
                 user.FindFirstValue(ErpClaims.Name) ?? string.Empty,
                 user.HasClaim(ErpClaims.PlatformAdmin, "true"),
                 companies.FirstOrDefault(c => c.Id.ToString() == tenantId),
-                companies));
+                companies,
+                codes,
+                codes.Where(c => mine.LegalEntitiesFor(c) is null).ToList()));
         }).RequireAuthorization(PlatformPolicies.CompanyUser);
 
         group.MapPost("/logout", async (HttpContext http) =>
