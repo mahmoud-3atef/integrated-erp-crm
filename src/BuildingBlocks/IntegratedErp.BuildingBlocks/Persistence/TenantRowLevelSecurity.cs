@@ -32,11 +32,12 @@ public static class TenantRowLevelSecurity
     {
         ArgumentNullException.ThrowIfNull(migrationBuilder);
         var policy = PolicyName(schema, table);
+        var target = $"[{Identifier(schema)}].[{Identifier(table)}]";
         migrationBuilder.Sql($"""
             CREATE SECURITY POLICY {policy}
-                ADD FILTER PREDICATE {PredicateFunction}(tenant_id) ON {schema}.{table},
-                ADD BLOCK PREDICATE {PredicateFunction}(tenant_id) ON {schema}.{table} AFTER INSERT,
-                ADD BLOCK PREDICATE {PredicateFunction}(tenant_id) ON {schema}.{table} AFTER UPDATE
+                ADD FILTER PREDICATE {PredicateFunction}(tenant_id) ON {target},
+                ADD BLOCK PREDICATE {PredicateFunction}(tenant_id) ON {target} AFTER INSERT,
+                ADD BLOCK PREDICATE {PredicateFunction}(tenant_id) ON {target} AFTER UPDATE
                 WITH (STATE = ON);
             """);
     }
@@ -47,7 +48,16 @@ public static class TenantRowLevelSecurity
         migrationBuilder.Sql($"DROP SECURITY POLICY IF EXISTS {PolicyName(schema, table)};");
     }
 
-    public static string PolicyName(string schema, string table) => $"{schema}.rls_{table}";
+    // Names are bracketed: schema names such as "identity" are T-SQL keywords.
+    public static string PolicyName(string schema, string table) => $"[{Identifier(schema)}].[rls_{Identifier(table)}]";
+
+    private static string Identifier(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return name.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '_')
+            ? name
+            : throw new ArgumentException($"Invalid SQL identifier '{name}'.", nameof(name));
+    }
 }
 
 /// <summary>Stamps the current tenant (or system flag) on every opened connection.</summary>

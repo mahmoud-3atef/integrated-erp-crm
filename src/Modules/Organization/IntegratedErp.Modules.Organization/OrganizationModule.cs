@@ -1,5 +1,6 @@
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Organization.Api;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Organization.Application.Settings;
@@ -31,6 +32,7 @@ public sealed class OrganizationModule : IModule
         services.AddModuleDbContext<OrganizationDbContext>(configuration, OrganizationDbContext.SchemaName);
         services.AddScoped<SettingsService>();
         services.AddScoped<OrganizationService>();
+        services.AddScoped<ITenantDirectory, TenantDirectory>();
 
         _devEndpoints = configuration.GetValue($"Modules:{Name}:DevEndpoints", defaultValue: false);
     }
@@ -44,8 +46,10 @@ public sealed class OrganizationModule : IModule
 
         if (_devEndpoints)
         {
-            group.MapSettingsEndpoints();
-            group.MapOrganizationEndpoints();
+            // Signed-in company users only; finer permissions arrive in slice 0.4c.
+            var secured = group.MapGroup(string.Empty).RequireAuthorization(PlatformPolicies.CompanyUser);
+            secured.MapSettingsEndpoints();
+            secured.MapOrganizationEndpoints();
         }
     }
 }

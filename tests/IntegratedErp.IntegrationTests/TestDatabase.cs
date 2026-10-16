@@ -2,6 +2,7 @@ using IntegratedErp.BuildingBlocks;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Organization;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -92,7 +93,7 @@ public sealed class TestDatabase : IAsyncLifetime
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
         services.AddPlatformCore();
-        services.AddModules(configuration, new OrganizationModule());
+        services.AddModules(configuration, new OrganizationModule(), new IdentityModule());
         _services = services.BuildServiceProvider();
 
         await _services.GetRequiredService<DatabaseMigrator>().MigrateAsync(CancellationToken.None);

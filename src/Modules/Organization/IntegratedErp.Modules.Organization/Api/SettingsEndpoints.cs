@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Organization.Application.Settings;
 using IntegratedErp.Modules.Organization.Domain.Settings;
 using Microsoft.AspNetCore.Builder;
@@ -42,11 +43,16 @@ internal static class SettingsEndpoints
             return value is null ? Results.NotFound() : Results.Text(value, "application/json");
         }).WithName("GetEffectiveSetting");
 
-        group.MapPut("/settings", async (SetSettingRequest request, ExecutionContextAccessor context, SettingsService service, CancellationToken cancellationToken) =>
+        group.MapPut("/settings", async (SetSettingRequest request, HttpContext http, ExecutionContextAccessor context, SettingsService service, CancellationToken cancellationToken) =>
         {
-            // Dev only: System-scope values are written as a system operation.
+            // System-scope values: platform administrators only, written as a system operation.
             if (request.ScopeType == SettingScopeType.System)
             {
+                if (!http.User.HasClaim(ErpClaims.PlatformAdmin, "true"))
+                {
+                    return Results.Forbid();
+                }
+
                 context.RunAsSystem("platform-admin");
             }
 

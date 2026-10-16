@@ -37,7 +37,7 @@ public sealed class NumberSequenceService(ITenantContext tenant)
         }
 
         var sql = $"""
-            MERGE {schema}.number_sequence WITH (HOLDLOCK) AS t
+            MERGE [{schema}].[number_sequence] WITH (HOLDLOCK) AS t
             USING (SELECT @tenant_id AS tenant_id, @sequence_key AS sequence_key, @scope_key AS scope_key, @period AS period) AS s
                 ON t.tenant_id = s.tenant_id AND t.sequence_key = s.sequence_key AND t.scope_key = s.scope_key AND t.period = s.period
             WHEN MATCHED THEN UPDATE SET next_value = t.next_value + 1

@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.SharedKernel;
 using Microsoft.AspNetCore.Builder;
@@ -21,11 +22,11 @@ internal static class OrganizationEndpoints
         {
             context.RunAsSystem("platform-admin");
             return ToHttp(await service.CreateTenantAsync(request.Code, request.NameAr, request.NameEn, ct).ConfigureAwait(false), StatusCodes.Status201Created);
-        }).WithName("CreateTenant");
+        }).WithName("CreateTenant").RequireAuthorization(PlatformPolicies.PlatformAdmin);
 
         group.MapGet("/tenants", async (OrganizationService service, CancellationToken ct) =>
             Results.Ok(await service.ListTenantsAsync(ct).ConfigureAwait(false)))
-            .WithName("ListTenants");
+            .WithName("ListTenants").RequireAuthorization(PlatformPolicies.PlatformAdmin);
 
         group.MapPost("/legal-entities", async (CreateLegalEntityRequest request, ITenantContext tenant, OrganizationService service, CancellationToken ct) =>
         {

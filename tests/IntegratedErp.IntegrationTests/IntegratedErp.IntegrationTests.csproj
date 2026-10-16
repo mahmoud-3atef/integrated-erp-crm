@@ -11,11 +11,13 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Xunit.SkippableFact" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Hosts\IntegratedErp.Api\IntegratedErp.Api.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organization\IntegratedErp.Modules.Organization\IntegratedErp.Modules.Organization.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\IntegratedErp.Modules.Identity\IntegratedErp.Modules.Identity.csproj" />

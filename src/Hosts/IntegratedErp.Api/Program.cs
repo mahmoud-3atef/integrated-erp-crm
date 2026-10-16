@@ -3,6 +3,7 @@ using IntegratedErp.BuildingBlocks;
 using IntegratedErp.BuildingBlocks.Configuration;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Web;
 using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Organization;
@@ -14,6 +15,7 @@ builder.Configuration.AddProtectedSecretsFile();
 
 builder.Services.AddPlatformCore();
 builder.Services.AddWebDefaults();
+builder.Services.AddPlatformAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
@@ -34,7 +36,8 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
-app.UseExecutionContext();
+app.UseRateLimiter();
+app.UsePlatformSecurity();
 
 if (app.Environment.IsDevelopment())
 {
