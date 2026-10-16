@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Machine-specific MSBuild overrides
 Directory.Build.local.props
+
+# Web app build output (built from src/Web)
+src/Hosts/IntegratedErp.Api/wwwroot/

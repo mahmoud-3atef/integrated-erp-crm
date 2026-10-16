@@ -1,0 +1,81 @@
+{
+  "app": {
+    "name": "Integrated ERP",
+    "tagline": "Workforce, operations and finance"
+  },
+  "language": {
+    "switchTo": "العربية",
+    "label": "Language"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use your company account (same as Windows)",
+    "userName": "User name",
+    "userNameHint": "e.g. JRCO\\mahmoud or mahmoud",
+    "password": "Password",
+    "submit": "Sign in",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
+  "mfaSetup": {
+    "title": "Set up two-step verification",
+    "intro": "Two-step verification is required to protect your account. Scan the code with Microsoft Authenticator or Google Authenticator.",
+    "step1": "Open your authenticator app and add an account",
+    "step2": "Scan the code (or type the key manually)",
+    "step3": "Enter the 6-digit code shown in the app",
+    "manualKey": "Manual key",
+    "copy": "Copy",
+    "copied": "Copied",
+    "code": "Verification code",
+    "submit": "Confirm and enable"
+  },
+  "recovery": {
+    "title": "Recovery codes",
+    "intro": "Keep these codes somewhere safe. Each one works once if you lose your phone. They will not be shown again.",
+    "copyAll": "Copy all codes",
+    "confirm": "I saved them, continue"
+  },
+  "mfa": {
+    "title": "Two-step verification",
+    "intro": "Enter the 6-digit code from your authenticator app",
+    "code": "Verification code",
+    "submit": "Verify",
+    "useRecovery": "Use a recovery code instead",
+    "useCode": "Use the app code",
+    "recoveryCode": "Recovery code",
+    "recoveryHint": "Format XXXXX-XXXXX"
+  },
+  "company": {
+    "title": "Choose a company",
+    "intro": "Your account can access more than one company. Choose the one to work on.",
+    "switch": "Switch company",
+    "current": "Current company"
+  },
+  "noCompany": {
+    "title": "No access",
+    "intro": "Your account is verified but not linked to any company yet. Contact the system administrator."
+  },
+  "home": {
+    "welcome": "Welcome, {{name}}",
+    "intro": "You are signed in. Modules will appear here as they are delivered.",
+    "platformAdmin": "Platform administrator",
+    "logout": "Sign out"
+  },
+  "common": {
+    "back": "Back",
+    "loading": "Loading…",
+    "startOver": "Start over"
+  },
+  "errors": {
+    "validation_invalid_credentials": "Wrong user name or password.",
+    "validation_too_many_attempts": "Too many failed attempts. Try again in 15 minutes.",
+    "validation_account_locked": "The account is temporarily locked. Try again later.",
+    "validation_directory_unavailable": "The sign-in service is unavailable. Try again shortly.",
+    "validation_invalid_mfa_code": "The verification code is wrong or expired.",
+    "validation_not_a_member": "You do not have access to this company.",
+    "rate_limited": "Too many requests. Wait a minute.",
+    "session_expired": "The sign-in step expired. Please start over.",
+    "network": "Cannot reach the server.",
+    "unknown": "Something went wrong."
+  }
+}

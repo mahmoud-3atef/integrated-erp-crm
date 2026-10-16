@@ -25,7 +25,7 @@
 
 ## التشغيل للتطوير
 
-المتطلبات: .NET 10 SDK (المحدد في `global.json`)، و Node 24 (للواجهة لاحقًا).
+المتطلبات: .NET 10 SDK (المحدد في `global.json`)، و Node 24 (للواجهة).
 
 ```bash
 dotnet build IntegratedErp.slnx
@@ -85,6 +85,27 @@ powershell -ExecutionPolicy Bypass -File tools/Set-ErpSecret.ps1 -List
 ```
 
 على السيرفر (النظام شغال كخدمة): `-Scope LocalMachine` أو `ERP_SECRETS_FILE` لمسار محدد.
+
+### الواجهة (عربي/إنجليزي)
+React + MUI في `src/Web`. البناء بيطلع في `wwwroot` بتاع الـ API، فالنظام كله بيشتغل من عنوان واحد (`http://localhost:5080`):
+
+```bash
+cd src/Web && npm ci && npm run build
+```
+
+أثناء تعديل الواجهة (تحديث فوري على `http://localhost:5173` والـ API شغال على 5080):
+
+```bash
+cd src/Web && npm run dev
+```
+
+```bash
+cd src/Web && npm test
+```
+
+اللغة الافتراضية عربي (RTL)، وزرار اللغة بيقلب لإنجليزي (LTR) ويفتكر الاختيار. النصوص في `src/Web/src/i18n/ar.json` و `en.json` (لازم نفس المفاتيح — في اختبار بيتأكد).
+
+**حسابات تجريبية (بيئة التطوير فقط):** `dev.admin` (مدير، مربوط بـ CarePro) و `dev.user` (بدون شركة) — معرّفين في `appsettings.Development.json` تحت `Identity:DevDirectory`، ومش بيتسجلوا خالص خارج Development. أي اسم تاني بيروح للـ Active Directory الحقيقي.
 
 ### تفعيل/تعطيل موديول
 في الإعدادات: `"Modules": { "<Name>": { "Enabled": false } }` — الموديول المقفول مابيتسجلش ولا بتظهر نقاطه.

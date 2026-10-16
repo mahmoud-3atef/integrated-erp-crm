@@ -6,6 +6,7 @@ using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Web;
 using IntegratedErp.Modules.Identity;
+using IntegratedErp.Modules.Identity.Infrastructure.Ldap;
 using IntegratedErp.Modules.Organization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,12 @@ builder.Services.AddModules(
     new OrganizationModule(),
     new IdentityModule());
 
+// Development only: local test accounts (dev.*) for exercising the sign-in UI without real passwords.
+if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Identity:DevDirectory:Enabled", false))
+{
+    DevelopmentDirectory.Replace(builder.Services, builder.Configuration);
+}
+
 var app = builder.Build();
 
 // "migrate": create/upgrade the database (all enabled modules) and exit.
@@ -35,6 +42,7 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
 }
 
 app.UseExceptionHandler();
+app.UseSecurityHeaders();
 app.UseStatusCodePages();
 app.UseRateLimiter();
 app.UsePlatformSecurity();
@@ -47,6 +55,12 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health");
 app.MapSystemEndpoints();
 app.MapModules();
+
+// The web app (built into wwwroot) on the same origin; unknown non-API paths go to the app's router.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+// Deep links into the web app return index.html; files (assets) and anything under /api do not.
+app.MapFallbackToFile("{*path:nonfile:regex(^(?!api(/|$)).*$)}", "index.html");
 
 await app.RunAsync().ConfigureAwait(false);
 
