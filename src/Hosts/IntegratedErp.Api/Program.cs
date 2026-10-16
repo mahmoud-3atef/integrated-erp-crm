@@ -4,6 +4,7 @@ using IntegratedErp.BuildingBlocks.Configuration;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Web;
+using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Organization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +20,8 @@ builder.Services.AddHealthChecks();
 // Every business module is listed here once; enablement is controlled by configuration.
 builder.Services.AddModules(
     builder.Configuration,
-    new OrganizationModule());
+    new OrganizationModule(),
+    new IdentityModule());
 
 var app = builder.Build();
 

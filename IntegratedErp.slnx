@@ -7,6 +7,10 @@
     <Project Path="src/Hosts/IntegratedErp.Api/IntegratedErp.Api.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/IntegratedErp.Modules.Identity.Contracts/IntegratedErp.Modules.Identity.Contracts.csproj" />
+    <Project Path="src/Modules/Identity/IntegratedErp.Modules.Identity/IntegratedErp.Modules.Identity.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Organization/">
     <Project Path="src/Modules/Organization/IntegratedErp.Modules.Organization.Contracts/IntegratedErp.Modules.Organization.Contracts.csproj" />
     <Project Path="src/Modules/Organization/IntegratedErp.Modules.Organization/IntegratedErp.Modules.Organization.csproj" />

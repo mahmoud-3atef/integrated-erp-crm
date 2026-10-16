@@ -18,5 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organization\IntegratedErp.Modules.Organization\IntegratedErp.Modules.Organization.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\IntegratedErp.Modules.Identity\IntegratedErp.Modules.Identity.csproj" />
   </ItemGroup>
 </Project>
