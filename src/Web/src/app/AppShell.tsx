@@ -1,36 +1,20 @@
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
-import GroupIcon from '@mui/icons-material/Group';
-import HomeIcon from '@mui/icons-material/Home';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import {
-  AppBar,
-  Box,
-  Button,
-  Chip,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  ListSubheader,
-  Toolbar,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
+import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { LanguageSwitch } from '../auth/AuthLayout';
+import { Initials } from '../components/ui';
 import { companyName } from '../pages/ChooseCompanyPage';
 import { SessionProvider, useSession } from './session';
-
-const drawerWidth = 248;
+import { tokens } from './theme';
 
 interface MenuItem {
   path: string;
@@ -49,12 +33,12 @@ interface MenuSection {
 
 /** The menu grows with each module; an item without its permission is not shown at all. */
 const menu: MenuSection[] = [
-  { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeIcon /> }] },
+  { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> }] },
   {
     titleKey: 'menu.administration',
     items: [
-      { path: '/admin/users', labelKey: 'menu.users', icon: <GroupIcon />, permission: 'identity.users.view', companyWide: true },
-      { path: '/admin/roles', labelKey: 'menu.roles', icon: <AdminPanelSettingsIcon />, permission: 'identity.roles.view', companyWide: true },
+      { path: '/admin/users', labelKey: 'menu.users', icon: <GroupOutlinedIcon />, permission: 'identity.users.view', companyWide: true },
+      { path: '/admin/roles', labelKey: 'menu.roles', icon: <AdminPanelSettingsOutlinedIcon />, permission: 'identity.roles.view', companyWide: true },
     ],
   },
 ];
@@ -68,85 +52,201 @@ export function AppShell() {
 }
 
 function Shell() {
-  const { t, i18n } = useTranslation();
-  const { me, can } = useSession();
+  const { t } = useTranslation();
+  const { can } = useSession();
   const theme = useTheme();
   const wide = useMediaQuery(theme.breakpoints.up('md'));
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  const sections = menu
+    .map((section) => ({ ...section, items: section.items.filter((item) => !item.permission || can(item.permission, item.companyWide)) }))
+    .filter((section) => section.items.length > 0);
+  const current = sections.flatMap((s) => s.items).find((item) => item.path === location.pathname);
+
+  return (
+    <Box sx={{ display: 'flex', gap: `${tokens.gap}px`, minHeight: '100dvh', p: { xs: 1, md: `${tokens.gap}px` }, bgcolor: 'background.default' }}>
+      {wide ? (
+        <Box
+          component="aside"
+          sx={{
+            position: 'sticky',
+            top: tokens.gap,
+            flex: `0 0 ${tokens.sidebarWidth}px`,
+            height: `calc(100dvh - ${tokens.gap * 2}px)`,
+            borderRadius: `${tokens.radiusLg}px`,
+            boxShadow: tokens.shadowMd,
+            overflow: 'hidden',
+          }}
+        >
+          <Sidebar sections={sections} />
+        </Box>
+      ) : (
+        <Drawer open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: tokens.sidebarWidth, border: 0 } } }}>
+          <Sidebar sections={sections} onNavigate={() => setOpen(false)} />
+        </Drawer>
+      )}
+
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: `${tokens.gap}px` }}>
+        <TopBar title={current ? t(current.labelKey) : t('app.name')} onMenu={wide ? undefined : () => setOpen(true)} />
+        <Box component="main" sx={{ width: '100%', px: { xs: 0.5, md: 0 } }}>
+          <Outlet />
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+function Sidebar({ sections, onNavigate }: { sections: MenuSection[]; onNavigate?: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: tokens.navy700, color: '#fff' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2.5, pt: 2.75, pb: 2.25 }}>
+        <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 46, height: 46, borderRadius: '50%', bgcolor: '#fff', overflow: 'hidden' }}>
+          <Box component="img" src="/brand/carepro-logo.png" alt="" sx={{ width: 40, height: 'auto' }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 15.5, lineHeight: 1.2, color: '#fff' }}>{t('app.name')}</Typography>
+          <Typography sx={{ fontSize: 11.5, color: 'rgba(255,255,255,.6)' }}>{t('app.tagline')}</Typography>
+        </Box>
+      </Box>
+
+      <Box component="nav" aria-label={t('menu.label')} sx={{ flex: 1, overflowY: 'auto', px: 1.5, pb: 1.5, scrollbarWidth: 'thin' }}>
+        {sections.map((section, index) => (
+          <Box key={section.titleKey ?? index}>
+            {section.titleKey && (
+              <Typography sx={{ px: 1.5, pt: 2, pb: 0.75, fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,.45)' }}>{t(section.titleKey)}</Typography>
+            )}
+            {section.items.map((item) => {
+              const active = location.pathname === item.path;
+              return (
+                <ButtonBase
+                  key={item.path}
+                  onClick={() => {
+                    navigate(item.path);
+                    onNavigate?.();
+                  }}
+                  aria-current={active ? 'page' : undefined}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                    gap: 1.5,
+                    width: '100%',
+                    px: 1.75,
+                    py: 1.25,
+                    mb: 0.4,
+                    borderRadius: 999,
+                    fontSize: 13.5,
+                    fontWeight: active ? 700 : 500,
+                    textAlign: 'start',
+                    color: active ? tokens.navy700 : 'rgba(255,255,255,.86)',
+                    bgcolor: active ? '#fff' : 'transparent',
+                    boxShadow: active ? '0 6px 16px rgba(0,0,0,.14)' : 'none',
+                    transition: 'background-color .15s, color .15s',
+                    '&:hover': { bgcolor: active ? '#fff' : 'rgba(255,255,255,.09)', color: active ? tokens.navy700 : '#fff' },
+                    '& svg': { fontSize: 20, color: active ? tokens.navy700 : 'rgba(255,255,255,.9)' },
+                  }}
+                >
+                  {item.icon}
+                  {t(item.labelKey)}
+                </ButtonBase>
+              );
+            })}
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
+  const { t, i18n } = useTranslation();
+  const { me } = useSession();
+  const navigate = useNavigate();
 
   const logout = async () => {
     await authApi.logout().catch(() => undefined);
     navigate('/login', { replace: true });
   };
 
-  const go = (path: string) => {
-    navigate(path);
-    setOpen(false);
-  };
-
-  const sections = menu
-    .map((section) => ({ ...section, items: section.items.filter((item) => !item.permission || can(item.permission, item.companyWide)) }))
-    .filter((section) => section.items.length > 0);
-
-  const nav = (
-    <Box component="nav" aria-label={t('menu.label')}>
-      <Toolbar />
-      {sections.map((section, index) => (
-        <List key={section.titleKey ?? index} subheader={section.titleKey ? <ListSubheader>{t(section.titleKey)}</ListSubheader> : undefined}>
-          {section.items.map((item) => (
-            <ListItemButton key={item.path} selected={location.pathname === item.path} onClick={() => go(item.path)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={t(item.labelKey)} />
-            </ListItemButton>
-          ))}
-        </List>
-      ))}
-    </Box>
-  );
-
   return (
-    <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: 'background.default' }}>
-      <AppBar position="fixed" color="default" elevation={0} sx={{ zIndex: (th) => th.zIndex.drawer + 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Toolbar sx={{ gap: { xs: 0.5, sm: 1 } }}>
-          {!wide && (
-            <IconButton edge="start" onClick={() => setOpen(true)} aria-label={t('menu.open')}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography variant="h6" color="primary" noWrap sx={{ fontWeight: 700, flexGrow: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-            {t('app.name')}
-          </Typography>
-          {me.company && <Chip icon={<BusinessIcon />} label={companyName(me.company, i18n.language)} variant="outlined" sx={{ maxWidth: { xs: 110, sm: 'none' } }} />}
-          {me.companies.length > 1 && (
-            <IconButton onClick={() => navigate('/login/company')} aria-label={t('company.switch')} title={t('company.switch')}>
+    <Box
+      component="header"
+      sx={{
+        position: 'sticky',
+        top: { xs: 8, md: tokens.gap },
+        zIndex: 30,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        minHeight: 62,
+        px: { xs: 1, sm: 2 },
+        py: 1,
+        bgcolor: '#fff',
+        borderRadius: `${tokens.radiusLg}px`,
+        boxShadow: tokens.shadowSm,
+        // Covers the gap above the bar so content does not show through while scrolling.
+        '&::before': { content: '""', position: 'absolute', insetInline: -4, bottom: '100%', height: tokens.gap + 2, bgcolor: 'background.default' },
+      }}
+    >
+      {onMenu && (
+        <IconButton onClick={onMenu} aria-label={t('menu.open')}>
+          <MenuIcon />
+        </IconButton>
+      )}
+      <Typography noWrap sx={{ fontSize: 17, fontWeight: 700, color: tokens.navy700, flexShrink: 1, minWidth: 0 }}>
+        {title}
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, marginInlineStart: 'auto' }}>
+        {me.company && (
+          <Box
+            sx={{
+              display: { xs: 'none', sm: 'inline-flex' },
+              alignItems: 'center',
+              gap: 0.75,
+              px: 1.5,
+              height: 34,
+              borderRadius: 999,
+              bgcolor: tokens.tint,
+              color: tokens.navy700,
+              fontSize: 13,
+              fontWeight: 600,
+              '& svg': { fontSize: 18 },
+            }}
+          >
+            <BusinessIcon />
+            {companyName(me.company, i18n.language)}
+          </Box>
+        )}
+        {me.companies.length > 1 && (
+          <Tooltip title={t('company.switch')}>
+            <IconButton onClick={() => navigate('/login/company')} aria-label={t('company.switch')}>
               <SwapHorizIcon />
             </IconButton>
-          )}
-          <LanguageSwitch />
-          {/* Phones: icon only, so the bar stays on one line. */}
-          <Button startIcon={<LogoutIcon />} color="inherit" onClick={() => void logout()} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
-            {t('home.logout')}
-          </Button>
-          <IconButton color="inherit" onClick={() => void logout()} aria-label={t('home.logout')} sx={{ display: { sm: 'none' } }}>
+          </Tooltip>
+        )}
+        <LanguageSwitch />
+        <Box sx={{ width: '1px', height: 26, mx: 0.75, bgcolor: tokens.border, display: { xs: 'none', sm: 'block' } }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'end' }}>
+            <Typography noWrap sx={{ fontWeight: 600, fontSize: 13, color: tokens.navy700, lineHeight: 1.2 }}>
+              {me.displayName}
+            </Typography>
+            <Typography noWrap sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+              {me.isPlatformAdmin ? t('home.platformAdmin') : me.company ? companyName(me.company, i18n.language) : ''}
+            </Typography>
+          </Box>
+          <Initials name={me.displayName} />
+        </Box>
+        <Tooltip title={t('home.logout')}>
+          <IconButton onClick={() => void logout()} aria-label={t('home.logout')}>
             <LogoutIcon />
           </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      <Drawer
-        variant={wide ? 'permanent' : 'temporary'}
-        open={wide || open}
-        onClose={() => setOpen(false)}
-        sx={{ width: { md: drawerWidth }, flexShrink: 0, '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box' } }}
-      >
-        {nav}
-      </Drawer>
-
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, sm: 3 } }}>
-        <Toolbar />
-        <Outlet />
+        </Tooltip>
       </Box>
     </Box>
   );

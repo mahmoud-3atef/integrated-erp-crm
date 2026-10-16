@@ -1,24 +1,27 @@
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import {
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
   MenuItem,
-  Paper,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -28,7 +31,9 @@ import { useTranslation } from 'react-i18next';
 import { accessApi, localName, type Assignment, type LegalEntity, type Member, type Role } from '../../api/access';
 import { errorKey } from '../../api/auth';
 import { useSession } from '../../app/session';
+import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { Badge, EmptyState, Initials, PageHeader, Panel, StatusDot } from '../../components/ui';
 
 const allEntities = 'all';
 
@@ -65,60 +70,78 @@ export function UsersPage() {
   const entityCode = (id: string | null) => (id ? (entities.find((e) => e.id === id)?.code ?? '…') : null);
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 900 }}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-        <Box>
-          <Typography variant="h5" component="h1">
-            {t('users.title')}
-          </Typography>
-          <Typography color="text.secondary">{t('users.intro')}</Typography>
-        </Box>
-        {canManage && (
-          <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAdding(true)} sx={{ flexShrink: 0 }}>
-            {t('users.add')}
-          </Button>
-        )}
-      </Stack>
+    <Box>
+      <PageHeader
+        title={t('users.title')}
+        subtitle={t('users.intro')}
+        actions={
+          canManage && (
+            <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAdding(true)}>
+              {t('users.add')}
+            </Button>
+          )
+        }
+      />
       <ErrorMessage messageKey={error} />
-      <Paper variant="outlined">
-        <List disablePadding>
-          {members.map((member) => (
-            <ListItemButton key={member.membershipId} divider onClick={() => setEditing(member)} disabled={!canManage}>
-              <ListItemText
-                primary={
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span>{member.displayName}</span>
-                    {member.userName && (
-                      <Typography component="span" variant="body2" color="text.secondary" dir="ltr">
-                        {member.userName}
-                      </Typography>
-                    )}
-                    {!member.isActive && <Chip size="small" color="warning" label={t('users.inactive')} />}
-                  </Stack>
-                }
-                secondary={
-                  member.roles.length === 0 ? (
-                    t('users.noRoles')
-                  ) : (
-                    <Stack component="span" direction="row" sx={{ gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
-                      {member.roles.map((a) => (
-                        <Chip
-                          key={`${a.roleId}-${a.legalEntityId ?? allEntities}`}
-                          component="span"
-                          size="small"
-                          variant="outlined"
-                          label={entityCode(a.legalEntityId) ? `${roleName(a.roleId)} · ${entityCode(a.legalEntityId)}` : roleName(a.roleId)}
-                        />
-                      ))}
+      <Panel>
+        <TableContainer sx={{ borderRadius: '6px' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>{t('users.name')}</TableCell>
+                <TableCell>{t('users.roles')}</TableCell>
+                <TableCell>{t('common.status')}</TableCell>
+                {canManage && <TableCell align="center">{t('common.actions')}</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member.membershipId} hover>
+                  <TableCell>
+                    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                      <Initials name={member.displayName} size={30} />
+                      <Box>
+                        <Typography noWrap sx={{ fontSize: 13, fontWeight: 500, color: tokens.gray900 }}>{member.displayName}</Typography>
+                        {member.userName && (
+                          <Typography dir="ltr" sx={{ fontSize: 11.5, color: tokens.gray500, textAlign: 'start' }}>
+                            {member.userName}
+                          </Typography>
+                        )}
+                      </Box>
                     </Stack>
-                  )
-                }
-                slotProps={{ secondary: { component: 'div' } }}
-              />
-            </ListItemButton>
-          ))}
-        </List>
-      </Paper>
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal' }}>
+                    {member.roles.length === 0 ? (
+                      <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('users.noRoles')}</Typography>
+                    ) : (
+                      <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap' }}>
+                        {member.roles.map((a) => (
+                          <Badge key={`${a.roleId}-${a.legalEntityId ?? allEntities}`} tone="primary">
+                            {entityCode(a.legalEntityId) ? `${roleName(a.roleId)} · ${entityCode(a.legalEntityId)}` : roleName(a.roleId)}
+                          </Badge>
+                        ))}
+                      </Stack>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <StatusDot tone={member.isActive ? 'success' : 'warning'} label={member.isActive ? t('common.active') : t('common.inactive')} />
+                  </TableCell>
+                  {canManage && (
+                    <TableCell align="center">
+                      <Tooltip title={t('common.edit')}>
+                        <IconButton size="small" onClick={() => setEditing(member)} aria-label={`${t('common.edit')} ${member.displayName}`}>
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {members.length === 0 && <EmptyState text={t('common.empty')} />}
+      </Panel>
       {adding && (
         <AddMemberDialog
           onClose={() => setAdding(false)}
@@ -143,7 +166,7 @@ export function UsersPage() {
           }}
         />
       )}
-    </Stack>
+    </Box>
   );
 }
 

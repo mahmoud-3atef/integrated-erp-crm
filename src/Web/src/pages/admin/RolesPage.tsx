@@ -1,22 +1,27 @@
 import AddIcon from '@mui/icons-material/Add';
-import LockIcon from '@mui/icons-material/Lock';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
   Alert,
   Box,
   Button,
   Checkbox,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  List,
-  ListItemButton,
-  ListItemText,
-  Paper,
+  IconButton,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -26,7 +31,9 @@ import { useTranslation } from 'react-i18next';
 import { accessApi, localName, type Permission, type Role } from '../../api/access';
 import { errorKey } from '../../api/auth';
 import { useSession } from '../../app/session';
+import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { Badge, PageHeader, Panel } from '../../components/ui';
 
 export function RolesPage() {
   const { t, i18n } = useTranslation();
@@ -52,38 +59,51 @@ export function RolesPage() {
   }, [load]);
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 900 }}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-        <Box>
-          <Typography variant="h5" component="h1">
-            {t('roles.title')}
-          </Typography>
-          <Typography color="text.secondary">{t('roles.intro')}</Typography>
-        </Box>
-        {canManage && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')} sx={{ flexShrink: 0 }}>
-            {t('roles.new')}
-          </Button>
-        )}
-      </Stack>
+    <Box>
+      <PageHeader
+        title={t('roles.title')}
+        subtitle={t('roles.intro')}
+        actions={
+          canManage && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>
+              {t('roles.new')}
+            </Button>
+          )
+        }
+      />
       <ErrorMessage messageKey={error} />
-      <Paper variant="outlined">
-        <List disablePadding>
-          {(roles ?? []).map((role) => (
-            <ListItemButton key={role.id} divider onClick={() => setEditing(role)}>
-              <ListItemText
-                primary={
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                    <span>{localName(role, i18n.language)}</span>
-                    {role.kind !== 'Custom' && <Chip size="small" icon={<LockIcon />} label={t('roles.builtIn')} />}
-                  </Stack>
-                }
-                secondary={t('roles.permissionCount', { count: role.permissions.length })}
-              />
-            </ListItemButton>
-          ))}
-        </List>
-      </Paper>
+      <Panel>
+        <TableContainer sx={{ borderRadius: '6px' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>{t('roles.name')}</TableCell>
+                <TableCell>{t('roles.type')}</TableCell>
+                <TableCell>{t('roles.permissions')}</TableCell>
+                <TableCell align="center">{t('common.actions')}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(roles ?? []).map((role) => (
+                <TableRow key={role.id} hover>
+                  <TableCell sx={{ fontWeight: 500, color: tokens.gray900 }}>{localName(role, i18n.language)}</TableCell>
+                  <TableCell>
+                    {role.kind === 'Custom' ? <Badge tone="neutral">{t('roles.custom')}</Badge> : <Badge tone="primary" icon={<LockOutlinedIcon />}>{t('roles.builtIn')}</Badge>}
+                  </TableCell>
+                  <TableCell>{t('roles.permissionCount', { count: role.permissions.length })}</TableCell>
+                  <TableCell align="center">
+                    <Tooltip title={canManage && role.kind === 'Custom' ? t('common.edit') : t('roles.permissions')}>
+                      <IconButton size="small" onClick={() => setEditing(role)} aria-label={`${t('common.edit')} ${localName(role, i18n.language)}`}>
+                        {canManage && role.kind === 'Custom' ? <EditOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Panel>
       {editing && (
         <RoleDialog
           role={editing === 'new' ? null : editing}
@@ -96,7 +116,7 @@ export function RolesPage() {
           }}
         />
       )}
-    </Stack>
+    </Box>
   );
 }
 

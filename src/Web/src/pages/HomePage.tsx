@@ -1,23 +1,32 @@
-import { Alert, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../app/session';
+import { tokens } from '../app/theme';
+import { Badge, Initials, Panel } from '../components/ui';
 
-/** Landing page inside the app shell; modules add their dashboards here as they are delivered. */
+/** Landing page inside the app shell; modules add their dashboards here as they are released. */
 export function HomePage() {
   const { t } = useTranslation();
   const { me } = useSession();
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 900 }}>
-      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 4 } }}>
-        <Stack spacing={1}>
-          <Typography variant="h5" component="h1">
-            {t('home.welcome', { name: me.displayName })}
-          </Typography>
-          <Typography color="text.secondary">{t('home.intro')}</Typography>
-          {me.isPlatformAdmin && <Chip label={t('home.platformAdmin')} color="secondary" size="small" sx={{ alignSelf: 'flex-start' }} />}
+    <Stack spacing={`${tokens.gap}px`}>
+      <Panel padding={3}>
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <Initials name={me.displayName} size={52} />
+          <Box>
+            <Typography component="h1" sx={{ fontSize: 21, fontWeight: 700, color: tokens.navy800 }}>
+              {t('home.welcome', { name: me.displayName })}
+            </Typography>
+            <Typography sx={{ fontSize: 13.5, color: tokens.gray600 }}>{t('home.intro')}</Typography>
+            {me.isPlatformAdmin && (
+              <Box sx={{ mt: 1 }}>
+                <Badge tone="info">{t('home.platformAdmin')}</Badge>
+              </Box>
+            )}
+          </Box>
         </Stack>
-      </Paper>
+      </Panel>
       {me.permissions.length === 0 && <Alert severity="info">{t('home.noPermissions')}</Alert>}
     </Stack>
   );
