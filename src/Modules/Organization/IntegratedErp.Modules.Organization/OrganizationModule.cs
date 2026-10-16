@@ -1,5 +1,6 @@
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Reference;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Organization.Api;
 using IntegratedErp.Modules.Organization.Application.Organization;
@@ -16,7 +17,7 @@ namespace IntegratedErp.Modules.Organization;
 
 /// <summary>
 /// Organization module: tenants, legal entities (commercial registrations), branches,
-/// reference codes and effective-dated settings. Folders follow the module layout:
+/// reference lists with fixed codes, the module registry and effective-dated settings. Folders follow the module layout:
 /// Domain / Application / Infrastructure / Api.
 /// </summary>
 public sealed class OrganizationModule : IModule
@@ -34,6 +35,9 @@ public sealed class OrganizationModule : IModule
         services.AddScoped<OrganizationService>();
         services.AddScoped<ITenantDirectory, TenantDirectory>();
         services.AddScoped<ILegalEntityDirectory, LegalEntityDirectory>();
+        services.AddScoped<CompanySetupService>();
+        services.AddScoped<IReferenceData>(sp => sp.GetRequiredService<CompanySetupService>());
+        services.AddReferenceLists(OrganizationReferenceLists.All);
         services.AddPermissions(OrganizationPermissions.All);
 
         _devEndpoints = configuration.GetValue($"Modules:{Name}:DevEndpoints", defaultValue: false);
@@ -46,12 +50,15 @@ public sealed class OrganizationModule : IModule
         group.MapGet("/status", () => Results.Ok(new { module = Name, status = "ready" }))
             .WithName("OrganizationStatus");
 
+        // Signed-in company users; each endpoint adds its own permission.
+        var secured = group.MapGroup(string.Empty).RequireAuthorization(PlatformPolicies.CompanyUser);
+        secured.MapOrganizationEndpoints();
+        secured.MapCompanySetupEndpoints();
+
         if (_devEndpoints)
         {
-            // Signed-in company users; each endpoint adds its own permission.
-            var secured = group.MapGroup(string.Empty).RequireAuthorization(PlatformPolicies.CompanyUser);
+            // Raw effective-dated settings API; the settings screens come with the modules that own them.
             secured.MapSettingsEndpoints();
-            secured.MapOrganizationEndpoints();
         }
     }
 }

@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Security;
 
 namespace IntegratedErp.Api;
 
@@ -10,7 +11,8 @@ internal static class SystemEndpoints
 
         // Which modules this deployment knows and which are switched on.
         group.MapGet("/modules", (ModuleRegistry registry) => Results.Ok(registry.Describe()))
-            .WithName("SystemModules");
+            .WithName("SystemModules")
+            .RequireAuthorization(PlatformPolicies.CompanyUser);
 
         return endpoints;
     }

@@ -168,6 +168,63 @@ namespace IntegratedErp.Modules.Organization.Infrastructure.Migrations
                     b.ToTable("outbox_message", "organization");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.Branches.Branch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("code");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid?>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name_en");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_branch");
+
+                    b.HasIndex("LegalEntityId")
+                        .HasDatabaseName("ix_branch_legal_entity_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_branch_tenant_id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_branch_tenant_id_code");
+
+                    b.ToTable("branch", "organization");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.LegalEntities.LegalEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -222,6 +279,65 @@ namespace IntegratedErp.Modules.Organization.Infrastructure.Migrations
                         .HasDatabaseName("ix_legal_entity_tenant_id_code");
 
                     b.ToTable("legal_entity", "organization");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.Reference.ReferenceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("code");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_system");
+
+                    b.Property<string>("ListCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("list_code");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name_en");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reference_item");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_reference_item_tenant_id");
+
+                    b.HasIndex("TenantId", "ListCode", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_reference_item_tenant_id_list_code_code");
+
+                    b.ToTable("reference_item", "organization");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.Settings.Setting", b =>
@@ -314,6 +430,15 @@ namespace IntegratedErp.Modules.Organization.Infrastructure.Migrations
                         .HasDatabaseName("ix_tenant_code");
 
                     b.ToTable("tenant", "organization");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.Branches.Branch", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Organization.Domain.LegalEntities.LegalEntity", null)
+                        .WithMany()
+                        .HasForeignKey("LegalEntityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_branch_legal_entities_legal_entity_id");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.LegalEntities.LegalEntity", b =>

@@ -1,5 +1,9 @@
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
+import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import StoreOutlinedIcon from '@mui/icons-material/StoreOutlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -35,6 +39,15 @@ interface MenuSection {
 const menu: MenuSection[] = [
   { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> }] },
   {
+    titleKey: 'menu.companySetup',
+    items: [
+      { path: '/setup/legal-entities', labelKey: 'menu.legalEntities', icon: <AccountBalanceOutlinedIcon />, permission: 'organization.legal_entities.view' },
+      { path: '/setup/branches', labelKey: 'menu.branches', icon: <StoreOutlinedIcon />, permission: 'organization.branches.view' },
+      { path: '/setup/reference-lists', labelKey: 'menu.referenceLists', icon: <ListAltOutlinedIcon />, permission: 'organization.reference_data.view' },
+      { path: '/setup/modules', labelKey: 'menu.modules', icon: <ExtensionOutlinedIcon />, permission: 'organization.modules.view' },
+    ],
+  },
+  {
     titleKey: 'menu.administration',
     items: [
       { path: '/admin/users', labelKey: 'menu.users', icon: <GroupOutlinedIcon />, permission: 'identity.users.view', companyWide: true },
@@ -62,7 +75,7 @@ function Shell() {
   const sections = menu
     .map((section) => ({ ...section, items: section.items.filter((item) => !item.permission || can(item.permission, item.companyWide)) }))
     .filter((section) => section.items.length > 0);
-  const current = sections.flatMap((s) => s.items).find((item) => item.path === location.pathname);
+  const current = sections.flatMap((s) => s.items).find((item) => isActive(item.path, location.pathname));
 
   return (
     <Box sx={{ display: 'flex', gap: `${tokens.gap}px`, minHeight: '100dvh', p: { xs: 1, md: `${tokens.gap}px` }, bgcolor: 'background.default' }}>
@@ -121,7 +134,7 @@ function Sidebar({ sections, onNavigate }: { sections: MenuSection[]; onNavigate
               <Typography sx={{ px: 1.5, pt: 2, pb: 0.75, fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,.45)' }}>{t(section.titleKey)}</Typography>
             )}
             {section.items.map((item) => {
-              const active = location.pathname === item.path;
+              const active = isActive(item.path, location.pathname);
               return (
                 <ButtonBase
                   key={item.path}
@@ -250,4 +263,9 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
       </Box>
     </Box>
   );
+}
+
+/** Home matches only itself; other items also match their sub-pages (e.g. a chosen reference list). */
+function isActive(path: string, pathname: string) {
+  return path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
 }

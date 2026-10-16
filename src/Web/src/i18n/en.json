@@ -97,7 +97,9 @@
     "status": "Status",
     "active": "Active",
     "inactive": "Inactive",
-    "empty": "No data."
+    "empty": "No data.",
+    "yes": "Yes",
+    "no": "No"
   },
   "errors": {
     "validation_invalid_credentials": "Incorrect user name or password.",
@@ -122,7 +124,24 @@
     "validation_legal_entity_unknown": "Unknown commercial registration.",
     "validation_last_administrator": "The company must keep at least one administrator for all commercial registrations.",
     "validation_not_yourself": "You cannot deactivate your own account.",
-    "validation_beyond_own_permissions": "You cannot grant permissions you do not hold."
+    "validation_beyond_own_permissions": "You cannot grant permissions you do not hold.",
+    "not_found_legal_entity": "Commercial registration not found.",
+    "not_found_branch": "Branch not found.",
+    "not_found_reference_list": "List not found.",
+    "not_found_reference_item": "Item not found.",
+    "validation_legal_entity_code_invalid": "A code of up to 30 characters is required.",
+    "validation_legal_entity_name_required": "Arabic and English names are required.",
+    "validation_cr_number_invalid": "The commercial registration number must be ten digits.",
+    "validation_vat_number_invalid": "The VAT number must be fifteen digits, starting and ending with 3.",
+    "conflict_legal_entity_code_taken": "Another commercial registration already uses this code.",
+    "validation_branch_code_invalid": "The code may contain only letters, digits and hyphens (up to 30).",
+    "validation_branch_name_required": "Arabic and English names are required.",
+    "validation_branch_city_too_long": "The city may not exceed 100 characters.",
+    "conflict_branch_code_taken": "Another branch already uses this code.",
+    "validation_reference_code_invalid": "The code may contain only letters, digits and hyphens (up to 30).",
+    "validation_reference_name_required": "Arabic and English names are required.",
+    "validation_reference_item_system": "System items cannot be switched off.",
+    "conflict_reference_code_taken": "This list already has an item with this code."
   },
   "menu": {
     "label": "Main menu",
@@ -130,7 +149,12 @@
     "home": "Home",
     "administration": "Administration",
     "users": "Users",
-    "roles": "Roles and permissions"
+    "roles": "Roles and permissions",
+    "companySetup": "Company setup",
+    "legalEntities": "Commercial registrations",
+    "branches": "Branches",
+    "referenceLists": "Reference lists",
+    "modules": "System modules"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -166,5 +190,64 @@
     "removeRole": "Remove role",
     "name": "Name",
     "userName": "User name"
+  },
+  "fields": {
+    "Code": "Code",
+    "NameAr": "Arabic name",
+    "NameEn": "English name",
+    "CommercialRegistrationNo": "Commercial registration no.",
+    "VatNumber": "VAT number",
+    "IsActive": "Active",
+    "LegalEntityId": "Commercial registration",
+    "City": "City",
+    "SortOrder": "Display order"
+  },
+  "history": {
+    "title": "Change history",
+    "empty": "No recorded changes.",
+    "Added": "Created",
+    "Modified": "Changed",
+    "Deleted": "Deleted"
+  },
+  "legalEntities": {
+    "title": "Commercial registrations",
+    "intro": "The company's commercial registrations. Each has its own financial statements and is the seller on tax invoices.",
+    "new": "New commercial registration",
+    "name": "Name",
+    "codeHint": "A short permanent code, for example: CP05",
+    "codeFixed": "The code cannot change after creation because other records refer to it.",
+    "crHint": "Ten digits",
+    "vatHint": "Fifteen digits starting and ending with 3; required before issuing tax invoices."
+  },
+  "branches": {
+    "title": "Branches",
+    "intro": "The company's branches and offices; each can belong to one commercial registration.",
+    "new": "New branch",
+    "name": "Branch name",
+    "codeHint": "A short permanent code, for example: RUH"
+  },
+  "reference": {
+    "title": "Reference lists",
+    "intro": "Lists used across the system with permanent codes, shown in Arabic and English.",
+    "newItem": "Add item",
+    "empty": "This list has no items yet.",
+    "system": "System",
+    "systemHint": "A system item the logic relies on: its name can change, but it cannot be switched off.",
+    "codeHint": "A permanent code in Latin letters, for example: PHL",
+    "codeFixed": "The code cannot change after creation because saved data refers to it."
+  },
+  "modules": {
+    "title": "System modules",
+    "intro": "The modules installed in this system and whether each is switched on.",
+    "enabled": "On",
+    "disabled": "Off",
+    "Organization": {
+      "name": "Organization and settings",
+      "description": "Companies, commercial registrations, branches, reference lists and settings."
+    },
+    "Identity": {
+      "name": "Identity and access",
+      "description": "Sign-in, two-step verification, users, roles and permissions."
+    }
   }
 }

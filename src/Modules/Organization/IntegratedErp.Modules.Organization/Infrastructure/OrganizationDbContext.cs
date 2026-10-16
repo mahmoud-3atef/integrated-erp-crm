@@ -1,5 +1,7 @@
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.Modules.Organization.Domain.Branches;
 using IntegratedErp.Modules.Organization.Domain.LegalEntities;
+using IntegratedErp.Modules.Organization.Domain.Reference;
 using IntegratedErp.Modules.Organization.Domain.Settings;
 using IntegratedErp.Modules.Organization.Domain.Tenants;
 using Microsoft.EntityFrameworkCore;
@@ -18,4 +20,8 @@ internal sealed class OrganizationDbContext(DbContextOptions<OrganizationDbConte
     public DbSet<Tenant> Tenants => Set<Tenant>();
 
     public DbSet<LegalEntity> LegalEntities => Set<LegalEntity>();
+
+    public DbSet<Branch> Branches => Set<Branch>();
+
+    public DbSet<ReferenceItem> ReferenceItems => Set<ReferenceItem>();
 }

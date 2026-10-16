@@ -58,24 +58,49 @@ public sealed class LegalEntity : ITenantOwned
             return Result.Failure<LegalEntity>(Error.Validation("legal_entity_code_invalid", "Code must be 1-30 characters."));
         }
 
-        if (string.IsNullOrWhiteSpace(nameAr) || string.IsNullOrWhiteSpace(nameEn))
+        var details = Check(nameAr, nameEn, crNumber, vatNumber);
+        return details.IsFailure
+            ? Result.Failure<LegalEntity>(details.Error)
+            : Result.Success(new LegalEntity(normalizedCode, details.Value.NameAr, details.Value.NameEn, details.Value.Cr, details.Value.Vat));
+    }
+
+    /// <summary>Changes the names and registration numbers; the code never changes (other records refer to it).</summary>
+    public Result Update(string nameAr, string nameEn, string crNumber, string? vatNumber)
+    {
+        var details = Check(nameAr, nameEn, crNumber, vatNumber);
+        if (details.IsFailure)
         {
-            return Result.Failure<LegalEntity>(Error.Validation("legal_entity_name_required", "Arabic and English names are required."));
+            return Result.Failure(details.Error);
+        }
+
+        (NameAr, NameEn, CommercialRegistrationNo, VatNumber) = details.Value;
+        return Result.Success();
+    }
+
+    public void SetActive(bool active) => IsActive = active;
+
+    private static Result<(string NameAr, string NameEn, string Cr, string? Vat)> Check(string nameAr, string nameEn, string crNumber, string? vatNumber)
+    {
+        nameAr = (nameAr ?? string.Empty).Trim();
+        nameEn = (nameEn ?? string.Empty).Trim();
+        if (nameAr.Length is 0 or > NameMaxLength || nameEn.Length is 0 or > NameMaxLength)
+        {
+            return Result.Failure<(string, string, string, string?)>(Error.Validation("legal_entity_name_required", "Arabic and English names are required."));
         }
 
         var cr = (crNumber ?? string.Empty).Trim();
         if (cr.Length != 10 || !cr.All(char.IsAsciiDigit))
         {
-            return Result.Failure<LegalEntity>(Error.Validation("cr_number_invalid", "Commercial registration number must be 10 digits."));
+            return Result.Failure<(string, string, string, string?)>(Error.Validation("cr_number_invalid", "Commercial registration number must be 10 digits."));
         }
 
         var vat = string.IsNullOrWhiteSpace(vatNumber) ? null : vatNumber.Trim();
         if (vat is not null && !IsValidVatNumber(vat))
         {
-            return Result.Failure<LegalEntity>(Error.Validation("vat_number_invalid", "VAT number must be 15 digits starting and ending with 3."));
+            return Result.Failure<(string, string, string, string?)>(Error.Validation("vat_number_invalid", "VAT number must be 15 digits starting and ending with 3."));
         }
 
-        return Result.Success(new LegalEntity(normalizedCode, nameAr.Trim(), nameEn.Trim(), cr, vat));
+        return Result.Success((nameAr, nameEn, cr, vat));
     }
 
     public static bool IsValidVatNumber(string value) =>

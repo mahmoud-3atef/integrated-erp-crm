@@ -9,6 +9,10 @@ import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
 import { RolesPage } from '../pages/admin/RolesPage';
 import { UsersPage } from '../pages/admin/UsersPage';
 import { HomePage } from '../pages/HomePage';
+import { BranchesPage } from '../pages/setup/BranchesPage';
+import { LegalEntitiesPage } from '../pages/setup/LegalEntitiesPage';
+import { ModulesPage } from '../pages/setup/ModulesPage';
+import { ReferenceListsPage } from '../pages/setup/ReferenceListsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { MfaSetupPage } from '../pages/MfaSetupPage';
 import { MfaVerifyPage } from '../pages/MfaVerifyPage';
@@ -34,6 +38,10 @@ export function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/roles" element={<RolesPage />} />
+                <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
+                <Route path="/setup/branches" element={<BranchesPage />} />
+                <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />
+                <Route path="/setup/modules" element={<ModulesPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />
