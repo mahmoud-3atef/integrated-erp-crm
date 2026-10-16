@@ -25,6 +25,8 @@
 
 ## التشغيل للتطوير
 
+الأوامر بتتنفذ من فولدر المشروع `C:\Integrated-ERP-CRM` (مش `C:\Windows\system32`). في Windows PowerShell 5.1 الأمر `&&` مش مدعوم — نفّذ كل أمر لوحده.
+
 المتطلبات: .NET 10 SDK (المحدد في `global.json`)، و Node 24 (للواجهة).
 
 ```bash
@@ -89,18 +91,22 @@ powershell -ExecutionPolicy Bypass -File tools/Set-ErpSecret.ps1 -List
 ### الواجهة (عربي/إنجليزي)
 React + MUI في `src/Web`. البناء بيطلع في `wwwroot` بتاع الـ API، فالنظام كله بيشتغل من عنوان واحد (`http://localhost:5080`):
 
-```bash
-cd src/Web && npm ci && npm run build
+```powershell
+cd C:\Integrated-ERP-CRM\src\Web
+npm ci
+npm run build
 ```
 
 أثناء تعديل الواجهة (تحديث فوري على `http://localhost:5173` والـ API شغال على 5080):
 
-```bash
-cd src/Web && npm run dev
+```powershell
+cd C:\Integrated-ERP-CRM\src\Web
+npm run dev
 ```
 
-```bash
-cd src/Web && npm test
+```powershell
+cd C:\Integrated-ERP-CRM\src\Web
+npm test
 ```
 
 اللغة الافتراضية عربي (RTL)، وزرار اللغة بيقلب لإنجليزي (LTR) ويفتكر الاختيار. النصوص في `src/Web/src/i18n/ar.json` و `en.json` (لازم نفس المفاتيح — في اختبار بيتأكد).
