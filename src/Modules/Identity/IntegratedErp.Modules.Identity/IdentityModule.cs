@@ -35,6 +35,7 @@ public sealed class IdentityModule : IModule
         services.AddSingleton<IDirectory, LdapDirectory>();
         services.AddScoped<SignInService>();
         services.AddScoped<AccessService>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddPermissions(IdentityPermissions.All);
 

@@ -44,7 +44,7 @@ export class ApiError extends Error {
 
 const csrfHeader = { 'X-ERP-CSRF': '1' };
 
-export async function request<T>(method: 'GET' | 'POST' | 'PUT', path: string, body?: unknown): Promise<T> {
+export async function request<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -63,6 +63,22 @@ export async function request<T>(method: 'GET' | 'POST' | 'PUT', path: string, b
 
   if (!response.ok) {
     throw new ApiError(response.status, await errorCode(response));
+  }
+
+  return (await response.json()) as T;
+}
+
+/** Multipart upload (files); same CSRF header and error handling as {@link request}. */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(path, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', ...csrfHeader }, body: form });
+  } catch {
+    throw new ApiError(0, 'network');
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, response.status === 413 ? 'validation.file_too_large' : await errorCode(response));
   }
 
   return (await response.json()) as T;

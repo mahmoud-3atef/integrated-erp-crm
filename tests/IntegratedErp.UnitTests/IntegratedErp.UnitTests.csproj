@@ -21,5 +21,6 @@
     <ProjectReference Include="..\..\src\SharedKernel\IntegratedErp.SharedKernel\IntegratedErp.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organization\IntegratedErp.Modules.Organization\IntegratedErp.Modules.Organization.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\IntegratedErp.Modules.Identity\IntegratedErp.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Documents\IntegratedErp.Modules.Documents\IntegratedErp.Modules.Documents.csproj" />
   </ItemGroup>
 </Project>

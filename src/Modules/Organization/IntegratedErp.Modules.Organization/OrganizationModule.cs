@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Attachments;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Reference;
@@ -38,6 +39,7 @@ public sealed class OrganizationModule : IModule
         services.AddScoped<CompanySetupService>();
         services.AddScoped<IReferenceData>(sp => sp.GetRequiredService<CompanySetupService>());
         services.AddReferenceLists(OrganizationReferenceLists.All);
+        services.AddAttachmentOwners<OrganizationAttachmentOwners>(OrganizationAttachmentOwners.All);
         services.AddPermissions(OrganizationPermissions.All);
 
         _devEndpoints = configuration.GetValue($"Modules:{Name}:DevEndpoints", defaultValue: false);

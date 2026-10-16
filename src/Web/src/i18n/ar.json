@@ -141,7 +141,16 @@
     "validation_reference_code_invalid": "الرمز يقبل الحروف الإنجليزية والأرقام والشرطة فقط، بحد أقصى 30 حرفًا.",
     "validation_reference_name_required": "الاسم العربي والاسم الإنجليزي مطلوبان.",
     "validation_reference_item_system": "لا يمكن إيقاف العناصر النظامية.",
-    "conflict_reference_code_taken": "يوجد عنصر آخر بالرمز نفسه في هذه القائمة."
+    "conflict_reference_code_taken": "يوجد عنصر آخر بالرمز نفسه في هذه القائمة.",
+    "forbidden_attachment": "ليست لديك صلاحية على ملفات هذا السجل.",
+    "not_found_attachment": "الملف غير موجود.",
+    "not_found_attachment_owner": "السجل غير موجود.",
+    "not_found_notification": "الإشعار غير موجود.",
+    "validation_document_type_unknown": "نوع المستند غير معروف.",
+    "validation_file_empty": "الملف فارغ أو لم يُختر.",
+    "validation_file_too_large": "حجم الملف أكبر من الحد المسموح به.",
+    "validation_file_type_not_allowed": "نوع الملف غير مقبول، أو أن محتواه لا يطابق امتداده.",
+    "validation_notes_too_long": "الملاحظات يجب ألا تتجاوز 500 حرف."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -248,6 +257,32 @@
     "Identity": {
       "name": "الهوية والصلاحيات",
       "description": "تسجيل الدخول والتحقق بخطوتين والمستخدمون والأدوار والصلاحيات."
+    },
+    "Documents": {
+      "name": "المستندات والإشعارات",
+      "description": "المرفقات على السجلات، والإشعارات داخل النظام وعبر البريد الإلكتروني."
     }
+  },
+  "attachments": {
+    "title": "المرفقات",
+    "type": "نوع المستند",
+    "expiresOn": "تاريخ الانتهاء",
+    "notes": "ملاحظات",
+    "choose": "اختيار ملف",
+    "allowed": "الأنواع المقبولة: PDF وصور PNG/JPG وملفات Word وExcel، بحد أقصى 20 ميجابايت.",
+    "upload": "رفع",
+    "file": "الملف",
+    "uploaded": "رُفع بواسطة",
+    "download": "تنزيل",
+    "remove": "إزالة",
+    "confirmRemove": "هل تريد إزالة الملف «{{name}}»؟ يبقى محفوظًا في سجل التدقيق.",
+    "expired": "منتهي",
+    "empty": "لا توجد مرفقات بعد."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "unread": "{{count}} إشعار غير مقروء",
+    "readAll": "تعليم الكل كمقروء",
+    "empty": "لا توجد إشعارات."
   }
 }

@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { LanguageSwitch } from '../auth/AuthLayout';
+import { NotificationsBell } from '../components/NotificationsBell';
 import { Initials } from '../components/ui';
 import { companyName } from '../pages/ChooseCompanyPage';
 import { SessionProvider, useSession } from './session';
@@ -242,6 +243,7 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
             </IconButton>
           </Tooltip>
         )}
+        <NotificationsBell />
         <LanguageSwitch />
         <Box sx={{ width: '1px', height: 26, mx: 0.75, bgcolor: tokens.border, display: { xs: 'none', sm: 'block' } }} />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>

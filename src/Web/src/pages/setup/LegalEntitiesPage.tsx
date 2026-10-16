@@ -1,5 +1,6 @@
 import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import HistoryIcon from '@mui/icons-material/History';
 import {
   Box,
@@ -31,6 +32,7 @@ import { setupApi, type LegalEntityRecord } from '../../api/setup';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { AttachmentsDialog } from '../../components/AttachmentsDialog';
 import { HistoryDialog } from '../../components/HistoryDialog';
 import { EmptyState, PageHeader, Panel, StatusDot } from '../../components/ui';
 
@@ -40,6 +42,7 @@ export function LegalEntitiesPage() {
   const [rows, setRows] = useState<LegalEntityRecord[]>([]);
   const [editing, setEditing] = useState<LegalEntityRecord | 'new' | null>(null);
   const [history, setHistory] = useState<LegalEntityRecord | null>(null);
+  const [files, setFiles] = useState<LegalEntityRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const canManage = can('organization.legal_entities.manage', true);
 
@@ -104,6 +107,11 @@ export function LegalEntitiesPage() {
                         </IconButton>
                       </Tooltip>
                     )}
+                    <Tooltip title={t('attachments.title')}>
+                      <IconButton size="small" onClick={() => setFiles(row)} aria-label={`${t('attachments.title')} ${row.code}`}>
+                        <AttachFileIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title={t('history.title')}>
                       <IconButton size="small" onClick={() => setHistory(row)} aria-label={`${t('history.title')} ${row.code}`}>
                         <HistoryIcon fontSize="small" />
@@ -126,6 +134,9 @@ export function LegalEntitiesPage() {
             void load();
           }}
         />
+      )}
+      {files && (
+        <AttachmentsDialog title={files.code} ownerType="organization.legal_entity" ownerId={files.id} canManage={canManage} onClose={() => setFiles(null)} />
       )}
       {history && <HistoryDialog title={history.code} load={loadHistory} onClose={() => setHistory(null)} />}
     </Box>

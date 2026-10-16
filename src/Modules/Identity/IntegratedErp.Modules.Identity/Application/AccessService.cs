@@ -1,11 +1,13 @@
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Security;
+using IntegratedErp.Modules.Documents.Contracts;
 using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Identity.Infrastructure.Ldap;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Identity.Application;
@@ -23,7 +25,7 @@ public sealed record MemberDto(Guid MembershipId, Guid UserAccountId, string Dis
 /// roles, members and role assignments. Guards against privilege escalation (nobody grants a permission they
 /// do not hold) and against locking the company out (the last full administrator cannot be removed).
 /// </summary>
-internal sealed class AccessService(
+internal sealed partial class AccessService(
     IdentityDbContext db,
     IDirectory directory,
     ILegalEntityDirectory legalEntities,
@@ -31,6 +33,9 @@ internal sealed class AccessService(
     PermissionCatalog catalog,
     ITenantContext tenant,
     ICurrentUser user,
+    ITenantDirectory tenants,
+    IEnumerable<INotifier> notifiers,
+    ILogger<AccessService> logger,
     IOptions<IdentityOptions> options)
 {
     public static readonly Error RoleNotFound = Error.NotFound("role", "Role not found.");
@@ -160,6 +165,7 @@ internal sealed class AccessService(
         }
 
         var membership = await db.Memberships.FirstOrDefaultAsync(m => m.UserAccountId == account.Id, cancellationToken).ConfigureAwait(false);
+        var joined = membership is null || !membership.IsActive;
         if (membership is null)
         {
             membership = new Membership(account.Id, CurrentTenant);
@@ -171,6 +177,19 @@ internal sealed class AccessService(
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (joined)
+        {
+            var company = await CompanyNamesAsync(cancellationToken).ConfigureAwait(false);
+            await NotifyAsync(
+                account.Id,
+                "identity.member_added",
+                "تمت إضافتك إلى شركة",
+                "You were added to a company",
+                $"أضافك {user.DisplayName} إلى شركة «{company.Ar}». ستظهر لك الشاشات بعد أن يُسند إليك دور.",
+                $"{user.DisplayName} added you to {company.En}. Screens will appear once you are given a role.",
+                cancellationToken).ConfigureAwait(false);
+        }
+
         var roles = await db.RoleAssignments.AsNoTracking().Where(a => a.MembershipId == membership.Id)
             .Select(a => new AssignmentDto(a.RoleId, a.LegalEntityId)).ToListAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success(new MemberDto(membership.Id, account.Id, account.DisplayName, found.SamAccountName, account.Email, membership.IsActive, roles));
@@ -218,7 +237,22 @@ internal sealed class AccessService(
             return Result.Failure(LastAdministrator);
         }
 
+        var changed = db.ChangeTracker.HasChanges();
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (changed)
+        {
+            var accountId = await db.Memberships.Where(m => m.Id == membershipId).Select(m => m.UserAccountId).FirstAsync(cancellationToken).ConfigureAwait(false);
+            var company = await CompanyNamesAsync(cancellationToken).ConfigureAwait(false);
+            await NotifyAsync(
+                accountId,
+                "identity.roles_changed",
+                "تغيّرت صلاحياتك",
+                "Your access changed",
+                $"عدّل {user.DisplayName} أدوارك في شركة «{company.Ar}». قد تتغير الشاشات المتاحة لك.",
+                $"{user.DisplayName} changed your roles in {company.En}. The screens available to you may change.",
+                cancellationToken).ConfigureAwait(false);
+        }
+
         return Result.Success();
     }
 
@@ -253,6 +287,32 @@ internal sealed class AccessService(
     }
 
     public Task<IReadOnlyList<LegalEntityInfo>> LegalEntitiesAsync(CancellationToken cancellationToken) => legalEntities.ListAsync(cancellationToken);
+
+    /// <summary>Best effort after the change is saved: a failed notification never undoes an access change.</summary>
+    private async Task NotifyAsync(Guid recipient, string kind, string titleAr, string titleEn, string bodyAr, string bodyEn, CancellationToken cancellationToken)
+    {
+        foreach (var notifier in notifiers)
+        {
+            try
+            {
+                await notifier.NotifyAsync(new NotificationRequest([recipient], kind, titleAr, titleEn, bodyAr, bodyEn, "/"), cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                LogNotifyFailed(logger, kind, ex);
+            }
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {Kind} could not be sent")]
+    private static partial void LogNotifyFailed(ILogger logger, string kind, Exception exception);
+
+    private async Task<(string Ar, string En)> CompanyNamesAsync(CancellationToken cancellationToken)
+    {
+        var found = await tenants.GetAsync([CurrentTenant], cancellationToken).ConfigureAwait(false);
+        var company = found.Count > 0 ? found[0] : null;
+        return company is null ? (string.Empty, string.Empty) : (company.NameAr, company.NameEn);
+    }
 
     private Guid CurrentTenant => tenant.TenantId ?? throw new InvalidOperationException("A company must be selected.");
 

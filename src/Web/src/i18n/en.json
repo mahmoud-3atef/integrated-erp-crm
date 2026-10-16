@@ -141,7 +141,16 @@
     "validation_reference_code_invalid": "The code may contain only letters, digits and hyphens (up to 30).",
     "validation_reference_name_required": "Arabic and English names are required.",
     "validation_reference_item_system": "System items cannot be switched off.",
-    "conflict_reference_code_taken": "This list already has an item with this code."
+    "conflict_reference_code_taken": "This list already has an item with this code.",
+    "forbidden_attachment": "You do not have permission for this record's files.",
+    "not_found_attachment": "File not found.",
+    "not_found_attachment_owner": "The record was not found.",
+    "not_found_notification": "Notification not found.",
+    "validation_document_type_unknown": "Unknown document type.",
+    "validation_file_empty": "The file is empty or was not chosen.",
+    "validation_file_too_large": "The file is larger than allowed.",
+    "validation_file_type_not_allowed": "This kind of file is not accepted, or its content does not match its extension.",
+    "validation_notes_too_long": "Notes may not exceed 500 characters."
   },
   "menu": {
     "label": "Main menu",
@@ -248,6 +257,32 @@
     "Identity": {
       "name": "Identity and access",
       "description": "Sign-in, two-step verification, users, roles and permissions."
+    },
+    "Documents": {
+      "name": "Documents and notifications",
+      "description": "Attachments on records, and notifications in the system and by email."
     }
+  },
+  "attachments": {
+    "title": "Attachments",
+    "type": "Document type",
+    "expiresOn": "Expiry date",
+    "notes": "Notes",
+    "choose": "Choose file",
+    "allowed": "Accepted: PDF, PNG/JPG images, Word and Excel files, up to 20 MB.",
+    "upload": "Upload",
+    "file": "File",
+    "uploaded": "Uploaded by",
+    "download": "Download",
+    "remove": "Remove",
+    "confirmRemove": "Remove the file “{{name}}”? It stays in the audit record.",
+    "expired": "Expired",
+    "empty": "No attachments yet."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread": "{{count}} unread notifications",
+    "readAll": "Mark all as read",
+    "empty": "No notifications."
   }
 }

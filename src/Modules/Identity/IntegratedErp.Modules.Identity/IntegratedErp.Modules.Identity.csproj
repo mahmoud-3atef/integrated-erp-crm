@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
     <ProjectReference Include="..\..\Organization\IntegratedErp.Modules.Organization.Contracts\IntegratedErp.Modules.Organization.Contracts.csproj" />
     <ProjectReference Include="..\IntegratedErp.Modules.Identity.Contracts\IntegratedErp.Modules.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Documents\IntegratedErp.Modules.Documents.Contracts\IntegratedErp.Modules.Documents.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="IntegratedErp.UnitTests" />

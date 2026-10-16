@@ -14,6 +14,9 @@ public sealed class DevelopmentUser
     public string Password { get; set; } = string.Empty;
 
     public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>Optional, to try email notifications locally.</summary>
+    public string? Email { get; set; }
 }
 
 /// <summary>
@@ -67,7 +70,7 @@ public sealed class DevelopmentDirectory(LdapDirectory inner, IReadOnlyList<Deve
         user.UserName,
         $"CN={user.DisplayName},OU=Development",
         user.DisplayName,
-        null,
+        user.Email,
         IsEnabled: true,
         IsLockedOut: false,
         Groups: []);
