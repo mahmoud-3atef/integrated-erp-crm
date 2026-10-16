@@ -113,6 +113,15 @@ npm test
 
 **حسابات تجريبية (بيئة التطوير فقط):** `dev.admin` (مدير، مربوط بـ CarePro) و `dev.user` (بدون شركة) — معرّفين في `appsettings.Development.json` تحت `Identity:DevDirectory`، ومش بيتسجلوا خالص خارج Development. أي اسم تاني بيروح للـ Active Directory الحقيقي.
 
+### الملفات والبريد الإلكتروني
+- **الملفات (المرفقات):** تُحفظ في `%LOCALAPPDATA%\IntegratedErp\files`، ويمكن تغيير المسار بالإعداد `Storage:Root` (مثل مجلد على سيرفر الملفات). الواجهة مصممة بمفاهيم S3، فيمكن الانتقال إلى MinIO أو التخزين السحابي لاحقًا دون تغيير الكود.
+- **البريد في بيئة التطوير:** لا يُرسل فعليًا، بل يُحفظ كل بريد ملفًا بصيغة `.eml` في `%LOCALAPPDATA%\IntegratedErp\mail` ويمكن فتحه ببرنامج Outlook.
+- **البريد في التشغيل الفعلي:** تُضبط الإعدادات `Email:Host` و`Email:Port` و`Email:UserName` و`Email:FromAddress`، وتُحفظ كلمة المرور في ملف الأسرار المشفر:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/Set-ErpSecret.ps1 -Name Email:Password -Secret
+```
+
 ### تفعيل/تعطيل موديول
 في الإعدادات: `"Modules": { "<Name>": { "Enabled": false } }` — الموديول المقفول مابيتسجلش ولا بتظهر نقاطه.
 
