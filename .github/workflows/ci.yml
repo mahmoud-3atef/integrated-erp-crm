@@ -11,6 +11,25 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    # Throw-away SQL Server 2022 for the integration tests (the password only protects this container).
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci_Only_Pass_2026!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ci_Only_Pass_2026!' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      ERP_TEST_SQLSERVER: "Server=localhost,1433;User Id=sa;Password=Ci_Only_Pass_2026!;TrustServerCertificate=true"
+
     steps:
       - uses: actions/checkout@v4
 

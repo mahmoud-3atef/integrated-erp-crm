@@ -39,6 +39,20 @@ dotnet test IntegratedErp.slnx
 dotnet run --project src/Hosts/IntegratedErp.Api --urls http://localhost:5080
 ```
 
+إنشاء/تحديث قاعدة البيانات (كل الموديولات المفعّلة) بأمر واحد:
+
+```bash
+dotnet run --project src/Hosts/IntegratedErp.Api -- migrate
+```
+
+في التطوير القاعدة على LocalDB (`IntegratedErp_Dev`) بإعدادات توافق SQL Server 2022 (160). اختبارات التكامل بتعمل قاعدة مؤقتة وتمسحها — على LocalDB في Windows، أو على السيرفر المحدد في `ERP_TEST_SQLSERVER`.
+
+إضافة migration لموديول:
+
+```bash
+dotnet ef migrations add <Name> --project src/Modules/Organization/IntegratedErp.Modules.Organization --startup-project src/Modules/Organization/IntegratedErp.Modules.Organization --output-dir Infrastructure/Migrations
+```
+
 نقاط مفيدة: `/health`، `/api/v1/system/modules` (الموديولات وحالة تفعيلها)، `/openapi/v1.json` (في بيئة التطوير).
 
 ### هيكل الكود
