@@ -1,7 +1,7 @@
+using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Identity.Contracts;
 using IntegratedErp.Modules.Workflow.Application;
-using IntegratedErp.Modules.Workflow.Domain;
 using IntegratedErp.SharedKernel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -9,52 +9,98 @@ using Microsoft.AspNetCore.Routing;
 
 namespace IntegratedErp.Modules.Workflow.Api;
 
-/// <summary>Approval routes, my tasks and decisions, and internal requests (always the current company).</summary>
+/// <summary>Approval processes (design), the engine's inbox and requests, and internal requests — current company only.</summary>
 internal static class WorkflowEndpoints
 {
-    public sealed record StageRequest(string NameAr, string NameEn, ApproverKind Kind, Guid? UserId, Guid? RoleId, string? DynamicKey);
+    public sealed record DraftRequest(string NameAr, string NameEn, int Priority, JsonElement Definition);
 
-    public sealed record RouteRequest(IReadOnlyList<StageRequest>? Stages, bool IsActive = true);
+    public sealed record ActiveRequest(bool IsActive);
 
-    public sealed record DecisionRequest(Decision Decision, string? Comment);
+    public sealed record DecisionRequest(Decision Decision, string? Comment, Dictionary<string, string?>? Fields);
 
-    public sealed record SubmitRequest(Guid? DirectManagerUserId);
+    public sealed record DelegateRequest(Guid UserId, string? Comment);
+
+    public sealed record ReasonRequest(string? Reason);
 
     public static void MapWorkflowEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/workflow").WithTags("Workflow").RequireAuthorization(PlatformPolicies.CompanyUser);
 
-        // Routes (company-wide settings).
-        group.MapGet("/routes", async (RouteService service, CancellationToken ct) =>
+        // ---- Process design (company-wide).
+        group.MapGet("/screens", (ProcessService service) => Results.Ok(service.Screens()))
+            .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
+
+        group.MapGet("/processes", async (ProcessService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(ct).ConfigureAwait(false)))
-            .RequirePermission(WorkflowPermissions.RoutesView, companyWide: true);
+            .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
 
-        group.MapGet("/routes/{documentType}/versions", async (string documentType, RouteService service, CancellationToken ct) =>
-                ToHttp(await service.VersionsAsync(documentType, ct).ConfigureAwait(false)))
-            .RequirePermission(WorkflowPermissions.RoutesView, companyWide: true);
+        group.MapGet("/processes/{id:guid}", async (Guid id, ProcessService service, CancellationToken ct) =>
+                ToHttp(await service.GetAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
 
-        group.MapPut("/routes/{documentType}", async (string documentType, RouteRequest r, RouteService service, CancellationToken ct) =>
-            {
-                var stages = (r.Stages ?? []).Select(s => new StageInput(s.NameAr ?? string.Empty, s.NameEn ?? string.Empty, s.Kind, s.UserId, s.RoleId, s.DynamicKey)).ToList();
-                return ToHttp(await service.PublishAsync(documentType, stages, r.IsActive, ct).ConfigureAwait(false));
-            })
-            .RequirePermission(WorkflowPermissions.RoutesManage, companyWide: true);
+        group.MapPost("/processes", async (ProcessInput input, ProcessService service, CancellationToken ct) =>
+                ToHttp(await service.CreateAsync(input, ct).ConfigureAwait(false), StatusCodes.Status201Created))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
 
-        group.MapGet("/approver-options", async (RouteService service, CancellationToken ct) =>
+        group.MapPut("/processes/{id:guid}/draft", async (Guid id, DraftRequest r, ProcessService service, CancellationToken ct) =>
+                ToHttp(await service.SaveDraftAsync(id, r.NameAr, r.NameEn, r.Priority, r.Definition, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
+        group.MapPost("/processes/{id:guid}/validate", async (Guid id, ProcessService service, CancellationToken ct) =>
+                ToHttp(await service.ValidateAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
+        group.MapPost("/processes/{id:guid}/publish", async (Guid id, ProcessService service, CancellationToken ct) =>
+                ToHttp(await service.PublishAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
+        group.MapPut("/processes/{id:guid}/active", async (Guid id, ActiveRequest r, ProcessService service, CancellationToken ct) =>
+                ToHttp(await service.SetActiveAsync(id, r.IsActive, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
+        group.MapGet("/approver-options", async (ProcessService service, CancellationToken ct) =>
                 Results.Ok(await service.ApproverOptionsAsync(ct).ConfigureAwait(false)))
-            .RequirePermission(WorkflowPermissions.RoutesView, companyWide: true);
+            .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
 
-        // My tasks: every signed-in user sees and decides only their own.
-        group.MapGet("/tasks", async (string? scope, ApprovalEngine engine, CancellationToken ct) =>
-            Results.Ok(await engine.MyTasksAsync(scope != "done", ct).ConfigureAwait(false)));
+        // ---- My tasks and my requests: every user sees and acts on their own only.
+        group.MapGet("/inbox", async (string? scope, ApprovalQueries queries, CancellationToken ct) =>
+            Results.Ok(await queries.InboxAsync(scope != "done", ct).ConfigureAwait(false)));
 
-        group.MapGet("/tasks/count", async (ApprovalEngine engine, CancellationToken ct) =>
-            Results.Ok(new { pending = await engine.PendingCountAsync(ct).ConfigureAwait(false) }));
+        group.MapGet("/inbox/count", async (ApprovalQueries queries, CancellationToken ct) =>
+            Results.Ok(new { pending = await queries.PendingCountAsync(ct).ConfigureAwait(false) }));
 
-        group.MapPost("/tasks/{id:guid}/decision", async (Guid id, DecisionRequest r, ApprovalEngine engine, CancellationToken ct) =>
-            ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, ct).ConfigureAwait(false)));
+        group.MapGet("/my-requests", async (ApprovalQueries queries, CancellationToken ct) =>
+            Results.Ok(await queries.MineAsync(ct).ConfigureAwait(false)));
 
-        // Internal requests: own requests; all of the company with the view permission.
+        group.MapPost("/work-items/{id:guid}/decision", async (Guid id, DecisionRequest r, ApprovalEngine engine, CancellationToken ct) =>
+            ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, r.Fields, ct).ConfigureAwait(false)));
+
+        group.MapPost("/work-items/{id:guid}/delegate", async (Guid id, DelegateRequest r, ApprovalEngine engine, CancellationToken ct) =>
+            ToHttp(await engine.DelegateAsync(id, r.UserId, r.Comment, ct).ConfigureAwait(false)));
+
+        // ---- One approval: participants and monitors.
+        group.MapGet("/instances/{id:guid}", async (Guid id, ApprovalQueries queries, CancellationToken ct) =>
+            ToHttp(await queries.DetailAsync(id, ct).ConfigureAwait(false)));
+
+        group.MapPost("/instances/{id:guid}/cancel", async (Guid id, ReasonRequest r, ApprovalEngine engine, IPermissionService permissions, CancellationToken ct) =>
+        {
+            var canManage = (await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).LegalEntitiesFor(WorkflowPermissions.ProcessesManage) is null;
+            return ToHttp(await engine.CancelAsync(id, r.Reason, canManage, ct).ConfigureAwait(false));
+        });
+
+        group.MapPost("/instances/{id:guid}/retry", async (Guid id, ApprovalEngine engine, CancellationToken ct) =>
+                ToHttp(await engine.RetryAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
+        group.MapGet("/instances", async (string? status, ApprovalQueries queries, CancellationToken ct) =>
+                Results.Ok(await queries.AllAsync(status, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.InstancesView, companyWide: true);
+
+        // People to pick (delegate to, direct manager): any signed-in member of the company.
+        group.MapGet("/people", async (IAccessDirectory access, CancellationToken ct) =>
+            Results.Ok(await access.ListMembersAsync(ct).ConfigureAwait(false)));
+
+        // ---- Internal requests.
         group.MapGet("/requests", async (bool? all, InternalRequestService service, CancellationToken ct) =>
             Results.Ok(await service.ListAsync(all == true, ct).ConfigureAwait(false)));
 
@@ -69,13 +115,8 @@ internal static class WorkflowEndpoints
                 ToHttp(await service.UpdateAsync(id, r, ct).ConfigureAwait(false)))
             .RequirePermission(WorkflowPermissions.RequestsCreate);
 
-        // People to pick as the direct manager when submitting.
-        group.MapGet("/requests/people", async (IAccessDirectory access, CancellationToken ct) =>
-                Results.Ok(await access.ListMembersAsync(ct).ConfigureAwait(false)))
-            .RequirePermission(WorkflowPermissions.RequestsCreate);
-
-        group.MapPost("/requests/{id:guid}/submit", async (Guid id, SubmitRequest? r, InternalRequestService service, CancellationToken ct) =>
-                ToHttp(await service.SubmitAsync(id, r?.DirectManagerUserId, ct).ConfigureAwait(false)))
+        group.MapPost("/requests/{id:guid}/submit", async (Guid id, InternalRequestService service, CancellationToken ct) =>
+                ToHttp(await service.SubmitAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(WorkflowPermissions.RequestsCreate);
     }
 
@@ -86,7 +127,8 @@ internal static class WorkflowEndpoints
 
     private static IResult Problem(Error error) => Results.Problem(
         error.Message,
-        statusCode: error.Code.StartsWith("not_found.", StringComparison.Ordinal) ? StatusCodes.Status404NotFound
+        statusCode: error.Code.StartsWith("forbidden.", StringComparison.Ordinal) ? StatusCodes.Status403Forbidden
+            : error.Code.StartsWith("not_found.", StringComparison.Ordinal) ? StatusCodes.Status404NotFound
             : error.Code.StartsWith("conflict.", StringComparison.Ordinal) ? StatusCodes.Status409Conflict
             : StatusCodes.Status400BadRequest,
         title: error.Code);

@@ -1,4 +1,3 @@
-using IntegratedErp.BuildingBlocks.Approvals;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
@@ -13,8 +12,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace IntegratedErp.Modules.Workflow;
 
 /// <summary>
-/// Workflow module: approval routes per document type (stages with a named user, a role, or a user the document
-/// supplies such as the direct manager), versioned; the approval engine and "my tasks"; and internal requests.
+/// Workflow module: approval processes in the style of Dynamics CRM workflows — a process targets a screen, has a
+/// start condition and nested steps (approval stages, if/else conditions, record updates, notifications, stop),
+/// is published as immutable versions, and runs through the approval engine; plus "my tasks", "my requests",
+/// monitoring, and internal requests as the first screen.
 /// </summary>
 public sealed class WorkflowModule : IModule
 {
@@ -25,11 +26,11 @@ public sealed class WorkflowModule : IModule
         services.AddModuleDbContext<WorkflowDbContext>(configuration, WorkflowDbContext.SchemaName);
         services.AddScoped<ApprovalEngine>();
         services.AddScoped<IApprovalService>(sp => sp.GetRequiredService<ApprovalEngine>());
-        services.AddScoped<RouteService>();
+        services.AddScoped<ProcessService>();
+        services.AddScoped<ApprovalQueries>();
         services.AddScoped<InternalRequestService>();
-        services.AddScoped<IApprovalOutcomeHandler, InternalRequestOutcomeHandler>();
+        services.AddScoped<IApprovalRecordAdapter, InternalRequestAdapter>();
         services.AddPermissions(WorkflowPermissions.All);
-        services.AddApprovalDocuments(InternalRequestService.Definition);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapWorkflowEndpoints();

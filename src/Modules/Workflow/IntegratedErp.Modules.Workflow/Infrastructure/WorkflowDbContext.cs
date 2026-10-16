@@ -15,58 +15,47 @@ internal sealed class WorkflowDbContext(DbContextOptions<WorkflowDbContext> opti
 
     public override string Schema => SchemaName;
 
-    public DbSet<ApprovalRoute> Routes => Set<ApprovalRoute>();
+    public DbSet<ApprovalProcess> Processes => Set<ApprovalProcess>();
 
-    public DbSet<ApprovalRouteVersion> RouteVersions => Set<ApprovalRouteVersion>();
+    public DbSet<ApprovalProcessVersion> ProcessVersions => Set<ApprovalProcessVersion>();
 
     public DbSet<ApprovalInstance> Instances => Set<ApprovalInstance>();
 
-    public DbSet<ApprovalTask> Tasks => Set<ApprovalTask>();
+    public DbSet<ApprovalWorkItem> WorkItems => Set<ApprovalWorkItem>();
+
+    public DbSet<ApprovalHistoryEntry> History => Set<ApprovalHistoryEntry>();
 
     public DbSet<InternalRequest> InternalRequests => Set<InternalRequest>();
 }
 
-internal sealed class ApprovalRouteConfiguration : IEntityTypeConfiguration<ApprovalRoute>
+internal sealed class ApprovalProcessConfiguration : IEntityTypeConfiguration<ApprovalProcess>
 {
-    public void Configure(EntityTypeBuilder<ApprovalRoute> builder)
+    public void Configure(EntityTypeBuilder<ApprovalProcess> builder)
     {
-        builder.ToTable("approval_route");
-        builder.HasKey(r => r.Id);
-        builder.Property(r => r.Id).ValueGeneratedNever();
-        builder.Property(r => r.DocumentType).HasMaxLength(100).IsRequired();
-        builder.Ignore(r => r.Current);
-        builder.HasIndex(r => new { r.TenantId, r.DocumentType }).IsUnique();
-        builder.HasMany(r => r.Versions).WithOne().HasForeignKey(v => v.RouteId).OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(r => r.Versions).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.ToTable("approval_process");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.Screen).HasMaxLength(100).IsRequired();
+        builder.Property(p => p.NameAr).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.NameEn).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.Draft).IsRequired();
+        builder.Ignore(p => p.Current);
+        builder.HasIndex(p => new { p.TenantId, p.Screen, p.Priority });
+        builder.HasMany(p => p.Versions).WithOne().HasForeignKey(v => v.ProcessId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(p => p.Versions).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }
 
-internal sealed class ApprovalRouteVersionConfiguration : IEntityTypeConfiguration<ApprovalRouteVersion>
+internal sealed class ApprovalProcessVersionConfiguration : IEntityTypeConfiguration<ApprovalProcessVersion>
 {
-    public void Configure(EntityTypeBuilder<ApprovalRouteVersion> builder)
+    public void Configure(EntityTypeBuilder<ApprovalProcessVersion> builder)
     {
-        builder.ToTable("approval_route_version");
+        builder.ToTable("approval_process_version");
         builder.HasKey(v => v.Id);
         builder.Property(v => v.Id).ValueGeneratedNever();
+        builder.Property(v => v.Definition).IsRequired();
         builder.Property(v => v.PublishedBy).HasMaxLength(200).IsRequired();
-        builder.HasIndex(v => new { v.RouteId, v.Version }).IsUnique();
-        builder.HasMany(v => v.Stages).WithOne().HasForeignKey(s => s.VersionId).OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(v => v.Stages).UsePropertyAccessMode(PropertyAccessMode.Field);
-    }
-}
-
-internal sealed class ApprovalStageConfiguration : IEntityTypeConfiguration<ApprovalStage>
-{
-    public void Configure(EntityTypeBuilder<ApprovalStage> builder)
-    {
-        builder.ToTable("approval_stage");
-        builder.HasKey(s => s.Id);
-        builder.Property(s => s.Id).ValueGeneratedNever();
-        builder.Property(s => s.NameAr).HasMaxLength(200).IsRequired();
-        builder.Property(s => s.NameEn).HasMaxLength(200).IsRequired();
-        builder.Property(s => s.Kind).HasConversion<string>().HasMaxLength(20);
-        builder.Property(s => s.DynamicKey).HasMaxLength(50);
-        builder.HasIndex(s => new { s.VersionId, s.Order }).IsUnique();
+        builder.HasIndex(v => new { v.ProcessId, v.Version }).IsUnique();
     }
 }
 
@@ -77,32 +66,69 @@ internal sealed class ApprovalInstanceConfiguration : IEntityTypeConfiguration<A
         builder.ToTable("approval_instance");
         builder.HasKey(i => i.Id);
         builder.Property(i => i.Id).ValueGeneratedNever();
-        builder.Property(i => i.DocumentType).HasMaxLength(100).IsRequired();
+        builder.Property(i => i.ProcessNameAr).HasMaxLength(200).IsRequired();
+        builder.Property(i => i.ProcessNameEn).HasMaxLength(200).IsRequired();
+        builder.Property(i => i.Screen).HasMaxLength(100).IsRequired();
         builder.Property(i => i.Title).HasMaxLength(300).IsRequired();
-        builder.Property(i => i.DynamicApprovers).HasMaxLength(2000).IsRequired();
+        builder.Property(i => i.Snapshot).IsRequired();
         builder.Property(i => i.SubmittedByName).HasMaxLength(200).IsRequired();
         builder.Property(i => i.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(i => i.Cursor).HasMaxLength(4000).IsRequired();
+        builder.Property(i => i.WaitingStepId).HasMaxLength(40);
+        builder.Property(i => i.WaitingStepAr).HasMaxLength(200);
+        builder.Property(i => i.WaitingStepEn).HasMaxLength(200);
+        builder.Property(i => i.Error).HasMaxLength(1000);
         builder.Property(i => i.RowVersion).IsRowVersion();
-        builder.HasOne<ApprovalRouteVersion>().WithMany().HasForeignKey(i => i.RouteVersionId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(i => new { i.TenantId, i.DocumentType, i.DocumentId });
-        builder.HasMany(i => i.Tasks).WithOne().HasForeignKey(t => t.InstanceId).OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(i => i.Tasks).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasOne<ApprovalProcessVersion>().WithMany().HasForeignKey(i => i.VersionId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(i => new { i.TenantId, i.Screen, i.RecordId }, "ix_approval_instance_record");
+        builder.HasIndex(i => new { i.TenantId, i.SubmittedBy, i.SubmittedAt });
+        // At most one running approval per record: a duplicate submission fails on this index.
+        builder.HasIndex(i => new { i.TenantId, i.Screen, i.RecordId }, "ux_approval_instance_running_record")
+            .IsUnique()
+            .HasFilter("[status] IN ('InProgress', 'Failed')");
     }
 }
 
-internal sealed class ApprovalTaskConfiguration : IEntityTypeConfiguration<ApprovalTask>
+internal sealed class ApprovalWorkItemConfiguration : IEntityTypeConfiguration<ApprovalWorkItem>
 {
-    public void Configure(EntityTypeBuilder<ApprovalTask> builder)
+    public void Configure(EntityTypeBuilder<ApprovalWorkItem> builder)
     {
-        builder.ToTable("approval_task");
-        builder.HasKey(t => t.Id);
-        builder.Property(t => t.Id).ValueGeneratedNever();
-        builder.Property(t => t.StageNameAr).HasMaxLength(200).IsRequired();
-        builder.Property(t => t.StageNameEn).HasMaxLength(200).IsRequired();
-        builder.Property(t => t.AssigneeName).HasMaxLength(200).IsRequired();
-        builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
-        builder.Property(t => t.Comment).HasMaxLength(1000);
-        builder.HasIndex(t => new { t.TenantId, t.AssigneeUserId, t.Status });
+        builder.ToTable("approval_work_item");
+        builder.HasKey(w => w.Id);
+        builder.Property(w => w.Id).ValueGeneratedNever();
+        builder.Property(w => w.StepId).HasMaxLength(40).IsRequired();
+        builder.Property(w => w.StepNameAr).HasMaxLength(200).IsRequired();
+        builder.Property(w => w.StepNameEn).HasMaxLength(200).IsRequired();
+        builder.Property(w => w.AssigneeName).HasMaxLength(200).IsRequired();
+        builder.Property(w => w.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(w => w.Comment).HasMaxLength(1000);
+        builder.Ignore(w => w.IsOpen);
+        builder.HasOne<ApprovalInstance>().WithMany().HasForeignKey(w => w.InstanceId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(w => new { w.TenantId, w.AssigneeUserId, w.Status });
+        builder.HasIndex(w => new { w.InstanceId, w.StepId, w.Round });
+    }
+}
+
+internal sealed class ApprovalHistoryConfiguration : IEntityTypeConfiguration<ApprovalHistoryEntry>
+{
+    public void Configure(EntityTypeBuilder<ApprovalHistoryEntry> builder)
+    {
+        builder.ToTable("approval_history");
+        builder.HasKey(h => h.Id);
+        builder.Property(h => h.Id).ValueGeneratedNever();
+        builder.Property(h => h.Kind).HasMaxLength(30).IsRequired();
+        builder.Property(h => h.StepId).HasMaxLength(40);
+        builder.Property(h => h.StepNameAr).HasMaxLength(200);
+        builder.Property(h => h.StepNameEn).HasMaxLength(200);
+        builder.Property(h => h.ActorName).HasMaxLength(200);
+        builder.Property(h => h.OnBehalfOf).HasMaxLength(200);
+        builder.Property(h => h.Outcome).HasMaxLength(30);
+        builder.Property(h => h.Comment).HasMaxLength(1000);
+        builder.Property(h => h.StatusBefore).HasMaxLength(20);
+        builder.Property(h => h.StatusAfter).HasMaxLength(20);
+        builder.HasOne<ApprovalInstance>().WithMany().HasForeignKey(h => h.InstanceId).OnDelete(DeleteBehavior.Cascade);
+        // Gap-free order within each approval.
+        builder.HasIndex(h => new { h.InstanceId, h.Sequence }).IsUnique();
     }
 }
 

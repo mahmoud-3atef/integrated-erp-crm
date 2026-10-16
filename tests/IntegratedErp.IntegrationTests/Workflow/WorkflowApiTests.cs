@@ -14,13 +14,15 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace IntegratedErp.IntegrationTests.Workflow;
 
 /// <summary>
-/// A document running on a route defined over the API (the slice 0.8 acceptance): an employee submits an internal
-/// request, a reviewer (by role) and the administrator (by name) approve it, and each sees only their own tasks.
+/// Approval processes over HTTP, end to end: designed and published through the API, then run by internal requests.
+/// Users: an administrator (designs processes), an employee (requests), a reviewer (role "reviewers"),
+/// and a manager (chosen by the employee as direct manager).
 /// </summary>
 [Collection(DatabaseTestGroup.Name)]
 public sealed class WorkflowApiTests : IAsyncLifetime
 {
     private const string Password = "Correct-Horse-1";
+    private const string Screen = "workflow.internal_request";
 
     private readonly TestDatabase _database;
     private readonly FakeDirectory _directory = new();
@@ -29,7 +31,16 @@ public sealed class WorkflowApiTests : IAsyncLifetime
     private readonly string _admin = $"adm{Guid.NewGuid():N}"[..14];
     private readonly string _employee = $"emp{Guid.NewGuid():N}"[..14];
     private readonly string _reviewer = $"rev{Guid.NewGuid():N}"[..14];
+    private readonly string _manager = $"mgr{Guid.NewGuid():N}"[..14];
     private WebApplicationFactory<Program>? _factory;
+
+    private HttpClient _adminClient = null!;
+    private HttpClient _employeeClient = null!;
+    private HttpClient _reviewerClient = null!;
+    private HttpClient _managerClient = null!;
+    private Guid _reviewersRole;
+    private Guid _managerId;
+    private Guid _reviewerId;
 
     public WorkflowApiTests(TestDatabase database) => _database = database;
 
@@ -45,7 +56,7 @@ public sealed class WorkflowApiTests : IAsyncLifetime
             await scope.ServiceProvider.GetRequiredService<OrganizationService>().CreateTenantAsync(_tenantCode, "شركة الاعتمادات", "Approvals Co", default);
         }
 
-        foreach (var name in new[] { _admin, _employee, _reviewer })
+        foreach (var name in new[] { _admin, _employee, _reviewer, _manager })
         {
             _directory.Add(name, Password, name);
         }
@@ -65,6 +76,22 @@ public sealed class WorkflowApiTests : IAsyncLifetime
                 services.AddSingleton<IDirectory>(_directory);
             });
         });
+
+        _adminClient = await SignInAsync(_admin);
+        var employeeMembership = await AddMemberAsync(_employee);
+        var reviewerMembership = await AddMemberAsync(_reviewer);
+        var managerMembership = await AddMemberAsync(_manager);
+        var requester = await CreateRoleAsync("requester", "workflow.requests.create");
+        _reviewersRole = await CreateRoleAsync("reviewers", "workflow.requests.view");
+        await SetRoleAsync(employeeMembership, requester);
+        await SetRoleAsync(reviewerMembership, _reviewersRole);
+        await SetRoleAsync(managerMembership, _reviewersRole);
+
+        _employeeClient = await SignInAsync(_employee);
+        _reviewerClient = await SignInAsync(_reviewer);
+        _managerClient = await SignInAsync(_manager);
+        _managerId = await MeAsync(_managerClient);
+        _reviewerId = await MeAsync(_reviewerClient);
     }
 
     public async Task DisposeAsync()
@@ -80,144 +107,250 @@ public sealed class WorkflowApiTests : IAsyncLifetime
         }
     }
 
+    /// <summary>Purchases over 10,000 go to the reviewers first; then the direct manager approves and must write notes.</summary>
+    private object PurchaseProcess(string managerStageName = "Manager approval") => new
+    {
+        startCondition = (object?)null,
+        steps = new object[]
+        {
+            new
+            {
+                type = "condition",
+                id = "big",
+                branches = new[]
+                {
+                    new
+                    {
+                        condition = new { matchAll = true, rules = new[] { new { fieldKey = "amount", @operator = "GreaterThan", value = "10000" } } },
+                        steps = new object[]
+                        {
+                            new { type = "update", id = "mark", changes = new[] { new { fieldKey = "status", value = "UnderReview" } } },
+                            new
+                            {
+                                type = "approval", id = "finance", nameAr = "مراجعة مالية", nameEn = "Finance review",
+                                assignees = new[] { new { kind = "Role", roleId = _reviewersRole } }, rule = "Any",
+                            },
+                        },
+                    },
+                },
+            },
+            new
+            {
+                type = "approval", id = "manager", nameAr = "اعتماد المدير المباشر", nameEn = managerStageName,
+                assignees = new[] { new { kind = "UserField", fieldKey = "direct_manager" } }, rule = "Any",
+                requiredFields = new[] { "approver_notes" }, dueHours = 48,
+            },
+        },
+    };
+
     [SkippableFact]
-    public async Task A_request_runs_through_a_route_defined_from_the_api()
+    public async Task A_small_request_goes_straight_to_the_direct_manager_who_must_write_notes()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
-        var (admin, adminId, employee, reviewer) = await SetUpAsync();
+        await PublishAsync(PurchaseProcess());
 
-        var created = await employee.PostAsJsonAsync("/api/v1/workflow/requests", new { subject = "شراء طابعة", details = "طابعة لقسم الموارد البشرية", amount = 1500.555m });
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var request = await Json(created);
-        var id = request.GetProperty("id").GetGuid();
-        Assert.Matches(@"^REQ-\d{4}-00001$", request.GetProperty("number").GetString());
-        Assert.Equal(1500.56m, request.GetProperty("amount").GetDecimal());
+        var id = await NewRequestAsync("شراء أحبار", 500m, _managerId);
+        Assert.Equal(HttpStatusCode.OK, (await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null)).StatusCode);
 
-        Assert.Equal(HttpStatusCode.OK, (await employee.PostAsJsonAsync($"/api/v1/workflow/requests/{id}/submit", new { })).StatusCode);
+        Assert.Empty(await InboxAsync(_reviewerClient));
+        var task = Assert.Single(await InboxAsync(_managerClient));
+        Assert.Equal("Manager approval", task.GetProperty("stepNameEn").GetString());
+        Assert.NotEqual(JsonValueKind.Null, task.GetProperty("dueAt").ValueKind);
 
-        // Stage 1 (role): only the reviewer has a task; the employee cannot edit while in approval.
-        Assert.Empty(await TasksAsync(admin));
-        var reviewTask = Assert.Single(await TasksAsync(reviewer));
-        Assert.Equal(HttpStatusCode.Conflict, (await employee.PutAsJsonAsync($"/api/v1/workflow/requests/{id}", new { subject = "x", details = "" })).StatusCode);
+        var missing = await DecideAsync(_managerClient, task, "Approve", null);
+        Assert.Equal("validation.approval_field_required", (await Json(missing)).GetProperty("title").GetString());
 
-        // Editing the route now does not affect this running approval (it keeps its version).
-        await PublishRouteAsync(admin, adminId, onlyAdmin: true);
+        var approved = await DecideAsync(_managerClient, task, "Approve", "موافق", new Dictionary<string, string?> { ["approver_notes"] = "يُشترى من المورد المعتمد" });
+        Assert.Equal(HttpStatusCode.NoContent, approved.StatusCode);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Decide(reviewer, reviewTask, "Approve", null)).StatusCode);
-        Assert.Empty(await TasksAsync(reviewer));
-        var managerTask = Assert.Single(await TasksAsync(admin));
-        Assert.Equal(2, managerTask.GetProperty("stageOrder").GetInt32());
-
-        Assert.Equal(HttpStatusCode.NoContent, (await Decide(admin, managerTask, "Approve", "موافق")).StatusCode);
-
-        var done = await Json(await employee.GetAsync($"/api/v1/workflow/requests/{id}"));
-        Assert.Equal("Approved", done.GetProperty("status").GetString());
-        var approval = done.GetProperty("approval");
-        Assert.Equal("Approved", approval.GetProperty("status").GetString());
-        Assert.Equal(["Approved", "Approved"], approval.GetProperty("steps").EnumerateArray().Select(s => s.GetProperty("status").GetString()));
-
-        // The reviewer took part, so may open it; a decided task cannot be decided again.
-        Assert.Equal(HttpStatusCode.OK, (await reviewer.GetAsync($"/api/v1/workflow/requests/{id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await Decide(admin, managerTask, "Approve", null)).StatusCode);
+        var request = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
+        Assert.Equal("Approved", request.GetProperty("status").GetString());
+        Assert.Equal("يُشترى من المورد المعتمد", request.GetProperty("approverNotes").GetString());
+        var kinds = request.GetProperty("approval").GetProperty("history").EnumerateArray().Select(h => h.GetProperty("kind").GetString()).ToList();
+        Assert.Equal(["Submitted", "ConditionEvaluated", "StageOpened", "RecordUpdated", "Approved", "Completed"], kinds);
+        Assert.Equal(
+            Enumerable.Range(1, kinds.Count),
+            request.GetProperty("approval").GetProperty("history").EnumerateArray().Select(h => h.GetProperty("sequence").GetInt32()));
     }
 
     [SkippableFact]
-    public async Task A_returned_request_can_be_corrected_and_submitted_again()
+    public async Task A_large_request_is_reviewed_first_and_its_status_is_updated_by_the_process()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
-        var (_, _, employee, reviewer) = await SetUpAsync();
-        var id = (await Json(await employee.PostAsJsonAsync("/api/v1/workflow/requests", new { subject = "سلفة", details = "" }))).GetProperty("id").GetGuid();
-        await employee.PostAsJsonAsync($"/api/v1/workflow/requests/{id}/submit", new { });
-        var task = Assert.Single(await TasksAsync(reviewer));
+        await PublishAsync(PurchaseProcess());
+        var id = await NewRequestAsync("شراء خادم", 25000m, _managerId);
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
 
-        Assert.Equal("validation.approval_comment_required", (await Json(await Decide(reviewer, task, "Return", ""))).GetProperty("title").GetString());
-        Assert.Equal(HttpStatusCode.NoContent, (await Decide(reviewer, task, "Return", "أضف المبلغ")).StatusCode);
+        var request = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
+        Assert.Equal("UnderReview", request.GetProperty("status").GetString());
 
-        var returned = await Json(await employee.GetAsync($"/api/v1/workflow/requests/{id}"));
+        // Role stage: both role holders get the task; the first decision closes it for the other.
+        var reviewerTask = Assert.Single(await InboxAsync(_reviewerClient));
+        var managerReviewTask = Assert.Single(await InboxAsync(_managerClient));
+        Assert.Equal("Finance review", managerReviewTask.GetProperty("stepNameEn").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_reviewerClient, reviewerTask, "Approve", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await DecideAsync(_managerClient, managerReviewTask, "Approve", null)).StatusCode);
+
+        // Next: the direct manager stage opens for the manager.
+        var managerTask = Assert.Single(await InboxAsync(_managerClient));
+        Assert.Equal("Manager approval", managerTask.GetProperty("stepNameEn").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_managerClient, managerTask, "Reject", "الميزانية لا تسمح")).StatusCode);
+        Assert.Equal("Rejected", (await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"))).GetProperty("status").GetString());
+    }
+
+    [SkippableFact]
+    public async Task Returned_requests_are_corrected_and_sent_again_on_the_new_version()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var process = await PublishAsync(PurchaseProcess());
+        var id = await NewRequestAsync("سلفة", 300m, _managerId);
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
+
+        // Publishing version 2 now does not change the running approval (still on version 1).
+        await SaveAndPublishAsync(process, PurchaseProcess("Manager approval v2"));
+        var task = Assert.Single(await InboxAsync(_managerClient));
+        Assert.Equal("Manager approval", task.GetProperty("stepNameEn").GetString());
+
+        Assert.Equal("validation.approval_comment_required", (await Json(await DecideAsync(_managerClient, task, "Return", " "))).GetProperty("title").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_managerClient, task, "Return", "أرفق عرض السعر")).StatusCode);
+
+        var returned = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
         Assert.Equal("Returned", returned.GetProperty("status").GetString());
-        Assert.Equal("أضف المبلغ", returned.GetProperty("lastComment").GetString());
+        Assert.True(returned.GetProperty("canEdit").GetBoolean());
 
-        Assert.Equal(HttpStatusCode.OK, (await employee.PutAsJsonAsync($"/api/v1/workflow/requests/{id}", new { subject = "سلفة", details = "", amount = 3000 })).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await employee.PostAsJsonAsync($"/api/v1/workflow/requests/{id}/submit", new { })).StatusCode);
-        Assert.Single(await TasksAsync(reviewer));
+        Assert.Equal(HttpStatusCode.OK, (await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null)).StatusCode);
+        var again = Assert.Single(await InboxAsync(_managerClient));
+        Assert.Equal("Manager approval v2", again.GetProperty("stepNameEn").GetString());
     }
 
     [SkippableFact]
-    public async Task Without_a_route_or_an_approver_a_request_cannot_be_submitted()
+    public async Task All_rule_waits_for_everyone_and_a_task_can_be_delegated()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
-        var admin = await SignInAsync(_admin);
-        await admin.PostAsJsonAsync("/api/v1/access/members", new { userName = _employee });
-        var employee = await SignInAsync(_employee);
-        var myId = (await Json(await admin.GetAsync("/api/v1/auth/me"))).GetProperty("userId").GetGuid();
+        var adminId = await MeAsync(_adminClient);
+        await PublishAsync(new
+        {
+            steps = new object[]
+            {
+                new
+                {
+                    type = "approval", id = "committee", nameAr = "اللجنة", nameEn = "Committee",
+                    assignees = new object[] { new { kind = "User", userId = _reviewerId }, new { kind = "User", userId = _managerId } },
+                    rule = "All",
+                },
+            },
+        });
+        var id = await NewRequestAsync("شراء أثاث", 900m, null);
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
 
-        // Bootstrap admin may create requests too; with no route there is nothing to submit to.
-        var id = (await Json(await admin.PostAsJsonAsync("/api/v1/workflow/requests", new { subject = "بلا مسار", details = "" }))).GetProperty("id").GetGuid();
-        Assert.Equal("validation.approval_no_route", (await Json(await admin.PostAsJsonAsync($"/api/v1/workflow/requests/{id}/submit", new { }))).GetProperty("title").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_reviewerClient, Assert.Single(await InboxAsync(_reviewerClient)), "Approve", null)).StatusCode);
+        Assert.Equal("InApproval", (await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"))).GetProperty("status").GetString());
 
-        // The only approver is the submitter: refused before starting (nobody approves their own request).
-        await PublishRouteAsync(admin, myId, onlyAdmin: true);
-        Assert.Equal("validation.approval_stage_unassigned", (await Json(await admin.PostAsJsonAsync($"/api/v1/workflow/requests/{id}/submit", new { }))).GetProperty("title").GetString());
+        // The manager hands the task to the administrator, who approves on the manager's behalf.
+        var managerTask = Assert.Single(await InboxAsync(_managerClient));
+        var delegated = await _managerClient.PostAsJsonAsync($"/api/v1/workflow/work-items/{managerTask.GetProperty("id").GetGuid()}/delegate", new { userId = adminId, comment = "إجازة" });
+        Assert.Equal(HttpStatusCode.NoContent, delegated.StatusCode);
+        Assert.Empty(await InboxAsync(_managerClient));
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_adminClient, Assert.Single(await InboxAsync(_adminClient)), "Approve", null)).StatusCode);
 
-        // A member without the create permission cannot create requests, and cannot see the routes.
-        Assert.Equal(HttpStatusCode.Forbidden, (await employee.PostAsJsonAsync("/api/v1/workflow/requests", new { subject = "x", details = "" })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await employee.GetAsync("/api/v1/workflow/routes")).StatusCode);
+        var request = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
+        Assert.Equal("Approved", request.GetProperty("status").GetString());
+        var onBehalf = request.GetProperty("approval").GetProperty("history").EnumerateArray().Last(h => h.GetProperty("kind").GetString() == "Approved");
+        Assert.Equal(_manager, onBehalf.GetProperty("onBehalfOf").GetString());
     }
 
-    /// <summary>Route: reviewers (role) then the administrator (named user). Employee may create requests.</summary>
-    private async Task<(HttpClient Admin, Guid AdminId, HttpClient Employee, HttpClient Reviewer)> SetUpAsync()
+    [SkippableFact]
+    public async Task Without_a_matching_process_or_approver_nothing_starts_and_requests_can_be_withdrawn()
     {
-        var admin = await SignInAsync(_admin);
-        var adminId = (await Json(await admin.GetAsync("/api/v1/auth/me"))).GetProperty("userId").GetGuid();
-        var employeeMembership = await AddMemberAsync(admin, _employee);
-        var reviewerMembership = await AddMemberAsync(admin, _reviewer);
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var id = await NewRequestAsync("بلا عملية", 100m, _managerId);
+        Assert.Equal("validation.approval_no_process", (await Json(await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null))).GetProperty("title").GetString());
 
-        var requester = await CreateRoleAsync(admin, "requester", "workflow.requests.create");
-        var reviewers = await CreateRoleAsync(admin, "reviewers", "workflow.routes.view");
-        await SetRolesAsync(admin, employeeMembership, requester);
-        await SetRolesAsync(admin, reviewerMembership, reviewers);
-        _reviewersRole = reviewers;
+        // Nobody can be their own direct manager.
+        var self = await _employeeClient.PostAsJsonAsync("/api/v1/workflow/requests", new { subject = "x", details = "", directManagerId = await MeAsync(_employeeClient) });
+        Assert.Equal("validation.request_manager_self", (await Json(self)).GetProperty("title").GetString());
 
-        await PublishRouteAsync(admin, adminId, onlyAdmin: false);
-        return (admin, adminId, await SignInAsync(_employee), await SignInAsync(_reviewer));
+        // Withdraw: the submitter cancels with a reason; the request can be edited again.
+        await PublishAsync(PurchaseProcess());
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
+        var instance = (await Json(await _employeeClient.GetAsync("/api/v1/workflow/my-requests"))).EnumerateArray().First().GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.Forbidden, (await _reviewerClient.PostAsJsonAsync($"/api/v1/workflow/instances/{instance}/cancel", new { reason = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await _employeeClient.PostAsJsonAsync($"/api/v1/workflow/instances/{instance}/cancel", new { reason = "لم أعد أحتاجه" })).StatusCode);
+        Assert.Empty(await InboxAsync(_managerClient));
+        Assert.Equal("Canceled", (await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"))).GetProperty("status").GetString());
+
+        // Only process designers may publish.
+        Assert.Equal(HttpStatusCode.Forbidden, (await _employeeClient.GetAsync("/api/v1/workflow/processes")).StatusCode);
     }
 
-    private Guid _reviewersRole;
-
-    private async Task PublishRouteAsync(HttpClient admin, Guid adminId, bool onlyAdmin)
+    [SkippableFact]
+    public async Task Invalid_processes_cannot_be_published()
     {
-        object[] stages = onlyAdmin
-            ? [new { nameAr = "اعتماد المدير", nameEn = "Manager approval", kind = "User", userId = adminId }]
-            : [
-                new { nameAr = "المراجعة", nameEn = "Review", kind = "Role", roleId = _reviewersRole },
-                new { nameAr = "اعتماد المدير", nameEn = "Manager approval", kind = "User", userId = adminId },
-            ];
-        var response = await admin.PutAsJsonAsync("/api/v1/workflow/routes/workflow.internal_request", new { stages, isActive = true });
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var created = await _adminClient.PostAsJsonAsync("/api/v1/workflow/processes", new { screen = Screen, nameAr = "عملية", nameEn = "Process", priority = 0 });
+        var id = (await Json(created)).GetProperty("process").GetProperty("id").GetGuid();
+        await _adminClient.PutAsJsonAsync($"/api/v1/workflow/processes/{id}/draft", new
+        {
+            nameAr = "عملية",
+            nameEn = "Process",
+            priority = 0,
+            definition = new { steps = new object[] { new { type = "update", id = "u", changes = new[] { new { fieldKey = "amount", value = "1" } } } } },
+        });
+
+        var invalid = await _adminClient.PostAsync($"/api/v1/workflow/processes/{id}/publish", null);
+        Assert.Equal("validation.process_invalid", (await Json(invalid)).GetProperty("title").GetString());
     }
+
+    // ---------------------------------------------------------------- helpers
+
+    private async Task<Guid> PublishAsync(object definition)
+    {
+        var created = await _adminClient.PostAsJsonAsync("/api/v1/workflow/processes", new { screen = Screen, nameAr = "عملية الشراء", nameEn = "Purchase process", priority = 10 });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var id = (await Json(created)).GetProperty("process").GetProperty("id").GetGuid();
+        await SaveAndPublishAsync(id, definition);
+        return id;
+    }
+
+    private async Task SaveAndPublishAsync(Guid id, object definition)
+    {
+        var saved = await _adminClient.PutAsJsonAsync($"/api/v1/workflow/processes/{id}/draft", new { nameAr = "عملية الشراء", nameEn = "Purchase process", priority = 10, definition });
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var published = await _adminClient.PostAsync($"/api/v1/workflow/processes/{id}/publish", null);
+        Assert.True(published.StatusCode == HttpStatusCode.OK, await published.Content.ReadAsStringAsync());
+    }
+
+    private async Task<Guid> NewRequestAsync(string subject, decimal amount, Guid? manager)
+    {
+        var created = await _employeeClient.PostAsJsonAsync("/api/v1/workflow/requests", new { subject, details = "", amount, category = "PURCHASE", directManagerId = manager });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        return (await Json(created)).GetProperty("id").GetGuid();
+    }
+
+    private static async Task<List<JsonElement>> InboxAsync(HttpClient client) =>
+        (await Json(await client.GetAsync("/api/v1/workflow/inbox"))).EnumerateArray().ToList();
+
+    private static Task<HttpResponseMessage> DecideAsync(HttpClient client, JsonElement task, string decision, string? comment, Dictionary<string, string?>? fields = null) =>
+        client.PostAsJsonAsync($"/api/v1/workflow/work-items/{task.GetProperty("id").GetGuid()}/decision", new { decision, comment, fields });
 
     private static async Task<JsonElement> Json(HttpResponseMessage response) =>
         JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
 
-    private static async Task<List<JsonElement>> TasksAsync(HttpClient client) =>
-        (await Json(await client.GetAsync("/api/v1/workflow/tasks"))).EnumerateArray().ToList();
+    private static async Task<Guid> MeAsync(HttpClient client) => (await Json(await client.GetAsync("/api/v1/auth/me"))).GetProperty("userId").GetGuid();
 
-    private static Task<HttpResponseMessage> Decide(HttpClient client, JsonElement task, string decision, string? comment) =>
-        client.PostAsJsonAsync($"/api/v1/workflow/tasks/{task.GetProperty("id").GetGuid()}/decision", new { decision, comment });
+    private async Task<Guid> AddMemberAsync(string userName) =>
+        (await Json(await _adminClient.PostAsJsonAsync("/api/v1/access/members", new { userName }))).GetProperty("membershipId").GetGuid();
 
-    private static async Task<Guid> AddMemberAsync(HttpClient admin, string userName) =>
-        (await Json(await admin.PostAsJsonAsync("/api/v1/access/members", new { userName }))).GetProperty("membershipId").GetGuid();
-
-    private static async Task<Guid> CreateRoleAsync(HttpClient admin, string code, params string[] permissions)
+    private async Task<Guid> CreateRoleAsync(string code, params string[] permissions)
     {
-        var response = await admin.PostAsJsonAsync("/api/v1/access/roles", new { code, nameAr = "دور " + code, nameEn = "Role " + code, permissions });
+        var response = await _adminClient.PostAsJsonAsync("/api/v1/access/roles", new { code, nameAr = "دور " + code, nameEn = "Role " + code, permissions });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await Json(response)).GetProperty("id").GetGuid();
     }
 
-    private static async Task SetRolesAsync(HttpClient admin, Guid membershipId, Guid roleId)
+    private async Task SetRoleAsync(Guid membershipId, Guid roleId)
     {
-        var response = await admin.PutAsJsonAsync($"/api/v1/access/members/{membershipId}/roles", new { roles = new[] { new { roleId, legalEntityId = (Guid?)null } } });
+        var response = await _adminClient.PutAsJsonAsync($"/api/v1/access/members/{membershipId}/roles", new { roles = new[] { new { roleId, legalEntityId = (Guid?)null } } });
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 

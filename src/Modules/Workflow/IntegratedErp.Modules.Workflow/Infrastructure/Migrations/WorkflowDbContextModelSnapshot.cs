@@ -168,6 +168,100 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                     b.ToTable("outbox_message", "workflow");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalHistoryEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("actor_name");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("at");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("comment");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("details");
+
+                    b.Property<Guid>("InstanceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("instance_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("OnBehalfOf")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("on_behalf_of");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("outcome");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int")
+                        .HasColumnName("sequence");
+
+                    b.Property<string>("StatusAfter")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status_after");
+
+                    b.Property<string>("StatusBefore")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status_before");
+
+                    b.Property<string>("StepId")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("step_id");
+
+                    b.Property<string>("StepNameAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("step_name_ar");
+
+                    b.Property<string>("StepNameEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("step_name_en");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_approval_history");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_approval_history_tenant_id");
+
+                    b.HasIndex("InstanceId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("ix_approval_history_instance_id_sequence");
+
+                    b.ToTable("approval_history", "workflow");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalInstance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -178,33 +272,44 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("completed_at");
 
-                    b.Property<int>("CurrentStage")
+                    b.Property<string>("Cursor")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("cursor");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("error");
+
+                    b.Property<int>("HistoryCount")
                         .HasColumnType("int")
-                        .HasColumnName("current_stage");
-
-                    b.Property<Guid>("DocumentId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("document_id");
-
-                    b.Property<string>("DocumentType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("document_type");
-
-                    b.Property<string>("DynamicApprovers")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)")
-                        .HasColumnName("dynamic_approvers");
+                        .HasColumnName("history_count");
 
                     b.Property<Guid?>("LegalEntityId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("legal_entity_id");
 
-                    b.Property<Guid>("RouteVersionId")
+                    b.Property<Guid>("ProcessId")
                         .HasColumnType("uniqueidentifier")
-                        .HasColumnName("route_version_id");
+                        .HasColumnName("process_id");
+
+                    b.Property<string>("ProcessNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("process_name_ar");
+
+                    b.Property<string>("ProcessNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("process_name_en");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("record_id");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -213,9 +318,16 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("rowversion")
                         .HasColumnName("row_version");
 
-                    b.Property<int>("StageCount")
-                        .HasColumnType("int")
-                        .HasColumnName("stage_count");
+                    b.Property<string>("Screen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("screen");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("snapshot");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -247,22 +359,53 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("nvarchar(300)")
                         .HasColumnName("title");
 
+                    b.Property<int>("Version")
+                        .HasColumnType("int")
+                        .HasColumnName("version");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("version_id");
+
+                    b.Property<string>("WaitingStepAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("waiting_step_ar");
+
+                    b.Property<string>("WaitingStepEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("waiting_step_en");
+
+                    b.Property<string>("WaitingStepId")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("waiting_step_id");
+
                     b.HasKey("Id")
                         .HasName("pk_approval_instance");
-
-                    b.HasIndex("RouteVersionId")
-                        .HasDatabaseName("ix_approval_instance_route_version_id");
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_approval_instance_tenant_id");
 
-                    b.HasIndex("TenantId", "DocumentType", "DocumentId")
-                        .HasDatabaseName("ix_approval_instance_tenant_id_document_type_document_id");
+                    b.HasIndex("VersionId")
+                        .HasDatabaseName("ix_approval_instance_version_id");
+
+                    b.HasIndex("TenantId", "SubmittedBy", "SubmittedAt")
+                        .HasDatabaseName("ix_approval_instance_tenant_id_submitted_by_submitted_at");
+
+                    b.HasIndex(new[] { "TenantId", "Screen", "RecordId" }, "ix_approval_instance_record")
+                        .HasDatabaseName("ix_approval_instance_tenant_id_screen_record_id");
+
+                    b.HasIndex(new[] { "TenantId", "Screen", "RecordId" }, "ux_approval_instance_running_record")
+                        .IsUnique()
+                        .HasDatabaseName("ix_approval_instance_tenant_id_screen_record_id1")
+                        .HasFilter("[status] IN ('InProgress', 'Failed')");
 
                     b.ToTable("approval_instance", "workflow");
                 });
 
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalRoute", b =>
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalProcess", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier")
@@ -272,90 +415,18 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("current_version");
 
-                    b.Property<string>("DocumentType")
+                    b.Property<string>("Draft")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("document_type");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("draft");
+
+                    b.Property<bool>("DraftChanged")
+                        .HasColumnType("bit")
+                        .HasColumnName("draft_changed");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
                         .HasColumnName("is_active");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("tenant_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_approval_route");
-
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("ix_approval_route_tenant_id");
-
-                    b.HasIndex("TenantId", "DocumentType")
-                        .IsUnique()
-                        .HasDatabaseName("ix_approval_route_tenant_id_document_type");
-
-                    b.ToTable("approval_route", "workflow");
-                });
-
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalRouteVersion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("PublishedAt")
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("published_at");
-
-                    b.Property<string>("PublishedBy")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("published_by");
-
-                    b.Property<Guid>("RouteId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("route_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("int")
-                        .HasColumnName("version");
-
-                    b.HasKey("Id")
-                        .HasName("pk_approval_route_version");
-
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("ix_approval_route_version_tenant_id");
-
-                    b.HasIndex("RouteId", "Version")
-                        .IsUnique()
-                        .HasDatabaseName("ix_approval_route_version_route_id_version");
-
-                    b.ToTable("approval_route_version", "workflow");
-                });
-
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalStage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("id");
-
-                    b.Property<string>("DynamicKey")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("dynamic_key");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("kind");
 
                     b.Property<string>("NameAr")
                         .IsRequired()
@@ -369,40 +440,79 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("name_en");
 
-                    b.Property<int>("Order")
+                    b.Property<int>("Priority")
                         .HasColumnType("int")
-                        .HasColumnName("order");
+                        .HasColumnName("priority");
 
-                    b.Property<Guid?>("RoleId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("role_id");
+                    b.Property<string>("Screen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("screen");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("tenant_id");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("user_id");
-
-                    b.Property<Guid>("VersionId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("version_id");
-
                     b.HasKey("Id")
-                        .HasName("pk_approval_stage");
+                        .HasName("pk_approval_process");
 
                     b.HasIndex("TenantId")
-                        .HasDatabaseName("ix_approval_stage_tenant_id");
+                        .HasDatabaseName("ix_approval_process_tenant_id");
 
-                    b.HasIndex("VersionId", "Order")
-                        .IsUnique()
-                        .HasDatabaseName("ix_approval_stage_version_id_order");
+                    b.HasIndex("TenantId", "Screen", "Priority")
+                        .HasDatabaseName("ix_approval_process_tenant_id_screen_priority");
 
-                    b.ToTable("approval_stage", "workflow");
+                    b.ToTable("approval_process", "workflow");
                 });
 
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalTask", b =>
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalProcessVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Definition")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("definition");
+
+                    b.Property<Guid>("ProcessId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("process_id");
+
+                    b.Property<DateTimeOffset>("PublishedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("PublishedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("published_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_approval_process_version");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_approval_process_version_tenant_id");
+
+                    b.HasIndex("ProcessId", "Version")
+                        .IsUnique()
+                        .HasDatabaseName("ix_approval_process_version_process_id_version");
+
+                    b.ToTable("approval_process_version", "workflow");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalWorkItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier")
@@ -423,33 +533,29 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("nvarchar(1000)")
                         .HasColumnName("comment");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
                     b.Property<DateTimeOffset?>("DecidedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DelegatedFrom")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("delegated_from");
+
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("due_at");
 
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("instance_id");
 
-                    b.Property<bool>("IsEscalated")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_escalated");
-
-                    b.Property<string>("StageNameAr")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("stage_name_ar");
-
-                    b.Property<string>("StageNameEn")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("stage_name_en");
-
-                    b.Property<int>("StageOrder")
+                    b.Property<int>("Round")
                         .HasColumnType("int")
-                        .HasColumnName("stage_order");
+                        .HasColumnName("round");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -457,23 +563,41 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("status");
 
+                    b.Property<string>("StepId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("step_id");
+
+                    b.Property<string>("StepNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("step_name_ar");
+
+                    b.Property<string>("StepNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("step_name_en");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("tenant_id");
 
                     b.HasKey("Id")
-                        .HasName("pk_approval_task");
-
-                    b.HasIndex("InstanceId")
-                        .HasDatabaseName("ix_approval_task_instance_id");
+                        .HasName("pk_approval_work_item");
 
                     b.HasIndex("TenantId")
-                        .HasDatabaseName("ix_approval_task_tenant_id");
+                        .HasDatabaseName("ix_approval_work_item_tenant_id");
+
+                    b.HasIndex("InstanceId", "StepId", "Round")
+                        .HasDatabaseName("ix_approval_work_item_instance_id_step_id_round");
 
                     b.HasIndex("TenantId", "AssigneeUserId", "Status")
-                        .HasDatabaseName("ix_approval_task_tenant_id_assignee_user_id_status");
+                        .HasDatabaseName("ix_approval_work_item_tenant_id_assignee_user_id_status");
 
-                    b.ToTable("approval_task", "workflow");
+                    b.ToTable("approval_work_item", "workflow");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.InternalRequest", b =>
@@ -486,6 +610,15 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("amount");
+
+                    b.Property<string>("ApproverNotes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("approver_notes");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("category");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset")
@@ -506,6 +639,10 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)")
                         .HasColumnName("details");
+
+                    b.Property<Guid?>("DirectManagerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("direct_manager_id");
 
                     b.Property<string>("LastComment")
                         .HasMaxLength(1000)
@@ -554,59 +691,49 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                     b.ToTable("internal_request", "workflow");
                 });
 
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalInstance", b =>
-                {
-                    b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalRouteVersion", null)
-                        .WithMany()
-                        .HasForeignKey("RouteVersionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_approval_instance_route_versions_route_version_id");
-                });
-
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalRouteVersion", b =>
-                {
-                    b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalRoute", null)
-                        .WithMany("Versions")
-                        .HasForeignKey("RouteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_approval_route_version_approval_route_route_id");
-                });
-
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalStage", b =>
-                {
-                    b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalRouteVersion", null)
-                        .WithMany("Stages")
-                        .HasForeignKey("VersionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_approval_stage_approval_route_version_version_id");
-                });
-
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalTask", b =>
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalHistoryEntry", b =>
                 {
                     b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalInstance", null)
-                        .WithMany("Tasks")
+                        .WithMany()
                         .HasForeignKey("InstanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_approval_task_approval_instance_instance_id");
+                        .HasConstraintName("fk_approval_history_instances_instance_id");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalInstance", b =>
                 {
-                    b.Navigation("Tasks");
+                    b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalProcessVersion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_approval_instance_process_versions_version_id");
                 });
 
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalRoute", b =>
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalProcessVersion", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalProcess", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("ProcessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_approval_process_version_approval_process_process_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalWorkItem", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Workflow.Domain.ApprovalInstance", null)
+                        .WithMany()
+                        .HasForeignKey("InstanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_approval_work_item_approval_instance_instance_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalProcess", b =>
                 {
                     b.Navigation("Versions");
-                });
-
-            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalRouteVersion", b =>
-                {
-                    b.Navigation("Stages");
                 });
 #pragma warning restore 612, 618
         }
