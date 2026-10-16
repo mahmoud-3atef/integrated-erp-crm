@@ -22,3 +22,41 @@
 4. الرواتب والمالية (+ مُدد / WPS)
 5. المبيعات (CRM)
 6. إيقاف الـ CRM
+
+## التشغيل للتطوير
+
+المتطلبات: .NET 10 SDK (المحدد في `global.json`)، و Node 24 (للواجهة لاحقًا).
+
+```bash
+dotnet build IntegratedErp.slnx
+```
+
+```bash
+dotnet test IntegratedErp.slnx
+```
+
+```bash
+dotnet run --project src/Hosts/IntegratedErp.Api --urls http://localhost:5080
+```
+
+نقاط مفيدة: `/health`، `/api/v1/system/modules` (الموديولات وحالة تفعيلها)، `/openapi/v1.json` (في بيئة التطوير).
+
+### هيكل الكود
+```text
+src/
+  SharedKernel/      أنواع مشتركة صغيرة بدون أي اعتماد (Result, Error, ...)
+  BuildingBlocks/    البنية المشتركة (تسجيل الموديولات، التدقيق، الترقيم، ...)
+  Modules/<Name>/
+    IntegratedErp.Modules.<Name>             التنفيذ: Domain / Application / Infrastructure / Api
+    IntegratedErp.Modules.<Name>.Contracts   الواجهة العامة — الشيء الوحيد اللي موديول تاني يقدر يستخدمه
+  Hosts/IntegratedErp.Api                    الـ API (بيسجل كل الموديولات)
+tests/
+  IntegratedErp.UnitTests                    قواعد العمل
+  IntegratedErp.ArchitectureTests            حدود الموديولات (بتفشل لو موديول استخدم تنفيذ موديول تاني)
+```
+
+### تفعيل/تعطيل موديول
+في الإعدادات: `"Modules": { "<Name>": { "Enabled": false } }` — الموديول المقفول مابيتسجلش ولا بتظهر نقاطه.
+
+### ملاحظة للأجهزة غير المحدّثة (CET)
+لو البناء أو التشغيل فشل برسالة `Your Windows doesn't fully support CET`، اعمل ملف `Directory.Build.local.props` في جذر المشروع (مش بيترفع على Git) فيه تشغيل المترجم عن طريق `dotnet` و `<CETCompat>false</CETCompat>` — أو ثبّت تحديثات Windows.
