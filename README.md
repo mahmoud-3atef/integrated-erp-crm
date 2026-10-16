@@ -69,6 +69,23 @@ tests/
   IntegratedErp.ArchitectureTests            حدود الموديولات (بتفشل لو موديول استخدم تنفيذ موديول تاني)
 ```
 
+### الأسرار (باسورد الـ LDAP وغيره)
+مش بتتكتب في `appsettings` ولا بتترفع على Git. بتتحفظ مشفرة بـ Windows DPAPI في `%LOCALAPPDATA%\IntegratedErp\secrets.dat` (لازم نفس مستخدم Windows اللي بيشغّل النظام):
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools/Set-ErpSecret.ps1 -Name Identity:Ldap:BindUser
+```
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools/Set-ErpSecret.ps1 -Name Identity:Ldap:BindPassword -Secret
+```
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools/Set-ErpSecret.ps1 -List
+```
+
+على السيرفر (النظام شغال كخدمة): `-Scope LocalMachine` أو `ERP_SECRETS_FILE` لمسار محدد.
+
 ### تفعيل/تعطيل موديول
 في الإعدادات: `"Modules": { "<Name>": { "Enabled": false } }` — الموديول المقفول مابيتسجلش ولا بتظهر نقاطه.
 

@@ -1,11 +1,15 @@
 using IntegratedErp.Api;
 using IntegratedErp.BuildingBlocks;
+using IntegratedErp.BuildingBlocks.Configuration;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Web;
 using IntegratedErp.Modules.Organization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Secrets (LDAP bind password, ...) from the DPAPI-encrypted file written by tools/Set-ErpSecret.ps1.
+builder.Configuration.AddProtectedSecretsFile();
 
 builder.Services.AddPlatformCore();
 builder.Services.AddWebDefaults();

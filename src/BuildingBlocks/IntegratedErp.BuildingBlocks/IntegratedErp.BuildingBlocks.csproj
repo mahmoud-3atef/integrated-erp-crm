@@ -5,8 +5,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\SharedKernel\IntegratedErp.SharedKernel\IntegratedErp.SharedKernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="IntegratedErp.UnitTests" />
   </ItemGroup>
 </Project>
