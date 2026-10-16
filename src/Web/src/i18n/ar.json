@@ -154,7 +154,7 @@
     "validation_approval_document_unknown": "نوع مستند غير معروف.",
     "validation_approval_no_route": "لا يوجد مسار اعتماد مفعّل لهذا النوع من المستندات.",
     "conflict_approval_in_progress": "المستند قيد الاعتماد بالفعل.",
-    "conflict_approval_changed": "سبقك شخص آخر إلى القرار. حدّث الصفحة وحاول مرة أخرى.",
+    "conflict_approval_changed": "سبقك شخص آخر إلى الإجراء. حدّث الصفحة وحاول مرة أخرى.",
     "validation_approval_stage_unassigned": "إحدى المراحل لا يوجد لها معتمد غير مُرسِل المستند. راجع المسار أو حدد المدير المباشر.",
     "not_found_approval_task": "المهمة غير موجودة.",
     "conflict_approval_task_closed": "لم تعد هذه المهمة مفتوحة.",
@@ -168,7 +168,27 @@
     "conflict_request_locked": "لا يمكن تعديل الطلب أثناء الاعتماد أو بعد القرار.",
     "validation_request_subject_required": "الموضوع مطلوب، بحد أقصى 200 حرف.",
     "validation_request_details_too_long": "التفاصيل يجب ألا تتجاوز 4000 حرف.",
-    "validation_request_amount_invalid": "المبلغ غير صحيح."
+    "validation_request_amount_invalid": "المبلغ غير صحيح.",
+    "validation_approval_screen_unknown": "شاشة غير معروفة.",
+    "not_found_approval_record": "السجل غير موجود.",
+    "validation_approval_no_process": "لا توجد عملية اعتماد مفعّلة تنطبق على هذا السجل.",
+    "forbidden_approval": "لا يمكنك تنفيذ هذا الإجراء على هذا الاعتماد.",
+    "validation_approval_return_not_allowed": "هذه المرحلة لا تسمح بالإرجاع.",
+    "validation_approval_field_required": "يجب تعبئة الحقول المطلوبة قبل الاعتماد.",
+    "validation_approval_field_invalid": "قيمة أحد الحقول غير صحيحة.",
+    "validation_approval_delegate_invalid": "لا يمكن تفويض المهمة إلى هذا الشخص.",
+    "not_found_approval_instance": "الاعتماد غير موجود.",
+    "conflict_approval_finished": "انتهى هذا الاعتماد بالفعل.",
+    "conflict_approval_not_failed": "لا تُعاد المحاولة إلا لاعتماد متوقف بخطأ.",
+    "not_found_approval_process": "العملية غير موجودة.",
+    "validation_process_invalid": "العملية غير مكتملة: تأكد من وجود مرحلة اعتماد، ومن تعبئة الأسماء والمعتمدين والشروط وقيم الحقول.",
+    "validation_process_name_required": "اسم العملية بالعربية والإنجليزية مطلوب.",
+    "validation_process_priority_invalid": "الأولوية من 0 إلى 1000.",
+    "validation_process_not_published": "انشر العملية أولًا قبل تفعيلها.",
+    "validation_process_approver_unknown": "أحد المستخدمين أو الأدوار في العملية لا ينتمي إلى هذه الشركة.",
+    "validation_request_category_invalid": "نوع الطلب غير معروف.",
+    "validation_request_manager_self": "لا يمكن أن تكون مديرًا مباشرًا لنفسك.",
+    "validation_request_manager_unknown": "المدير المباشر ليس عضوًا في هذه الشركة."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -183,9 +203,12 @@
     "referenceLists": "القوائم المرجعية",
     "modules": "وحدات النظام",
     "approvals": "الاعتمادات",
-    "tasks": "مهامي",
+    "tasks": "صندوق المهام",
     "requests": "الطلبات الداخلية",
-    "routes": "مسارات الاعتماد"
+    "routes": "مسارات الاعتماد",
+    "myApprovals": "طلباتي للاعتماد",
+    "monitor": "متابعة الاعتمادات",
+    "processes": "عمليات الاعتماد"
   },
   "roles": {
     "title": "الأدوار والصلاحيات",
@@ -286,7 +309,7 @@
     },
     "Workflow": {
       "name": "الاعتمادات",
-      "description": "مسارات الاعتماد القابلة للتعديل، ومهامي، والطلبات الداخلية."
+      "description": "عمليات اعتماد قابلة للتصميم (مراحل وشروط وتحديثات وإشعارات)، وصندوق المهام، والطلبات الداخلية."
     }
   },
   "attachments": {
@@ -332,14 +355,66 @@
       "Returned": "مُعاد للتعديل"
     },
     "confirm": {
-      "Approve": "اعتماد المستند",
-      "Reject": "رفض المستند",
-      "Return": "إرجاع المستند للتعديل"
+      "Approve": "اعتماد",
+      "Reject": "رفض",
+      "Return": "إرجاع للتعديل",
+      "Delegate": "تفويض المهمة",
+      "Cancel": "إلغاء الاعتماد"
+    },
+    "by": "بواسطة {{name}}",
+    "byOnBehalf": "بواسطة {{name}} نيابة عن {{original}}",
+    "history": "سجل الاعتماد",
+    "details": "التفاصيل",
+    "openRecord": "فتح السجل",
+    "yourDecision": "قرارك",
+    "actions": "الإجراءات",
+    "recordData": "بيانات السجل",
+    "delegate": "تفويض",
+    "delegateTo": "تفويض إلى",
+    "cancel": "إلغاء الاعتماد",
+    "retry": "إعادة المحاولة",
+    "failedBecause": "توقفت العملية: {{error}}",
+    "requiredFieldHint": "مطلوب قبل الاعتماد، ويُحفظ في السجل.",
+    "instance": {
+      "InProgress": "قيد الاعتماد",
+      "Approved": "معتمد",
+      "Rejected": "مرفوض",
+      "Returned": "مُعاد للتعديل",
+      "Canceled": "ملغى",
+      "Failed": "متوقف بخطأ"
+    },
+    "event": {
+      "Submitted": "أُرسل للاعتماد",
+      "StageOpened": "بدأت المرحلة",
+      "Approved": "اعتماد",
+      "Rejected": "رفض",
+      "Returned": "إرجاع للتعديل",
+      "Delegated": "تفويض",
+      "ConditionEvaluated": "تقييم شرط",
+      "RecordUpdated": "تحديث السجل",
+      "Notified": "إرسال إشعار",
+      "Completed": "انتهت العملية",
+      "Canceled": "أُلغي الاعتماد",
+      "Failed": "توقف بخطأ",
+      "Retried": "إعادة المحاولة"
+    },
+    "decided": {
+      "Approved": "اعتمدتُ",
+      "Rejected": "رفضتُ",
+      "Returned": "أرجعتُ",
+      "Delegated": "فوّضتُ"
+    },
+    "do": {
+      "Approve": "اعتماد",
+      "Reject": "رفض",
+      "Return": "إرجاع",
+      "Delegate": "تفويض",
+      "Cancel": "إلغاء الاعتماد"
     }
   },
   "tasks": {
-    "title": "مهامي",
-    "intro": "المستندات التي تنتظر قرارك، والمستندات التي قررت فيها.",
+    "title": "صندوق المهام",
+    "intro": "المهام التي تنتظر قرارك، وما قررت فيه سابقًا.",
     "pending": "بانتظار قراري",
     "done": "ما قررتُ فيه",
     "document": "المستند",
@@ -352,7 +427,10 @@
     "escalated": "مُصعَّد",
     "emptyPending": "لا توجد مستندات بانتظار قرارك.",
     "emptyDone": "لم تتخذ أي قرار بعد.",
-    "waiting": "{{count}} مهمة بانتظارك"
+    "waiting": "{{count}} مهمة بانتظارك",
+    "due": "المهلة",
+    "overdue": "متأخرة",
+    "delegatedToMe": "مفوَّضة إليّ"
   },
   "requests": {
     "title": "الطلبات الداخلية",
@@ -372,7 +450,7 @@
     "saved": "تم الحفظ.",
     "sendTitle": "الإرسال للاعتماد",
     "directManager": "المدير المباشر",
-    "directManagerHint": "يلزم إذا تضمن المسار مرحلة «المدير المباشر».",
+    "directManagerHint": "يستخدمه مسار الاعتماد إن تضمّن مرحلة «المدير المباشر».",
     "noManager": "دون تحديد",
     "send": "إرسال للاعتماد",
     "returnedBecause": "أُعيد الطلب للتعديل. السبب: {{reason}}",
@@ -381,7 +459,20 @@
       "InApproval": "قيد الاعتماد",
       "Approved": "معتمد",
       "Rejected": "مرفوض",
-      "Returned": "مُعاد للتعديل"
+      "Returned": "مُعاد للتعديل",
+      "UnderReview": "قيد المراجعة",
+      "OnHold": "معلّق",
+      "Canceled": "ملغى"
+    },
+    "category": "نوع الطلب",
+    "sendHint": "عند الإرسال تُختار عملية الاعتماد المناسبة للطلب تلقائيًا حسب شروطها.",
+    "approverNotes": "ملاحظات المعتمد",
+    "categories": {
+      "GENERAL": "عام",
+      "PURCHASE": "شراء",
+      "ADVANCE": "سلفة",
+      "LEAVE": "إجازة",
+      "OTHER": "أخرى"
     }
   },
   "routes": {
@@ -412,5 +503,140 @@
       "User": "مستخدم محدد",
       "Dynamic": "يحدده المستند"
     }
+  },
+  "process": {
+    "listTitle": "عمليات الاعتماد",
+    "listIntro": "لكل شاشة عملية اعتماد أو أكثر: شرط بدء، ومراحل وشروط وإجراءات، وتُنشر بإصدارات.",
+    "new": "عملية اعتماد جديدة",
+    "create": "إنشاء",
+    "empty": "لا توجد عمليات اعتماد بعد.",
+    "name": "العملية",
+    "process": "العملية",
+    "screen": "الشاشة",
+    "screenHint": "الشاشة التي تُطبَّق عليها هذه العملية.",
+    "priority": "الأولوية",
+    "priorityHint": "عند تعدد العمليات لنفس الشاشة تُطبَّق الأقل رقمًا أولًا إذا تحقق شرط بدئها.",
+    "version": "الإصدار",
+    "unpublished": "تعديلات غير منشورة",
+    "activeStatus": "مفعّلة",
+    "draftStatus": "غير مفعّلة",
+    "publishedVersion": "الإصدار المنشور {{version}}",
+    "saveDraft": "حفظ المسودة",
+    "validate": "تحقق",
+    "publish": "نشر إصدار جديد",
+    "active": "مفعّلة",
+    "saved": "تم حفظ المسودة.",
+    "valid": "العملية سليمة وجاهزة للنشر.",
+    "published": "تم نشر إصدار جديد وتفعيل العملية.",
+    "activated": "تم تفعيل العملية.",
+    "deactivated": "تم إيقاف العملية؛ لا تبدأ بها طلبات جديدة.",
+    "draft": "المسودة",
+    "versionReadOnly": "هذا إصدار منشور ولا يمكن تعديله. للتغيير عدّل المسودة ثم انشر إصدارًا جديدًا.",
+    "general": "البيانات العامة",
+    "startCondition": "شرط البدء",
+    "startConditionHint": "تُطبَّق العملية فقط على السجلات التي تحقق هذا الشرط؛ اتركه فارغًا لتشمل جميع السجلات.",
+    "steps": "خطوات العملية",
+    "stepsHint": "تُنفَّذ الخطوات بالترتيب. تتوقف العملية عند كل مرحلة اعتماد حتى يُتخذ القرار، ثم تكمل.",
+    "noSteps": "لا توجد خطوات بعد. أضف مرحلة اعتماد على الأقل.",
+    "addStep": "إضافة خطوة",
+    "removeStep": "حذف الخطوة",
+    "expand": "فتح",
+    "collapse": "طي",
+    "unnamedStage": "مرحلة بلا اسم",
+    "branchCount": "{{count}} فرع",
+    "noChanges": "لا توجد حقول",
+    "assignees": "المعتمدون",
+    "addAssignee": "إضافة معتمد",
+    "removeAssignee": "إزالة",
+    "ruleAny": "يكفي قرار أحدهم",
+    "ruleAll": "يلزم اعتماد الجميع",
+    "dueHours": "المهلة بالساعات",
+    "requiredFields": "حقول يملؤها المعتمد قبل الاعتماد",
+    "requiredFieldsHint": "لا يستطيع المعتمد الاعتماد حتى يملأها، وتُحفظ في السجل.",
+    "allowReturn": "السماح بالإرجاع للتعديل",
+    "allowDelegate": "السماح بالتفويض",
+    "onApprove": "عند الموافقة",
+    "onApproveHint": "خطوات تُنفَّذ بعد الموافقة، ثم تكمل العملية بالخطوة التالية.",
+    "onReject": "عند الرفض",
+    "onRejectHint": "إن تُركت فارغة تنتهي العملية بالرفض.",
+    "onReturn": "عند الإرجاع",
+    "onReturnHint": "إن تُركت فارغة يعود السجل إلى مقدّمه للتعديل وإعادة الإرسال.",
+    "if": "إذا",
+    "elseIf": "وإلا إذا",
+    "then": "فنفّذ",
+    "else": "وإلا",
+    "elseHint": "خطوات تُنفَّذ إن لم يتحقق أي شرط مما سبق.",
+    "addElseIf": "إضافة «وإلا إذا»",
+    "removeBranch": "حذف الفرع",
+    "matchAll": "جميع الشروط",
+    "matchAny": "أي شرط",
+    "and": "و",
+    "or": "أو",
+    "field": "الحقل",
+    "operator": "المقارنة",
+    "value": "القيمة",
+    "values": "القيم",
+    "addRule": "إضافة شرط",
+    "removeRule": "حذف",
+    "setTo": "القيمة من",
+    "fixedValue": "قيمة محددة",
+    "fromField": "حقل آخر",
+    "addField": "إضافة حقل",
+    "nothingUpdatable": "لا تتيح هذه الشاشة تحديث أي حقل من العمليات.",
+    "recipients": "المستلمون",
+    "recipient": "المستلم",
+    "addRecipient": "إضافة مستلم",
+    "titleAr": "العنوان بالعربية",
+    "titleEn": "العنوان بالإنجليزية",
+    "bodyAr": "النص بالعربية",
+    "bodyEn": "النص بالإنجليزية",
+    "placeholders": "يمكن استخدام:",
+    "endAs": "إنهاء العملية بنتيجة",
+    "type": {
+      "approval": "مرحلة اعتماد",
+      "condition": "شرط",
+      "update": "تحديث السجل",
+      "notify": "إرسال إشعار",
+      "stop": "إنهاء العملية"
+    },
+    "typeHint": {
+      "approval": "مهمة لأشخاص يعتمدون أو يرفضون أو يُرجعون",
+      "condition": "إذا / وإلا إذا / وإلا حسب قيم الحقول",
+      "update": "تعبئة حقل أو تغيير حالة السجل",
+      "notify": "إشعار داخل النظام وبالبريد",
+      "stop": "إنهاء العملية بالاعتماد أو الرفض أو الإلغاء"
+    },
+    "assignee": {
+      "Role": "دور",
+      "User": "مستخدم محدد",
+      "UserField": "مستخدم من حقل في السجل",
+      "Submitter": "مقدّم الطلب"
+    },
+    "outcome": {
+      "Approved": "معتمد",
+      "Rejected": "مرفوض",
+      "Canceled": "ملغى"
+    },
+    "op": {
+      "Equals": "يساوي",
+      "NotEquals": "لا يساوي",
+      "GreaterThan": "أكبر من",
+      "GreaterOrEqual": "أكبر من أو يساوي",
+      "LessThan": "أصغر من",
+      "LessOrEqual": "أصغر من أو يساوي",
+      "In": "ضمن",
+      "IsEmpty": "فارغ",
+      "IsNotEmpty": "غير فارغ"
+    }
+  },
+  "myApprovals": {
+    "title": "طلباتي للاعتماد",
+    "intro": "كل ما أرسلته للاعتماد، وأين وصل.",
+    "empty": "لا توجد اعتمادات."
+  },
+  "monitor": {
+    "title": "متابعة الاعتمادات",
+    "intro": "جميع الاعتمادات في الشركة وحالاتها، بما فيها المتوقفة بخطأ.",
+    "all": "الكل"
   }
 }

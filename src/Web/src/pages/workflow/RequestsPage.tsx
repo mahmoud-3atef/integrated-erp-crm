@@ -9,10 +9,19 @@ import { workflowApi, type InternalRequest, type RequestStatus } from '../../api
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { EmptyState, PageHeader, Panel, StatusDot, type Tone } from '../../components/ui';
-import { PillTabs } from './TasksPage';
+import { EmptyState, PageHeader, Panel, PillTabs, StatusDot, type Tone } from '../../components/ui';
 
-export const requestTone: Record<RequestStatus, Tone> = { Draft: 'neutral', InApproval: 'info', Approved: 'success', Rejected: 'danger', Returned: 'warning' };
+
+export const requestTone: Record<RequestStatus, Tone> = {
+  Draft: 'neutral',
+  InApproval: 'info',
+  UnderReview: 'info',
+  OnHold: 'warning',
+  Approved: 'success',
+  Rejected: 'danger',
+  Returned: 'warning',
+  Canceled: 'neutral',
+};
 
 export function RequestsPage() {
   const { t, i18n } = useTranslation();

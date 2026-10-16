@@ -191,11 +191,17 @@ internal sealed class InternalRequestAdapter(WorkflowDbContext db) : IApprovalRe
 {
     public const string ScreenCode = "workflow.internal_request";
 
-    private static readonly RecordFieldOption[] SettableStatuses =
+    // All statuses can be shown and compared; a process may set only the in-approval ones (the end is set by EndedAsync).
+    private static readonly RecordFieldOption[] Statuses =
     [
+        new(nameof(RequestStatus.Draft), "مسودة", "Draft", Settable: false),
         new(nameof(RequestStatus.InApproval), "قيد الاعتماد", "In approval"),
         new(nameof(RequestStatus.UnderReview), "قيد المراجعة", "Under review"),
         new(nameof(RequestStatus.OnHold), "معلّق", "On hold"),
+        new(nameof(RequestStatus.Approved), "معتمد", "Approved", Settable: false),
+        new(nameof(RequestStatus.Rejected), "مرفوض", "Rejected", Settable: false),
+        new(nameof(RequestStatus.Returned), "مُعاد للتعديل", "Returned", Settable: false),
+        new(nameof(RequestStatus.Canceled), "ملغى", "Canceled", Settable: false),
     ];
 
     public ApprovalScreen Screen { get; } = new(
@@ -211,7 +217,7 @@ internal sealed class InternalRequestAdapter(WorkflowDbContext db) : IApprovalRe
             new("legal_entity", "السجل التجاري", "Commercial registration", RecordFieldType.LegalEntity, Updatable: false),
             new("requested_by", "مقدّم الطلب", "Requested by", RecordFieldType.User, Updatable: false),
             new("direct_manager", "المدير المباشر", "Direct manager", RecordFieldType.User, Updatable: false),
-            new("status", "حالة الطلب", "Request status", RecordFieldType.Choice, Updatable: true, SettableStatuses),
+            new("status", "حالة الطلب", "Request status", RecordFieldType.Choice, Updatable: true, Statuses),
             new("approver_notes", "ملاحظات المعتمد", "Approver notes", RecordFieldType.Text, Updatable: true),
         ]);
 
@@ -245,7 +251,7 @@ internal sealed class InternalRequestAdapter(WorkflowDbContext db) : IApprovalRe
         RequestStatus? status = null;
         if (changes.TryGetValue("status", out var value))
         {
-            if (!SettableStatuses.Any(s => s.Value == value) || !Enum.TryParse<RequestStatus>(value, out var parsed))
+            if (!Statuses.Any(s => s.Value == value && s.Settable) || !Enum.TryParse<RequestStatus>(value, out var parsed))
             {
                 return Result.Failure(Error.Validation("request_status_not_settable", "This status cannot be set by a process."));
             }

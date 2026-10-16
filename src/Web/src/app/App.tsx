@@ -11,8 +11,10 @@ import { UsersPage } from '../pages/admin/UsersPage';
 import { HomePage } from '../pages/HomePage';
 import { RequestDetailPage } from '../pages/workflow/RequestDetailPage';
 import { RequestsPage } from '../pages/workflow/RequestsPage';
-import { RoutesPage } from '../pages/workflow/RoutesPage';
-import { TasksPage } from '../pages/workflow/TasksPage';
+import { ApprovalDetailPage } from '../pages/workflow/ApprovalDetailPage';
+import { InboxPage, MonitorPage, MyApprovalsPage } from '../pages/workflow/InboxPage';
+import { ProcessEditorPage } from '../pages/workflow/ProcessEditorPage';
+import { ProcessesPage } from '../pages/workflow/ProcessesPage';
 import { BranchesPage } from '../pages/setup/BranchesPage';
 import { LegalEntitiesPage } from '../pages/setup/LegalEntitiesPage';
 import { ModulesPage } from '../pages/setup/ModulesPage';
@@ -46,10 +48,14 @@ export function App() {
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />
                 <Route path="/setup/modules" element={<ModulesPage />} />
-                <Route path="/workflow/tasks" element={<TasksPage />} />
+                <Route path="/workflow/inbox" element={<InboxPage />} />
+                <Route path="/workflow/my-requests" element={<MyApprovalsPage />} />
+                <Route path="/workflow/monitor" element={<MonitorPage />} />
+                <Route path="/workflow/approvals/:id" element={<ApprovalDetailPage />} />
+                <Route path="/workflow/processes" element={<ProcessesPage />} />
+                <Route path="/workflow/processes/:id" element={<ProcessEditorPage />} />
                 <Route path="/workflow/requests" element={<RequestsPage />} />
                 <Route path="/workflow/requests/:id" element={<RequestDetailPage />} />
-                <Route path="/workflow/routes" element={<RoutesPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />

@@ -154,7 +154,7 @@
     "validation_approval_document_unknown": "Unknown document type.",
     "validation_approval_no_route": "No active approval route is defined for this document type.",
     "conflict_approval_in_progress": "The document is already in approval.",
-    "conflict_approval_changed": "Someone else decided this first. Refresh and try again.",
+    "conflict_approval_changed": "Someone else acted first. Refresh and try again.",
     "validation_approval_stage_unassigned": "A stage has no approver other than the sender. Check the route or choose the direct manager.",
     "not_found_approval_task": "Task not found.",
     "conflict_approval_task_closed": "This task is no longer open.",
@@ -168,7 +168,27 @@
     "conflict_request_locked": "The request cannot be changed while in approval or after a decision.",
     "validation_request_subject_required": "A subject of up to 200 characters is required.",
     "validation_request_details_too_long": "Details may not exceed 4000 characters.",
-    "validation_request_amount_invalid": "The amount is not valid."
+    "validation_request_amount_invalid": "The amount is not valid.",
+    "validation_approval_screen_unknown": "Unknown screen.",
+    "not_found_approval_record": "The record was not found.",
+    "validation_approval_no_process": "No active approval process applies to this record.",
+    "forbidden_approval": "You cannot do this on this approval.",
+    "validation_approval_return_not_allowed": "This stage does not allow returning.",
+    "validation_approval_field_required": "Required fields must be filled before approving.",
+    "validation_approval_field_invalid": "A field value is not valid.",
+    "validation_approval_delegate_invalid": "The task cannot be delegated to this person.",
+    "not_found_approval_instance": "Approval not found.",
+    "conflict_approval_finished": "This approval has already ended.",
+    "conflict_approval_not_failed": "Only a stopped approval can be retried.",
+    "not_found_approval_process": "Process not found.",
+    "validation_process_invalid": "The process is incomplete: check it has an approval stage, and that names, approvers, conditions and field values are filled.",
+    "validation_process_name_required": "Arabic and English names are required.",
+    "validation_process_priority_invalid": "Priority must be 0 to 1000.",
+    "validation_process_not_published": "Publish the process before activating it.",
+    "validation_process_approver_unknown": "A user or role in the process is not part of this company.",
+    "validation_request_category_invalid": "Unknown request category.",
+    "validation_request_manager_self": "You cannot be your own direct manager.",
+    "validation_request_manager_unknown": "The direct manager is not a member of this company."
   },
   "menu": {
     "label": "Main menu",
@@ -185,7 +205,10 @@
     "approvals": "Approvals",
     "tasks": "My tasks",
     "requests": "Internal requests",
-    "routes": "Approval routes"
+    "routes": "Approval routes",
+    "myApprovals": "My submissions",
+    "monitor": "Approval monitor",
+    "processes": "Approval processes"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -286,7 +309,7 @@
     },
     "Workflow": {
       "name": "Approvals",
-      "description": "Editable approval routes, my tasks, and internal requests."
+      "description": "Designable approval processes (stages, conditions, updates, notifications), my tasks, and internal requests."
     }
   },
   "attachments": {
@@ -332,14 +355,66 @@
       "Returned": "Returned"
     },
     "confirm": {
-      "Approve": "Approve the document",
-      "Reject": "Reject the document",
-      "Return": "Return the document for changes"
+      "Approve": "Approve",
+      "Reject": "Reject",
+      "Return": "Return for changes",
+      "Delegate": "Delegate the task",
+      "Cancel": "Cancel the approval"
+    },
+    "by": "By {{name}}",
+    "byOnBehalf": "By {{name}} on behalf of {{original}}",
+    "history": "Approval history",
+    "details": "Details",
+    "openRecord": "Open record",
+    "yourDecision": "Your decision",
+    "actions": "Actions",
+    "recordData": "Record data",
+    "delegate": "Delegate",
+    "delegateTo": "Delegate to",
+    "cancel": "Cancel approval",
+    "retry": "Retry",
+    "failedBecause": "The process stopped: {{error}}",
+    "requiredFieldHint": "Required before approving; saved on the record.",
+    "instance": {
+      "InProgress": "In approval",
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Returned": "Returned",
+      "Canceled": "Canceled",
+      "Failed": "Stopped with an error"
+    },
+    "event": {
+      "Submitted": "Sent for approval",
+      "StageOpened": "Stage started",
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Returned": "Returned for changes",
+      "Delegated": "Delegated",
+      "ConditionEvaluated": "Condition evaluated",
+      "RecordUpdated": "Record updated",
+      "Notified": "Notification sent",
+      "Completed": "Process ended",
+      "Canceled": "Approval canceled",
+      "Failed": "Stopped with an error",
+      "Retried": "Retried"
+    },
+    "decided": {
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Returned": "Returned",
+      "Delegated": "Delegated"
+    },
+    "do": {
+      "Approve": "Approve",
+      "Reject": "Reject",
+      "Return": "Return",
+      "Delegate": "Delegate",
+      "Cancel": "Cancel approval"
     }
   },
   "tasks": {
     "title": "My tasks",
-    "intro": "Documents waiting for your decision, and those you have decided.",
+    "intro": "Tasks waiting for your decision, and the ones you decided.",
     "pending": "Waiting for me",
     "done": "Decided by me",
     "document": "Document",
@@ -352,7 +427,10 @@
     "escalated": "Escalated",
     "emptyPending": "Nothing is waiting for your decision.",
     "emptyDone": "You have not decided anything yet.",
-    "waiting": "{{count}} tasks waiting"
+    "waiting": "{{count}} tasks waiting",
+    "due": "Deadline",
+    "overdue": "Overdue",
+    "delegatedToMe": "Delegated to me"
   },
   "requests": {
     "title": "Internal requests",
@@ -372,7 +450,7 @@
     "saved": "Saved.",
     "sendTitle": "Send for approval",
     "directManager": "Direct manager",
-    "directManagerHint": "Needed when the route has a “direct manager” stage.",
+    "directManagerHint": "Used by the approval process if it has a “direct manager” stage.",
     "noManager": "Not specified",
     "send": "Send for approval",
     "returnedBecause": "The request was returned for changes. Reason: {{reason}}",
@@ -381,7 +459,20 @@
       "InApproval": "In approval",
       "Approved": "Approved",
       "Rejected": "Rejected",
-      "Returned": "Returned"
+      "Returned": "Returned",
+      "UnderReview": "Under review",
+      "OnHold": "On hold",
+      "Canceled": "Canceled"
+    },
+    "category": "Category",
+    "sendHint": "When sent, the matching approval process is chosen automatically by its conditions.",
+    "approverNotes": "Approver notes",
+    "categories": {
+      "GENERAL": "General",
+      "PURCHASE": "Purchase",
+      "ADVANCE": "Advance",
+      "LEAVE": "Leave",
+      "OTHER": "Other"
     }
   },
   "routes": {
@@ -412,5 +503,140 @@
       "User": "Specific user",
       "Dynamic": "Set by the document"
     }
+  },
+  "process": {
+    "listTitle": "Approval processes",
+    "listIntro": "Each screen has one or more approval processes: a start condition, stages, conditions and actions, published as versions.",
+    "new": "New approval process",
+    "create": "Create",
+    "empty": "No approval processes yet.",
+    "name": "Process",
+    "process": "Process",
+    "screen": "Screen",
+    "screenHint": "The screen this process applies to.",
+    "priority": "Priority",
+    "priorityHint": "With several processes on one screen, the lowest number whose start condition matches is used.",
+    "version": "Version",
+    "unpublished": "Unpublished changes",
+    "activeStatus": "Active",
+    "draftStatus": "Inactive",
+    "publishedVersion": "Published version {{version}}",
+    "saveDraft": "Save draft",
+    "validate": "Validate",
+    "publish": "Publish new version",
+    "active": "Active",
+    "saved": "Draft saved.",
+    "valid": "The process is valid and ready to publish.",
+    "published": "A new version was published and the process is active.",
+    "activated": "The process is active.",
+    "deactivated": "The process is inactive; no new approvals start with it.",
+    "draft": "Draft",
+    "versionReadOnly": "This is a published version and cannot be changed. Edit the draft and publish a new version.",
+    "general": "General",
+    "startCondition": "Start condition",
+    "startConditionHint": "The process applies only to records matching this condition; leave it empty for all records.",
+    "steps": "Process steps",
+    "stepsHint": "Steps run in order. The process waits at each approval stage until it is decided, then continues.",
+    "noSteps": "No steps yet. Add at least one approval stage.",
+    "addStep": "Add step",
+    "removeStep": "Remove step",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "unnamedStage": "Unnamed stage",
+    "branchCount": "{{count}} branches",
+    "noChanges": "No fields",
+    "assignees": "Approvers",
+    "addAssignee": "Add approver",
+    "removeAssignee": "Remove",
+    "ruleAny": "Any one decides",
+    "ruleAll": "Everyone must approve",
+    "dueHours": "Deadline (hours)",
+    "requiredFields": "Fields the approver must fill",
+    "requiredFieldsHint": "The approver cannot approve until they are filled; they are saved on the record.",
+    "allowReturn": "Allow return for changes",
+    "allowDelegate": "Allow delegation",
+    "onApprove": "On approve",
+    "onApproveHint": "Steps that run after approval; then the process continues with the next step.",
+    "onReject": "On reject",
+    "onRejectHint": "If empty, the process ends as rejected.",
+    "onReturn": "On return",
+    "onReturnHint": "If empty, the record goes back to its sender to change and send again.",
+    "if": "If",
+    "elseIf": "Else if",
+    "then": "Then",
+    "else": "Else",
+    "elseHint": "Steps that run when none of the conditions above is met.",
+    "addElseIf": "Add “else if”",
+    "removeBranch": "Remove branch",
+    "matchAll": "All rules",
+    "matchAny": "Any rule",
+    "and": "AND",
+    "or": "OR",
+    "field": "Field",
+    "operator": "Comparison",
+    "value": "Value",
+    "values": "Values",
+    "addRule": "Add rule",
+    "removeRule": "Remove",
+    "setTo": "Value from",
+    "fixedValue": "A fixed value",
+    "fromField": "Another field",
+    "addField": "Add field",
+    "nothingUpdatable": "This screen does not let processes update any field.",
+    "recipients": "Recipients",
+    "recipient": "Recipient",
+    "addRecipient": "Add recipient",
+    "titleAr": "Arabic title",
+    "titleEn": "English title",
+    "bodyAr": "Arabic text",
+    "bodyEn": "English text",
+    "placeholders": "You can use:",
+    "endAs": "End the process as",
+    "type": {
+      "approval": "Approval stage",
+      "condition": "Condition",
+      "update": "Update record",
+      "notify": "Send notification",
+      "stop": "Stop process"
+    },
+    "typeHint": {
+      "approval": "A task for people to approve, reject or return",
+      "condition": "If / else if / else on field values",
+      "update": "Set a field or change the record's status",
+      "notify": "In-system notification and email",
+      "stop": "End the process as approved, rejected or canceled"
+    },
+    "assignee": {
+      "Role": "Role",
+      "User": "Specific user",
+      "UserField": "User from a record field",
+      "Submitter": "The submitter"
+    },
+    "outcome": {
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Canceled": "Canceled"
+    },
+    "op": {
+      "Equals": "equals",
+      "NotEquals": "does not equal",
+      "GreaterThan": "greater than",
+      "GreaterOrEqual": "at least",
+      "LessThan": "less than",
+      "LessOrEqual": "at most",
+      "In": "is one of",
+      "IsEmpty": "is empty",
+      "IsNotEmpty": "is not empty"
+    }
+  },
+  "myApprovals": {
+    "title": "My submissions",
+    "intro": "Everything you sent for approval, and where it stands.",
+    "empty": "No approvals."
+  },
+  "monitor": {
+    "title": "Approval monitor",
+    "intro": "Every approval in the company and its state, including those stopped by an error.",
+    "all": "All"
   }
 }

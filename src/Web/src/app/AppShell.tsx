@@ -2,6 +2,8 @@ import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettin
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
+import OutboxOutlinedIcon from '@mui/icons-material/OutboxOutlined';
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
@@ -50,9 +52,11 @@ const menu: MenuSection[] = [
   {
     titleKey: 'menu.approvals',
     items: [
-      { path: '/workflow/tasks', labelKey: 'menu.tasks', icon: <TaskAltOutlinedIcon />, showTaskCount: true },
+      { path: '/workflow/inbox', labelKey: 'menu.tasks', icon: <TaskAltOutlinedIcon />, showTaskCount: true },
+      { path: '/workflow/my-requests', labelKey: 'menu.myApprovals', icon: <OutboxOutlinedIcon /> },
       { path: '/workflow/requests', labelKey: 'menu.requests', icon: <DescriptionOutlinedIcon />, anyOf: ['workflow.requests.create', 'workflow.requests.view'] },
-      { path: '/workflow/routes', labelKey: 'menu.routes', icon: <AltRouteOutlinedIcon />, permission: 'workflow.routes.view', companyWide: true },
+      { path: '/workflow/monitor', labelKey: 'menu.monitor', icon: <MonitorHeartOutlinedIcon />, permission: 'workflow.instances.view', companyWide: true },
+      { path: '/workflow/processes', labelKey: 'menu.processes', icon: <AltRouteOutlinedIcon />, permission: 'workflow.processes.view', companyWide: true },
     ],
   },
   {
@@ -312,7 +316,7 @@ function isActive(path: string, pathname: string) {
 function useTaskCount(pathname: string) {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    const load = () => workflowApi.taskCount().then((r) => setCount(r.pending)).catch(() => undefined);
+    const load = () => workflowApi.inboxCount().then((r) => setCount(r.pending)).catch(() => undefined);
     void load();
     const timer = window.setInterval(load, 60_000);
     return () => window.clearInterval(timer);

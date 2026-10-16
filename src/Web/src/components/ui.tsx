@@ -1,4 +1,4 @@
-import { Box, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
+import { Box, ButtonBase, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 import type { ReactNode } from 'react';
 import { toneColors, tokens } from '../app/theme';
 
@@ -111,4 +111,35 @@ export function Initials({ name, size = 38 }: { name: string; size?: number }) {
 /** Empty list message. */
 export function EmptyState({ text }: { text: string }) {
   return <Typography sx={{ py: 5, textAlign: 'center', color: tokens.gray500 }}>{text}</Typography>;
+}
+
+/** The portal's pill tabs (.cp-tabs). */
+export function PillTabs<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (value: T) => void }) {
+  return (
+    <Box role="tablist" sx={{ display: 'inline-flex', gap: 0.5, p: 0.5, borderRadius: 999, bgcolor: tokens.tint, mb: `${tokens.gap}px` }}>
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <ButtonBase
+            key={option.value}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(option.value)}
+            sx={{
+              px: 2,
+              py: 0.9,
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 600,
+              color: active ? tokens.navy700 : tokens.gray600,
+              bgcolor: active ? '#fff' : 'transparent',
+              boxShadow: active ? tokens.shadowXs : 'none',
+            }}
+          >
+            {option.label}
+          </ButtonBase>
+        );
+      })}
+    </Box>
+  );
 }

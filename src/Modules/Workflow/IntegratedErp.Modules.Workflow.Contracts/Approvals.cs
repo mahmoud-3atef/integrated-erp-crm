@@ -30,7 +30,8 @@ public enum RecordFieldType
     LegalEntity,
 }
 
-public sealed record RecordFieldOption(string Value, string NameAr, string NameEn);
+/// <param name="Settable">Whether a process may set this value (e.g. a final status is shown and compared, but set only by the module).</param>
+public sealed record RecordFieldOption(string Value, string NameAr, string NameEn, bool Settable = true);
 
 /// <summary>
 /// A field of a screen's record usable in conditions; <paramref name="Updatable"/> fields may also be set by a

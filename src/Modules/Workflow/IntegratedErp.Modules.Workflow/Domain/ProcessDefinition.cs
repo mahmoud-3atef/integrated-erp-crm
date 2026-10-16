@@ -286,7 +286,8 @@ public static class DefinitionRules
                                     errors.Add($"Field \"{change.FieldKey}\" can only be copied from a field of the same type.");
                                 }
                             }
-                            else if (!FieldValues.IsValid(field, change.Value))
+                            else if (!FieldValues.IsValid(field, change.Value)
+                                     || (field.Type == RecordFieldType.Choice && change.Value is not null && field.Options?.First(o => o.Value == change.Value).Settable == false))
                             {
                                 errors.Add($"The value for \"{change.FieldKey}\" is not valid.");
                             }
