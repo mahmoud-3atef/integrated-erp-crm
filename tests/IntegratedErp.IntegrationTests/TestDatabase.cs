@@ -1,10 +1,11 @@
+using IntegratedErp.BuildingBlocks;
+using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.Modules.Organization;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace IntegratedErp.IntegrationTests;
 
@@ -30,6 +31,43 @@ public sealed class TestDatabase : IAsyncLifetime
 
     public IServiceProvider Services => _services ?? throw new InvalidOperationException("Database is not available.");
 
+    /// <summary>A DI scope acting as the given tenant/user — like one request.</summary>
+    public IServiceScope Scope(Guid? tenantId = null, bool system = false, string user = "test-user")
+    {
+        var scope = Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ExecutionContextAccessor>();
+        if (system)
+        {
+            context.RunAsSystem(user);
+        }
+        else
+        {
+            context.SetUser(user, user);
+            if (tenantId is { } id)
+            {
+                context.SetTenant(id);
+            }
+        }
+
+        return scope;
+    }
+
+    /// <summary>Opens a raw connection with the given tenant in SESSION_CONTEXT (as the app does).</summary>
+    public async Task<SqlConnection> OpenAsTenantAsync(Guid? tenantId, bool system = false)
+    {
+        var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            EXEC sp_set_session_context @key = N'tenant_id', @value = @tenant_id;
+            EXEC sp_set_session_context @key = N'is_system', @value = @is_system;
+            """;
+        command.Parameters.AddWithValue("@tenant_id", tenantId is { } id ? id : DBNull.Value);
+        command.Parameters.AddWithValue("@is_system", system);
+        await command.ExecuteNonQueryAsync();
+        return connection;
+    }
+
     public async Task InitializeAsync()
     {
         if (!IsAvailable)
@@ -53,8 +91,8 @@ public sealed class TestDatabase : IAsyncLifetime
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
+        services.AddPlatformCore();
         services.AddModules(configuration, new OrganizationModule());
-        services.AddTransient<DatabaseMigrator>();
         _services = services.BuildServiceProvider();
 
         await _services.GetRequiredService<DatabaseMigrator>().MigrateAsync(CancellationToken.None);

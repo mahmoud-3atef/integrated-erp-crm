@@ -1,4 +1,5 @@
 using IntegratedErp.Api;
+using IntegratedErp.BuildingBlocks;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Web;
@@ -6,10 +7,10 @@ using IntegratedErp.Modules.Organization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddPlatformCore();
 builder.Services.AddWebDefaults();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
-builder.Services.AddTransient<DatabaseMigrator>();
 
 // Every business module is listed here once; enablement is controlled by configuration.
 builder.Services.AddModules(
@@ -27,6 +28,7 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseExecutionContext();
 
 if (app.Environment.IsDevelopment())
 {

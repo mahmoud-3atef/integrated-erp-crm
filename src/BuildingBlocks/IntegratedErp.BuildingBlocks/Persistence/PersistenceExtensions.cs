@@ -14,7 +14,8 @@ public static class PersistenceExtensions
 
     /// <summary>
     /// Registers a module DbContext against the shared database, with the module's own schema,
-    /// its own migrations history table, snake_case names and SQL Server 2022 compatibility.
+    /// its own migrations history table, snake_case names, SQL Server 2022 compatibility and the
+    /// tenant session context used by row-level security.
     /// </summary>
     public static IServiceCollection AddModuleDbContext<TContext>(
         this IServiceCollection services,
@@ -27,7 +28,9 @@ public static class PersistenceExtensions
         var connectionString = configuration.GetConnectionString(ConnectionStringName)
             ?? throw new InvalidOperationException($"Connection string '{ConnectionStringName}' is not configured.");
 
-        services.AddDbContext<TContext>(options => Configure(options, connectionString, schema));
+        services.AddDbContext<TContext>((provider, options) =>
+            Configure(options, connectionString, schema)
+                .AddInterceptors(provider.GetRequiredService<TenantSessionContextInterceptor>()));
         services.AddScoped<IModuleDatabase, ModuleDatabase<TContext>>();
 
         return services;

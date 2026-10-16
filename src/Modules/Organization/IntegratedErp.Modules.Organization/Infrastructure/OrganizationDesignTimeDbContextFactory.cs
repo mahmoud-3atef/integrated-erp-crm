@@ -1,4 +1,6 @@
+using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -15,6 +17,10 @@ internal sealed class OrganizationDesignTimeDbContextFactory : IDesignTimeDbCont
         var options = new DbContextOptionsBuilder<OrganizationDbContext>();
         PersistenceExtensions.Configure(options, connectionString, OrganizationDbContext.SchemaName);
 
-        return new OrganizationDbContext(options.Options);
+        var context = new ExecutionContextAccessor();
+        context.RunAsSystem("design-time");
+        var dependencies = new ModuleDbContextDependencies(context, context, new SystemClock(TimeProvider.System));
+
+        return new OrganizationDbContext(options.Options, dependencies);
     }
 }

@@ -1,6 +1,7 @@
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.Modules.Organization.Api;
+using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Organization.Application.Settings;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Organization.Infrastructure;
@@ -29,6 +30,7 @@ public sealed class OrganizationModule : IModule
 
         services.AddModuleDbContext<OrganizationDbContext>(configuration, OrganizationDbContext.SchemaName);
         services.AddScoped<SettingsService>();
+        services.AddScoped<OrganizationService>();
 
         _devEndpoints = configuration.GetValue($"Modules:{Name}:DevEndpoints", defaultValue: false);
     }
@@ -43,6 +45,7 @@ public sealed class OrganizationModule : IModule
         if (_devEndpoints)
         {
             group.MapSettingsEndpoints();
+            group.MapOrganizationEndpoints();
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.Modules.Organization.Domain.Settings;
 using IntegratedErp.Modules.Organization.Infrastructure;
 using IntegratedErp.SharedKernel;
@@ -7,11 +8,17 @@ using Microsoft.EntityFrameworkCore;
 namespace IntegratedErp.Modules.Organization.Application.Settings;
 
 /// <summary>Reads and writes effective-dated settings.</summary>
-internal sealed class SettingsService(OrganizationDbContext db)
+internal sealed class SettingsService(OrganizationDbContext db, ITenantContext tenant)
 {
     /// <summary>Raw JSON of the value that applies on <paramref name="asOf"/> for the context, or null.</summary>
     public async Task<string?> GetEffectiveValueAsync(string key, SettingContext context, DateOnly asOf, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        if (!tenant.IsSystem && context.TenantId != tenant.TenantId)
+        {
+            throw new UnauthorizedAccessException("Settings of another tenant cannot be read.");
+        }
+
         var normalizedKey = Setting.NormalizeKey(key);
         var tenantId = context.TenantId;
 
@@ -35,6 +42,13 @@ internal sealed class SettingsService(OrganizationDbContext db)
     public async Task<Result> SetValueAsync(string key, SettingScope scope, string jsonValue, DateOnly effectiveFrom, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(scope);
+
+        // System-wide values are changed by system operations only; scoped values by their own tenant only.
+        var allowed = tenant.IsSystem || (scope.TenantId is { } owner && owner == tenant.TenantId);
+        if (!allowed)
+        {
+            return Result.Failure(Error.Validation("setting_scope_forbidden", "This setting scope belongs to another tenant or to the system."));
+        }
 
         if (!IsValidJson(jsonValue))
         {

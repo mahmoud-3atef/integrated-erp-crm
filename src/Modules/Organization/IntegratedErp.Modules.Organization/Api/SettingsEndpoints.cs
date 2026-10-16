@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.Modules.Organization.Application.Settings;
 using IntegratedErp.Modules.Organization.Domain.Settings;
 using Microsoft.AspNetCore.Builder;
@@ -24,24 +25,31 @@ internal static class SettingsEndpoints
     {
         group.MapGet("/settings/{key}", async (
             string key,
-            Guid? tenantId,
             Guid? legalEntityId,
             Guid? customerId,
             Guid? contractId,
             Guid? projectId,
             DateOnly? asOf,
+            ITenantContext tenant,
             SettingsService service,
             CancellationToken cancellationToken) =>
         {
-            var context = new SettingContext(tenantId, legalEntityId, customerId, contractId, projectId);
+            // Always the caller's own tenant — never taken from the query string.
+            var context = new SettingContext(tenant.TenantId, legalEntityId, customerId, contractId, projectId);
             var date = asOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
             var value = await service.GetEffectiveValueAsync(key, context, date, cancellationToken).ConfigureAwait(false);
 
             return value is null ? Results.NotFound() : Results.Text(value, "application/json");
         }).WithName("GetEffectiveSetting");
 
-        group.MapPut("/settings", async (SetSettingRequest request, SettingsService service, CancellationToken cancellationToken) =>
+        group.MapPut("/settings", async (SetSettingRequest request, ExecutionContextAccessor context, SettingsService service, CancellationToken cancellationToken) =>
         {
+            // Dev only: System-scope values are written as a system operation.
+            if (request.ScopeType == SettingScopeType.System)
+            {
+                context.RunAsSystem("platform-admin");
+            }
+
             SettingScope scope;
             try
             {
@@ -61,7 +69,10 @@ internal static class SettingsEndpoints
 
             return result.IsSuccess
                 ? Results.NoContent()
-                : Results.Problem(result.Error.Message, statusCode: StatusCodes.Status409Conflict, title: result.Error.Code);
+                : Results.Problem(
+                    result.Error.Message,
+                    statusCode: result.Error.Code.StartsWith("conflict.", StringComparison.Ordinal) ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest,
+                    title: result.Error.Code);
         }).WithName("SetSetting");
     }
 }

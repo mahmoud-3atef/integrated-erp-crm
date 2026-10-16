@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Context;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,8 +19,11 @@ public sealed partial class DatabaseMigrator(IServiceProvider services, IConfigu
             ?? throw new InvalidOperationException($"Connection string '{PersistenceExtensions.ConnectionStringName}' is not configured.");
 
         await EnsureDatabaseAsync(connectionString, cancellationToken).ConfigureAwait(false);
+        await EnsurePlatformObjectsAsync(connectionString, cancellationToken).ConfigureAwait(false);
 
         using var scope = services.CreateScope();
+        // Migrations (and any data they seed) run as a trusted system operation.
+        scope.ServiceProvider.GetRequiredService<ExecutionContextAccessor>().RunAsSystem("migrator");
         foreach (var database in scope.ServiceProvider.GetServices<IModuleDatabase>())
         {
             var pending = await database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
@@ -68,6 +72,22 @@ public sealed partial class DatabaseMigrator(IServiceProvider services, IConfigu
         }
 
         LogDatabaseReady(logger, databaseName, PersistenceExtensions.SqlCompatibilityLevel);
+    }
+
+    // Shared database objects that module migrations rely on (row-level security predicate).
+    private static async Task EnsurePlatformObjectsAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        var connection = new SqlConnection(connectionString);
+        await using (connection.ConfigureAwait(false))
+        {
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            var command = connection.CreateCommand();
+            await using (command.ConfigureAwait(false))
+            {
+                command.CommandText = TenantRowLevelSecurity.CreatePredicateSql;
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Schema {Schema}: {Count} pending migration(s) [{Migrations}]")]

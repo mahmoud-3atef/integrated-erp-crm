@@ -10,9 +10,10 @@ public sealed class SettingsPersistenceTests(TestDatabase database)
 {
     private static DateOnly D(int year, int month, int day) => new(year, month, day);
 
-    private async Task<T> WithServiceAsync<T>(Func<SettingsService, Task<T>> action)
+    // Writes run as system so any scope can be set up; reads run as the tenant being asked about.
+    private async Task<T> WithServiceAsync<T>(Func<SettingsService, Task<T>> action, Guid? tenant = null)
     {
-        using var scope = database.Services.CreateScope();
+        using var scope = tenant is null ? database.Scope(system: true) : database.Scope(tenant);
         return await action(scope.ServiceProvider.GetRequiredService<SettingsService>());
     }
 
@@ -51,15 +52,35 @@ public sealed class SettingsPersistenceTests(TestDatabase database)
         Assert.True((await WithServiceAsync(s => s.SetValueAsync(key, SettingScope.ForTenant(tenant), "1300", D(2026, 9, 1), default))).IsSuccess);
         Assert.True((await WithServiceAsync(s => s.SetValueAsync(key, SettingScope.For(SettingScopeType.Customer, tenant, customer), "900", D(2026, 1, 1), default))).IsSuccess);
 
-        var tenantAugust = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(tenant), D(2026, 8, 31), default));
-        var tenantSeptember = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(tenant), D(2026, 9, 1), default));
-        var customerSeptember = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(tenant, CustomerId: customer), D(2026, 9, 1), default));
-        var otherTenant = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(Guid.NewGuid()), D(2026, 9, 1), default));
+        var tenantAugust = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(tenant), D(2026, 8, 31), default), tenant);
+        var tenantSeptember = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(tenant), D(2026, 9, 1), default), tenant);
+        var customerSeptember = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(tenant, CustomerId: customer), D(2026, 9, 1), default), tenant);
+        var otherTenantId = Guid.NewGuid();
+        var otherTenant = await WithServiceAsync(s => s.GetEffectiveAsync<decimal>(key, new SettingContext(otherTenantId), D(2026, 9, 1), default), otherTenantId);
 
         Assert.Equal(1200m, tenantAugust);
         Assert.Equal(1300m, tenantSeptember);
         Assert.Equal(900m, customerSeptember);
         Assert.Equal(1000m, otherTenant);
+    }
+
+    [SkippableFact]
+    public async Task A_tenant_cannot_write_another_tenants_or_system_settings()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+
+        var mine = Guid.NewGuid();
+        var someoneElse = Guid.NewGuid();
+        using var scope = database.Scope(mine);
+        var service = scope.ServiceProvider.GetRequiredService<SettingsService>();
+
+        var foreign = await service.SetValueAsync("x.y", SettingScope.ForTenant(someoneElse), "1", D(2026, 1, 1), default);
+        var system = await service.SetValueAsync("x.y", SettingScope.System, "1", D(2026, 1, 1), default);
+
+        Assert.Equal("validation.setting_scope_forbidden", foreign.Error.Code);
+        Assert.Equal("validation.setting_scope_forbidden", system.Error.Code);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.GetEffectiveValueAsync("x.y", new SettingContext(someoneElse), D(2026, 1, 1), default));
     }
 
     [SkippableFact]
