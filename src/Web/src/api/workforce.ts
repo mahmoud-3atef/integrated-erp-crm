@@ -1,7 +1,7 @@
 // Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). Read-only in the parallel phase.
 import { request } from './auth';
 
-export type Placement = 'Working' | 'New' | 'Housing' | 'Vacation' | 'Suspended' | 'Exited' | 'Absconded' | 'Other';
+export type Placement = 'Working' | 'New' | 'Housing' | 'Vacation' | 'Suspended' | 'Exited' | 'Absconded' | 'Other' | 'Inactive';
 export type WorkerKind = 'Worker' | 'Staff';
 
 /** Monthly salary (SAR); `project` is what the old screen showed as the project allowance. */

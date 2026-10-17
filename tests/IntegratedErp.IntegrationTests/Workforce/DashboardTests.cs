@@ -39,6 +39,19 @@ public sealed class DashboardTests(TestDatabase database)
 
         Worker(crm, "BSS0510", 279640001, philippines, null); // in housing
         Worker(crm, "BSS0511", 279640007, philippines, null); // final exit
+
+        // On the job in the old system, but on the pseudo-project of inactive workers: out of every count.
+        var inactiveProject = Guid.NewGuid();
+        var parked = crm.Add(CrmEntities.Employee, new()
+        {
+            ["new_name"] = "WORKER BSS0520", ["new_empidnumber"] = "BSS0520", ["new_idnumber"] = "2052000000", ["statuscode"] = 100000000, ["new_employeetype"] = 2,
+            ["new_nationalityid"] = philippines.ToString(), ["new_projectid"] = inactiveProject.ToString(), ["new_projectidname"] = "InActive Employee",
+        }, created: Created2025);
+        crm.Add("new_empwork", new()
+        {
+            ["new_employeeid"] = parked.ToString(), ["new_projectid"] = inactiveProject.ToString(), ["new_projectidname"] = "InActive Employee",
+            ["new_startdate"] = $"{thisMonth:yyyy-MM-dd}T09:00:00Z", ["new_serviceprice"] = 3000m, ["statecode"] = 0, ["new_number"] = "SW0520",
+        }, created: Created2025);
         await SyncAsync(tenantId, crm);
 
         using var scope = database.Scope(tenantId);
@@ -50,6 +63,14 @@ public sealed class DashboardTests(TestDatabase database)
         Assert.Equal(12, workforce.Moves.Count);
         Assert.Equal((thisMonth, 3), (workforce.Moves[^1].Month, workforce.Moves[^1].WorkStarts));
         Assert.Equal(0, workforce.IqamaWithExpiry);
+        Assert.False(workforce.Placements.ContainsKey("Inactive"));
+
+        // The workers list leaves them out of its total, and shows them on their own filter or a search.
+        var queries = scope.ServiceProvider.GetRequiredService<WorkerQueries>();
+        var list = await queries.ListAsync(new WorkerFilter(IntegratedErp.Modules.Workforce.Domain.WorkerKind.Worker, null, null, null, false, 1, 50), false, default);
+        Assert.Equal((5, 1), (list.Total, list.Counts["Inactive"]));
+        Assert.Equal(1, (await queries.ListAsync(new WorkerFilter(IntegratedErp.Modules.Workforce.Domain.WorkerKind.Worker, null, "Inactive", null, false, 1, 50), false, default)).Total);
+        Assert.Equal(1, (await queries.ListAsync(new WorkerFilter(IntegratedErp.Modules.Workforce.Domain.WorkerKind.Worker, "BSS0520", null, null, false, 1, 50), false, default)).Total);
 
         var operations = await scope.ServiceProvider.GetRequiredService<OperationsDashboard>().GetAsync(default);
         Assert.Equal((0, 0, 0), (operations.Deliveries.Preparing, operations.Returns.InApproval, operations.TransferredThisMonth));

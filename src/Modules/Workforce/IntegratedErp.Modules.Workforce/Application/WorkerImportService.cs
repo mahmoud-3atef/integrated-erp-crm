@@ -5,6 +5,7 @@ using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.Workforce.Domain;
 using IntegratedErp.Modules.Workforce.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
@@ -13,7 +14,7 @@ namespace IntegratedErp.Modules.Workforce.Application;
 /// last import. Identity numbers already held by another person are kept for review but not as current, so no
 /// number ever belongs to two people. Nationality and profession come from the reference list mappings.
 /// </summary>
-internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging staging, IClock clock) : ICrmStagingConsumer
+internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging staging, IOptions<WorkforceOptions> options, IClock clock) : ICrmStagingConsumer
 {
     private const string Employee = "new_employee";
     private const int Chunk = 300;
@@ -39,7 +40,10 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
         var records = await staging.ChangedSinceAsync(Employee, state.Watermark, cancellationToken).ConfigureAwait(false);
         if (records.Count == 0)
         {
-            return remapped == 0 ? "no changes" : $"{remapped} nationalities or professions updated after a merge";
+            var moved = await InactiveProjectsAsync(cancellationToken).ConfigureAwait(false);
+            return remapped == 0 && moved == 0
+                ? "no changes"
+                : $"{remapped} nationalities or professions updated after a merge, {moved} workers in or out of an inactive project";
         }
 
         // Current identity numbers of the company: (type, number) → person. Numbers are never moved between people
@@ -124,11 +128,31 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        var inactive = await InactiveProjectsAsync(cancellationToken).ConfigureAwait(false);
         var summary = $"{created} added, {updated} updated, {removed} removed in the CRM, {duplicates} identity numbers already used by another person"
-            + (remapped > 0 ? $", {remapped} remapped after a merge" : string.Empty);
+            + (remapped > 0 ? $", {remapped} remapped after a merge" : string.Empty)
+            + $", {inactive} workers in or out of an inactive project";
         state.Done(records.Max(r => r.LastSyncedAt), clock.UtcNow, summary);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return summary;
+    }
+
+    /// <summary>
+    /// Workers on the job on an inactive project (settings) are put out of the counts; those whose project changed
+    /// (or whose project is no longer listed) come back.
+    /// </summary>
+    private async Task<int> InactiveProjectsAsync(CancellationToken cancellationToken)
+    {
+        var settings = options.Value;
+        var workers = await db.Workers.Where(w => w.Placement == Placement.Working || w.Placement == Placement.Inactive)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var changed = workers.Count(w => w.SetOnInactiveProject(settings.IsInactiveProject(w.ProjectName)));
+        if (changed > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return changed;
     }
 
     /// <summary>

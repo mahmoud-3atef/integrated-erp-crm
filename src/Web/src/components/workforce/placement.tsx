@@ -19,6 +19,7 @@ export const placementLook: Record<Placement, { tone: string; soft: string; icon
   Exited: { tone: '#c0392b', soft: '#fdeeee', icon: <FlightTakeoffOutlinedIcon /> },
   Absconded: { tone: '#7a2e8e', soft: '#f5ecf7', icon: <PersonOffOutlinedIcon /> },
   Other: { tone: '#66798a', soft: '#edf2f6', icon: <HelpOutlineOutlinedIcon /> },
+  Inactive: { tone: '#8aa1b1', soft: '#edf2f6', icon: <HelpOutlineOutlinedIcon /> },
 };
 
 /** The status cards of each list: the old workers page's six; staff are never in workers' housing. */

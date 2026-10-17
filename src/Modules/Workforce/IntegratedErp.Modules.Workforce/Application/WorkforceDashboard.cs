@@ -3,6 +3,7 @@ using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workforce.Domain;
 using IntegratedErp.Modules.Workforce.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
@@ -33,7 +34,7 @@ public sealed record WorkforceDashboardDto(
 /// which projects, their nationalities and professions, the movements of the last twelve months, the iqamas to renew,
 /// and the data checks (history exceptions, the invoice match).
 /// </summary>
-internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData reference, IClock clock)
+internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData reference, IOptions<WorkforceOptions> options, IClock clock)
 {
     private static readonly Placement[] Gone = [Placement.Exited, Placement.Absconded];
 
@@ -58,6 +59,8 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 };
             })
             .ToList();
+        var inactive = now.Where(w => w.Placement == Placement.Inactive).Select(w => w.Id).ToHashSet();
+        now = now.Where(w => w.Placement != Placement.Inactive).ToList();
         var active = now.Where(w => !Gone.Contains(w.Placement)).ToList();
         var placements = now.GroupBy(w => w.Placement.ToString()).ToDictionary(g => g.Key, g => g.Count());
 
@@ -91,7 +94,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
 
         return new WorkforceDashboardDto(
             active.Count, placements, projects.Take(8).ToList(), projects.Count, nationalities, professions,
-            await MovesAsync(today, cancellationToken).ConfigureAwait(false),
+            await MovesAsync(today, inactive, cancellationToken).ConfigureAwait(false),
             activeIqamas.Count,
             activeIqamas.Count(i => i.ExpiresOn >= today && i.ExpiresOn <= today.AddDays(30)),
             activeIqamas.Count(i => i.ExpiresOn < today),
@@ -102,17 +105,20 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
     /// The work starts and returns to housing of the last twelve months, from the timeline: the old system's history up
     /// to each worker's first period recorded here, then the recorded periods.
     /// </summary>
-    private async Task<IReadOnlyList<MonthMovesDto>> MovesAsync(DateOnly today, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<MonthMovesDto>> MovesAsync(DateOnly today, HashSet<Guid> inactive, CancellationToken cancellationToken)
     {
         var from = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
         var firstRecorded = await db.Periods.AsNoTracking().GroupBy(p => p.WorkerId).Select(g => new { g.Key, First = g.Min(p => p.StartsOn) })
             .ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken).ConfigureAwait(false);
         var recorded = await db.Periods.AsNoTracking().Where(p => p.StartsOn >= from && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
-            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn }).ToListAsync(cancellationToken).ConfigureAwait(false);
+            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, Place = p.ProjectName }).ToListAsync(cancellationToken).ConfigureAwait(false);
         var history = await db.HistoryPeriods.AsNoTracking().Where(p => p.StartsOn >= from && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
-            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn }).ToListAsync(cancellationToken).ConfigureAwait(false);
+            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.Place }).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        // Neither the inactive workers' movements nor anyone's work starts on an inactive project.
         var moves = recorded
             .Concat(history.Where(h => !firstRecorded.TryGetValue(h.WorkerId, out var first) || h.StartsOn < first))
+            .Where(m => !inactive.Contains(m.WorkerId) && !(m.Kind == PeriodKind.Work && options.Value.IsInactiveProject(m.Place)))
             .ToLookup(m => new DateOnly(m.StartsOn.Year, m.StartsOn.Month, 1));
         return Enumerable.Range(0, 12).Select(i => from.AddMonths(i))
             .Select(m => new MonthMovesDto(m, moves[m].Count(x => x.Kind == PeriodKind.Work), moves[m].Count(x => x.Kind == PeriodKind.Housing)))

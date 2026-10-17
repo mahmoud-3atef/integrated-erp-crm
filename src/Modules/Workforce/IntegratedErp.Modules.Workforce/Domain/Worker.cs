@@ -23,6 +23,12 @@ public enum Placement
     Exited,
     Absconded,
     Other,
+
+    /// <summary>
+    /// On the job in the old system, but on a project that stands for inactive workers ("InActive Employee"): not
+    /// working, and left out of every count (dashboard, lists, prices, movements).
+    /// </summary>
+    Inactive,
 }
 
 /// <summary>The worker's life cycle (not where they are): docs/02-target-architecture/04 §3.</summary>
@@ -137,6 +143,23 @@ public sealed class Worker : ITenantOwned
 
     /// <summary>The CRM record no longer exists (deleted there).</summary>
     public bool RemovedInCrm { get; private set; }
+
+    /// <summary>
+    /// Puts a worker the old system has on the job on an inactive project (see <see cref="Placement.Inactive"/>) out
+    /// of the counts, or back when their project changes. Returns whether the placement changed.
+    /// </summary>
+    public bool SetOnInactiveProject(bool inactive)
+    {
+        var (placement, _) = CrmWorkerStatus.Map(CrmStatus);
+        var next = inactive && placement == Placement.Working ? Placement.Inactive : placement;
+        if (next == Placement)
+        {
+            return false;
+        }
+
+        Placement = next;
+        return true;
+    }
 
     public void Update(WorkerSnapshot s)
     {

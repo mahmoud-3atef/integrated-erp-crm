@@ -79,6 +79,12 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
             .Select(w => openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : openHousing.Any(p => p.WorkerId == w.Id) ? Placement.Housing : w.Placement)
             .GroupBy(x => x).Select(g => new { g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Key.ToString(), x => x.Count, cancellationToken).ConfigureAwait(false);
+
+        // Workers on an inactive project are out of the list and its total, unless asked for (their filter or a search).
+        if (filter.Placement != nameof(Placement.Inactive) && string.IsNullOrWhiteSpace(filter.Search))
+        {
+            query = query.Where(w => w.Placement != Placement.Inactive || openWork.Any(p => p.WorkerId == w.Id) || openHousing.Any(p => p.WorkerId == w.Id));
+        }
         if (Enum.TryParse<Placement>(filter.Placement, out var placement))
         {
             query = query.Where(w => (openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : openHousing.Any(p => p.WorkerId == w.Id) ? Placement.Housing : w.Placement) == placement);

@@ -980,7 +980,8 @@
       "Suspended": "Suspended",
       "Exited": "Final exit",
       "Absconded": "Absconded",
-      "Other": "Other"
+      "Other": "Other",
+      "Inactive": "Inactive (InActive project)"
     },
     "kind": {
       "Worker": "Workers",
@@ -1186,7 +1187,9 @@
         "NotInvoiced": "The ledger has the worker on the project, the project has an invoice for the month, but the worker is not on it.",
         "ProjectNotInvoiced": "Workers on projects without an invoice for the month (internal projects such as head office, or an invoice not made yet). Not counted in the match rate."
       }
-    }
+    },
+    "inactiveNote": "Workers on an inactive project ({{count}}): left out of every count.",
+    "inactiveShow": "Show them"
   },
   "commercial": {
     "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync. Only customers and projects created from 1 January 2025 are brought over.",

@@ -5,6 +5,7 @@ using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.Workforce.Domain;
 using IntegratedErp.Modules.Workforce.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
@@ -17,7 +18,7 @@ namespace IntegratedErp.Modules.Workforce.Application;
 /// invoices were made from spreadsheets without checking the periods. Rebuilt after every sync in which the invoices
 /// or the ledger changed.
 /// </summary>
-internal sealed class InvoiceCheckBuilder(WorkforceDbContext db, ICrmStaging staging, IClock clock) : ICrmStagingConsumer
+internal sealed class InvoiceCheckBuilder(WorkforceDbContext db, ICrmStaging staging, IOptions<WorkforceOptions> options, IClock clock) : ICrmStagingConsumer
 {
     private static readonly TimeSpan Riyadh = TimeSpan.FromHours(3);
 
@@ -221,7 +222,8 @@ internal sealed class InvoiceCheckBuilder(WorkforceDbContext db, ICrmStaging sta
                 : p)
             .OfType<WorkSpan>()
             .Where(p => p.EndsOn is null || p.EndsOn > from);
-        return recorded.Concat(trimmed).ToList();
+        // Work on an inactive project ("InActive Employee") is not work: never invoiced, never expected on an invoice.
+        return recorded.Concat(trimmed).Where(p => !(p.Kind == PeriodKind.Work && options.Value.IsInactiveProject(p.ProjectName))).ToList();
     }
 
     /// <summary>

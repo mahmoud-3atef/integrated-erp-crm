@@ -1,6 +1,7 @@
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import {
+  Link,
   Alert,
   Box,
   Button,
@@ -158,6 +159,20 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
           );
         })}
       </Box>
+      {!staff && (data?.counts.Inactive ?? 0) > 0 && (
+        <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: `${tokens.gap}px` }}>
+          {t('workforce.inactiveNote', { count: data?.counts.Inactive ?? 0 })}{' '}
+          {placement === 'Inactive' ? (
+            <Link component="button" onClick={() => update({ status: null })}>
+              {t('workforce.reset')}
+            </Link>
+          ) : (
+            <Link component="button" onClick={() => update({ status: 'Inactive' })}>
+              {t('workforce.inactiveShow')}
+            </Link>
+          )}
+        </Alert>
+      )}
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>

@@ -205,7 +205,7 @@ internal sealed class HistoryBuilder(WorkforceDbContext db, ICrmStaging staging,
                 issues.Add(new HistoryIssue(worker.Id, HistoryIssues.OnJobWithoutWorkStart, null,
                     $"على رأس العمل في النظام القديم على «{worker.ProjectName ?? "—"}» بلا أي مباشرة.", null));
             }
-            else if (current is { } kind && Expected(kind) is { } expected && !expected.Contains(worker.Placement))
+            else if (current is { } kind && Expected(kind) is { } expected && !expected.Contains(worker.Placement) && worker.Placement != Placement.Inactive)
             {
                 issues.Add(new HistoryIssue(worker.Id, HistoryIssues.StatusMismatch, last!.On,
                     $"آخر حركة {Describe(last)} ({last.SourceNo}) لكن الحالة في النظام القديم «{CrmWorkerStatus.Name(worker.CrmStatus)?.Ar ?? worker.Placement.ToString()}».", last.SourceNo));
