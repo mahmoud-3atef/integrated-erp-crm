@@ -486,3 +486,6 @@ Directory.Build.local.props
 
 # Web app build output (built from src/Web)
 src/Hosts/IntegratedErp.Api/wwwroot/
+
+# Local compiler wrapper used by Directory.Build.local.props (machine-specific)
+.erp-tools/
