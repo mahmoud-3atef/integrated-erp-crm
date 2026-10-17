@@ -7,6 +7,10 @@
     <Project Path="src/Hosts/IntegratedErp.Api/IntegratedErp.Api.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/CrmSync/">
+    <Project Path="src/Modules/CrmSync/IntegratedErp.Modules.CrmSync.Contracts/IntegratedErp.Modules.CrmSync.Contracts.csproj" />
+    <Project Path="src/Modules/CrmSync/IntegratedErp.Modules.CrmSync/IntegratedErp.Modules.CrmSync.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Documents/">
     <Project Path="src/Modules/Documents/IntegratedErp.Modules.Documents.Contracts/IntegratedErp.Modules.Documents.Contracts.csproj" />
     <Project Path="src/Modules/Documents/IntegratedErp.Modules.Documents/IntegratedErp.Modules.Documents.csproj" />

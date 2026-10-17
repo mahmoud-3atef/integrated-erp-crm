@@ -2,6 +2,7 @@ using IntegratedErp.BuildingBlocks;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.Modules.CrmSync;
 using IntegratedErp.Modules.Documents;
 using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Organization;
@@ -95,7 +96,7 @@ public sealed class TestDatabase : IAsyncLifetime
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
         services.AddPlatformCore();
-        services.AddModules(configuration, new OrganizationModule(), new IdentityModule(), new DocumentsModule(), new WorkflowModule());
+        services.AddModules(configuration, new OrganizationModule(), new IdentityModule(), new DocumentsModule(), new WorkflowModule(), new CrmSyncModule());
         _services = services.BuildServiceProvider();
 
         await _services.GetRequiredService<DatabaseMigrator>().MigrateAsync(CancellationToken.None);

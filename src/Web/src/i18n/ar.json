@@ -188,7 +188,14 @@
     "validation_process_approver_unknown": "أحد المستخدمين أو الأدوار في العملية لا ينتمي إلى هذه الشركة.",
     "validation_request_category_invalid": "نوع الطلب غير معروف.",
     "validation_request_manager_self": "لا يمكن أن تكون مديرًا مباشرًا لنفسك.",
-    "validation_request_manager_unknown": "المدير المباشر ليس عضوًا في هذه الشركة."
+    "validation_request_manager_unknown": "المدير المباشر ليس عضوًا في هذه الشركة.",
+    "validation_crm_sync_not_configured": "الاتصال بقاعدة بيانات CRM غير مضبوط.",
+    "validation_crm_sync_other_company": "بيانات CRM تخص شركة أخرى.",
+    "conflict_crm_sync_running": "توجد مزامنة في الانتظار أو جارية الآن.",
+    "validation_crm_sync_not_synced": "نفّذ المزامنة أولًا حتى تُنسخ الدول والمهن.",
+    "validation_crm_sync_item_unknown": "اختر عنصرًا فعّالًا من القائمة.",
+    "validation_crm_sync_same_item": "لا يمكن دمج العنصر في نفسه.",
+    "not_found_crm_mapping": "سجل CRM غير موجود."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -208,7 +215,8 @@
     "routes": "مسارات الاعتماد",
     "myApprovals": "طلباتي للاعتماد",
     "monitor": "متابعة الاعتمادات",
-    "processes": "عمليات الاعتماد"
+    "processes": "عمليات الاعتماد",
+    "crmSync": "المزامنة من النظام القديم"
   },
   "roles": {
     "title": "الأدوار والصلاحيات",
@@ -681,5 +689,100 @@
       "Future": "قادمة"
     },
     "days": "{{count}} يوم"
+  },
+  "crmSync": {
+    "title": "المزامنة من النظام القديم",
+    "intro": "نسخة للقراءة فقط من بيانات نظام CRM الحالي، وتحويل جنسياته ومهنه إلى قوائم النظام دون تكرار.",
+    "notConfigured": "الاتصال بقاعدة بيانات CRM غير مضبوط (CrmSync:ConnectionString)، لذا المزامنة غير متاحة.",
+    "otherCompany": "بيانات CRM تخص الشركة «{{company}}»؛ بدّل إليها لتشغيل المزامنة.",
+    "copyTitle": "نسخ البيانات من CRM",
+    "readOnly": "قراءة فقط: لا يُكتب أي شيء في قاعدة CRM.",
+    "every": "تعمل المزامنة التزايدية تلقائيًا كل {{minutes}} دقيقة.",
+    "manualOnly": "تعمل عند الطلب فقط.",
+    "runIncremental": "مزامنة التغييرات",
+    "runFull": "مزامنة كاملة",
+    "fullHint": "تقرأ المزامنة الكاملة كل السجلات من جديد، وتعلّم السجلات التي حُذفت من CRM بأنها محذوفة. قد تستغرق بضع دقائق.",
+    "entity": "الكيان",
+    "records": "السجلات",
+    "deleted": "المحذوفة",
+    "lastChange": "آخر تعديل منسوخ",
+    "lastSuccess": "آخر مزامنة ناجحة",
+    "ok": "تمت",
+    "never": "لم تتم بعد",
+    "runs": "آخر عمليات المزامنة",
+    "scheduled": "تلقائية",
+    "totals": "قُرئ {{read}}، أُضيف {{inserted}}، عُدّل {{updated}}، حُذف {{deleted}}",
+    "referencesTitle": "الجنسيات والمهن",
+    "referencesIntro": "تُطابَق كل دولة مع رمزها الدولي (ISO)، وتُدمج المهن المتكررة بأي تهجئة في مهنة واحدة. السجلات التي ليست جنسيات فعلية تبقى للمراجعة.",
+    "import": "استيراد إلى القوائم المرجعية",
+    "syncFirst": "نفّذ المزامنة أولًا حتى تُنسخ الدول والمهن.",
+    "notImported": "لم يُستورد شيء بعد.",
+    "lists": {
+      "nationalities": "الجنسيات",
+      "professions": "المهن"
+    },
+    "summary": {
+      "crmRecords": "سجلات CRM",
+      "items": "عناصر فريدة",
+      "merged": "نسخ مدمجة",
+      "created": "أُنشئت الآن",
+      "unmapped": "دون مطابقة",
+      "needsReview": "تحتاج مراجعة"
+    },
+    "unmappedTitle": "سجلات لم تُطابَق ({{count}}): ليست قيمًا فعلية، ويبقى الحقل فارغًا لدى من يستخدمها حتى يُصحَّح",
+    "usedBy": "يستخدمه {{count}} موظف",
+    "search": "بحث بالرمز أو الاسم",
+    "mergedOnly": "المدمجة فقط",
+    "itemCount": "العدد: {{count}}",
+    "code": "الرمز",
+    "name": "الاسم",
+    "crmCopies": "نسخ CRM",
+    "employees": "الموظفون",
+    "crmRecords": "سجلات CRM المدمجة في هذا العنصر",
+    "showMore": "عرض المزيد",
+    "mode": {
+      "Incremental": "تزايدية",
+      "Full": "كاملة"
+    },
+    "status": {
+      "Queued": "في الانتظار",
+      "Running": "جارية",
+      "Succeeded": "ناجحة",
+      "PartlyFailed": "نجحت جزئيًا",
+      "Failed": "فشلت"
+    },
+    "rule": {
+      "Name": "الأصل",
+      "Duplicate": "نسخة مكررة",
+      "Spelling": "تهجئة أخرى",
+      "EnglishName": "بالاسم الإنجليزي",
+      "Alias": "اسم بديل",
+      "Conflict": "تعارض — للمراجعة",
+      "Unmapped": "دون مطابقة",
+      "Manual": "يدوي"
+    },
+    "entities": {
+      "new_country": "الدول والجنسيات",
+      "new_profession": "المهن",
+      "systemuser": "مستخدمو النظام",
+      "team": "الفرق",
+      "account": "العملاء",
+      "new_project": "المشاريع",
+      "new_employee": "الموظفون والعمالة",
+      "new_empwork": "مباشرات العمل",
+      "new_deliverorder": "أوامر التسليم",
+      "mw_lodginorderdetails": "تفاصيل أوامر السكن",
+      "new_ajeercontract": "الأسرّة",
+      "new_thijridate": "تسكين الأسرّة",
+      "hr_vicrequest": "طلبات الإجازات"
+    },
+    "link": "ربط بعنصر",
+    "linkTitle": "ربط سجل بعنصر من القائمة",
+    "linkHint": "سيُربط السجل «{{name}}» (يستخدمه {{count}} موظف) بالعنصر الذي تختاره، وتحافظ عمليات الاستيراد اللاحقة على هذا الاختيار.",
+    "merge": "دمج",
+    "mergeInto": "دمج في عنصر آخر",
+    "mergeTitle": "دمج عنصر في عنصر آخر",
+    "mergeHint": "ستنتقل كل سجلات CRM المرتبطة بـ«{{name}}» (يستخدمه {{count}} موظف) إلى العنصر الذي تختاره، ويُعطَّل «{{name}}». تحافظ عمليات الاستيراد اللاحقة على هذا الدمج.",
+    "target": "العنصر الهدف"
   }
 }

@@ -38,6 +38,7 @@ public sealed class OrganizationModule : IModule
         services.AddScoped<ILegalEntityDirectory, LegalEntityDirectory>();
         services.AddScoped<CompanySetupService>();
         services.AddScoped<IReferenceData>(sp => sp.GetRequiredService<CompanySetupService>());
+        services.AddScoped<IReferenceDataImport>(sp => sp.GetRequiredService<CompanySetupService>());
         services.AddReferenceLists(OrganizationReferenceLists.All);
         services.AddAttachmentOwners<OrganizationAttachmentOwners>(OrganizationAttachmentOwners.All);
         services.AddPermissions(OrganizationPermissions.All);

@@ -6,6 +6,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { SignInFlowProvider } from '../auth/SignInFlow';
 import { directionOf, type Language } from '../i18n';
 import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
+import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
 import { RolesPage } from '../pages/admin/RolesPage';
 import { UsersPage } from '../pages/admin/UsersPage';
 import { HomePage } from '../pages/HomePage';
@@ -44,6 +45,7 @@ export function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/roles" element={<RolesPage />} />
+                <Route path="/admin/crm-sync" element={<CrmSyncPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

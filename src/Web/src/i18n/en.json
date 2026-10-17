@@ -188,7 +188,14 @@
     "validation_process_approver_unknown": "A user or role in the process is not part of this company.",
     "validation_request_category_invalid": "Unknown request category.",
     "validation_request_manager_self": "You cannot be your own direct manager.",
-    "validation_request_manager_unknown": "The direct manager is not a member of this company."
+    "validation_request_manager_unknown": "The direct manager is not a member of this company.",
+    "validation_crm_sync_not_configured": "The CRM database connection is not configured.",
+    "validation_crm_sync_other_company": "The CRM's data belongs to another company.",
+    "conflict_crm_sync_running": "A sync is already queued or running.",
+    "validation_crm_sync_not_synced": "Run the sync first so countries and professions are copied.",
+    "validation_crm_sync_item_unknown": "Choose an active item of the list.",
+    "validation_crm_sync_same_item": "An item cannot be merged into itself.",
+    "not_found_crm_mapping": "CRM record not found."
   },
   "menu": {
     "label": "Main menu",
@@ -208,7 +215,8 @@
     "routes": "Approval routes",
     "myApprovals": "My submissions",
     "monitor": "Approval monitor",
-    "processes": "Approval processes"
+    "processes": "Approval processes",
+    "crmSync": "Sync from old system"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -681,5 +689,100 @@
       "Future": "Upcoming"
     },
     "days": "{{count}} d"
+  },
+  "crmSync": {
+    "title": "Sync from the old system",
+    "intro": "A read-only copy of the current CRM's data, and its nationalities and professions turned into the system's lists without duplicates.",
+    "notConfigured": "The CRM database connection is not configured (CrmSync:ConnectionString), so syncing is unavailable.",
+    "otherCompany": "The CRM's data belongs to the company “{{company}}”; switch to it to run the sync.",
+    "copyTitle": "Copy data from the CRM",
+    "readOnly": "Read-only: nothing is ever written to the CRM database.",
+    "every": "Incremental sync runs automatically every {{minutes}} minutes.",
+    "manualOnly": "Runs on request only.",
+    "runIncremental": "Sync changes",
+    "runFull": "Full sync",
+    "fullHint": "A full sync reads every record again and marks records deleted from the CRM as deleted. It may take a few minutes.",
+    "entity": "Entity",
+    "records": "Records",
+    "deleted": "Deleted",
+    "lastChange": "Last change copied",
+    "lastSuccess": "Last successful sync",
+    "ok": "Done",
+    "never": "Not yet",
+    "runs": "Recent sync runs",
+    "scheduled": "automatic",
+    "totals": "read {{read}}, added {{inserted}}, updated {{updated}}, deleted {{deleted}}",
+    "referencesTitle": "Nationalities and professions",
+    "referencesIntro": "Each country is matched to its international (ISO) code, and professions repeated in any spelling are merged into one. Records that are not real nationalities are left for review.",
+    "import": "Import into reference lists",
+    "syncFirst": "Run the sync first so countries and professions are copied.",
+    "notImported": "Nothing has been imported yet.",
+    "lists": {
+      "nationalities": "Nationalities",
+      "professions": "Professions"
+    },
+    "summary": {
+      "crmRecords": "CRM records",
+      "items": "Unique items",
+      "merged": "Merged copies",
+      "created": "Created now",
+      "unmapped": "Unmatched",
+      "needsReview": "Need review"
+    },
+    "unmappedTitle": "Unmatched records ({{count}}): not real values; the field stays empty for whoever uses them until corrected",
+    "usedBy": "used by {{count}} employees",
+    "search": "Search by code or name",
+    "mergedOnly": "Merged only",
+    "itemCount": "Count: {{count}}",
+    "code": "Code",
+    "name": "Name",
+    "crmCopies": "CRM copies",
+    "employees": "Employees",
+    "crmRecords": "CRM records merged into this item",
+    "showMore": "Show more",
+    "mode": {
+      "Incremental": "incremental",
+      "Full": "full"
+    },
+    "status": {
+      "Queued": "Queued",
+      "Running": "Running",
+      "Succeeded": "Succeeded",
+      "PartlyFailed": "Partly failed",
+      "Failed": "Failed"
+    },
+    "rule": {
+      "Name": "Original",
+      "Duplicate": "Duplicate copy",
+      "Spelling": "Other spelling",
+      "EnglishName": "By English name",
+      "Alias": "Alternative name",
+      "Conflict": "Conflict — review",
+      "Unmapped": "Unmatched",
+      "Manual": "By hand"
+    },
+    "entities": {
+      "new_country": "Countries and nationalities",
+      "new_profession": "Professions",
+      "systemuser": "System users",
+      "team": "Teams",
+      "account": "Customers",
+      "new_project": "Projects",
+      "new_employee": "Employees and workers",
+      "new_empwork": "Work starts",
+      "new_deliverorder": "Delivery orders",
+      "mw_lodginorderdetails": "Housing order lines",
+      "new_ajeercontract": "Beds",
+      "new_thijridate": "Bed assignments",
+      "hr_vicrequest": "Vacation requests"
+    },
+    "link": "Link to an item",
+    "linkTitle": "Link a record to a list item",
+    "linkHint": "The record “{{name}}” (used by {{count}} employees) will point to the item you choose; later imports keep this choice.",
+    "merge": "Merge",
+    "mergeInto": "Merge into another item",
+    "mergeTitle": "Merge an item into another",
+    "mergeHint": "All CRM records of “{{name}}” (used by {{count}} employees) move to the item you choose, and “{{name}}” is switched off. Later imports keep this merge.",
+    "target": "Target item"
   }
 }

@@ -24,7 +24,7 @@ public sealed record HistoryEntryDto(string Action, string UserName, DateTimeOff
 /// Company setup of the current company: commercial registrations, branches and reference lists. Every change is
 /// written to the audit log in the same transaction (ModuleDbContext), and <see cref="HistoryAsync"/> reads it back.
 /// </summary>
-internal sealed class CompanySetupService(OrganizationDbContext db, ReferenceListCatalog lists, ITenantContext tenant) : IReferenceData
+internal sealed class CompanySetupService(OrganizationDbContext db, ReferenceListCatalog lists, ITenantContext tenant) : IReferenceData, IReferenceDataImport
 {
     public static readonly Error LegalEntityNotFound = Error.NotFound("legal_entity", "Commercial registration not found.");
     public static readonly Error BranchNotFound = Error.NotFound("branch", "Branch not found.");
@@ -238,6 +238,54 @@ internal sealed class CompanySetupService(OrganizationDbContext db, ReferenceLis
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<Result<ReferenceImportResult>> ImportAsync(string listCode, IReadOnlyList<ImportedReferenceItem> items, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (lists.Find(listCode) is null)
+        {
+            return Result.Failure<ReferenceImportResult>(ListNotFound);
+        }
+
+        var existing = (await db.ReferenceItems.AsNoTracking().Where(i => i.ListCode == listCode).Select(i => i.Code)
+            .ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet(StringComparer.Ordinal);
+        var created = 0;
+        var present = 0;
+        foreach (var item in items)
+        {
+            var built = ReferenceItem.Create(listCode, item.Code, item.NameAr, item.NameEn, item.SortOrder);
+            if (built.IsFailure)
+            {
+                return Result.Failure<ReferenceImportResult>(built.Error);
+            }
+
+            if (!existing.Add(built.Value.Code))
+            {
+                present++;
+                continue;
+            }
+
+            db.ReferenceItems.Add(built.Value);
+            created++;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success(new ReferenceImportResult(created, present));
+    }
+
+    public async Task<Result> DeactivateAsync(string listCode, IReadOnlyList<string> codes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(codes);
+        var normalized = codes.Select(ReferenceItem.NormalizeCode).ToList();
+        foreach (var item in await db.ReferenceItems.Where(i => i.ListCode == listCode && normalized.Contains(i.Code) && i.IsActive && !i.IsSystem)
+                     .ToListAsync(cancellationToken).ConfigureAwait(false))
+        {
+            item.SetActive(false);
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
     }
 
     private async Task<bool> LegalEntityExistsAsync(Guid? id, CancellationToken cancellationToken) =>

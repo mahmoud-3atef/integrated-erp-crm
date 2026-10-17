@@ -1,12 +1,13 @@
 using IntegratedErp.BuildingBlocks.Reference;
+using IntegratedErp.Modules.Organization.Contracts;
 
 namespace IntegratedErp.Modules.Organization;
 
 /// <summary>Company-wide reference lists. Each later module declares its own lists the same way.</summary>
 internal static class OrganizationReferenceLists
 {
-    public const string Nationalities = "nationalities";
-    public const string Professions = "professions";
+    public const string Nationalities = ReferenceListCodes.Nationalities;
+    public const string Professions = ReferenceListCodes.Professions;
     public const string Cities = "cities";
     public const string Banks = "banks";
     public const string ReturnReasons = "return_reasons";

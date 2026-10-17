@@ -135,7 +135,7 @@ public abstract class ModuleDbContext : DbContext
 
         var now = _dependencies.Clock.UtcNow;
         var traceId = Activity.Current?.TraceId.ToString();
-        foreach (var entry in changed)
+        foreach (var entry in changed.Where(e => e.Entity is not INotAudited))
         {
             AuditLog.Add(CreateAuditEntry(entry, now, traceId));
         }

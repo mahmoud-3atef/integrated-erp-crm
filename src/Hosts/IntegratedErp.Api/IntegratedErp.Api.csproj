@@ -8,5 +8,6 @@
     <ProjectReference Include="..\..\Modules\Identity\IntegratedErp.Modules.Identity\IntegratedErp.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\Modules\Documents\IntegratedErp.Modules.Documents\IntegratedErp.Modules.Documents.csproj" />
     <ProjectReference Include="..\..\Modules\Workflow\IntegratedErp.Modules.Workflow\IntegratedErp.Modules.Workflow.csproj" />
+    <ProjectReference Include="..\..\Modules\CrmSync\IntegratedErp.Modules.CrmSync\IntegratedErp.Modules.CrmSync.csproj" />
   </ItemGroup>
 </Project>
