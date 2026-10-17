@@ -151,6 +151,54 @@ internal sealed class TimesheetService(
         return Result.Success();
     }
 
+    /// <summary>The timesheet as the Excel template to fill in (with the adjustments entered so far).</summary>
+    public async Task<(byte[] Content, string FileName)?> ExportAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var (timesheet, _, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        return timesheet is null ? null : (TimesheetWorkbook.Build(timesheet, setting!.MaxOvertimeHours), TimesheetWorkbook.FileName(timesheet));
+    }
+
+    /// <summary>What an uploaded file would change, and its problems — nothing is saved.</summary>
+    public async Task<Result<ExcelPreview>> PreviewAsync(Guid id, Stream content, CancellationToken cancellationToken)
+    {
+        var (timesheet, _, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        if (timesheet is null)
+        {
+            return Result.Failure<ExcelPreview>(TimesheetErrors.NotFound);
+        }
+
+        return timesheet.IsEditable
+            ? Result.Success(TimesheetWorkbook.Read(content, timesheet, setting!.MaxOvertimeHours).Preview)
+            : Result.Failure<ExcelPreview>(TimesheetErrors.NotEditable);
+    }
+
+    /// <summary>Applies an uploaded file: all its changes as adjustments with their reasons, or nothing when it has a problem.</summary>
+    public async Task<Result<ExcelPreview>> ApplyExcelAsync(Guid id, Stream content, CancellationToken cancellationToken)
+    {
+        var (timesheet, rules, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        if (timesheet is null)
+        {
+            return Result.Failure<ExcelPreview>(TimesheetErrors.NotFound);
+        }
+
+        var (preview, totals) = TimesheetWorkbook.Read(content, timesheet, setting!.MaxOvertimeHours);
+        if (preview.Problems.Count > 0 || totals.Count == 0)
+        {
+            return Result.Success(preview);
+        }
+
+        var set = timesheet.SetTotals(totals, rules!, setting.MaxOvertimeHours, $"{user.DisplayName} (Excel)", clock.UtcNow);
+        if (set.IsFailure)
+        {
+            return Result.Failure<ExcelPreview>(set.Error);
+        }
+
+        db.TimesheetAdjustments.RemoveRange(set.Value.Removed);
+        db.TimesheetAdjustments.AddRange(set.Value.Added);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success(preview);
+    }
+
     /// <summary>Sends the timesheet through the company's approval process for timesheets.</summary>
     public async Task<Result> SubmitAsync(Guid id, CancellationToken cancellationToken)
     {

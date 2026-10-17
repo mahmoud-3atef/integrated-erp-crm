@@ -259,6 +259,57 @@ public sealed class Timesheet : ITenantOwned
         return Result.Success(adjustment);
     }
 
+    /// <summary>
+    /// Sets workers' totals per adjustment type (an uploaded Excel file): a worker's adjustments of a changed type are
+    /// replaced by one carrying the new total and the row's reason (none when the total is zero). All or nothing.
+    /// Returns the adjustments removed and added.
+    /// </summary>
+    public Result<(IReadOnlyList<TimesheetAdjustment> Removed, IReadOnlyList<TimesheetAdjustment> Added)> SetTotals(
+        IReadOnlyList<AdjustmentTotal> totals, BillingRules rules, decimal maxOvertimeHours, string by, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(totals);
+        if (!IsEditable)
+        {
+            return Result.Failure<(IReadOnlyList<TimesheetAdjustment>, IReadOnlyList<TimesheetAdjustment>)>(TimesheetErrors.NotEditable);
+        }
+
+        foreach (var t in totals)
+        {
+            var days = _lines.Where(l => l.WorkerId == t.WorkerId).Sum(l => l.WorkDays);
+            var problem = days == 0 ? TimesheetErrors.WorkerNotOnTimesheet
+                : string.IsNullOrWhiteSpace(t.Reason) ? TimesheetErrors.Reason
+                : t.Type != AdjustmentType.FeeDays && t.Total < 0 ? TimesheetErrors.Value
+                : t.Type == AdjustmentType.Absence && t.Total > days ? TimesheetErrors.AbsenceOverDays
+                : t.Type == AdjustmentType.Overtime && t.Total > maxOvertimeHours ? TimesheetErrors.OvertimeOverLimit
+                : null;
+            if (problem is not null)
+            {
+                return Result.Failure<(IReadOnlyList<TimesheetAdjustment>, IReadOnlyList<TimesheetAdjustment>)>(problem);
+            }
+        }
+
+        var removed = new List<TimesheetAdjustment>();
+        var added = new List<TimesheetAdjustment>();
+        foreach (var t in totals)
+        {
+            var old = _adjustments.Where(a => a.WorkerId == t.WorkerId && a.Type == t.Type).ToList();
+            removed.AddRange(old);
+            _adjustments.RemoveAll(old.Contains);
+            if (t.Total != 0)
+            {
+                var adjustment = new TimesheetAdjustment(Id, t.WorkerId, t.Type, t.Total, t.Reason.Trim(), by, at);
+                _adjustments.Add(adjustment);
+                added.Add(adjustment);
+            }
+        }
+
+        Recalculate(rules);
+        return Result.Success<(IReadOnlyList<TimesheetAdjustment>, IReadOnlyList<TimesheetAdjustment>)>((removed, added));
+    }
+
+    /// <summary>A worker's adjustments of one type, as totals.</summary>
+    public decimal TotalOf(Guid workerId, AdjustmentType type) => _adjustments.Where(a => a.WorkerId == workerId && a.Type == type).Sum(a => a.Value);
+
     public Result RemoveAdjustment(Guid adjustmentId, BillingRules rules)
     {
         if (!IsEditable)
@@ -350,6 +401,9 @@ public sealed class Timesheet : ITenantOwned
         }
     }
 }
+
+/// <summary>A worker's new total of one adjustment type, with the reason.</summary>
+public sealed record AdjustmentTotal(Guid WorkerId, AdjustmentType Type, decimal Total, string Reason);
 
 /// <summary>The project a timesheet is for.</summary>
 public sealed record TimesheetProject(Guid ProjectId, Guid ProjectCrmId, string Code, string Name, string? CustomerName, string? ContractType);

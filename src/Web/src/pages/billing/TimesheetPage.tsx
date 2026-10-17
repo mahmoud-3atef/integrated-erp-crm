@@ -5,6 +5,8 @@ import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import {
   Alert,
@@ -40,6 +42,7 @@ import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/wo
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
+import { ExcelUploadDialog } from './ExcelUploadDialog';
 import { SourceBadge, TimesheetStatusBadge } from './timesheets';
 
 type Tab = 'workers' | 'invoice' | 'payroll' | 'suppliers' | 'unknown' | 'approval';
@@ -64,6 +67,7 @@ export function TimesheetPage() {
   const [tab, setTab] = useState<Tab>('workers');
   const [adjusting, setAdjusting] = useState<TimesheetLine | null>(null);
   const [settings, setSettings] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const approval = useRecordApproval(sheet?.approval?.instanceId);
@@ -155,6 +159,14 @@ export function TimesheetPage() {
           {canRun && (
             <RunProcessButton screen="billing.timesheet" recordId={sheet.id} title={`${sheet.timesheetNo} — ${sheet.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />
           )}
+          <Button startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
+            {t('timesheets.excel.download')}
+          </Button>
+          {sheet.canEdit && (
+            <Button startIcon={<UploadFileOutlinedIcon />} onClick={() => setUploading(true)}>
+              {t('timesheets.excel.upload')}
+            </Button>
+          )}
           <Button startIcon={<SettingsOutlinedIcon />} onClick={() => setSettings(true)}>
             {t('timesheets.settings.title')}
           </Button>
@@ -239,6 +251,16 @@ export function TimesheetPage() {
         {tab === 'approval' && sheet.approval && <ApprovalLog status={sheet.approval} detail={approval.detail} />}
       </Box>
 
+      {uploading && (
+        <ExcelUploadDialog
+          timesheetId={sheet.id}
+          onClose={() => setUploading(false)}
+          onApplied={() => {
+            setUploading(false);
+            void reload();
+          }}
+        />
+      )}
       {adjusting && <AdjustDialog sheet={sheet} line={adjusting} onClose={() => setAdjusting(null)} onChanged={() => void reload()} />}
       {settings && (
         <SettingsDialog

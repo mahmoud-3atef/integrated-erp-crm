@@ -361,7 +361,8 @@
     "validation_timesheet_absence_over_days": "The absent days exceed the worker's work days.",
     "validation_timesheet_overtime_limit": "The overtime hours exceed the project's monthly limit.",
     "not_found_timesheet_adjustment": "Adjustment not found.",
-    "validation_timesheet_settings": "Check the billing settings' values."
+    "validation_timesheet_settings": "Check the billing settings' values.",
+    "validation_excel_file": "Choose an .xlsx file (up to 10 MB)."
   },
   "menu": {
     "label": "Main menu",
@@ -1908,6 +1909,37 @@
       "maxOvertimeHours": "Most overtime hours a worker",
       "gosiRate": "GOSI rate % (Cost Plus)",
       "vatRate": "VAT rate %"
+    },
+    "excel": {
+      "download": "Download Excel",
+      "upload": "Upload Excel",
+      "uploadTitle": "Upload the month's adjustments from Excel",
+      "uploadHint": "Download this timesheet's file, fill in the yellow columns (absence, overtime, additions, deductions and loans, fee days, other costs) with each worker's total for the month and the reason, then upload it. A preview shows before saving, and nothing is saved when the file has a problem.",
+      "choose": "Choose the file",
+      "chooseOther": "Choose another file",
+      "empty": "Choose this timesheet's Excel file.",
+      "problems": "The file has {{count}} problems; fix them and upload it again. Nothing was saved.",
+      "ready": "The file is fine ({{rows}} workers): {{count}} changes ready to save.",
+      "noChanges": "The file is fine ({{rows}} workers) and changes nothing on the timesheet.",
+      "apply": "Save the changes",
+      "row": "Row",
+      "problem": "Problem",
+      "current": "Current",
+      "uploaded": "From the file",
+      "codes": {
+        "excel_not_readable": "The file is not a valid Excel file.",
+        "excel_not_template": "The file is not the timesheet template downloaded from the system.",
+        "excel_other_timesheet": "The file is another timesheet's (another project or month).",
+        "excel_unknown_worker": "The worker is not on this timesheet (do not add workers).",
+        "excel_duplicate_worker": "The worker is twice in the file.",
+        "excel_locked_changed": "A locked column (work days) changed; download the file again.",
+        "excel_not_a_number": "A value is not a number.",
+        "excel_negative": "A negative value is not allowed.",
+        "excel_absence_over_days": "The absence exceeds the worker's work days.",
+        "excel_overtime_limit": "The overtime exceeds the project's monthly limit.",
+        "excel_reason_missing": "The row has a change without a reason.",
+        "excel_missing_worker": "The worker was removed from the file (do not delete rows)."
+      }
     }
   }
 }

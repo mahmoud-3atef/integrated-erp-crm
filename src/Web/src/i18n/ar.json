@@ -361,7 +361,8 @@
     "validation_timesheet_absence_over_days": "أيام الغياب تتجاوز أيام عمل العامل.",
     "validation_timesheet_overtime_limit": "ساعات الإضافي تتجاوز الحد الشهري للمشروع.",
     "not_found_timesheet_adjustment": "التعديل غير موجود.",
-    "validation_timesheet_settings": "راجع قيم إعدادات الفوترة."
+    "validation_timesheet_settings": "راجع قيم إعدادات الفوترة.",
+    "validation_excel_file": "اختر ملف ‎.xlsx‎ (حتى 10 ميجابايت)."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -1908,6 +1909,37 @@
       "maxOvertimeHours": "أقصى ساعات إضافي للعامل",
       "gosiRate": "نسبة التأمينات % (Cost Plus)",
       "vatRate": "نسبة الضريبة %"
+    },
+    "excel": {
+      "download": "تنزيل Excel",
+      "upload": "رفع Excel",
+      "uploadTitle": "رفع متغيرات الشهر من Excel",
+      "uploadHint": "نزّل ملف هذا التحضير، وعبّئ الأعمدة الصفراء (الغياب، والإضافي، والإضافات والخصومات والسلف، وأيام الرسوم، والتكاليف الأخرى) بالقيمة الإجمالية للشهر لكل عامل مع السبب، ثم ارفعه. تُعرض المعاينة قبل الحفظ، ولا يُحفظ شيء إن كان في الملف خطأ.",
+      "choose": "اختيار الملف",
+      "chooseOther": "اختيار ملف آخر",
+      "empty": "اختر ملف Excel الخاص بهذا التحضير.",
+      "problems": "في الملف {{count}} مشكلة؛ صحّحها ثم ارفعه من جديد. لم يُحفظ شيء.",
+      "ready": "الملف سليم ({{rows}} عاملًا): {{count}} تغييرًا جاهزًا للحفظ.",
+      "noChanges": "الملف سليم ({{rows}} عاملًا) ولا تغيير فيه عن التحضير الحالي.",
+      "apply": "حفظ التغييرات",
+      "row": "الصف",
+      "problem": "المشكلة",
+      "current": "الحالي",
+      "uploaded": "من الملف",
+      "codes": {
+        "excel_not_readable": "الملف ليس ملف Excel صالحًا.",
+        "excel_not_template": "الملف ليس قالب التحضير المنزّل من النظام.",
+        "excel_other_timesheet": "الملف لتحضير آخر (مشروع أو شهر مختلف).",
+        "excel_unknown_worker": "العامل ليس في هذا التحضير (لا تُضف عمالًا).",
+        "excel_duplicate_worker": "العامل مكرر في الملف.",
+        "excel_locked_changed": "تغيّر عمود مقفل (أيام العمل)؛ أعد تنزيل الملف.",
+        "excel_not_a_number": "قيمة ليست رقمًا.",
+        "excel_negative": "قيمة سالبة غير مسموحة.",
+        "excel_absence_over_days": "الغياب أكثر من أيام عمل العامل.",
+        "excel_overtime_limit": "الإضافي أكثر من الحد الشهري للمشروع.",
+        "excel_reason_missing": "الصف فيه تغيير بلا سبب.",
+        "excel_missing_worker": "العامل محذوف من الملف (لا تحذف صفوفًا)."
+      }
     }
   }
 }

@@ -1,0 +1,187 @@
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  LinearProgress,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { errorKey, upload } from '../../api/auth';
+import { tokens } from '../../app/theme';
+import { ErrorMessage } from '../../auth/AuthLayout';
+import { sar } from '../operations/delivery';
+
+interface ExcelPreview {
+  rows: number;
+  problems: { row: number; workerNo: string | null; code: string; column: string | null }[];
+  changes: { workerId: string; workerNo: string; name: string; type: string; current: number; uploaded: number; reason: string }[];
+}
+
+/**
+ * Uploads the filled-in timesheet file: first a preview (its problems, or the changes it makes), then — when it has
+ * no problem — applying it. Nothing is saved before the confirmation.
+ */
+export function ExcelUploadDialog({ timesheetId, onClose, onApplied }: { timesheetId: string; onClose: () => void; onApplied: () => void }) {
+  const { t } = useTranslation();
+  const input = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<ExcelPreview | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async (path: 'preview' | 'apply', chosen: File) => {
+    const form = new FormData();
+    form.append('file', chosen);
+    return upload<ExcelPreview>(`/api/v1/billing/timesheets/${timesheetId}/excel/${path}`, form);
+  };
+
+  const choose = async (chosen: File | undefined) => {
+    if (!chosen) return;
+    setFile(chosen);
+    setPreview(null);
+    setBusy(true);
+    setError(null);
+    try {
+      setPreview(await send('preview', chosen));
+    } catch (failure) {
+      setError(errorKey(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const apply = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await send('apply', file!);
+      if (result.problems.length > 0) {
+        setPreview(result);
+      } else {
+        onApplied();
+      }
+    } catch (failure) {
+      setError(errorKey(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const ok = preview && preview.problems.length === 0;
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>{t('timesheets.excel.uploadTitle')}</DialogTitle>
+      <DialogContent dividers>
+        <ErrorMessage messageKey={error} />
+        <Typography sx={{ fontSize: 13, color: tokens.gray600, mb: 2 }}>{t('timesheets.excel.uploadHint')}</Typography>
+        <input ref={input} type="file" accept=".xlsx" hidden onChange={(e) => void choose(e.target.files?.[0])} />
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Button variant="outlined" startIcon={<UploadFileOutlinedIcon />} disabled={busy} onClick={() => (input.current && ((input.current.value = ''), input.current.click()))}>
+            {file ? t('timesheets.excel.chooseOther') : t('timesheets.excel.choose')}
+          </Button>
+          {file && <Typography sx={{ fontSize: 13, color: tokens.navy800, fontWeight: 700 }}>{file.name}</Typography>}
+        </Stack>
+        {busy && <LinearProgress sx={{ mb: 2, borderRadius: 2 }} />}
+
+        {preview && preview.problems.length > 0 && (
+          <>
+            <Alert severity="error" icon={<ErrorOutlineIcon />} sx={{ mb: 1.5 }}>
+              {t('timesheets.excel.problems', { count: preview.problems.length })}
+            </Alert>
+            <TableContainer sx={{ maxHeight: 320 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('timesheets.excel.row')}</TableCell>
+                    <TableCell>{t('workforce.col.name')}</TableCell>
+                    <TableCell>{t('timesheets.excel.problem')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {preview.problems.map((p, n) => (
+                    <TableRow key={n}>
+                      <TableCell>{p.row > 0 ? p.row : '—'}</TableCell>
+                      <TableCell dir="ltr" sx={{ textAlign: 'start' }}>
+                        {p.workerNo ?? '—'}
+                      </TableCell>
+                      <TableCell sx={{ color: tokens.danger }}>{t(`timesheets.excel.codes.${p.code}`)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+
+        {ok && (
+          <>
+            <Alert severity={preview.changes.length > 0 ? 'success' : 'info'} icon={<CheckCircleOutlineIcon />} sx={{ mb: 1.5 }}>
+              {preview.changes.length > 0 ? t('timesheets.excel.ready', { rows: preview.rows, count: preview.changes.length }) : t('timesheets.excel.noChanges', { rows: preview.rows })}
+            </Alert>
+            {preview.changes.length > 0 && (
+              <TableContainer sx={{ maxHeight: 360 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('workforce.col.name')}</TableCell>
+                      <TableCell>{t('timesheets.adjustmentType')}</TableCell>
+                      <TableCell align="center">{t('timesheets.excel.current')}</TableCell>
+                      <TableCell align="center">{t('timesheets.excel.uploaded')}</TableCell>
+                      <TableCell>{t('timesheets.reason')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {preview.changes.map((c, n) => (
+                      <TableRow key={n}>
+                        <TableCell>
+                          <Typography dir="ltr" sx={{ fontSize: 12.5, fontWeight: 700, color: tokens.navy800, textAlign: 'start' }}>
+                            {c.name}
+                          </Typography>
+                          <Typography dir="ltr" sx={{ fontSize: 11, color: tokens.gray500, textAlign: 'start' }}>
+                            {c.workerNo}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{t(`timesheets.adjustments.${c.type}`)}</TableCell>
+                        <TableCell align="center" sx={{ color: tokens.gray500 }}>
+                          {sar(c.current)}
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 800, color: tokens.navy800 }}>
+                          {sar(c.uploaded)}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 12.5 }}>{c.reason}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
+        )}
+        {!preview && !busy && (
+          <Box sx={{ p: 3, textAlign: 'center', borderRadius: `${tokens.radius}px`, border: `2px dashed ${tokens.gray200}`, color: tokens.gray500, fontSize: 13 }}>{t('timesheets.excel.empty')}</Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
+        <Button variant="contained" disabled={busy || !ok || preview.changes.length === 0} onClick={() => void apply()}>
+          {t('timesheets.excel.apply')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}

@@ -86,6 +86,40 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal(("IRC - 02", 1, 20m), (sheet.Suppliers.Single().SupplierName, sheet.Suppliers.Single().Workers, sheet.Suppliers.Single().WorkDays));
             Assert.Equal(["BSS0703"], sheet.UnknownSource.Select(p => p.WorkerNo));
 
+            // The Excel channel: the template has the adjustments entered so far; the file's values are totals.
+            var file = (await service.ExportAsync(id, default))!.Value;
+            Assert.EndsWith(".xlsx", file.FileName);
+            var filled = Edit(file.Content, ws =>
+            {
+                Assert.Equal(["BSS0701", "BSS0702", "BSS0703"], Enumerable.Range(7, 3).Select(r => ws.Cell(r, 1).GetString()));
+                Assert.Equal(2m, ws.Cell(7, 9).GetValue<decimal>()); // the absence entered on the screen
+                ws.Cell(8, 9).Value = 3; // BSS0702: 3 absent days
+                ws.Cell(8, 11).Value = 250; // and a customer addition
+                ws.Cell(8, 16).Value = "كشف حضور العميل";
+                ws.Cell(9, 10).Value = 4; // BSS0703: overtime, but no reason
+            });
+            var preview = (await service.PreviewAsync(id, new MemoryStream(filled), default)).Value;
+            Assert.Equal([("excel_reason_missing", "BSS0703")], preview.Problems.Select(p => (p.Code, p.WorkerNo)));
+
+            // Nothing is applied while the file has a problem.
+            Assert.Single((await service.ApplyExcelAsync(id, new MemoryStream(filled), default)).Value.Problems);
+            var fixedFile = Edit(filled, ws => ws.Cell(9, 16).Value = "عمل إضافي معتمد");
+            var applied = (await service.ApplyExcelAsync(id, new MemoryStream(fixedFile), default)).Value;
+            Assert.Equal((0, 3), (applied.Problems.Count, applied.Changes.Count));
+
+            // Uploading the same file again changes nothing.
+            Assert.Empty((await service.PreviewAsync(id, new MemoryStream(fixedFile), default)).Value.Changes);
+            sheet = (await queries.GetAsync(id, default))!;
+            var supplierLine = sheet.Lines.Single(l => l.WorkerNo == "BSS0702");
+            Assert.Equal((3m, 250m), (supplierLine.AbsenceDays, supplierLine.ClientAdditions));
+            Assert.Equal(4m, sheet.Lines.Single(l => l.WorkerNo == "BSS0703").OvertimeHours);
+            Assert.Equal(2m, sheet.Lines.Single(l => l.WorkerNo == "BSS0701").AbsenceDays);
+
+            // The old system's checks: a changed locked column, a worker dropped, another timesheet's file.
+            Assert.Equal("excel_locked_changed", (await service.PreviewAsync(id, new MemoryStream(Edit(fixedFile, ws => ws.Cell(7, 7).Value = 31)), default)).Value.Problems.Single().Code);
+            Assert.Equal("excel_missing_worker", (await service.PreviewAsync(id, new MemoryStream(Edit(fixedFile, ws => ws.Row(9).Clear())), default)).Value.Problems.Single().Code);
+            Assert.Equal("excel_not_readable", (await service.PreviewAsync(id, new MemoryStream([1, 2, 3]), default)).Value.Problems.Single().Code);
+
             Assert.True((await service.SubmitAsync(id, default)).IsSuccess);
         }
 
@@ -107,6 +141,18 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal("conflict.timesheet_not_editable", (await service.GenerateAsync(new GenerateInput(projectId, september), default)).Error.Code);
             Assert.Equal(1, (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().MonthAsync(september, default)).Totals.Approved);
         }
+    }
+
+    /// <summary>Changes the timesheet sheet of an Excel file, as a supervisor would.</summary>
+    private static byte[] Edit(byte[] file, Action<ClosedXML.Excel.IXLWorksheet> change)
+    {
+        using var workbook = new ClosedXML.Excel.XLWorkbook(new MemoryStream(file));
+        var ws = workbook.Worksheet("Timesheet");
+        ws.Unprotect("ERP-TIMESHEET-V1");
+        change(ws);
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
     }
 
     private async Task<(Guid Manager, Guid Approver)> PeopleAsync(Guid tenantId)
