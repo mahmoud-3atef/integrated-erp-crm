@@ -47,7 +47,9 @@ public static class PlatformAuthentication
             .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
         if (OperatingSystem.IsWindows())
         {
-            dataProtection.ProtectKeysWithDpapi();
+            // On a server the app runs as an IIS app pool: protect the keys for the machine (the folder's permissions
+            // limit who can read them) rather than for a user profile that the pool may not load.
+            dataProtection.ProtectKeysWithDpapi(protectToLocalMachine: configuration.GetValue("Platform:KeysMachineScope", false));
         }
 
         var secure = environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;

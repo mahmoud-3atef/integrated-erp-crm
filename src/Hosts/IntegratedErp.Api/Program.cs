@@ -1,6 +1,7 @@
 using IntegratedErp.Api;
 using IntegratedErp.BuildingBlocks;
 using IntegratedErp.BuildingBlocks.Configuration;
+using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
@@ -10,18 +11,30 @@ using IntegratedErp.Modules.Documents;
 using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Identity.Infrastructure.Ldap;
 using IntegratedErp.Modules.Organization;
+using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workflow;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// On a server: its own settings (connections, AD, CRM, company) in a file outside the release folder, so a deploy
+// never overwrites them (deploy/Initialize-ErpServer.ps1 creates it and sets ERP_CONFIG_FILE).
+if (Environment.GetEnvironmentVariable("ERP_CONFIG_FILE") is { Length: > 0 } serverConfig)
+{
+    builder.Configuration.AddJsonFile(serverConfig, optional: false, reloadOnChange: false);
+}
+
 // Secrets (LDAP bind password, ...) from the DPAPI-encrypted file written by tools/Set-ErpSecret.ps1.
 builder.Configuration.AddProtectedSecretsFile();
+
+// Logs: console in development; daily files on a server (Serilog section of the settings).
+builder.Services.AddSerilog((services, logger) => logger.ReadFrom.Configuration(builder.Configuration).ReadFrom.Services(services));
 
 builder.Services.AddPlatformCore();
 builder.Services.AddWebDefaults();
 builder.Services.AddPlatformAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddPlatformHealthChecks(builder.Configuration);
 
 // Every business module is listed here once; enablement is controlled by configuration.
 builder.Services.AddModules(
@@ -47,7 +60,31 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+// "create-company [code Arabic-name English-name]": first-run setup of a server — the company the bootstrap
+// administrators join (names from the arguments, or from the Setup section of the server settings); does nothing if
+// it exists, so every deploy runs it.
+if (args.Length >= 1 && string.Equals(args[0], "create-company", StringComparison.OrdinalIgnoreCase))
+{
+    var setup = app.Configuration.GetSection("Setup");
+    var code = args.Length >= 4 ? args[1] : setup["CompanyCode"];
+    var nameAr = args.Length >= 4 ? args[2] : setup["CompanyNameAr"];
+    var nameEn = args.Length >= 4 ? args[3] : setup["CompanyNameEn"];
+    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(nameAr) || string.IsNullOrWhiteSpace(nameEn))
+    {
+        Console.WriteLine("No company to set up (Setup:CompanyCode / CompanyNameAr / CompanyNameEn).");
+        return;
+    }
+
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<ExecutionContextAccessor>().RunAsSystem("setup");
+    var company = await scope.ServiceProvider.GetRequiredService<ITenantSetup>().EnsureAsync(code, nameAr, nameEn, CancellationToken.None).ConfigureAwait(false);
+    Console.WriteLine(company.IsSuccess ? $"Company '{company.Value.Code}' is ready." : $"Could not create the company: {company.Error.Message}");
+    Environment.ExitCode = company.IsSuccess ? 0 : 1;
+    return;
+}
+
 app.UseExceptionHandler();
+app.UseSerilogRequestLogging();
 app.UseSecurityHeaders();
 app.UseStatusCodePages();
 app.UseRateLimiter();
@@ -58,7 +95,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapHealthChecks("/health");
+app.MapPlatformHealthChecks();
 app.MapSystemEndpoints();
 app.MapModules();
 

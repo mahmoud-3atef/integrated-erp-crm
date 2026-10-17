@@ -1,3 +1,5 @@
+using IntegratedErp.SharedKernel;
+
 namespace IntegratedErp.Modules.Organization.Contracts;
 
 /// <summary>A company that operates the system (tenant), as other modules may see it.</summary>
@@ -9,4 +11,11 @@ public interface ITenantDirectory
     Task<TenantInfo?> FindByCodeAsync(string code, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<TenantInfo>> GetAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+}
+
+/// <summary>First-run setup of a server: creates the company the first administrators join (if it does not exist).</summary>
+public interface ITenantSetup
+{
+    /// <summary>The company with this code, created with these names when missing (a system operation).</summary>
+    Task<Result<TenantInfo>> EnsureAsync(string code, string nameAr, string nameEn, CancellationToken cancellationToken);
 }

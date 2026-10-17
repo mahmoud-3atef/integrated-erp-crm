@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Organization.Domain.LegalEntities;
 using IntegratedErp.Modules.Organization.Domain.Tenants;
 using IntegratedErp.Modules.Organization.Infrastructure;
@@ -11,8 +12,23 @@ public sealed record TenantDto(Guid Id, string Code, string NameAr, string NameE
 public sealed record LegalEntityDto(Guid Id, string Code, string NameAr, string NameEn, string CommercialRegistrationNo, string? VatNumber, bool IsActive);
 
 /// <summary>Tenants and legal entities.</summary>
-internal sealed class OrganizationService(OrganizationDbContext db)
+internal sealed class OrganizationService(OrganizationDbContext db) : ITenantSetup
 {
+    public async Task<Result<TenantInfo>> EnsureAsync(string code, string nameAr, string nameEn, CancellationToken cancellationToken)
+    {
+        var normalized = (code ?? string.Empty).Trim().ToLowerInvariant();
+        var existing = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Code == normalized, cancellationToken).ConfigureAwait(false);
+        if (existing is not null)
+        {
+            return Result.Success(new TenantInfo(existing.Id, existing.Code, existing.NameAr, existing.NameEn, existing.IsActive));
+        }
+
+        var created = await CreateTenantAsync(code ?? string.Empty, nameAr, nameEn, cancellationToken).ConfigureAwait(false);
+        return created.IsFailure
+            ? Result.Failure<TenantInfo>(created.Error)
+            : Result.Success(new TenantInfo(created.Value.Id, created.Value.Code, created.Value.NameAr, created.Value.NameEn, true));
+    }
+
     public async Task<Result<TenantDto>> CreateTenantAsync(string code, string nameAr, string nameEn, CancellationToken cancellationToken)
     {
         var created = Tenant.Create(code, nameAr, nameEn);

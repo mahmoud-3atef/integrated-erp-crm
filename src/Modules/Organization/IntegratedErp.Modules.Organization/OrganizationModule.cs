@@ -34,6 +34,7 @@ public sealed class OrganizationModule : IModule
         services.AddModuleDbContext<OrganizationDbContext>(configuration, OrganizationDbContext.SchemaName);
         services.AddScoped<SettingsService>();
         services.AddScoped<OrganizationService>();
+        services.AddScoped<ITenantSetup>(sp => sp.GetRequiredService<OrganizationService>());
         services.AddScoped<ITenantDirectory, TenantDirectory>();
         services.AddScoped<ILegalEntityDirectory, LegalEntityDirectory>();
         services.AddScoped<CompanySetupService>();
