@@ -80,10 +80,10 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
     }
 
     public async Task<IReadOnlyList<WorkerCard>> AvailableAsync(CancellationToken cancellationToken) =>
-        await CardsWhereAsync(
+        (await CardsWhereAsync(
             db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active
                 && (w.Placement == Placement.Housing || w.Placement == Placement.New)),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false)).Where(c => c.Available).ToList();
 
     public async Task<IReadOnlyList<WorkerCard>> CardsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
@@ -115,9 +115,24 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
             .ToDictionary(i => i.Code, StringComparer.Ordinal);
         var nationalities = (await reference.ListAllAsync(ReferenceListCodes.Nationalities, cancellationToken).ConfigureAwait(false))
             .ToDictionary(i => i.Code, StringComparer.Ordinal);
+        // A work period opened here (a delivered delivery order) puts the worker on the job, whatever the old system says.
+        var workerIds = rows.Select(r => r.Worker.Id).ToList();
+        var working = await db.Periods.AsNoTracking().Where(p => workerIds.Contains(p.WorkerId) && p.EndsOn == null && p.Kind == PeriodKind.Work)
+            .ToDictionaryAsync(p => p.WorkerId, cancellationToken).ConfigureAwait(false);
         return rows.Select(r =>
             {
                 var w = r.Worker;
+                if (working.TryGetValue(w.Id, out var period))
+                {
+                    var p = professions.GetValueOrDefault(w.ProfessionCode ?? string.Empty);
+                    var n = nationalities.GetValueOrDefault(r.Person.NationalityCode ?? string.Empty);
+                    var i = iqamas.GetValueOrDefault(r.Person.Id);
+                    return new WorkerCard(
+                        w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, nameof(Placement.Working), false, "على رأس العمل (من هذا النظام)", "On the job (this system)",
+                        w.ProfessionCode, p?.NameAr, p?.NameEn, r.Person.NationalityCode, n?.NameAr, n?.NameEn, i?.Number, i?.ExpiresOn,
+                        w.Salary.Total, period.ProjectCrmId, period.ProjectName);
+                }
+
                 var status = CrmWorkerStatus.Name(w.CrmStatus);
                 var profession = w.ProfessionCode is { } pc ? professions.GetValueOrDefault(pc) : null;
                 var nationality = r.Person.NationalityCode is { } nc ? nationalities.GetValueOrDefault(nc) : null;

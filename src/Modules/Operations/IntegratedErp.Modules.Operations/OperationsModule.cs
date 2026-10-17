@@ -40,7 +40,7 @@ internal static class OperationsPermissions
 {
     public const string DeliveryView = "operations.delivery.view";
     public const string DeliveryCreate = "operations.delivery.create";
-    public const string DeliveryConfirm = "operations.delivery.confirm";
+    public const string DeliveryApprove = "operations.delivery.approve";
 
     private const string GroupAr = "العمليات";
     private const string GroupEn = "Operations";
@@ -49,6 +49,6 @@ internal static class OperationsPermissions
     [
         new(DeliveryView, GroupAr, GroupEn, "عرض أوامر التسليم", "View delivery orders"),
         new(DeliveryCreate, GroupAr, GroupEn, "إنشاء أوامر التسليم وتعديلها وإرسالها للاعتماد", "Create, edit and submit delivery orders"),
-        new(DeliveryConfirm, GroupAr, GroupEn, "تأكيد تسليم العمالة (مسؤول التسليم)", "Confirm the delivery of workers (delivery officer)"),
+        new(DeliveryApprove, GroupAr, GroupEn, "اعتماد أوامر التسليم (مدير العمليات)", "Approve delivery orders (operations manager)"),
     ];
 }

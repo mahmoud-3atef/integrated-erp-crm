@@ -1,5 +1,6 @@
 using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Identity.Contracts;
 using IntegratedErp.Modules.Workflow.Contracts;
@@ -30,10 +31,13 @@ public sealed record VersionDto(int Version, string PublishedBy, DateTimeOffset 
 
 public sealed record ProcessInput(string Screen, string NameAr, string NameEn, int Priority);
 
-public sealed record ApproverOptionsDto(IReadOnlyList<RoleInfo> Roles, IReadOnlyList<MemberInfo> Members);
+/// <summary>A permission a stage can be assigned to (whoever holds it through a role).</summary>
+public sealed record PermissionOptionDto(string Code, string GroupAr, string GroupEn, string NameAr, string NameEn);
+
+public sealed record ApproverOptionsDto(IReadOnlyList<RoleInfo> Roles, IReadOnlyList<MemberInfo> Members, IReadOnlyList<PermissionOptionDto> Permissions);
 
 /// <summary>Approval processes of the current company: drafts edited freely, published as immutable versions.</summary>
-internal sealed class ProcessService(WorkflowDbContext db, ApprovalEngine engine, IAccessDirectory access, ICurrentUser user, IClock clock)
+internal sealed class ProcessService(WorkflowDbContext db, ApprovalEngine engine, IAccessDirectory access, PermissionCatalog permissions, ICurrentUser user, IClock clock)
 {
     private static readonly Error NotFound = Error.NotFound("approval_process", "Process not found.");
 
@@ -145,7 +149,8 @@ internal sealed class ProcessService(WorkflowDbContext db, ApprovalEngine engine
     public async Task<ApproverOptionsDto> ApproverOptionsAsync(CancellationToken cancellationToken) =>
         new(
             (await access.ListRolesAsync(cancellationToken).ConfigureAwait(false)).Where(r => r.IsActive).ToList(),
-            await access.ListMembersAsync(cancellationToken).ConfigureAwait(false));
+            await access.ListMembersAsync(cancellationToken).ConfigureAwait(false),
+            permissions.All.Where(p => !p.IsView).Select(p => new PermissionOptionDto(p.Code, p.GroupAr, p.GroupEn, p.NameAr, p.NameEn)).ToList());
 
     /// <summary>The steps' rules, then that named users and roles belong to this company.</summary>
     private async Task<Result> CheckAsync(ApprovalProcess process, CancellationToken cancellationToken)
@@ -176,6 +181,11 @@ internal sealed class ProcessService(WorkflowDbContext db, ApprovalEngine engine
             if (people.Any(p => (p.User is { } u && !members.Contains(u)) || (p.Role is { } r && !roles.Contains(r))))
             {
                 return Result.Failure(Error.Validation("process_approver_unknown", "A user or role in the process is not part of this company."));
+            }
+
+            if (step is ApprovalStep stage && stage.Assignees.Any(a => a.Kind == AssigneeKind.Permission && !permissions.Contains(a.Permission!)))
+            {
+                return Result.Failure(Error.Validation("process_permission_unknown", "A permission in the process does not exist."));
             }
         }
 

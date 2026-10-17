@@ -290,16 +290,22 @@ function ApprovalEditor({ step, onChange }: { step: ApprovalStep; onChange: (ste
             label={t('routes.approverKind')}
             value={a.kind}
             disabled={readOnly}
-            onChange={(e) => setAssignee(index, { kind: e.target.value as AssigneeKind, userId: null, roleId: null, fieldKey: null })}
+            onChange={(e) => setAssignee(index, { kind: e.target.value as AssigneeKind, userId: null, roleId: null, fieldKey: null, permission: null })}
             sx={{ maxWidth: { sm: 200 } }}
           >
             <MenuItem value="Role">{t('process.assignee.Role')}</MenuItem>
             <MenuItem value="User">{t('process.assignee.User')}</MenuItem>
+            <MenuItem value="Permission">{t('process.assignee.Permission')}</MenuItem>
+            <MenuItem value="Submitter">{t('process.assignee.SubmitterConfirms')}</MenuItem>
             <MenuItem value="UserField" disabled={userFields.length === 0}>
               {t('process.assignee.UserField')}
             </MenuItem>
           </TextField>
-          <PersonPicker kind={a.kind} value={a.kind === 'Role' ? a.roleId : a.kind === 'User' ? a.userId : a.fieldKey} onChange={(v) => setAssignee(index, a.kind === 'Role' ? { roleId: v } : a.kind === 'User' ? { userId: v } : { fieldKey: v })} />
+          <PersonPicker
+            kind={a.kind}
+            value={a.kind === 'Role' ? a.roleId : a.kind === 'User' ? a.userId : a.kind === 'Permission' ? a.permission : a.fieldKey}
+            onChange={(v) => setAssignee(index, a.kind === 'Role' ? { roleId: v } : a.kind === 'User' ? { userId: v } : a.kind === 'Permission' ? { permission: v } : { fieldKey: v })}
+          />
           {!readOnly && step.assignees.length > 1 && (
             <IconButton size="small" onClick={() => set({ assignees: step.assignees.filter((_, i) => i !== index) })} aria-label={t('process.removeAssignee')}>
               <DeleteOutlinedIcon fontSize="small" />
@@ -382,8 +388,11 @@ function PersonPicker({ kind, value, onChange, label }: { kind: AssigneeKind | R
     return null;
   }
 
+  const ar = i18n.language === 'ar';
   const items =
-    kind === 'Role'
+    kind === 'Permission'
+      ? options.permissions.map((p) => ({ value: p.code, label: `${ar ? p.groupAr : p.groupEn} — ${ar ? p.nameAr : p.nameEn}` }))
+      : kind === 'Role'
       ? options.roles.map((r) => ({ value: r.id, label: localName(r, i18n.language) }))
       : kind === 'User'
         ? options.members.map((m) => ({ value: m.userAccountId, label: m.displayName }))

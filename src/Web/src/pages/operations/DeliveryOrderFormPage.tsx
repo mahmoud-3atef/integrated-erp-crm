@@ -133,7 +133,7 @@ export function DeliveryOrderFormPage() {
   const missingPrice = lines.some((l) => !l.special && quotes[l.workerId]?.totalPrice === null);
   const valid = !!projectId && !!deliverOn && !!startOn && startOn >= deliverOn && receiverName.trim() !== '' && lines.length > 0 && (!late || delayReason.trim() !== '');
 
-  const save = async (andSubmit: boolean) => {
+  const save = async () => {
     setBusy(true);
     setError(null);
     const input: DeliveryInput = {
@@ -152,19 +152,9 @@ export function DeliveryOrderFormPage() {
       })),
     };
     try {
-      const orderId = id ?? (await operationsApi.create(input)).id;
-      if (id) {
-        await operationsApi.update(id, input);
-      }
-      if (andSubmit) {
-        try {
-          await operationsApi.submit(orderId);
-        } catch (failure) {
-          navigate(`/operations/delivery-orders/${orderId}?error=${encodeURIComponent(errorKey(failure))}`);
-          return;
-        }
-      }
-      navigate(`/operations/delivery-orders/${orderId}`);
+      // Saving starts the approval: the creator's confirmation task comes first.
+      const saved = id ? await operationsApi.update(id, input) : await operationsApi.create(input);
+      navigate(`/operations/delivery-orders/${saved.id}${saved.approvalError ? `?error=errors.${saved.approvalError.replace('.', '_')}` : ''}`);
     } catch (failure) {
       setError(errorKey(failure));
     } finally {
@@ -256,6 +246,9 @@ export function DeliveryOrderFormPage() {
       >
         {!projectId && lines.length > 0 && <Alert severity="info" sx={{ mb: 1.5 }}>{t('operations.delivery.chooseProject')}</Alert>}
         {missingPrice && <Alert severity="warning" sx={{ mb: 1.5 }}>{t('operations.delivery.missingPackage')}</Alert>}
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('operations.delivery.flowHint')}
+        </Alert>
         {lines.length === 0 ? (
           <Typography sx={{ py: 3, textAlign: 'center', color: tokens.gray500 }}>{t('operations.delivery.noLines')}</Typography>
         ) : (
@@ -361,11 +354,8 @@ export function DeliveryOrderFormPage() {
         )}
         <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 1.5, mt: 2.5 }}>
           <Button onClick={() => navigate(-1)}>{t('common.cancel')}</Button>
-          <Button variant="outlined" disabled={busy || !valid} onClick={() => void save(false)}>
-            {t('operations.delivery.saveDraft')}
-          </Button>
-          <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || !valid} onClick={() => void save(true)}>
-            {t('operations.delivery.saveAndSubmit')}
+          <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || !valid} onClick={() => void save()}>
+            {t('common.save')}
           </Button>
         </Stack>
       </Section>

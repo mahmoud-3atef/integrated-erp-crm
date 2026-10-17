@@ -43,9 +43,18 @@ public enum AssigneeKind
 
     /// <summary>The user in a record field (e.g. direct manager, project manager).</summary>
     UserField,
+
+    /// <summary>
+    /// The person who submitted the record, to confirm it themselves (e.g. the creator of a delivery order approves
+    /// it before it goes on). The only case where someone decides on their own submission.
+    /// </summary>
+    Submitter,
+
+    /// <summary>Anyone holding a permission through a role (e.g. "approve delivery orders" for operations managers).</summary>
+    Permission,
 }
 
-public sealed record Assignee(AssigneeKind Kind, Guid? UserId = null, Guid? RoleId = null, string? FieldKey = null);
+public sealed record Assignee(AssigneeKind Kind, Guid? UserId = null, Guid? RoleId = null, string? FieldKey = null, string? Permission = null);
 
 public enum CompletionRule
 {
@@ -243,6 +252,8 @@ public static class DefinitionRules
                                 AssigneeKind.User => assignee.UserId is not null,
                                 AssigneeKind.Role => assignee.RoleId is not null,
                                 AssigneeKind.UserField => IsField(assignee.FieldKey, RecordFieldType.User),
+                                AssigneeKind.Submitter => true,
+                                AssigneeKind.Permission => !string.IsNullOrWhiteSpace(assignee.Permission),
                                 _ => false,
                             };
                             if (!ok)

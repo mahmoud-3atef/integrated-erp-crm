@@ -29,7 +29,8 @@ internal sealed class DeliveryOrderImportService(
     {
         279640001 => DeliveryStatus.Delivered,
         279640003 => DeliveryStatus.NotDelivered,
-        279640000 => DeliveryStatus.Draft,
+        279640000 => DeliveryStatus.UnderPreparation,
+        279640011 => DeliveryStatus.SentToOperationsManager,
         279640007 => DeliveryStatus.Returned,
         2 => DeliveryStatus.Canceled,
         _ => DeliveryStatus.InApproval,

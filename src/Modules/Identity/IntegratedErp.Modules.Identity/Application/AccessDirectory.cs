@@ -41,6 +41,19 @@ internal sealed class AccessDirectory(IdentityDbContext db, IOptions<IdentityOpt
             .Distinct()
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+    public async Task<IReadOnlyList<Guid>> MembersWithPermissionAsync(string permissionCode, Guid? legalEntityId, CancellationToken cancellationToken) =>
+        await (
+                from a in db.RoleAssignments.AsNoTracking()
+                join r in db.Roles.AsNoTracking() on a.RoleId equals r.Id
+                join m in db.Memberships.AsNoTracking() on a.MembershipId equals m.Id
+                join u in db.Users.AsNoTracking() on m.UserAccountId equals u.Id
+                where r.IsActive && r.Kind != RoleKind.Administrator && r.Permissions.Any(p => p.PermissionCode == permissionCode)
+                      && m.IsActive && u.IsActive
+                      && (a.LegalEntityId == null || (legalEntityId != null && a.LegalEntityId == legalEntityId))
+                select u.Id)
+            .Distinct()
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
     public Task<bool> IsMemberAsync(Guid userAccountId, CancellationToken cancellationToken) =>
         (from m in db.Memberships
          join u in db.Users on m.UserAccountId equals u.Id

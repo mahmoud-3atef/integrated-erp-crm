@@ -57,13 +57,21 @@ public sealed record ApprovalScreen(
     string NameEn,
     string LinkTemplate,
     IReadOnlyList<RecordField> Fields,
-    IReadOnlyList<RecordRelation>? Relations = null)
+    IReadOnlyList<RecordRelation>? Relations = null,
+    DefaultApprovalProcess? DefaultProcess = null)
 {
     [JsonIgnore]
     public IReadOnlyList<RecordRelation> RelatedTables => Relations ?? [];
 
     public string LinkTo(Guid recordId) => LinkTemplate.Replace("{id}", recordId.ToString(), StringComparison.Ordinal);
 }
+
+/// <summary>
+/// The process a screen starts with when the company has none for it yet: created and published automatically on
+/// the first submission, then shown and edited like any other in "Approval processes". <paramref name="DefinitionJson"/>
+/// uses the process editor's format (camelCase, enums as names).
+/// </summary>
+public sealed record DefaultApprovalProcess(string NameAr, string NameEn, string DefinitionJson);
 
 /// <summary>
 /// A table related to the screen's record (e.g. an invoice's project, a movement's worker) whose fields a process may

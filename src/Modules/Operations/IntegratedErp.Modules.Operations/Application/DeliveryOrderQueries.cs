@@ -27,8 +27,8 @@ public sealed record DeliveryRowDto(
     string CreatedByName,
     DateTimeOffset CreatedAt);
 
-/// <summary>The old list's cards: all orders, waiting for approval, approved waiting for delivery, delivered.</summary>
-public sealed record DeliveryTotalsDto(int All, int Pending, int Approved, int Delivered, int Drafts);
+/// <summary>The list's cards: all orders, under preparation, with the operations manager, delivered, closed without delivery.</summary>
+public sealed record DeliveryTotalsDto(int All, int UnderPreparation, int WithOperations, int Delivered, int Closed);
 
 public sealed record DeliveryListDto(int Total, DeliveryTotalsDto Totals, IReadOnlyList<DeliveryRowDto> Items);
 
@@ -73,9 +73,9 @@ public sealed record DeliveryDetailDto(
     string? DeliveredByName,
     IReadOnlyList<DeliveryLineDto> Lines,
     ApprovalStatusInfo? Approval,
+    bool AwaitingApproval,
     bool CanEdit,
     bool CanSubmit,
-    bool CanConfirm,
     bool CanCancel);
 
 public sealed record DeliveryListFilter(string? Search, string? Status, string? Source, string? Sort, bool Descending, int Page, int PageSize);
@@ -93,10 +93,10 @@ internal sealed class DeliveryOrderQueries(
         var rows = await RowsAsync(null, cancellationToken).ConfigureAwait(false);
         var totals = new DeliveryTotalsDto(
             rows.Count,
-            rows.Count(r => r.Status == nameof(DeliveryStatus.InApproval)),
-            rows.Count(r => r.Status == nameof(DeliveryStatus.Approved)),
+            rows.Count(r => IsPreparing(r.Status)),
+            rows.Count(r => IsWithOperations(r.Status)),
             rows.Count(r => r.Status == nameof(DeliveryStatus.Delivered)),
-            rows.Count(r => r.Status is nameof(DeliveryStatus.Draft) or nameof(DeliveryStatus.Returned)));
+            rows.Count(r => IsClosed(r.Status)));
 
         IEnumerable<DeliveryRowDto> query = rows;
         if (filter.Search?.Trim() is { Length: > 0 } search)
@@ -106,10 +106,10 @@ internal sealed class DeliveryOrderQueries(
 
         query = filter.Status switch
         {
-            "pending" => query.Where(r => r.Status == nameof(DeliveryStatus.InApproval)),
-            "approved" => query.Where(r => r.Status == nameof(DeliveryStatus.Approved)),
+            "preparing" => query.Where(r => IsPreparing(r.Status)),
+            "operations" => query.Where(r => IsWithOperations(r.Status)),
             "delivered" => query.Where(r => r.Status == nameof(DeliveryStatus.Delivered)),
-            "drafts" => query.Where(r => r.Status is nameof(DeliveryStatus.Draft) or nameof(DeliveryStatus.Returned)),
+            "closed" => query.Where(r => IsClosed(r.Status)),
             _ => query,
         };
         query = filter.Source switch
@@ -167,10 +167,10 @@ internal sealed class DeliveryOrderQueries(
         return new DeliveryDetailDto(
             row, order.ProjectCode, order.ContractType, order.ReceiverTitle, order.DelayReason, order.Notes, order.LastComment,
             order.SubmittedAt, order.DeliveredAt, order.DeliveredByName, lines, approval,
+            AwaitingApproval: order.AwaitingApproval,
             CanEdit: canCreate && order.IsEditable,
-            CanSubmit: canCreate && order.IsEditable && lines.Count > 0,
-            CanConfirm: system && order.Status == DeliveryStatus.Approved && granted.Has(OperationsPermissions.DeliveryConfirm),
-            CanCancel: canCreate && system && order.Status is DeliveryStatus.Draft or DeliveryStatus.Returned or DeliveryStatus.Approved);
+            CanSubmit: canCreate && order.IsEditable && !order.AwaitingApproval && lines.Count > 0,
+            CanCancel: canCreate && system && order.IsEditable && !order.AwaitingApproval);
     }
 
     /// <summary>The projects an order can be for.</summary>
@@ -194,6 +194,13 @@ internal sealed class DeliveryOrderQueries(
                 o.DeliverOn, o.StartOn, o.Workers, o.Total, o.Specials, o.ReceiverName, o.CreatedByName, o.CreatedAt))
             .ToList();
     }
+
+    private static bool IsPreparing(string status) => status is nameof(DeliveryStatus.UnderPreparation) or nameof(DeliveryStatus.Returned);
+
+    private static bool IsWithOperations(string status) => status is nameof(DeliveryStatus.SentToOperationsManager) or nameof(DeliveryStatus.InApproval);
+
+    private static bool IsClosed(string status) =>
+        status is nameof(DeliveryStatus.Rejected) or nameof(DeliveryStatus.Canceled) or nameof(DeliveryStatus.NotDelivered);
 
     private static bool Has(string? value, string search) => value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
 }

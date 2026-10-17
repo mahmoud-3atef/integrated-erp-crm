@@ -6,11 +6,9 @@ import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlin
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
-import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import {
   Alert,
   Box,
@@ -39,7 +37,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { Badge, PillTabs } from '../../components/ui';
 import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
-import { DeliveryStatusBadge, isoToday, sar } from './delivery';
+import { DeliveryStatusBadge, sar } from './delivery';
 
 function SummaryItem({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
@@ -64,7 +62,6 @@ export function DeliveryOrderDetailPage() {
   const [tab, setTab] = useState<'workers' | 'approval'>('workers');
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState<Record<string, string> | null>(null);
   const [canceling, setCanceling] = useState<string | null>(null);
   const approval = useRecordApproval(order?.approval?.instanceId);
 
@@ -168,7 +165,7 @@ export function DeliveryOrderDetailPage() {
           </Stack>
         )}
 
-        {(order.canEdit || order.canSubmit || order.canConfirm || order.canCancel) && (
+        {(order.canEdit || order.canSubmit || order.canCancel) && (
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.25, mt: 2.5 }}>
             {order.canEdit && (
               <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/delivery-orders/${o.id}/edit`)}>
@@ -180,16 +177,6 @@ export function DeliveryOrderDetailPage() {
                 {t('operations.delivery.submit')}
               </Button>
             )}
-            {order.canConfirm && (
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<TaskAltOutlinedIcon />}
-                onClick={() => setConfirming(Object.fromEntries(order.lines.map((l) => [l.id, l.startOn ?? o.startOn ?? isoToday()])))}
-              >
-                {t('operations.delivery.confirm')}
-              </Button>
-            )}
             {order.canCancel && (
               <Button color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCanceling('')}>
                 {t('operations.delivery.cancel')}
@@ -199,6 +186,16 @@ export function DeliveryOrderDetailPage() {
         )}
       </Box>
       <ErrorMessage messageKey={error} />
+      {o.source === 'System' && o.status === 'UnderPreparation' && order.awaitingApproval && (
+        <Alert severity="info" sx={{ mb: `${tokens.gap}px` }}>
+          {t('operations.delivery.creatorHint')}
+        </Alert>
+      )}
+      {o.status === 'Delivered' && o.source === 'System' && (
+        <Alert severity="success" sx={{ mb: `${tokens.gap}px` }}>
+          {t('operations.delivery.deliveredHint')}
+        </Alert>
+      )}
 
       {order.approval && (
         <ApprovalBar
@@ -292,55 +289,6 @@ export function DeliveryOrderDetailPage() {
           {o.source === 'Crm' ? t('operations.delivery.crmNote') : t('operations.delivery.parallelNote')}
         </Stack>
       </Box>
-
-      {confirming && (
-        <Dialog open onClose={() => setConfirming(null)} fullWidth maxWidth="sm">
-          <DialogTitle>{t('operations.delivery.confirmTitle', { no: o.orderNo })}</DialogTitle>
-          <DialogContent dividers>
-            <Alert severity="info" icon={<LocalShippingOutlinedIcon />} sx={{ mb: 2 }}>
-              {t('operations.delivery.confirmHint')}
-            </Alert>
-            <Stack spacing={1.5}>
-              {order.lines.map((l) => (
-                <Stack key={l.id} direction="row" sx={{ alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography dir="ltr" sx={{ fontSize: 13, fontWeight: 700, textAlign: 'start' }}>
-                      {l.name}
-                    </Typography>
-                    <Typography dir="ltr" sx={{ fontSize: 11.5, color: tokens.gray500, textAlign: 'start' }}>
-                      {l.workerNo}
-                    </Typography>
-                  </Box>
-                  <TextField
-                    size="small"
-                    type="date"
-                    label={t('operations.delivery.col.workerStart')}
-                    value={confirming[l.id]}
-                    onChange={(e) => setConfirming({ ...confirming, [l.id]: e.target.value })}
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Stack>
-              ))}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConfirming(null)}>{t('common.cancel')}</Button>
-            <Button
-              variant="contained"
-              color="success"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  await operationsApi.confirm(o.id, Object.entries(confirming).map(([lineId, startedOn]) => ({ lineId, startedOn })));
-                  setConfirming(null);
-                })
-              }
-            >
-              {t('operations.delivery.confirm')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
 
       {canceling !== null && (
         <Dialog open onClose={() => setCanceling(null)} fullWidth maxWidth="sm">

@@ -23,9 +23,8 @@ public sealed record DeliveryInput(
     string? Notes,
     IReadOnlyList<DeliveryLineInput> Lines);
 
-public sealed record ConfirmInput(IReadOnlyList<ConfirmLineInput> Lines);
-
-public sealed record ConfirmLineInput(Guid LineId, DateOnly StartedOn);
+/// <summary>A saved order; <paramref name="ApprovalError"/>: why its approval did not start (e.g. no process applies).</summary>
+public sealed record SavedOrderDto(Guid Id, string? ApprovalError);
 
 /// <summary>An available worker for the order form; <paramref name="BusyOrderNo"/>: another open order already has them.</summary>
 public sealed record AvailableWorkerDto(WorkerCard Worker, string? BusyOrderNo);
@@ -66,14 +65,16 @@ internal sealed class DeliveryOrderService(
     /// <summary>A delivery date older than this many days needs a delay reason.</summary>
     public const int DelayDays = 2;
 
-    private static readonly DeliveryStatus[] Open = [DeliveryStatus.Draft, DeliveryStatus.InApproval, DeliveryStatus.Returned, DeliveryStatus.Approved];
+    private static readonly DeliveryStatus[] Open =
+        [DeliveryStatus.UnderPreparation, DeliveryStatus.SentToOperationsManager, DeliveryStatus.InApproval, DeliveryStatus.Returned];
 
-    public async Task<Result<Guid>> CreateAsync(DeliveryInput input, CancellationToken cancellationToken)
+    /// <summary>Saves a new order under preparation and starts its approval (the creator's confirmation comes first).</summary>
+    public async Task<Result<SavedOrderDto>> CreateAsync(DeliveryInput input, CancellationToken cancellationToken)
     {
         var built = await BuildAsync(null, input, cancellationToken).ConfigureAwait(false);
         if (built.IsFailure)
         {
-            return Result.Failure<Guid>(built.Error);
+            return Result.Failure<SavedOrderDto>(built.Error);
         }
 
         var now = clock.UtcNow;
@@ -85,38 +86,49 @@ internal sealed class DeliveryOrderService(
         db.DeliveryOrders.Add(order);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return Result.Success(order.Id);
+        var started = await SubmitAsync(order.Id, cancellationToken).ConfigureAwait(false);
+        return Result.Success(new SavedOrderDto(order.Id, started.IsFailure ? started.Error.Code : null));
     }
 
-    public async Task<Result> UpdateAsync(Guid id, DeliveryInput input, CancellationToken cancellationToken)
+    /// <summary>
+    /// Saves changes while the order is under preparation (its creator has not confirmed it yet) or returned. A
+    /// returned order (or one whose approval did not start) is sent into approval again.
+    /// </summary>
+    public async Task<Result<SavedOrderDto>> UpdateAsync(Guid id, DeliveryInput input, CancellationToken cancellationToken)
     {
         var order = await db.DeliveryOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
         if (order is null)
         {
-            return Result.Failure(DeliveryErrors.NotFound);
+            return Result.Failure<SavedOrderDto>(DeliveryErrors.NotFound);
         }
 
         if (!order.IsEditable)
         {
-            return Result.Failure(DeliveryErrors.NotEditable);
+            return Result.Failure<SavedOrderDto>(DeliveryErrors.NotEditable);
         }
 
         var built = await BuildAsync(id, input, cancellationToken).ConfigureAwait(false);
         if (built.IsFailure)
         {
-            return built;
+            return Result.Failure<SavedOrderDto>(built.Error);
         }
 
         db.DeliveryLines.RemoveRange(order.Lines);
         var updated = order.Update(built.Value.Header, built.Value.Lines);
         if (updated.IsFailure)
         {
-            return updated;
+            return Result.Failure<SavedOrderDto>(updated.Error);
         }
 
         db.DeliveryLines.AddRange(order.Lines);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return Result.Success();
+        if (order.AwaitingApproval)
+        {
+            return Result.Success(new SavedOrderDto(order.Id, null));
+        }
+
+        var started = await SubmitAsync(order.Id, cancellationToken).ConfigureAwait(false);
+        return Result.Success(new SavedOrderDto(order.Id, started.IsFailure ? started.Error.Code : null));
     }
 
     /// <summary>Checks the workers are still available, then starts the company's approval process for delivery orders.</summary>
@@ -145,31 +157,12 @@ internal sealed class DeliveryOrderService(
             new ApprovalSubmission(DeliveryOrderAdapter.ScreenCode, order.Id, $"{order.OrderNo} — {order.ProjectName}"), cancellationToken).ConfigureAwait(false);
         if (started.IsFailure)
         {
-            // No process applies (or it could not start): the order stays a draft.
-            order.ApprovalEnded(DeliveryStatus.Draft, null);
+            // No process applies (or it could not start): the order waits under preparation.
+            order.SubmissionFailed();
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return Result.Failure(started.Error);
         }
 
-        return Result.Success();
-    }
-
-    public async Task<Result> ConfirmAsync(Guid id, ConfirmInput input, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(input);
-        var order = await db.DeliveryOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
-        if (order is null)
-        {
-            return Result.Failure(DeliveryErrors.NotFound);
-        }
-
-        var confirmed = order.ConfirmDelivery(input.Lines.ToDictionary(l => l.LineId, l => l.StartedOn), user.DisplayName, clock.UtcNow);
-        if (confirmed.IsFailure)
-        {
-            return confirmed;
-        }
-
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
 

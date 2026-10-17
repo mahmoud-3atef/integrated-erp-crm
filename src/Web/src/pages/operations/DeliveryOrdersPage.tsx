@@ -112,10 +112,10 @@ export function DeliveryOrdersPage() {
 
       <KpiGrid count={5}>
         {card('', t('operations.delivery.cards.all'), data?.totals.all, t('operations.delivery.cards.allFoot'), <DescriptionOutlinedIcon />, tokens.navy700)}
-        {card('drafts', t('operations.delivery.cards.drafts'), data?.totals.drafts, t('operations.delivery.cards.draftsFoot'), <EditNoteOutlinedIcon />, '#6b7a90')}
-        {card('pending', t('operations.delivery.cards.pending'), data?.totals.pending, t('operations.delivery.cards.pendingFoot'), <HourglassBottomOutlinedIcon />, '#d9822b')}
-        {card('approved', t('operations.delivery.cards.approved'), data?.totals.approved, t('operations.delivery.cards.approvedFoot'), <AssignmentTurnedInOutlinedIcon />, '#1b6a92')}
+        {card('preparing', t('operations.delivery.cards.preparing'), data?.totals.underPreparation, t('operations.delivery.cards.preparingFoot'), <EditNoteOutlinedIcon />, '#6b7a90')}
+        {card('operations', t('operations.delivery.cards.operations'), data?.totals.withOperations, t('operations.delivery.cards.operationsFoot'), <HourglassBottomOutlinedIcon />, '#d9822b')}
         {card('delivered', t('operations.delivery.cards.delivered'), data?.totals.delivered, t('operations.delivery.cards.deliveredFoot'), <TaskAltOutlinedIcon />, '#1f9d55')}
+        {card('closed', t('operations.delivery.cards.closed'), data?.totals.closed, t('operations.delivery.cards.closedFoot'), <AssignmentTurnedInOutlinedIcon />, '#c0392b')}
       </KpiGrid>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>

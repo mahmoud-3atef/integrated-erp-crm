@@ -20,6 +20,12 @@ public interface IAccessDirectory
     /// </summary>
     Task<IReadOnlyList<Guid>> MembersInRoleAsync(Guid roleId, Guid? legalEntityId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Active members holding a permission through an active role (not the administrator role, which holds every
+    /// permission), for all commercial registrations or for <paramref name="legalEntityId"/> when given.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> MembersWithPermissionAsync(string permissionCode, Guid? legalEntityId, CancellationToken cancellationToken);
+
     /// <summary>Whether the user is an active member of the current company.</summary>
     Task<bool> IsMemberAsync(Guid userAccountId, CancellationToken cancellationToken);
 }

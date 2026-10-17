@@ -50,7 +50,7 @@ internal sealed class DeliveryOrderConfiguration : IEntityTypeConfiguration<Deli
         builder.Property(o => o.Id).ValueGeneratedNever();
         builder.Property(o => o.OrderNo).HasMaxLength(30).IsRequired();
         builder.Property(o => o.Source).HasConversion<string>().HasMaxLength(10);
-        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(o => o.ProjectCode).HasMaxLength(100).IsRequired();
         builder.Property(o => o.ProjectName).HasMaxLength(300).IsRequired();
         builder.Property(o => o.CustomerName).HasMaxLength(300);

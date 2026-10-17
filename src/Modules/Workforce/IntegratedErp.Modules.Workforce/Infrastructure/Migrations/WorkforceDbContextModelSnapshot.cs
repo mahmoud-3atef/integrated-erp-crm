@@ -484,6 +484,152 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                     b.ToTable("worker", "workforce");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClosedByNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("closed_by_no");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ends_on");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("source_id");
+
+                    b.Property<Guid?>("SourceLineId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("source_line_id");
+
+                    b.Property<string>("SourceNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("source_no");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("source_type");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("starts_on");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Rate", "IntegratedErp.Modules.Workforce.Domain.WorkerPeriod.Rate#PeriodRate", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("Housing")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_housing");
+
+                            b1.Property<bool>("HousingBillable")
+                                .HasColumnType("bit")
+                                .HasColumnName("rate_housing_billable");
+
+                            b1.Property<bool>("IsSpecialPrice")
+                                .HasColumnType("bit")
+                                .HasColumnName("rate_is_special_price");
+
+                            b1.Property<Guid?>("PackageId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("rate_package_id");
+
+                            b1.Property<string>("PackageNo")
+                                .HasMaxLength(30)
+                                .HasColumnType("nvarchar(30)")
+                                .HasColumnName("rate_package_no");
+
+                            b1.Property<decimal>("Salary")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_salary");
+
+                            b1.Property<decimal>("ServiceFee")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_service_fee");
+
+                            b1.Property<decimal>("TotalPrice")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_total_price");
+
+                            b1.Property<decimal>("Transport")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_transport");
+
+                            b1.Property<bool>("TransportBillable")
+                                .HasColumnType("bit")
+                                .HasColumnName("rate_transport_billable");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_worker_period");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_worker_period_tenant_id");
+
+                    b.HasIndex("WorkerId")
+                        .HasDatabaseName("ix_worker_period_worker_id");
+
+                    b.HasIndex("TenantId", "SourceLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_worker_period_tenant_id_source_line_id")
+                        .HasFilter("[source_line_id] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_worker_period_open")
+                        .HasFilter("[ends_on] IS NULL");
+
+                    b.HasIndex("TenantId", "WorkerId", "StartsOn")
+                        .HasDatabaseName("ix_worker_period_tenant_id_worker_id_starts_on");
+
+                    b.ToTable("worker_period", "workforce");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkforceImport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -535,6 +681,16 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_worker_person_person_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerPeriod", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Workforce.Domain.Worker", null)
+                        .WithMany()
+                        .HasForeignKey("WorkerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_worker_period_worker_worker_id");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.Person", b =>

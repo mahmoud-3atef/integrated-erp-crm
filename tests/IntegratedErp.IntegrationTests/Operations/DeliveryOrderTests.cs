@@ -6,9 +6,14 @@ using IntegratedErp.Modules.CrmSync.Domain;
 using IntegratedErp.Modules.CrmSync.Infrastructure;
 using IntegratedErp.Modules.Operations.Application;
 using IntegratedErp.Modules.Operations.Domain;
-using IntegratedErp.Modules.Operations.Infrastructure;
 using IntegratedErp.Modules.Organization.Application.Organization;
-using IntegratedErp.Modules.Workflow.Contracts;
+using IntegratedErp.BuildingBlocks.Security;
+using IntegratedErp.Modules.Identity.Domain;
+using IntegratedErp.Modules.Identity.Infrastructure;
+using IntegratedErp.Modules.Workflow.Application;
+using IntegratedErp.Modules.Workflow.Domain;
+using IntegratedErp.Modules.Workflow.Infrastructure;
+using IntegratedErp.Modules.Workforce.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -78,9 +83,12 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             Assert.True(created.IsSuccess);
         }
 
+        // The people of the default process: the order's creator and an operations manager.
+        var (creator, operationsManager) = await PeopleAsync(tenantId);
+
         var deliverOn = DateOnly.FromDateTime(DateTime.UtcNow);
         Guid orderId;
-        using (var scope = database.Scope(tenantId))
+        using (var scope = database.Scope(tenantId, user: creator.ToString()))
         {
             var service = scope.ServiceProvider.GetRequiredService<DeliveryOrderService>();
             DeliveryInput Input(params DeliveryLineInput[] lines) => new(projectId, deliverOn, deliverOn.AddDays(1), "مشرف الضيافة", "مشرف", null, null, lines);
@@ -92,54 +100,93 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             Assert.Equal("validation.delivery_delay_reason",
                 (await service.CreateAsync(Input(new DeliveryLineInput(first, null, null, null)) with { DeliverOn = deliverOn.AddDays(-5), StartOn = deliverOn }, default)).Error.Code);
 
-            var created = await service.CreateAsync(Input(new DeliveryLineInput(first, null, null, null), new DeliveryLineInput(second, null, 3200m, "اتفاق مع العميل")), default);
+            // Saved: under preparation, and the default process starts at once (created for the company on first use).
+            var created = await service.CreateAsync(
+                Input(new DeliveryLineInput(first, deliverOn.AddDays(2), null, null), new DeliveryLineInput(second, null, 3200m, "اتفاق مع العميل")), default);
             Assert.True(created.IsSuccess, created.IsFailure ? created.Error.Code : null);
-            orderId = created.Value;
+            Assert.Null(created.Value.ApprovalError);
+            orderId = created.Value.Id;
 
             // A worker on an open order cannot be on another one.
             Assert.Equal("conflict.delivery_worker_busy", (await service.CreateAsync(Input(new DeliveryLineInput(first, null, null, null)), default)).Error.Code);
-
-            // No approval process is set up for delivery orders: the order stays a draft.
-            Assert.Equal("validation.approval_no_process", (await service.SubmitAsync(orderId, default)).Error.Code);
         }
 
-        using (var scope = database.Scope(tenantId))
+        using (var scope = database.Scope(tenantId, user: creator.ToString()))
         {
             var detail = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!;
-            Assert.Equal(("Draft", 2), (detail.Summary.Status, detail.Lines.Count));
+            Assert.Equal(("UnderPreparation", true, 2), (detail.Summary.Status, detail.AwaitingApproval, detail.Lines.Count));
             Assert.StartsWith("DO-", detail.Summary.OrderNo, StringComparison.Ordinal);
             var packaged = detail.Lines.Single(l => l.WorkerNo == "BSS0001");
             Assert.Equal(("PKG-00001", 3000m, false, true), (packaged.PackageNo, packaged.TotalPrice, packaged.IsSpecialPrice, packaged.HousingBillable));
             var special = detail.Lines.Single(l => l.WorkerNo == "BSS0002");
             Assert.Equal((3200m, true, null), (special.TotalPrice, special.IsSpecialPrice, special.PackageNo));
+            Assert.Equal("تأكيد منشئ أمر التسليم", detail.Approval!.CurrentStepAr);
 
-            // The approval engine sends it, then approves it.
-            var db = scope.ServiceProvider.GetRequiredService<OperationsDbContext>();
-            var order = await db.DeliveryOrders.Include(o => o.Lines).SingleAsync(o => o.Id == orderId);
-            Assert.True(order.MarkSubmitted(DateTimeOffset.UtcNow).IsSuccess);
-            await db.SaveChangesAsync();
-            var adapter = scope.ServiceProvider.GetServices<IApprovalRecordAdapter>().Single(a => a.Screen.Code == DeliveryOrderAdapter.ScreenCode);
-            var fields = await adapter.ReadAsync(orderId, default);
-            Assert.Equal(("2", "6200.00", "true"), (fields!["workers"], fields["total_price"], fields["has_special_price"]));
-            await adapter.EndedAsync(orderId, ApprovalEnd.Approved, "موافق", default);
+            // 1. The creator confirms their own order: sent to the operations manager.
+            await DecideAsync(scope, creator, "موافق");
+        }
+
+        using (var scope = database.Scope(tenantId, user: operationsManager.ToString()))
+        {
+            var detail = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("SentToOperationsManager", "اعتماد مدير العمليات"), (detail.Summary.Status, detail.Approval!.CurrentStepAr));
+            Assert.False(detail.CanEdit);
+
+            // 2. The operations manager approves: delivered.
+            await DecideAsync(scope, operationsManager, "تم");
         }
 
         using (var scope = database.Scope(tenantId))
         {
-            var service = scope.ServiceProvider.GetRequiredService<DeliveryOrderService>();
-            var lines = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!.Lines;
-            Assert.Equal("validation.delivery_start_before",
-                (await service.ConfirmAsync(orderId, new ConfirmInput([new(lines[0].Id, deliverOn.AddDays(-1))]), default)).Error.Code);
-            Assert.True((await service.ConfirmAsync(orderId, new ConfirmInput([new(lines[0].Id, deliverOn.AddDays(2))]), default)).IsSuccess);
-
             var detail = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!;
-            Assert.Equal("Delivered", detail.Summary.Status);
+            Assert.Equal(("Delivered", false), (detail.Summary.Status, detail.AwaitingApproval));
             Assert.Equal([deliverOn.AddDays(2), deliverOn.AddDays(1)], detail.Lines.Select(l => l.StartedOn!.Value));
 
-            // Delivered: the workers are free for a new order again.
+            // Each worker now has an open work period on the project, with the line's price.
+            var ledger = scope.ServiceProvider.GetRequiredService<IPeriodLedger>();
+            var period = (await ledger.PeriodsAsync(first, default)).Single();
+            Assert.Equal(("Work", "مشروع الرياض", deliverOn.AddDays(2), (DateOnly?)null, 3000m, detail.Summary.OrderNo),
+                (period.Kind, period.ProjectName, period.StartsOn, period.EndsOn, period.TotalPrice, period.SourceNo));
+            Assert.Equal((3200m, true), ((await ledger.PeriodsAsync(second, default)).Single().TotalPrice, (await ledger.PeriodsAsync(second, default)).Single().IsSpecialPrice));
+
+            // On the job here: no longer available for another delivery order.
+            var available = await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().AvailableAsync(default);
+            Assert.DoesNotContain(available, w => w.Id == first || w.Id == second);
+
             var list = await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().ListAsync(new DeliveryListFilter(null, "delivered", null, null, true, 1, 50), default);
             Assert.Equal(2, list.Totals.Delivered);
         }
+    }
+
+    /// <summary>The user's open approval task on the order, approved.</summary>
+    private static async Task DecideAsync(IServiceScope scope, Guid userId, string comment)
+    {
+        var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+        var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == userId && w.Status == WorkItemStatus.Pending);
+        var decided = await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Approve, comment, null, default);
+        Assert.True(decided.IsSuccess, decided.IsFailure ? decided.Error.Code : null);
+    }
+
+    /// <summary>Two members of the company: a creator of delivery orders and an operations manager (approve permission).</summary>
+    private async Task<(Guid Creator, Guid OperationsManager)> PeopleAsync(Guid tenantId)
+    {
+        using var scope = database.Scope(tenantId, user: "setup");
+        var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var catalog = scope.ServiceProvider.GetRequiredService<PermissionCatalog>();
+        async Task<Guid> PersonAsync(string name, string role, string permission)
+        {
+            var user = UserAccount.Create(name, null);
+            identity.Users.Add(user);
+            var membership = new Membership(user.Id, tenantId);
+            identity.Memberships.Add(membership);
+            var created = Role.Create($"{role}-{Guid.NewGuid():N}"[..20], role, role, ["operations.delivery.view", permission], catalog);
+            identity.Roles.Add(created.Value);
+            identity.RoleAssignments.Add(new RoleAssignment(membership.Id, created.Value.Id, null, tenantId));
+            await identity.SaveChangesAsync();
+            return user.Id;
+        }
+
+        return (await PersonAsync("منشئ الأمر", "sales", "operations.delivery.create"), await PersonAsync("مدير العمليات", "operations", "operations.delivery.approve"));
     }
 
     private static Guid Worker(FakeCrm crm, string number, Guid nationality, Guid profession, int status, Guid? project) =>

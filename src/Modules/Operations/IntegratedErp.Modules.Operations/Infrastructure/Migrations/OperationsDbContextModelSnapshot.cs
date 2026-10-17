@@ -306,6 +306,10 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
                     b.Property<string>("ContractType")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)")
@@ -420,8 +424,8 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
                         .HasColumnName("status");
 
                     b.Property<DateTimeOffset?>("SubmittedAt")

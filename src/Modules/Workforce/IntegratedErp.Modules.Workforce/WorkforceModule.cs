@@ -26,6 +26,7 @@ public sealed class WorkforceModule : IModule
         services.AddModuleDbContext<WorkforceDbContext>(configuration, WorkforceDbContext.SchemaName);
         services.AddScoped<WorkerQueries>();
         services.AddScoped<IWorkforceDirectory, WorkforceDirectory>();
+        services.AddScoped<IPeriodLedger, PeriodLedger>();
         services.AddScoped<WorkerImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<WorkerImportService>());
         services.AddPermissions(WorkforcePermissions.All);

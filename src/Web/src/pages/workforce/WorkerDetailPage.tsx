@@ -35,6 +35,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
+import { WorkerPeriods } from './WorkerPeriods';
 import { placementLook } from '../../components/workforce/placement';
 
 /**
@@ -47,7 +48,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
-  const [tab, setTab] = useState<'info' | 'ids'>('info');
+  const [tab, setTab] = useState<'info' | 'ids' | 'periods'>('info');
   const [error, setError] = useState<string | null>(null);
   const ar = i18n.language === 'ar';
 
@@ -198,10 +199,13 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           options={[
             { value: 'info', label: t('workforce.tabs.info') },
             { value: 'ids', label: t('workforce.tabs.ids', { count: worker.identifiers.length }) },
+            ...(staff ? [] : [{ value: 'periods' as const, label: t('workforce.tabs.periods') }]),
           ]}
         />
 
-        {tab === 'info' ? (
+        {tab === 'periods' ? (
+          <WorkerPeriods kind={kind} workerId={id!} />
+        ) : tab === 'info' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5, alignItems: 'start' }}>
             <Stack spacing={2.5}>
               <FieldSection title={t('workforce.sections.basic')} icon={<BadgeOutlinedIcon />}>

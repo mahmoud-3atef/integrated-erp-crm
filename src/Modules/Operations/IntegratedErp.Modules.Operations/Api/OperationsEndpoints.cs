@@ -42,7 +42,7 @@ internal static class OperationsEndpoints
 
         group.MapPost("/", async (DeliveryInput input, DeliveryOrderService service, CancellationToken ct) =>
                 await service.CreateAsync(input, ct).ConfigureAwait(false) is var result && result.IsSuccess
-                    ? Results.Json(new { id = result.Value }, statusCode: StatusCodes.Status201Created)
+                    ? Results.Json(result.Value, statusCode: StatusCodes.Status201Created)
                     : Problem(result.Error))
             .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);
 
@@ -53,10 +53,6 @@ internal static class OperationsEndpoints
         group.MapPost("/{id:guid}/submit", async (Guid id, DeliveryOrderService service, CancellationToken ct) =>
                 ToHttp(await service.SubmitAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);
-
-        group.MapPost("/{id:guid}/confirm", async (Guid id, ConfirmInput input, DeliveryOrderService service, CancellationToken ct) =>
-                ToHttp(await service.ConfirmAsync(id, input, ct).ConfigureAwait(false)))
-            .RequirePermission(OperationsPermissions.DeliveryConfirm, companyWide: true);
 
         group.MapPost("/{id:guid}/cancel", async (Guid id, CancelRequest r, DeliveryOrderService service, CancellationToken ct) =>
                 ToHttp(await service.CancelAsync(id, r.Comment, ct).ConfigureAwait(false)))

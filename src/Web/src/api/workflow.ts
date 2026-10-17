@@ -55,7 +55,7 @@ export interface ConditionGroup {
   rules: ConditionRule[];
 }
 
-export type AssigneeKind = 'User' | 'Role' | 'UserField';
+export type AssigneeKind = 'User' | 'Role' | 'UserField' | 'Submitter' | 'Permission';
 export type RecipientKind = 'Submitter' | 'User' | 'Role' | 'UserField';
 
 export interface Assignee {
@@ -63,6 +63,7 @@ export interface Assignee {
   userId?: string | null;
   roleId?: string | null;
   fieldKey?: string | null;
+  permission?: string | null;
 }
 
 export interface Recipient {
@@ -174,9 +175,18 @@ export interface MemberOption {
   userName: string | null;
 }
 
+export interface PermissionOption {
+  code: string;
+  groupAr: string;
+  groupEn: string;
+  nameAr: string;
+  nameEn: string;
+}
+
 export interface ApproverOptions {
   roles: RoleOption[];
   members: MemberOption[];
+  permissions: PermissionOption[];
 }
 
 // ---------------------------------------------------------------- Running approvals

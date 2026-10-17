@@ -22,6 +22,42 @@ internal sealed class WorkforceDbContext(DbContextOptions<WorkforceDbContext> op
     public DbSet<Worker> Workers => Set<Worker>();
 
     public DbSet<WorkforceImport> Imports => Set<WorkforceImport>();
+
+    public DbSet<WorkerPeriod> Periods => Set<WorkerPeriod>();
+}
+
+internal sealed class WorkerPeriodConfiguration : IEntityTypeConfiguration<WorkerPeriod>
+{
+    public void Configure(EntityTypeBuilder<WorkerPeriod> builder)
+    {
+        builder.ToTable("worker_period");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.ProjectName).HasMaxLength(300);
+        builder.Property(p => p.SourceType).HasMaxLength(50).IsRequired();
+        builder.Property(p => p.SourceNo).HasMaxLength(50).IsRequired();
+        builder.Property(p => p.ClosedByNo).HasMaxLength(50);
+        builder.Ignore(p => p.IsOpen);
+        builder.ComplexProperty(p => p.Rate, rate =>
+        {
+            rate.Property(r => r.PackageId).HasColumnName("rate_package_id");
+            rate.Property(r => r.PackageNo).HasColumnName("rate_package_no").HasMaxLength(30);
+            rate.Property(r => r.Salary).HasColumnName("rate_salary").HasPrecision(18, 2);
+            rate.Property(r => r.ServiceFee).HasColumnName("rate_service_fee").HasPrecision(18, 2);
+            rate.Property(r => r.Housing).HasColumnName("rate_housing").HasPrecision(18, 2);
+            rate.Property(r => r.HousingBillable).HasColumnName("rate_housing_billable");
+            rate.Property(r => r.Transport).HasColumnName("rate_transport").HasPrecision(18, 2);
+            rate.Property(r => r.TransportBillable).HasColumnName("rate_transport_billable");
+            rate.Property(r => r.TotalPrice).HasColumnName("rate_total_price").HasPrecision(18, 2);
+            rate.Property(r => r.IsSpecialPrice).HasColumnName("rate_is_special_price");
+        });
+        builder.HasOne<Worker>().WithMany().HasForeignKey(p => p.WorkerId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(p => new { p.TenantId, p.WorkerId, p.StartsOn });
+        builder.HasIndex(p => new { p.TenantId, p.SourceLineId }).IsUnique().HasFilter("[source_line_id] IS NOT NULL");
+        // L3: one open period per worker.
+        builder.HasIndex(p => new { p.TenantId, p.WorkerId }).IsUnique().HasFilter("[ends_on] IS NULL").HasDatabaseName("ux_worker_period_open");
+    }
 }
 
 internal sealed class PersonConfiguration : IEntityTypeConfiguration<Person>

@@ -217,9 +217,11 @@
     "validation_delivery_start_before": "The start of work cannot be before the delivery date.",
     "validation_delivery_no_workers": "Add at least one worker.",
     "conflict_delivery_not_editable": "Only a draft or returned order can be changed.",
-    "conflict_delivery_not_approved": "Only an approved order can be confirmed.",
     "conflict_delivery_not_cancelable": "This order can no longer be canceled.",
-    "not_found_delivery_order": "Delivery order not found."
+    "not_found_delivery_order": "Delivery order not found.",
+    "conflict_delivery_not_in_approval": "The order is not in approval.",
+    "validation_delivery_status_not_settable": "A process cannot set this status.",
+    "validation_process_permission_unknown": "A permission in the process does not exist."
   },
   "menu": {
     "label": "Main menu",
@@ -660,7 +662,9 @@
       "Role": "Role",
       "User": "Specific user",
       "UserField": "User from a record field",
-      "Submitter": "The submitter"
+      "Submitter": "The submitter",
+      "Permission": "Holders of a permission",
+      "SubmitterConfirms": "The submitter (confirms their own request)"
     },
     "outcome": {
       "Approved": "Approved",
@@ -887,7 +891,8 @@
     "noSalaryPermission": "You do not have permission to view salaries and allowances.",
     "tabs": {
       "info": "Employee data",
-      "ids": "IDs and documents ({{count}})"
+      "ids": "IDs and documents ({{count}})",
+      "periods": "Period ledger"
     },
     "sections": {
       "basic": "Basic data",
@@ -946,7 +951,24 @@
       "intro": "Company staff files, updated automatically from the old system after every sync.",
       "count": "{{count}} staff"
     },
-    "staffExited": "Service ended"
+    "staffExited": "Service ended",
+    "periods": {
+      "empty": "No periods yet. A period is recorded when the worker is delivered by a delivery order of this system.",
+      "kind": "Period",
+      "from": "From",
+      "to": "To",
+      "open": "Ongoing",
+      "source": "Document",
+      "kinds": {
+        "Work": "Work",
+        "Housing": "Housing",
+        "Vacation": "Vacation",
+        "ClientVacation": "Customer vacation",
+        "Absconded": "Absconded",
+        "Suspended": "Suspended",
+        "Out": "Exit"
+      }
+    }
   },
   "commercial": {
     "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync. Only customers and projects created from 1 January 2025 are brought over.",
@@ -1170,12 +1192,7 @@
       "specialReason": "Reason for the special price",
       "useSpecial": "Package price",
       "sameAsOrder": "Order's date",
-      "saveDraft": "Save as draft",
-      "saveAndSubmit": "Save and submit for approval",
       "submit": "Submit for approval",
-      "confirm": "Confirm delivery",
-      "confirmTitle": "Confirm the delivery of order {{no}}",
-      "confirmHint": "The whole order is confirmed, with each worker's actual start of work. If a worker was not delivered, return the order for changes and remove the worker first.",
       "cancel": "Cancel the order",
       "cancelTitle": "Cancel order {{no}}",
       "cancelReason": "Reason for canceling",
@@ -1198,14 +1215,14 @@
       "cards": {
         "all": "All orders",
         "allFoot": "All orders",
-        "drafts": "Drafts and returned",
-        "draftsFoot": "Not sent yet",
-        "pending": "In approval",
-        "pendingFoot": "Waiting for approval",
-        "approved": "Awaiting delivery",
-        "approvedFoot": "Approved, not delivered",
+        "preparing": "Under preparation",
+        "preparingFoot": "Awaiting the creator's confirmation, or returned",
+        "operations": "With the operations manager",
+        "operationsFoot": "Awaiting approval",
         "delivered": "Delivered",
-        "deliveredFoot": "Show delivered"
+        "deliveredFoot": "Show delivered",
+        "closed": "Rejected or canceled",
+        "closedFoot": "Not delivered"
       },
       "col": {
         "order": "Order number",
@@ -1229,13 +1246,16 @@
         "lastProject": "Last project",
         "added": "On this order",
         "shown": "Showing {{shown}} of {{all}}"
-      }
+      },
+      "flowHint": "On saving, the order is \"under preparation\" and you get a task to confirm it. Once you confirm, it goes to the operations manager; when they approve, it is \"delivered\" and each worker gets a work period in the period ledger.",
+      "creatorHint": "The order is under preparation: review it, then confirm it with \"Approve\" in the approval stages bar below to send it to the operations manager. You can still change it before confirming.",
+      "deliveredHint": "Delivered: each worker has a work period on the project in the period ledger from their start of work, at their line's price."
     },
     "status": {
-      "Draft": "Draft",
+      "UnderPreparation": "Under preparation",
+      "SentToOperationsManager": "Sent to the operations manager",
       "InApproval": "In approval",
       "Returned": "Returned",
-      "Approved": "Awaiting delivery",
       "Rejected": "Rejected",
       "Delivered": "Delivered",
       "NotDelivered": "Not delivered",

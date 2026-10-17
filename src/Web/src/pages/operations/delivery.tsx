@@ -3,10 +3,10 @@ import type { DeliveryRow, DeliveryStatus } from '../../api/operations';
 import { Badge, type Tone } from '../../components/ui';
 
 export const deliveryTone: Record<DeliveryStatus, Tone> = {
-  Draft: 'neutral',
+  UnderPreparation: 'neutral',
+  SentToOperationsManager: 'warning',
   InApproval: 'warning',
   Returned: 'info',
-  Approved: 'primary',
   Rejected: 'danger',
   Delivered: 'success',
   NotDelivered: 'danger',
@@ -14,7 +14,7 @@ export const deliveryTone: Record<DeliveryStatus, Tone> = {
 };
 
 /** Old system statuses with their own names (sent to the delivery officer, the sales coordinator…). */
-const crmStatusNames = new Set([279640000, 279640002, 279640006, 279640007, 279640009, 279640010, 279640011]);
+const crmStatusNames = new Set([279640002, 279640006, 279640007, 279640009, 279640010]);
 
 /** The order's status; an order of the old system shows the old status name while it waits. */
 export function DeliveryStatusBadge({ row }: { row: Pick<DeliveryRow, 'status' | 'source' | 'crmStatus'> }) {

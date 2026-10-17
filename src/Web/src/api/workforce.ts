@@ -90,4 +90,26 @@ export const workforceApi = {
     return request<WorkerList>('GET', `${base}/${kindPath(kind)}?${params.toString()}`);
   },
   get: (kind: WorkerKind, id: string) => request<WorkerDetail>('GET', `${base}/${kindPath(kind)}/${id}`),
+  periods: (kind: WorkerKind, id: string) => request<WorkerPeriod[]>('GET', `${base}/${kindPath(kind)}/${id}/periods`),
 };
+
+/** A period of the worker's timeline (period ledger): endsOn is the first day after it (null while open). */
+export interface WorkerPeriod {
+  id: string;
+  kind: string;
+  projectId: string | null;
+  projectName: string | null;
+  startsOn: string;
+  endsOn: string | null;
+  sourceType: string;
+  sourceId: string;
+  sourceNo: string;
+  closedByNo: string | null;
+  packageNo: string | null;
+  salary: number | null;
+  serviceFee: number | null;
+  housing: number | null;
+  transport: number | null;
+  totalPrice: number | null;
+  isSpecialPrice: boolean;
+}

@@ -75,6 +75,7 @@ internal sealed partial class ApprovalEngine(
             return Result.Failure<Guid>(AlreadyRunning);
         }
 
+        await EnsureDefaultProcessAsync(adapter.Screen, cancellationToken).ConfigureAwait(false);
         var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
         var processes = await db.Processes.AsNoTracking().Include(p => p.Versions)
             .Where(p => p.Screen == submission.Screen && p.IsActive)
@@ -113,6 +114,29 @@ internal sealed partial class ApprovalEngine(
 
         await FlushNotificationsAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success(instance.Id);
+    }
+
+    /// <summary>
+    /// The first submission of a screen that the company has no process for: its default process (if it declares
+    /// one) is created and published, so it works at once and can then be changed in "Approval processes".
+    /// </summary>
+    private async Task EnsureDefaultProcessAsync(ApprovalScreen screen, CancellationToken cancellationToken)
+    {
+        if (screen.DefaultProcess is not { } template || await db.Processes.AnyAsync(p => p.Screen == screen.Code, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var definition = DefinitionJson.Read(template.DefinitionJson);
+        if (DefinitionRules.Validate(definition, screen).IsFailure)
+        {
+            return; // a broken template never blocks the screen: it simply has no process yet
+        }
+
+        var process = new ApprovalProcess(screen.Code, template.NameAr, template.NameEn, 100, DefinitionJson.Write(definition));
+        process.Publish("النظام / System", clock.UtcNow);
+        db.Processes.Add(process);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // ------------------------------------------------------------------ Decide / delegate / cancel / retry
@@ -494,11 +518,19 @@ internal sealed partial class ApprovalEngine(
                 case AssigneeKind.UserField when assignee.FieldKey is { } key && Guid.TryParse(values.GetValueOrDefault(key), out var fromRecord):
                     people.Add(fromRecord);
                     break;
+                case AssigneeKind.Submitter:
+                    people.Add(instance.SubmittedBy);
+                    break;
+                case AssigneeKind.Permission when assignee.Permission is { } permission:
+                    people.UnionWith(await access.MembersWithPermissionAsync(permission, instance.LegalEntityId, cancellationToken).ConfigureAwait(false));
+                    break;
             }
         }
 
-        // Nobody approves their own request; only active members of this company can approve.
-        people.RemoveWhere(id => id == instance.SubmittedBy || !members.ContainsKey(id));
+        // Nobody approves their own request (unless the stage is the submitter's own confirmation); only active
+        // members of this company can approve.
+        var submitterStage = stage.Assignees.Any(a => a.Kind == AssigneeKind.Submitter);
+        people.RemoveWhere(id => (id == instance.SubmittedBy && !submitterStage) || !members.ContainsKey(id));
         var escalated = false;
         if (people.Count == 0)
         {

@@ -1,5 +1,6 @@
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Workforce.Application;
+using IntegratedErp.Modules.Workforce.Contracts;
 using IntegratedErp.Modules.Workforce.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -37,6 +38,10 @@ internal static class WorkforceEndpoints
                 var withSalary = (await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).Has(salary);
                 return await queries.GetAsync(id, kind, withSalary, ct).ConfigureAwait(false) is { } file ? Results.Ok(file) : Results.NotFound();
             })
+            .RequirePermission(view, companyWide: true);
+
+        group.MapGet($"/{path}/{{id:guid}}/periods", async (Guid id, IPeriodLedger ledger, CancellationToken ct) =>
+                Results.Ok(await ledger.PeriodsAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(view, companyWide: true);
     }
 }

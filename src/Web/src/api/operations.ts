@@ -4,7 +4,7 @@ import type { ContractType } from './commercial';
 import type { ApprovalStatus } from './workflow';
 import type { Placement } from './workforce';
 
-export type DeliveryStatus = 'Draft' | 'InApproval' | 'Returned' | 'Approved' | 'Rejected' | 'Delivered' | 'NotDelivered' | 'Canceled';
+export type DeliveryStatus = 'UnderPreparation' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Delivered' | 'NotDelivered' | 'Canceled';
 
 export interface DeliveryRow {
   id: string;
@@ -28,7 +28,7 @@ export interface DeliveryRow {
 
 export interface DeliveryList {
   total: number;
-  totals: { all: number; pending: number; approved: number; delivered: number; drafts: number };
+  totals: { all: number; underPreparation: number; withOperations: number; delivered: number; closed: number };
   items: DeliveryRow[];
 }
 
@@ -74,9 +74,9 @@ export interface DeliveryDetail {
   deliveredByName: string | null;
   lines: DeliveryLine[];
   approval: ApprovalStatus | null;
+  awaitingApproval: boolean;
   canEdit: boolean;
   canSubmit: boolean;
-  canConfirm: boolean;
   canCancel: boolean;
 }
 
@@ -154,6 +154,12 @@ export interface DeliveryInput {
   lines: DeliveryLineInput[];
 }
 
+/** A saved order; approvalError: the error code when its approval could not start. */
+export interface SavedOrder {
+  id: string;
+  approvalError: string | null;
+}
+
 export interface DeliveryQuery {
   search?: string;
   status?: string;
@@ -181,9 +187,8 @@ export const operationsApi = {
   workers: (search: string) => request<WorkerCard[]>('GET', `${base}/workers?search=${encodeURIComponent(search)}`),
   prices: (projectId: string, workerIds: string[], on: string, orderId?: string) =>
     request<WorkerPriceQuote[]>('POST', `${base}/prices`, { projectId, workerIds, on, orderId: orderId ?? null }),
-  create: (input: DeliveryInput) => request<{ id: string }>('POST', base, input),
-  update: (id: string, input: DeliveryInput) => request<void>('PUT', `${base}/${id}`, input),
+  create: (input: DeliveryInput) => request<SavedOrder>('POST', base, input),
+  update: (id: string, input: DeliveryInput) => request<SavedOrder>('PUT', `${base}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${base}/${id}/submit`),
-  confirm: (id: string, lines: { lineId: string; startedOn: string }[]) => request<void>('POST', `${base}/${id}/confirm`, { lines }),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${base}/${id}/cancel`, { comment }),
 };

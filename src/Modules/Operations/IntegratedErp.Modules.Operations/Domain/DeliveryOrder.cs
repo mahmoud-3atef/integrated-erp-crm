@@ -2,20 +2,26 @@ using IntegratedErp.SharedKernel;
 
 namespace IntegratedErp.Modules.Operations.Domain;
 
-/// <summary>Where a delivery order stands (docs/02-target-architecture/05 §1, document life cycle).</summary>
+/// <summary>
+/// Where a delivery order stands. The default process: saved ⇒ under preparation, with a confirmation task for its
+/// creator ⇒ sent to the operations manager ⇒ delivered (the workers' work periods open).
+/// </summary>
 public enum DeliveryStatus
 {
-    Draft,
+    /// <summary>Saved; the creator confirms it (old system: "قيد الإعداد").</summary>
+    UnderPreparation,
+
+    /// <summary>Confirmed by its creator, waiting for the operations manager (old system: 279640011).</summary>
+    SentToOperationsManager,
+
+    /// <summary>In another approval stage (a process of the company's own, or old orders sent to others).</summary>
     InApproval,
 
-    /// <summary>Sent back by an approver to change and send again.</summary>
+    /// <summary>Sent back by an approver to change; saving it starts the approval again.</summary>
     Returned,
-
-    /// <summary>Approved, waiting for the delivery officer to confirm the delivery.</summary>
-    Approved,
     Rejected,
 
-    /// <summary>The delivery was confirmed (old system: "تم التسليم").</summary>
+    /// <summary>Approved by the operations manager: delivered (old system: "تم التسليم").</summary>
     Delivered,
 
     /// <summary>Old system only: "لم يتم التسليم".</summary>
@@ -145,6 +151,9 @@ public sealed class DeliveryOrder : ITenantOwned
 
     public DateTimeOffset? SubmittedAt { get; private set; }
 
+    /// <summary>An approval of the order is running (from its submission until the approval ends).</summary>
+    public bool AwaitingApproval { get; private set; }
+
     public DateTimeOffset? DeliveredAt { get; private set; }
 
     public string? DeliveredByName { get; private set; }
@@ -153,7 +162,11 @@ public sealed class DeliveryOrder : ITenantOwned
 
     public IReadOnlyList<DeliveryLine> Lines => _lines;
 
-    public bool IsEditable => Source == DocumentSource.System && Status is DeliveryStatus.Draft or DeliveryStatus.Returned;
+    public bool IsEditable => Source == DocumentSource.System && Status is DeliveryStatus.UnderPreparation or DeliveryStatus.Returned;
+
+    /// <summary>In an approval stage (statuses an approval can end from).</summary>
+    public bool IsInApproval => Source == DocumentSource.System && AwaitingApproval
+        && Status is DeliveryStatus.UnderPreparation or DeliveryStatus.SentToOperationsManager or DeliveryStatus.InApproval;
 
     public static DeliveryOrder Create(string orderNo, DeliveryHeader header, IEnumerable<DeliveryLineValues> lines, Guid? userId, string userName, DateTimeOffset at)
     {
@@ -163,7 +176,7 @@ public sealed class DeliveryOrder : ITenantOwned
             Id = Guid.CreateVersion7(),
             OrderNo = orderNo,
             Source = DocumentSource.System,
-            Status = DeliveryStatus.Draft,
+            Status = DeliveryStatus.UnderPreparation,
             CreatedBy = userId,
             CreatedByName = userName,
             CreatedAt = at,
@@ -187,7 +200,7 @@ public sealed class DeliveryOrder : ITenantOwned
 
     public Result MarkSubmitted(DateTimeOffset at)
     {
-        if (!IsEditable)
+        if (!IsEditable || AwaitingApproval)
         {
             return Result.Failure(DeliveryErrors.NotEditable);
         }
@@ -197,52 +210,81 @@ public sealed class DeliveryOrder : ITenantOwned
             return Result.Failure(DeliveryErrors.NoWorkers);
         }
 
-        Status = DeliveryStatus.InApproval;
+        Status = DeliveryStatus.UnderPreparation;
+        AwaitingApproval = true;
         SubmittedAt = at;
         return Result.Success();
     }
 
-    /// <summary>The approval ended (approval engine callback).</summary>
+    /// <summary>The approval could not start (no process applies): the order waits under preparation.</summary>
+    public void SubmissionFailed() => AwaitingApproval = false;
+
+    /// <summary>A step of the approval process sets the status (e.g. "sent to the operations manager").</summary>
+    public Result SetStatusFromProcess(DeliveryStatus status)
+    {
+        if (!IsInApproval || status is not (DeliveryStatus.SentToOperationsManager or DeliveryStatus.InApproval or DeliveryStatus.UnderPreparation))
+        {
+            return Result.Failure(DeliveryErrors.StatusNotSettable);
+        }
+
+        Status = status;
+        return Result.Success();
+    }
+
+    /// <summary>The approval ended without approving it: returned for changes, rejected, or withdrawn.</summary>
     public void ApprovalEnded(DeliveryStatus status, string? comment)
     {
-        if (Source != DocumentSource.System || Status != DeliveryStatus.InApproval)
+        if (!IsInApproval)
         {
             return;
         }
 
         Status = status;
+        AwaitingApproval = false;
         LastComment = comment;
     }
 
-    /// <summary>The delivery officer confirms the delivery of the whole order, with each worker's actual start of work.</summary>
-    public Result ConfirmDelivery(IReadOnlyDictionary<Guid, DateOnly> startDates, string userName, DateTimeOffset at)
+    /// <summary>
+    /// Approved by the last stage (the operations manager): delivered, every worker starting on their line's date
+    /// (the order's when the line has none). The workers' work periods are then opened in the period ledger.
+    /// </summary>
+    public Result Deliver(string approvedBy, string? comment, DateTimeOffset at)
     {
-        ArgumentNullException.ThrowIfNull(startDates);
-        if (Source != DocumentSource.System || Status != DeliveryStatus.Approved)
+        if (!IsInApproval)
         {
-            return Result.Failure(DeliveryErrors.NotApproved);
+            return Result.Failure(DeliveryErrors.NotInApproval);
         }
 
         foreach (var line in _lines)
         {
-            var start = startDates.TryGetValue(line.Id, out var given) ? given : line.StartOn ?? StartOn ?? DeliverOn!.Value;
-            if (start < DeliverOn)
-            {
-                return Result.Failure(DeliveryErrors.StartBeforeDelivery);
-            }
-
-            line.Confirm(start);
+            line.Confirm(line.StartOn ?? StartOn ?? DeliverOn!.Value);
         }
 
         Status = DeliveryStatus.Delivered;
+        AwaitingApproval = false;
         DeliveredAt = at;
-        DeliveredByName = userName;
+        DeliveredByName = approvedBy;
+        LastComment = comment;
         return Result.Success();
+    }
+
+    /// <summary>Delivered, but the work periods could not open (e.g. a date clashes with a worker's timeline): back to its creator.</summary>
+    public void ReturnForFix(string reason)
+    {
+        Status = DeliveryStatus.Returned;
+        AwaitingApproval = false;
+        DeliveredAt = null;
+        DeliveredByName = null;
+        LastComment = reason;
+        foreach (var line in _lines)
+        {
+            line.Confirm(null);
+        }
     }
 
     public Result Cancel(string? comment)
     {
-        if (Source != DocumentSource.System || Status is not (DeliveryStatus.Draft or DeliveryStatus.Returned or DeliveryStatus.Approved))
+        if (!IsEditable || AwaitingApproval)
         {
             return Result.Failure(DeliveryErrors.NotCancelable);
         }
@@ -406,7 +448,7 @@ public sealed class DeliveryLine : ITenantOwned
     /// <summary>The old system's work start (SW000000), on orders copied from it.</summary>
     public string? WorkStartNo { get; private set; }
 
-    internal void Confirm(DateOnly startedOn) => StartedOn = startedOn;
+    internal void Confirm(DateOnly? startedOn) => StartedOn = startedOn;
 }
 
 /// <summary>An order as read from the old system.</summary>
@@ -433,7 +475,8 @@ public static class DeliveryErrors
 {
     public static readonly Error NotFound = Error.NotFound("delivery_order", "Delivery order not found.");
     public static readonly Error NotEditable = Error.Conflict("delivery_not_editable", "Only a draft or returned order can be changed.");
-    public static readonly Error NotApproved = Error.Conflict("delivery_not_approved", "Only an approved order can be confirmed.");
+    public static readonly Error NotInApproval = Error.Conflict("delivery_not_in_approval", "The order is not in approval.");
+    public static readonly Error StatusNotSettable = Error.Validation("delivery_status_not_settable", "This status cannot be set by a process.");
     public static readonly Error NotCancelable = Error.Conflict("delivery_not_cancelable", "This order can no longer be canceled.");
     public static readonly Error NoWorkers = Error.Validation("delivery_no_workers", "Add at least one worker.");
     public static readonly Error StartBeforeDelivery = Error.Validation("delivery_start_before", "The start of work cannot be before the delivery date.");
