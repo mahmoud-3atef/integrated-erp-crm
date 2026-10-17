@@ -322,7 +322,10 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             var detail = (await scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>().GetAsync(orderId, default))!;
             Assert.Equal("Completed", detail.Summary.Status);
 
-            var period = (await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(workerId, default)).Single();
+            // The timeline: the old system's history up to the return, then the housing period recorded here.
+            var timeline = await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(workerId, default);
+            Assert.All(timeline.Skip(1), p => Assert.True(p.FromOldSystem && p.EndsOn <= today));
+            var period = timeline[0];
             Assert.Equal(("Housing", today, (DateOnly?)null, false, detail.Summary.OrderNo), (period.Kind, period.StartsOn, period.EndsOn, period.PaySalary, period.SourceNo));
 
             // In housing here (the old system still says on the job): available for a delivery order again.

@@ -97,11 +97,24 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IClock clock) : IPerio
         return Result.Success();
     }
 
-    public async Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken) =>
-        (await db.Periods.AsNoTracking().Where(p => p.WorkerId == workerId).OrderByDescending(p => p.StartsOn)
-            .ToListAsync(cancellationToken).ConfigureAwait(false))
-        .Select(Info)
-        .ToList();
+    public async Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken)
+    {
+        var recorded = (await db.Periods.AsNoTracking().Where(p => p.WorkerId == workerId).ToListAsync(cancellationToken).ConfigureAwait(false))
+            .Select(Info).ToList();
+        var takesOver = recorded.Count > 0 ? recorded.Min(p => p.StartsOn) : (DateOnly?)null;
+        var history = (await db.HistoryPeriods.AsNoTracking().Where(p => p.WorkerId == workerId).ToListAsync(cancellationToken).ConfigureAwait(false))
+            .Where(p => takesOver is null || p.StartsOn < takesOver)
+            .Select(p => new PeriodInfo(
+                p.Id, p.Kind.ToString(), null, p.Place, p.StartsOn,
+                takesOver is { } over && (p.EndsOn is null || p.EndsOn > over) ? over : p.EndsOn,
+                p.SourceType, p.SourceCrmId, p.SourceNo, null, null,
+                null, null,
+                p.Kind == PeriodKind.Work ? p.Rate.Housing : null,
+                p.Kind == PeriodKind.Work ? p.Rate.Transport : null,
+                p.Kind == PeriodKind.Work && p.Rate.TotalPrice > 0 ? p.Rate.TotalPrice : null,
+                false, false, FromOldSystem: true));
+        return recorded.Concat(history).OrderByDescending(p => p.StartsOn).ToList();
+    }
 
     internal static PeriodInfo Info(WorkerPeriod p) => new(
         p.Id, p.Kind.ToString(), p.ProjectId, p.ProjectName, p.StartsOn, p.EndsOn, p.SourceType, p.SourceId, p.SourceNo, p.ClosedByNo,

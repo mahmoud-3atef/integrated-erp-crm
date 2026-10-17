@@ -53,7 +53,8 @@ public sealed record PeriodInfo(
     decimal? Transport,
     decimal? TotalPrice,
     bool IsSpecialPrice,
-    bool PaySalary = false);
+    bool PaySalary = false,
+    bool FromOldSystem = false);
 
 /// <summary>
 /// The period ledger (docs/02-target-architecture/04): each worker's timeline of periods (housing, work on a project,
@@ -73,6 +74,9 @@ public interface IPeriodLedger
     /// </summary>
     Task<Result> StartHousingAsync(HousingStartRequest start, CancellationToken cancellationToken);
 
-    /// <summary>A worker's periods, latest first.</summary>
+    /// <summary>
+    /// A worker's timeline, latest first: the history from the old system up to the first period recorded here, then
+    /// the periods recorded here.
+    /// </summary>
     Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken);
 }

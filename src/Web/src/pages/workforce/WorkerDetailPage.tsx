@@ -48,7 +48,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
-  const [tab, setTab] = useState<'info' | 'ids' | 'periods'>('info');
+  const [tab, setTab] = useState<'info' | 'ids' | 'periods'>(() => (new URLSearchParams(window.location.search).get('tab') === 'periods' ? 'periods' : 'info'));
   const [error, setError] = useState<string | null>(null);
   const ar = i18n.language === 'ar';
 

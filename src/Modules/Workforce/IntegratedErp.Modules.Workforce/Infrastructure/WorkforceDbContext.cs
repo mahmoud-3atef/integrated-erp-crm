@@ -24,6 +24,67 @@ internal sealed class WorkforceDbContext(DbContextOptions<WorkforceDbContext> op
     public DbSet<WorkforceImport> Imports => Set<WorkforceImport>();
 
     public DbSet<WorkerPeriod> Periods => Set<WorkerPeriod>();
+
+    public DbSet<HistoryPeriod> HistoryPeriods => Set<HistoryPeriod>();
+
+    public DbSet<HistoryIssue> HistoryIssues => Set<HistoryIssue>();
+
+    public DbSet<HistoryImport> HistoryImports => Set<HistoryImport>();
+}
+
+internal sealed class HistoryPeriodConfiguration : IEntityTypeConfiguration<HistoryPeriod>
+{
+    public void Configure(EntityTypeBuilder<HistoryPeriod> builder)
+    {
+        builder.ToTable("history_period");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.Place).HasMaxLength(300);
+        builder.Property(p => p.SourceType).HasMaxLength(30).IsRequired();
+        builder.Property(p => p.SourceNo).HasMaxLength(50).IsRequired();
+        builder.ComplexProperty(p => p.Rate, rate =>
+        {
+            rate.Property(r => r.PackageId).HasColumnName("rate_package_id");
+            rate.Property(r => r.PackageNo).HasColumnName("rate_package_no").HasMaxLength(30);
+            rate.Property(r => r.Salary).HasColumnName("rate_salary").HasPrecision(18, 2);
+            rate.Property(r => r.ServiceFee).HasColumnName("rate_service_fee").HasPrecision(18, 2);
+            rate.Property(r => r.Housing).HasColumnName("rate_housing").HasPrecision(18, 2);
+            rate.Property(r => r.HousingBillable).HasColumnName("rate_housing_billable");
+            rate.Property(r => r.Transport).HasColumnName("rate_transport").HasPrecision(18, 2);
+            rate.Property(r => r.TransportBillable).HasColumnName("rate_transport_billable");
+            rate.Property(r => r.TotalPrice).HasColumnName("rate_total_price").HasPrecision(18, 2);
+            rate.Property(r => r.IsSpecialPrice).HasColumnName("rate_is_special_price");
+        });
+        builder.HasIndex(p => new { p.TenantId, p.WorkerId, p.StartsOn });
+    }
+}
+
+internal sealed class HistoryIssueConfiguration : IEntityTypeConfiguration<HistoryIssue>
+{
+    public void Configure(EntityTypeBuilder<HistoryIssue> builder)
+    {
+        builder.ToTable("history_issue");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
+        builder.Property(i => i.Code).HasMaxLength(30).IsRequired();
+        builder.Property(i => i.Details).HasMaxLength(1000).IsRequired();
+        builder.Property(i => i.SourceNo).HasMaxLength(50);
+        builder.HasIndex(i => new { i.TenantId, i.Code });
+        builder.HasIndex(i => new { i.TenantId, i.WorkerId });
+    }
+}
+
+internal sealed class HistoryImportConfiguration : IEntityTypeConfiguration<HistoryImport>
+{
+    public void Configure(EntityTypeBuilder<HistoryImport> builder)
+    {
+        builder.ToTable("history_import");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
+        builder.Property(i => i.Summary).HasMaxLength(500);
+        builder.HasIndex(i => i.TenantId).IsUnique();
+    }
 }
 
 internal sealed class WorkerPeriodConfiguration : IEntityTypeConfiguration<WorkerPeriod>

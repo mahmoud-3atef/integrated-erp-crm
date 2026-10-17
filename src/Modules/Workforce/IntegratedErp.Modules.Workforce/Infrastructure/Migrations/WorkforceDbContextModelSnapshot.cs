@@ -169,6 +169,217 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                     b.ToTable("outbox_message", "workforce");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.HistoryImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("BuiltAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("built_at");
+
+                    b.Property<DateTimeOffset?>("HousingWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("housing_watermark");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("VacationsWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("vacations_watermark");
+
+                    b.Property<DateTimeOffset?>("WorkStartsWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("work_starts_watermark");
+
+                    b.Property<DateTimeOffset?>("WorkersWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("workers_watermark");
+
+                    b.HasKey("Id")
+                        .HasName("pk_history_import");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_history_import_tenant_id");
+
+                    b.ToTable("history_import", "workforce");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.HistoryIssue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("details");
+
+                    b.Property<DateOnly?>("On")
+                        .HasColumnType("date")
+                        .HasColumnName("on");
+
+                    b.Property<string>("SourceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("source_no");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_history_issue");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_history_issue_tenant_id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .HasDatabaseName("ix_history_issue_tenant_id_code");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .HasDatabaseName("ix_history_issue_tenant_id_worker_id");
+
+                    b.ToTable("history_issue", "workforce");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.HistoryPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ends_on");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Place")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("place");
+
+                    b.Property<Guid?>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid>("SourceCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("source_crm_id");
+
+                    b.Property<string>("SourceNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("source_no");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("source_type");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("starts_on");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Rate", "IntegratedErp.Modules.Workforce.Domain.HistoryPeriod.Rate#PeriodRate", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("Housing")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_housing");
+
+                            b1.Property<bool>("HousingBillable")
+                                .HasColumnType("bit")
+                                .HasColumnName("rate_housing_billable");
+
+                            b1.Property<bool>("IsSpecialPrice")
+                                .HasColumnType("bit")
+                                .HasColumnName("rate_is_special_price");
+
+                            b1.Property<Guid?>("PackageId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("rate_package_id");
+
+                            b1.Property<string>("PackageNo")
+                                .HasMaxLength(30)
+                                .HasColumnType("nvarchar(30)")
+                                .HasColumnName("rate_package_no");
+
+                            b1.Property<decimal>("Salary")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_salary");
+
+                            b1.Property<decimal>("ServiceFee")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_service_fee");
+
+                            b1.Property<decimal>("TotalPrice")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_total_price");
+
+                            b1.Property<decimal>("Transport")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("rate_transport");
+
+                            b1.Property<bool>("TransportBillable")
+                                .HasColumnType("bit")
+                                .HasColumnName("rate_transport_billable");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_history_period");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_history_period_tenant_id");
+
+                    b.HasIndex("TenantId", "WorkerId", "StartsOn")
+                        .HasDatabaseName("ix_history_period_tenant_id_worker_id_starts_on");
+
+                    b.ToTable("history_period", "workforce");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.Person", b =>
                 {
                     b.Property<Guid>("Id")

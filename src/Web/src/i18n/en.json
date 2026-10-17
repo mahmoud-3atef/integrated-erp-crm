@@ -267,7 +267,8 @@
     "prices": "Price packages",
     "operations": "Operations",
     "deliveryOrders": "Delivery orders",
-    "returnOrders": "Return orders"
+    "returnOrders": "Return orders",
+    "historyIssues": "Period ledger exceptions"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -992,9 +993,48 @@
         "Out": "Exit"
       },
       "salaryPaid": "Paid",
-      "salaryStopped": "Unpaid"
+      "salaryStopped": "Unpaid",
+      "origin": "Origin",
+      "oldSystem": "Old system",
+      "thisSystem": "This system",
+      "issues": "Exceptions in this worker's history ({{count}})"
     },
-    "fromLedger": "From the period ledger · old system: {{status}}"
+    "fromLedger": "From the period ledger · old system: {{status}}",
+    "history": {
+      "title": "Period ledger exceptions",
+      "intro": "What does not add up in the workers' movement history in the old system, to review and fix there before the switchover.",
+      "how": "After every sync each worker's period history is built from the old system: work starts, approved housing orders and approved vacations in date order; each movement starts a period that the next one closes (the day of a move belongs to the new period). From 2025, with the last movement before it as the starting point. Fixes are made in the old system, and the exception disappears at the next sync.",
+      "builtAt": "Last built: {{at}} — workers with exceptions: {{workers}}",
+      "all": "All exceptions",
+      "search": "Search by worker number or name, document number or project",
+      "count": "{{count}} exceptions",
+      "empty": "No matching exceptions",
+      "kind": "Exception",
+      "on": "Date",
+      "details": "Details",
+      "codes": {
+        "SameDay": "Two movements on one day",
+        "Gap": "Uncovered days",
+        "EndBeforeStart": "End before start",
+        "EndAfterNext": "End after the next movement",
+        "WorkWithoutPrice": "Work start without a price",
+        "ReturnWithoutWork": "Return without a work start",
+        "OnJobWithoutWorkStart": "On the job without a work start",
+        "StatusMismatch": "Status does not match the history",
+        "ProjectMismatch": "Project does not match the last work start"
+      },
+      "explain": {
+        "SameDay": "The worker has more than one movement on the same day (e.g. duplicate work starts). The latest created was kept; cancel the duplicate in the old system.",
+        "Gap": "A movement ended (end date) before the next one started, leaving days where nobody knows where the worker was (neither invoiced nor counted).",
+        "EndBeforeStart": "The end date of the work start or vacation is before its start; ignored.",
+        "EndAfterNext": "A movement's end date is after the next movement's start (overlap); the next one's start was used.",
+        "WorkWithoutPrice": "A work start without a service price, and no service price on the worker: its days cannot be invoiced.",
+        "ReturnWithoutWork": "A \"returned worker\" housing order while the history does not have the worker on a project before it.",
+        "OnJobWithoutWorkStart": "The worker is \"on the job\" in the old system without any work start to show it.",
+        "StatusMismatch": "The worker's status in the old system does not match the last movement of their history (e.g. last housed but on the job).",
+        "ProjectMismatch": "The worker is on the job on another project than their last work start."
+      }
+    }
   },
   "commercial": {
     "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync. Only customers and projects created from 1 January 2025 are brought over.",

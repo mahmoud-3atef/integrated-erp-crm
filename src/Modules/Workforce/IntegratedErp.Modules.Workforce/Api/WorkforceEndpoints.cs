@@ -19,6 +19,10 @@ internal static class WorkforceEndpoints
         var group = endpoints.MapGroup("/api/v1/workforce").WithTags("Workforce").RequireAuthorization(PlatformPolicies.CompanyUser);
         Map(group, "workers", WorkerKind.Worker, WorkforcePermissions.WorkersView, WorkforcePermissions.WorkersSalary);
         Map(group, "staff", WorkerKind.Staff, WorkforcePermissions.StaffView, WorkforcePermissions.StaffSalary);
+
+        group.MapGet("/history/issues", async (string? code, string? search, Guid? workerId, int? page, int? pageSize, HistoryQueries queries, CancellationToken ct) =>
+                Results.Ok(await queries.IssuesAsync(code, search, workerId, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
     }
 
     private static void Map(RouteGroupBuilder group, string path, WorkerKind kind, string view, string salary)

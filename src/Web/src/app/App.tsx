@@ -1,45 +1,50 @@
-import { CacheProvider } from '@emotion/react';
-import { CssBaseline, ThemeProvider } from '@mui/material';
-import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { SignInFlowProvider } from '../auth/SignInFlow';
-import { directionOf, type Language } from '../i18n';
-import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
-import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
-import { DeliveryOrderDetailPage } from '../pages/operations/DeliveryOrderDetailPage';
-import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage';
-import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
-import { ReturnOrderDetailPage } from '../pages/operations/ReturnOrderDetailPage';
-import { ReturnOrderFormPage } from '../pages/operations/ReturnOrderFormPage';
-import { ReturnOrdersPage } from '../pages/operations/ReturnOrdersPage';
-import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
-import { CustomersPage } from '../pages/commercial/CustomersPage';
-import { PricesPage } from '../pages/commercial/PricesPage';
-import { ProjectDetailPage } from '../pages/commercial/ProjectDetailPage';
-import { ProjectsPage } from '../pages/commercial/ProjectsPage';
-import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
-import { WorkersPage } from '../pages/workforce/WorkersPage';
-import { RolesPage } from '../pages/admin/RolesPage';
-import { UsersPage } from '../pages/admin/UsersPage';
-import { HomePage } from '../pages/HomePage';
-import { RequestDetailPage } from '../pages/workflow/RequestDetailPage';
-import { RequestsPage } from '../pages/workflow/RequestsPage';
-import { ApprovalDetailPage } from '../pages/workflow/ApprovalDetailPage';
-import { InboxPage, MonitorPage, MyApprovalsPage } from '../pages/workflow/InboxPage';
-import { ProcessEditorPage } from '../pages/workflow/ProcessEditorPage';
-import { ProcessesPage } from '../pages/workflow/ProcessesPage';
-import { BranchesPage } from '../pages/setup/BranchesPage';
-import { LegalEntitiesPage } from '../pages/setup/LegalEntitiesPage';
-import { ModulesPage } from '../pages/setup/ModulesPage';
-import { ReferenceListsPage } from '../pages/setup/ReferenceListsPage';
-import { LoginPage } from '../pages/LoginPage';
-import { MfaSetupPage } from '../pages/MfaSetupPage';
-import { MfaVerifyPage } from '../pages/MfaVerifyPage';
-import { NoCompanyPage } from '../pages/NoCompanyPage';
-import { RecoveryCodesPage } from '../pages/RecoveryCodesPage';
-import { AppShell } from './AppShell';
-import { buildTheme, ltrCache, rtlCache } from './theme';
+import { CacheProvider } from "@emotion/react";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { SignInFlowProvider } from "../auth/SignInFlow";
+import { directionOf, type Language } from "../i18n";
+import { ChooseCompanyPage } from "../pages/ChooseCompanyPage";
+import { CrmSyncPage } from "../pages/admin/CrmSyncPage";
+import { DeliveryOrderDetailPage } from "../pages/operations/DeliveryOrderDetailPage";
+import { DeliveryOrderFormPage } from "../pages/operations/DeliveryOrderFormPage";
+import { DeliveryOrdersPage } from "../pages/operations/DeliveryOrdersPage";
+import { HistoryIssuesPage } from "../pages/workforce/HistoryIssuesPage";
+import { ReturnOrderDetailPage } from "../pages/operations/ReturnOrderDetailPage";
+import { ReturnOrderFormPage } from "../pages/operations/ReturnOrderFormPage";
+import { ReturnOrdersPage } from "../pages/operations/ReturnOrdersPage";
+import { CustomerDetailPage } from "../pages/commercial/CustomerDetailPage";
+import { CustomersPage } from "../pages/commercial/CustomersPage";
+import { PricesPage } from "../pages/commercial/PricesPage";
+import { ProjectDetailPage } from "../pages/commercial/ProjectDetailPage";
+import { ProjectsPage } from "../pages/commercial/ProjectsPage";
+import { WorkerDetailPage } from "../pages/workforce/WorkerDetailPage";
+import { WorkersPage } from "../pages/workforce/WorkersPage";
+import { RolesPage } from "../pages/admin/RolesPage";
+import { UsersPage } from "../pages/admin/UsersPage";
+import { HomePage } from "../pages/HomePage";
+import { RequestDetailPage } from "../pages/workflow/RequestDetailPage";
+import { RequestsPage } from "../pages/workflow/RequestsPage";
+import { ApprovalDetailPage } from "../pages/workflow/ApprovalDetailPage";
+import {
+  InboxPage,
+  MonitorPage,
+  MyApprovalsPage,
+} from "../pages/workflow/InboxPage";
+import { ProcessEditorPage } from "../pages/workflow/ProcessEditorPage";
+import { ProcessesPage } from "../pages/workflow/ProcessesPage";
+import { BranchesPage } from "../pages/setup/BranchesPage";
+import { LegalEntitiesPage } from "../pages/setup/LegalEntitiesPage";
+import { ModulesPage } from "../pages/setup/ModulesPage";
+import { ReferenceListsPage } from "../pages/setup/ReferenceListsPage";
+import { LoginPage } from "../pages/LoginPage";
+import { MfaSetupPage } from "../pages/MfaSetupPage";
+import { MfaVerifyPage } from "../pages/MfaVerifyPage";
+import { NoCompanyPage } from "../pages/NoCompanyPage";
+import { RecoveryCodesPage } from "../pages/RecoveryCodesPage";
+import { AppShell } from "./AppShell";
+import { buildTheme, ltrCache, rtlCache } from "./theme";
 
 export function App() {
   const { i18n } = useTranslation();
@@ -47,7 +52,7 @@ export function App() {
   const theme = useMemo(() => buildTheme(direction), [direction]);
 
   return (
-    <CacheProvider value={direction === 'rtl' ? rtlCache : ltrCache}>
+    <CacheProvider value={direction === "rtl" ? rtlCache : ltrCache}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <BrowserRouter>
@@ -59,39 +64,109 @@ export function App() {
                 <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/roles" element={<RolesPage />} />
                 <Route path="/admin/crm-sync" element={<CrmSyncPage />} />
-                <Route path="/workforce/workers" element={<WorkersPage key="workers" kind="Worker" />} />
-                <Route path="/workforce/workers/:id" element={<WorkerDetailPage kind="Worker" />} />
-                <Route path="/workforce/staff" element={<WorkersPage key="staff" kind="Staff" />} />
-                <Route path="/workforce/staff/:id" element={<WorkerDetailPage kind="Staff" />} />
+                <Route
+                  path="/workforce/workers"
+                  element={<WorkersPage key="workers" kind="Worker" />}
+                />
+                <Route
+                  path="/workforce/workers/:id"
+                  element={<WorkerDetailPage kind="Worker" />}
+                />
+                <Route
+                  path="/workforce/staff"
+                  element={<WorkersPage key="staff" kind="Staff" />}
+                />
+                <Route
+                  path="/workforce/staff/:id"
+                  element={<WorkerDetailPage kind="Staff" />}
+                />
                 <Route path="/commercial/projects" element={<ProjectsPage />} />
-                <Route path="/commercial/projects/:id" element={<ProjectDetailPage />} />
-                <Route path="/commercial/customers" element={<CustomersPage />} />
-                <Route path="/commercial/customers/:id" element={<CustomerDetailPage />} />
+                <Route
+                  path="/commercial/projects/:id"
+                  element={<ProjectDetailPage />}
+                />
+                <Route
+                  path="/commercial/customers"
+                  element={<CustomersPage />}
+                />
+                <Route
+                  path="/commercial/customers/:id"
+                  element={<CustomerDetailPage />}
+                />
                 <Route path="/commercial/prices" element={<PricesPage />} />
-                <Route path="/operations/delivery-orders" element={<DeliveryOrdersPage />} />
-                <Route path="/operations/delivery-orders/new" element={<DeliveryOrderFormPage />} />
-                <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />
-                <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderFormPage />} />
-                <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />
-                <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
-                <Route path="/operations/return-orders/:id" element={<ReturnOrderDetailPage />} />
-                <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderFormPage />} />
-                <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
+                <Route
+                  path="/operations/delivery-orders"
+                  element={<DeliveryOrdersPage />}
+                />
+                <Route
+                  path="/operations/delivery-orders/new"
+                  element={<DeliveryOrderFormPage />}
+                />
+                <Route
+                  path="/operations/delivery-orders/:id"
+                  element={<DeliveryOrderDetailPage />}
+                />
+                <Route
+                  path="/operations/delivery-orders/:id/edit"
+                  element={<DeliveryOrderFormPage />}
+                />
+                <Route
+                  path="/operations/return-orders"
+                  element={<ReturnOrdersPage />}
+                />
+                <Route
+                  path="/workforce/history-issues"
+                  element={<HistoryIssuesPage />}
+                />
+                <Route
+                  path="/operations/return-orders/new"
+                  element={<ReturnOrderFormPage />}
+                />
+                <Route
+                  path="/operations/return-orders/:id"
+                  element={<ReturnOrderDetailPage />}
+                />
+                <Route
+                  path="/operations/return-orders/:id/edit"
+                  element={<ReturnOrderFormPage />}
+                />
+                <Route
+                  path="/setup/legal-entities"
+                  element={<LegalEntitiesPage />}
+                />
                 <Route path="/setup/branches" element={<BranchesPage />} />
-                <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />
+                <Route
+                  path="/setup/reference-lists/:list?"
+                  element={<ReferenceListsPage />}
+                />
                 <Route path="/setup/modules" element={<ModulesPage />} />
                 <Route path="/workflow/inbox" element={<InboxPage />} />
-                <Route path="/workflow/my-requests" element={<MyApprovalsPage />} />
+                <Route
+                  path="/workflow/my-requests"
+                  element={<MyApprovalsPage />}
+                />
                 <Route path="/workflow/monitor" element={<MonitorPage />} />
-                <Route path="/workflow/approvals/:id" element={<ApprovalDetailPage />} />
+                <Route
+                  path="/workflow/approvals/:id"
+                  element={<ApprovalDetailPage />}
+                />
                 <Route path="/workflow/processes" element={<ProcessesPage />} />
-                <Route path="/workflow/processes/:id" element={<ProcessEditorPage />} />
+                <Route
+                  path="/workflow/processes/:id"
+                  element={<ProcessEditorPage />}
+                />
                 <Route path="/workflow/requests" element={<RequestsPage />} />
-                <Route path="/workflow/requests/:id" element={<RequestDetailPage />} />
+                <Route
+                  path="/workflow/requests/:id"
+                  element={<RequestDetailPage />}
+                />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />
-              <Route path="/login/recovery-codes" element={<RecoveryCodesPage />} />
+              <Route
+                path="/login/recovery-codes"
+                element={<RecoveryCodesPage />}
+              />
               <Route path="/login/mfa" element={<MfaVerifyPage />} />
               <Route path="/login/company" element={<ChooseCompanyPage />} />
               <Route path="/login/no-access" element={<NoCompanyPage />} />

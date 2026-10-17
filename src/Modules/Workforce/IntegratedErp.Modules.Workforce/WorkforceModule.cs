@@ -29,6 +29,9 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<IPeriodLedger, PeriodLedger>();
         services.AddScoped<WorkerImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<WorkerImportService>());
+        services.AddScoped<HistoryBuilder>();
+        services.AddScoped<HistoryQueries>();
+        services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<HistoryBuilder>());
         services.AddPermissions(WorkforcePermissions.All);
     }
 
