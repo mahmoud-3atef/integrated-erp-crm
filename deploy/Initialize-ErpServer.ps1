@@ -91,7 +91,7 @@ $variables = [ordered]@{
 }
 $filter = "system.applicationHost/applicationPools/add[@name='$SiteName']/environmentVariables"
 foreach ($name in $variables.Keys) {
-    Remove-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Filter $filter -Name '.' -AtElement @{ name = $name } -ErrorAction SilentlyContinue
+    Remove-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Filter $filter -Name '.' -AtElement @{ name = $name } -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
     Add-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Filter $filter -Name '.' -Value @{ name = $name; value = $variables[$name] }
 }
 Ok 'Pool settings: no managed code, always running, environment variables'
