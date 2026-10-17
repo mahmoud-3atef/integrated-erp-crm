@@ -68,7 +68,9 @@ if ($Rollback) {
 } else {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $release = Join-Path $releases $stamp
-    $commit = (& git -C $repository rev-parse --short HEAD 2>$null)
+    # Only for the release label: a git problem (e.g. folder owned by another account) must not stop the deploy.
+    $commit = (& cmd /c "git -C `"$repository`" rev-parse --short HEAD 2>nul")
+    if (-not $commit) { $commit = 'unknown' }
     Step "Building release $stamp (commit $commit)"
 
     if (-not $SkipTests) {
