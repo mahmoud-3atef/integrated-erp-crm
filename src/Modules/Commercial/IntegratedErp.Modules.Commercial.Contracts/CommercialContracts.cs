@@ -33,3 +33,24 @@ public interface IPriceCatalog
     /// </summary>
     Task<PackagePriceInfo?> FindAsync(Guid projectId, string professionCode, string? nationalityCode, DateOnly on, CancellationToken cancellationToken);
 }
+
+/// <summary>A project as other modules show and use it (e.g. on a delivery order).</summary>
+public sealed record ProjectInfo(
+    Guid Id,
+    Guid CrmId,
+    string Code,
+    string Name,
+    string? CustomerName,
+    string? Manager,
+    string? ContractType,
+    bool IsActive);
+
+/// <summary>The projects of the current company.</summary>
+public interface IProjectDirectory
+{
+    /// <summary>Active projects, by name.</summary>
+    Task<IReadOnlyList<ProjectInfo>> ActiveAsync(CancellationToken cancellationToken);
+
+    /// <summary>These projects (by id or by CRM id); unknown ones are left out.</summary>
+    Task<IReadOnlyList<ProjectInfo>> FindAsync(IReadOnlyCollection<Guid> ids, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken);
+}

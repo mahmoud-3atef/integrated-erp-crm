@@ -10,6 +10,8 @@
   <Folder Name="/src/Modules/Commercial/">
     <Project Path="src/Modules/Commercial/IntegratedErp.Modules.Commercial.Contracts/IntegratedErp.Modules.Commercial.Contracts.csproj" />
     <Project Path="src/Modules/Commercial/IntegratedErp.Modules.Commercial/IntegratedErp.Modules.Commercial.csproj" />
+    <Project Path="src/Modules/Operations/IntegratedErp.Modules.Operations.Contracts/IntegratedErp.Modules.Operations.Contracts.csproj" />
+    <Project Path="src/Modules/Operations/IntegratedErp.Modules.Operations/IntegratedErp.Modules.Operations.csproj" />
   </Folder>
   <Folder Name="/src/Modules/CrmSync/">
     <Project Path="src/Modules/CrmSync/IntegratedErp.Modules.CrmSync.Contracts/IntegratedErp.Modules.CrmSync.Contracts.csproj" />

@@ -13,5 +13,6 @@
     <ProjectReference Include="..\..\Modules\CrmSync\IntegratedErp.Modules.CrmSync\IntegratedErp.Modules.CrmSync.csproj" />
     <ProjectReference Include="..\..\Modules\Workforce\IntegratedErp.Modules.Workforce\IntegratedErp.Modules.Workforce.csproj" />
     <ProjectReference Include="..\..\Modules\Commercial\IntegratedErp.Modules.Commercial\IntegratedErp.Modules.Commercial.csproj" />
+    <ProjectReference Include="..\..\Modules\Operations\IntegratedErp.Modules.Operations\IntegratedErp.Modules.Operations.csproj" />
   </ItemGroup>
 </Project>

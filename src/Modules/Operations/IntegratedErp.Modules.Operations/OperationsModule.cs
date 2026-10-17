@@ -1,0 +1,54 @@
+using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Security;
+using IntegratedErp.Modules.CrmSync.Contracts;
+using IntegratedErp.Modules.Operations.Api;
+using IntegratedErp.Modules.Operations.Application;
+using IntegratedErp.Modules.Operations.Contracts;
+using IntegratedErp.Modules.Operations.Infrastructure;
+using IntegratedErp.Modules.Workflow.Contracts;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace IntegratedErp.Modules.Operations;
+
+/// <summary>
+/// Operations module: the movement documents that move workers (docs/02-target-architecture/05), starting with the
+/// delivery order. In the parallel phase the old system's orders are copied here read-only, next to the orders written
+/// here; the period ledger is built from the documents later (docs/03-migration-plan/04, slice 1.5).
+/// </summary>
+public sealed class OperationsModule : IModule
+{
+    public string Name => OperationsContracts.ModuleName;
+
+    public void RegisterServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddModuleDbContext<OperationsDbContext>(configuration, OperationsDbContext.SchemaName);
+        services.AddScoped<DeliveryOrderService>();
+        services.AddScoped<DeliveryOrderQueries>();
+        services.AddScoped<IApprovalRecordAdapter, DeliveryOrderAdapter>();
+        services.AddScoped<DeliveryOrderImportService>();
+        services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<DeliveryOrderImportService>());
+        services.AddPermissions(OperationsPermissions.All);
+    }
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapOperationsEndpoints();
+}
+
+internal static class OperationsPermissions
+{
+    public const string DeliveryView = "operations.delivery.view";
+    public const string DeliveryCreate = "operations.delivery.create";
+    public const string DeliveryConfirm = "operations.delivery.confirm";
+
+    private const string GroupAr = "العمليات";
+    private const string GroupEn = "Operations";
+
+    public static readonly PermissionDefinition[] All =
+    [
+        new(DeliveryView, GroupAr, GroupEn, "عرض أوامر التسليم", "View delivery orders"),
+        new(DeliveryCreate, GroupAr, GroupEn, "إنشاء أوامر التسليم وتعديلها وإرسالها للاعتماد", "Create, edit and submit delivery orders"),
+        new(DeliveryConfirm, GroupAr, GroupEn, "تأكيد تسليم العمالة (مسؤول التسليم)", "Confirm the delivery of workers (delivery officer)"),
+    ];
+}

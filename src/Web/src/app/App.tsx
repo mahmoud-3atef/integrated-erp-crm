@@ -7,6 +7,9 @@ import { SignInFlowProvider } from '../auth/SignInFlow';
 import { directionOf, type Language } from '../i18n';
 import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
 import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
+import { DeliveryOrderDetailPage } from '../pages/operations/DeliveryOrderDetailPage';
+import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage';
+import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
 import { CustomersPage } from '../pages/commercial/CustomersPage';
 import { PricesPage } from '../pages/commercial/PricesPage';
@@ -62,6 +65,10 @@ export function App() {
                 <Route path="/commercial/customers" element={<CustomersPage />} />
                 <Route path="/commercial/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/commercial/prices" element={<PricesPage />} />
+                <Route path="/operations/delivery-orders" element={<DeliveryOrdersPage />} />
+                <Route path="/operations/delivery-orders/new" element={<DeliveryOrderFormPage />} />
+                <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />
+                <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderFormPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

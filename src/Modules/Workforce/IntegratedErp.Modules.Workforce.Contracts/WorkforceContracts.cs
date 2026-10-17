@@ -35,6 +35,31 @@ public sealed record WorkingWorker(
     decimal TotalSalary,
     DateOnly? JoinedOn);
 
+/// <summary>
+/// A worker as a movement document picks them: who they are, where they are now and what prices them.
+/// <paramref name="Available"/>: an active worker in housing (or new), who can be delivered to a project.
+/// </summary>
+public sealed record WorkerCard(
+    Guid Id,
+    Guid CrmId,
+    string WorkerNo,
+    string Name,
+    string Placement,
+    bool Available,
+    string? StatusAr,
+    string? StatusEn,
+    string? ProfessionCode,
+    string? ProfessionAr,
+    string? ProfessionEn,
+    string? NationalityCode,
+    string? NationalityAr,
+    string? NationalityEn,
+    string? IqamaNo,
+    DateOnly? IqamaExpiresOn,
+    decimal TotalSalary,
+    Guid? ProjectCrmId,
+    string? ProjectName);
+
 /// <summary>Workers (not company staff) by CRM project, for the project and customer pages.</summary>
 public interface IWorkforceDirectory
 {
@@ -46,4 +71,16 @@ public interface IWorkforceDirectory
 
     /// <summary>Every worker on the job on a CRM project (for the price packages).</summary>
     Task<IReadOnlyList<WorkingWorker>> WorkingAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Workers (not staff) matching a search: worker number, name or any identity number; several numbers separated by
+    /// spaces or commas find each of them. Available workers first.
+    /// </summary>
+    Task<IReadOnlyList<WorkerCard>> SearchAsync(string search, int take, CancellationToken cancellationToken);
+
+    /// <summary>The cards of these workers (unknown ids are left out).</summary>
+    Task<IReadOnlyList<WorkerCard>> CardsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>The cards of the workers with these worker numbers or CRM ids (for documents copied from the old system).</summary>
+    Task<IReadOnlyList<WorkerCard>> CardsByCrmAsync(IReadOnlyCollection<string> workerNos, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken);
 }

@@ -20,6 +20,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,6 +63,10 @@ const menu: MenuSection[] = [
       { path: '/commercial/projects', labelKey: 'menu.projects', icon: <AccountTreeOutlinedIcon />, permission: 'commercial.projects.view', companyWide: true },
       { path: '/commercial/prices', labelKey: 'menu.prices', icon: <SellOutlinedIcon />, permission: 'commercial.prices.view', companyWide: true },
     ],
+  },
+  {
+    titleKey: 'menu.operations',
+    items: [{ path: '/operations/delivery-orders', labelKey: 'menu.deliveryOrders', icon: <LocalShippingOutlinedIcon />, permission: 'operations.delivery.view', companyWide: true }],
   },
   {
     titleKey: 'menu.workforce',

@@ -26,5 +26,6 @@
     <ProjectReference Include="..\..\src\Modules\CrmSync\IntegratedErp.Modules.CrmSync\IntegratedErp.Modules.CrmSync.csproj" />
     <ProjectReference Include="..\..\src\Modules\Workforce\IntegratedErp.Modules.Workforce\IntegratedErp.Modules.Workforce.csproj" />
     <ProjectReference Include="..\..\src\Modules\Commercial\IntegratedErp.Modules.Commercial\IntegratedErp.Modules.Commercial.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Operations\IntegratedErp.Modules.Operations\IntegratedErp.Modules.Operations.csproj" />
   </ItemGroup>
 </Project>

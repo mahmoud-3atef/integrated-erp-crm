@@ -171,7 +171,7 @@
     "validation_request_amount_invalid": "The amount is not valid.",
     "validation_approval_screen_unknown": "Unknown screen.",
     "not_found_approval_record": "The record was not found.",
-    "validation_approval_no_process": "No active approval process applies to this record.",
+    "validation_approval_no_process": "No active approval process applies to this record. Add one in Approvals > Approval processes.",
     "forbidden_approval": "You cannot do this on this approval.",
     "validation_approval_return_not_allowed": "This stage does not allow returning.",
     "validation_approval_field_required": "Required fields must be filled before approving.",
@@ -203,7 +203,23 @@
     "validation_package_total": "The package price must be more than zero.",
     "validation_package_dates": "The end date is before the start date.",
     "conflict_package_overlap": "An active package for the same project, profession and nationality covers part of this period. Change its dates or stop it first.",
-    "not_found_price_package": "Package not found."
+    "not_found_price_package": "Package not found.",
+    "validation_delivery_project": "Choose an active project.",
+    "validation_delivery_receiver": "The receiver's name is required.",
+    "validation_delivery_delay_reason": "The delivery date is more than two days ago: write the reason for the delay.",
+    "validation_delivery_worker_duplicate": "A worker is on the order twice.",
+    "validation_delivery_worker_unavailable": "A worker is not available for delivery (not in housing or not active).",
+    "conflict_delivery_worker_busy": "A worker is on another open delivery order.",
+    "validation_delivery_no_price": "A worker has no package for their profession and nationality: enter a special price with a reason.",
+    "validation_delivery_special_reason": "A special price needs a reason.",
+    "validation_delivery_price_minimum": "The service price cannot be less than SAR 1,000.",
+    "validation_delivery_price_below_cost": "The service price is less than the salary, housing and transport.",
+    "validation_delivery_start_before": "The start of work cannot be before the delivery date.",
+    "validation_delivery_no_workers": "Add at least one worker.",
+    "conflict_delivery_not_editable": "Only a draft or returned order can be changed.",
+    "conflict_delivery_not_approved": "Only an approved order can be confirmed.",
+    "conflict_delivery_not_cancelable": "This order can no longer be canceled.",
+    "not_found_delivery_order": "Delivery order not found."
   },
   "menu": {
     "label": "Main menu",
@@ -232,7 +248,9 @@
     "commercial": "Customers and contracts",
     "customers": "Customers",
     "projects": "Projects",
-    "prices": "Price packages"
+    "prices": "Price packages",
+    "operations": "Operations",
+    "deliveryOrders": "Delivery orders"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1116,6 +1134,111 @@
         "housing": "Housing",
         "transport": "Transport"
       }
+    }
+  },
+  "operations": {
+    "delivery": {
+      "title": "Worker delivery orders",
+      "intro": "Delivering workers from housing to projects at the package prices, with approval and delivery confirmation.",
+      "new": "New delivery order",
+      "editOrder": "Edit delivery order {{no}}",
+      "search": "Search by order number, project, customer or receiver",
+      "count": "{{count}} orders",
+      "empty": "No orders match this filter",
+      "fromCrm": "From the old system",
+      "orderNo": "Delivery order no.",
+      "orderStatus": "Delivery order status",
+      "workersCount": "{{count}} workers",
+      "specialCount": "{{count}} special prices",
+      "monthlyTotal": "Monthly service price, total",
+      "createdBy": "Created by",
+      "receiverName": "Authorised receiver",
+      "receiverTitle": "Receiver's position",
+      "notes": "Notes",
+      "delayReason": "Reason for the delay",
+      "delayHint": "The delivery date is more than two days ago, so a reason is required.",
+      "lastComment": "Last comment",
+      "workerSearch": "Search by worker number, name or iqama number (several numbers separated by spaces or commas)",
+      "noWorkersFound": "No matching workers.",
+      "addPicked": "Add selected ({{count}})",
+      "availableHint": "Only available workers can be added: in housing or new, and not on an open delivery order.",
+      "chooseProject": "Choose the project to see each worker's package and price.",
+      "missingPackage": "Some workers have no package for their profession and nationality on this project: give them a special price with a reason, or add a package in \"Price packages\".",
+      "noLines": "No workers yet. Search for workers and add them in the section above.",
+      "busy": "on order {{no}}",
+      "projectPackage": "The project's package",
+      "specialReason": "Reason for the special price",
+      "useSpecial": "Package price",
+      "sameAsOrder": "Order's date",
+      "saveDraft": "Save as draft",
+      "saveAndSubmit": "Save and submit for approval",
+      "submit": "Submit for approval",
+      "confirm": "Confirm delivery",
+      "confirmTitle": "Confirm the delivery of order {{no}}",
+      "confirmHint": "The whole order is confirmed, with each worker's actual start of work. If a worker was not delivered, return the order for changes and remove the worker first.",
+      "cancel": "Cancel the order",
+      "cancelTitle": "Cancel order {{no}}",
+      "cancelReason": "Reason for canceling",
+      "crmNote": "This order is from the old system; it is shown here for reference and updated with every sync.",
+      "parallelNote": "In the parallel phase this order does not reach the old system and does not change the worker's status there; it is for trying out until the cutover.",
+      "sections": {
+        "order": "Order details",
+        "add": "Add workers",
+        "workers": "Workers on the order ({{count}})"
+      },
+      "tabs": {
+        "workers": "Workers ({{count}})",
+        "approval": "Approval history"
+      },
+      "source": {
+        "all": "All orders",
+        "system": "Orders of this system",
+        "crm": "Orders of the old system"
+      },
+      "cards": {
+        "all": "All orders",
+        "allFoot": "All orders",
+        "drafts": "Drafts and returned",
+        "draftsFoot": "Not sent yet",
+        "pending": "In approval",
+        "pendingFoot": "Waiting for approval",
+        "approved": "Awaiting delivery",
+        "approvedFoot": "Approved, not delivered",
+        "delivered": "Delivered",
+        "deliveredFoot": "Show delivered"
+      },
+      "col": {
+        "order": "Order number",
+        "deliverOn": "Delivery date",
+        "startOn": "Start of work",
+        "workers": "Workers",
+        "status": "Status",
+        "receiver": "Receiver",
+        "iqama": "Iqama number",
+        "housingTransport": "Housing / transport",
+        "specialPrice": "Special price",
+        "workerStart": "Worker's start"
+      },
+      "breakdown": "salary {{salary}} + fee {{fee}}"
+    },
+    "status": {
+      "Draft": "Draft",
+      "InApproval": "In approval",
+      "Returned": "Returned",
+      "Approved": "Awaiting delivery",
+      "Rejected": "Rejected",
+      "Delivered": "Delivered",
+      "NotDelivered": "Not delivered",
+      "Canceled": "Canceled"
+    },
+    "crmStatus": {
+      "279640000": "Under preparation",
+      "279640002": "Sent to the vice president",
+      "279640006": "Reserved workers",
+      "279640007": "Returned to sales",
+      "279640009": "Sent to the delivery officer",
+      "279640010": "Sent to the sales coordinator",
+      "279640011": "Waiting for the operations manager"
     }
   }
 }

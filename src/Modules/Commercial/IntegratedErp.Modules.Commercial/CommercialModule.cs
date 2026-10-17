@@ -27,6 +27,7 @@ public sealed class CommercialModule : IModule
         services.AddScoped<CommercialQueries>();
         services.AddScoped<PricingQueries>();
         services.AddScoped<PricingService>();
+        services.AddScoped<IProjectDirectory, ProjectDirectory>();
         services.AddScoped<IPriceCatalog>(sp => sp.GetRequiredService<PricingService>());
         services.AddScoped<CommercialImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<CommercialImportService>());
