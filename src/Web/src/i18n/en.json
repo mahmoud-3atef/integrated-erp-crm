@@ -220,7 +220,10 @@
     "workforce": "Workers affairs",
     "workers": "Workers",
     "staffAffairs": "Staff affairs",
-    "staff": "Staff"
+    "staff": "Staff",
+    "commercial": "Customers and contracts",
+    "customers": "Customers",
+    "projects": "Projects"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -917,5 +920,101 @@
       "count": "{{count}} staff"
     },
     "staffExited": "Service ended"
+  },
+  "commercial": {
+    "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync. Only customers and projects created from 1 January 2025 are brought over.",
+    "projects": {
+      "title": "Projects",
+      "intro": "Projects, their contracts and the workers on them, updated automatically from the old system.",
+      "search": "Search by code, project name, customer or project manager",
+      "count": "{{count}} projects",
+      "empty": "No projects match this filter",
+      "cards": {
+        "projects": "Active projects",
+        "projectsFoot": "Show projects",
+        "workers": "Workers on projects",
+        "workersFoot": "Projects with workers",
+        "ending": "Contracts ending within 60 days",
+        "endingFoot": "Renewal follow-up",
+        "noCustomer": "Projects without a customer",
+        "noCustomerFoot": "Need a customer link"
+      }
+    },
+    "customers": {
+      "title": "Customers",
+      "intro": "Customers, their projects and their workers, updated automatically from the old system.",
+      "search": "Search by name, number, CR, VAT number or mobile",
+      "count": "{{count}} customers",
+      "empty": "No customers match this filter",
+      "cards": {
+        "all": "Customers",
+        "allFoot": "All customers",
+        "active": "Active customers",
+        "activeFoot": "Show active",
+        "withProjects": "Customers with projects",
+        "withProjectsFoot": "Show customers",
+        "workers": "Workers with customers",
+        "workersFoot": "Customers with workers"
+      }
+    },
+    "col": {
+      "project": "Project",
+      "customer": "Customer",
+      "manager": "Project manager",
+      "workers": "Workers",
+      "projects": "Projects (active / all)",
+      "contractType": "Contract type",
+      "period": "Contract period",
+      "created": "Created",
+      "contractStatus": "Contract status"
+    },
+    "field": {
+      "code": "Project code",
+      "cr": "Commercial registration",
+      "vat": "VAT number",
+      "contact": "Customer contact",
+      "mobile": "Mobile",
+      "email": "Email",
+      "emails": "Email addresses",
+      "city": "City",
+      "sector": "Sector",
+      "start": "Contract start",
+      "end": "Contract end",
+      "duration": "Contract term",
+      "contractNo": "Contract number",
+      "customerNo": "Customer number",
+      "laborOffice": "Labor office number"
+    },
+    "sections": {
+      "project": "Project details",
+      "contract": "Contract",
+      "customer": "Customer details"
+    },
+    "tabs": {
+      "workers": "Workers on the project ({{count}} on the job of {{total}})",
+      "projects": "Projects ({{count}}) — workers {{workers}}"
+    },
+    "contractType": {
+      "CostPlus": "Lump sum",
+      "TotalCost": "Total cost",
+      "TotalCostMultiSalaries": "Total cost, multiple salaries"
+    },
+    "contractStatus": {
+      "Valid": "Valid",
+      "WantsRenewal": "Wants renewal",
+      "NoRenewal": "No renewal",
+      "Canceled": "Canceled",
+      "Expired": "Term ended"
+    },
+    "noCustomer": "No customer",
+    "noWorkers": "No workers on this project.",
+    "noProjects": "This customer has no projects.",
+    "daysLeft": "{{days}} days left",
+    "ended": "ended {{days}} days ago",
+    "months": "{{count}} months",
+    "active": "Active",
+    "inactive": "Inactive",
+    "projectDetails": "Project details",
+    "customerDetails": "Customer details"
   }
 }

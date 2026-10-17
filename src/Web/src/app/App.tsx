@@ -7,6 +7,10 @@ import { SignInFlowProvider } from '../auth/SignInFlow';
 import { directionOf, type Language } from '../i18n';
 import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
 import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
+import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
+import { CustomersPage } from '../pages/commercial/CustomersPage';
+import { ProjectDetailPage } from '../pages/commercial/ProjectDetailPage';
+import { ProjectsPage } from '../pages/commercial/ProjectsPage';
 import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
 import { WorkersPage } from '../pages/workforce/WorkersPage';
 import { RolesPage } from '../pages/admin/RolesPage';
@@ -52,6 +56,10 @@ export function App() {
                 <Route path="/workforce/workers/:id" element={<WorkerDetailPage kind="Worker" />} />
                 <Route path="/workforce/staff" element={<WorkersPage key="staff" kind="Staff" />} />
                 <Route path="/workforce/staff/:id" element={<WorkerDetailPage kind="Staff" />} />
+                <Route path="/commercial/projects" element={<ProjectsPage />} />
+                <Route path="/commercial/projects/:id" element={<ProjectDetailPage />} />
+                <Route path="/commercial/customers" element={<CustomersPage />} />
+                <Route path="/commercial/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />
