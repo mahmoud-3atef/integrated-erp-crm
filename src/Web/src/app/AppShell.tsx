@@ -23,6 +23,7 @@ import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
 import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
+import PinOutlinedIcon from '@mui/icons-material/PinOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
@@ -117,6 +118,7 @@ const menu: MenuSection[] = [
       { path: '/admin/users', labelKey: 'menu.users', icon: <GroupOutlinedIcon />, permission: 'identity.users.view', companyWide: true },
       { path: '/admin/roles', labelKey: 'menu.roles', icon: <AdminPanelSettingsOutlinedIcon />, permission: 'identity.roles.view', companyWide: true },
       { path: '/admin/crm-sync', labelKey: 'menu.crmSync', icon: <CloudSyncOutlinedIcon />, permission: 'crm_sync.view', companyWide: true },
+      { path: '/admin/numbering', labelKey: 'menu.numbering', icon: <PinOutlinedIcon />, permission: 'organization.settings.view', companyWide: true },
     ],
   },
 ];

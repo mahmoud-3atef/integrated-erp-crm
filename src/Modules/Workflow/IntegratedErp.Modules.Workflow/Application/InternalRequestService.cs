@@ -82,8 +82,8 @@ internal sealed class InternalRequestService(
         var now = clock.UtcNow;
         var today = SaudiTime.ToBusinessDate(now);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var value = await numbering.NextAsync(db, new NumberRequest("internal_request", Period: today.Year), cancellationToken).ConfigureAwait(false);
-        var created = InternalRequest.Create(DocumentNumberFormat.Format("REQ-{YYYY}-{N:5}", value, today), Fields(input), Me(), user.DisplayName, now);
+        var number = await numbering.NextNumberAsync(db, "internal_request", today, cancellationToken).ConfigureAwait(false);
+        var created = InternalRequest.Create(number, Fields(input), Me(), user.DisplayName, now);
         if (created.IsFailure)
         {
             // Rolled back: the number is not used, so the sequence stays gap-free.

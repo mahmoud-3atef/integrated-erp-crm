@@ -24,4 +24,6 @@ internal sealed class OrganizationDbContext(DbContextOptions<OrganizationDbConte
     public DbSet<Branch> Branches => Set<Branch>();
 
     public DbSet<ReferenceItem> ReferenceItems => Set<ReferenceItem>();
+
+    public DbSet<NumberingSetting> NumberingSettings => Set<NumberingSetting>();
 }

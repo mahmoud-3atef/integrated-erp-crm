@@ -40,6 +40,7 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
         var records = await staging.ChangedSinceAsync(Employee, state.Watermark, cancellationToken).ConfigureAwait(false);
         if (records.Count == 0)
         {
+            await DropUnnumberedAsync([], cancellationToken).ConfigureAwait(false);
             var moved = await InactiveProjectsAsync(cancellationToken).ConfigureAwait(false);
             return remapped == 0 && moved == 0
                 ? "no changes"
@@ -54,7 +55,8 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
 
         // Oldest CRM records first: when two people carry the same number, the one created first keeps it.
         var ordered = records.OrderBy(r => CreatedOn(r.Payload)).ThenBy(r => r.CrmId).ToList();
-        int created = 0, updated = 0, removed = 0, duplicates = 0;
+        int created = 0, updated = 0, removed = 0, duplicates = 0, skipped = 0;
+        var unnumbered = new List<Guid>();
         foreach (var chunk in ordered.Chunk(Chunk))
         {
             var ids = chunk.Select(r => r.CrmId).ToList();
@@ -79,6 +81,19 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
 
                 using var document = JsonDocument.Parse(record.Payload);
                 var row = document.RootElement;
+
+                // A worker without a worker number in the old system is never brought over (one brought before goes).
+                if (Text(row, "new_empidnumber")?.Trim() is not { Length: > 0 })
+                {
+                    if (worker is not null)
+                    {
+                        unnumbered.Add(worker.Id);
+                    }
+
+                    skipped++;
+                    continue;
+                }
+
                 Person person;
                 if (worker is null)
                 {
@@ -128,13 +143,54 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        var dropped = await DropUnnumberedAsync(unnumbered, cancellationToken).ConfigureAwait(false);
         var inactive = await InactiveProjectsAsync(cancellationToken).ConfigureAwait(false);
         var summary = $"{created} added, {updated} updated, {removed} removed in the CRM, {duplicates} identity numbers already used by another person"
+            + $", {skipped} without a worker number left out" + (dropped > 0 ? $" ({dropped} brought before removed)" : string.Empty)
             + (remapped > 0 ? $", {remapped} remapped after a merge" : string.Empty)
             + $", {inactive} workers in or out of an inactive project";
         state.Done(records.Max(r => r.LastSyncedAt), clock.UtcNow, summary);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return summary;
+    }
+
+    /// <summary>
+    /// Removes workers who have no worker number in the old system (and those brought before with a made-up "CRM-"
+    /// number): their file, identity numbers and derived history go. One with periods recorded here only leaves the
+    /// lists (removed in the old system), so no document loses its worker.
+    /// </summary>
+    private async Task<int> DropUnnumberedAsync(List<Guid> unnumbered, CancellationToken cancellationToken)
+    {
+        var ids = unnumbered
+            .Concat(await db.Workers.Where(w => w.WorkerNo.StartsWith("CRM-")).Select(w => w.Id).ToListAsync(cancellationToken).ConfigureAwait(false))
+            .Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        var workers = await db.Workers.Where(w => ids.Contains(w.Id)).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var withPeriods = await db.Periods.Where(p => ids.Contains(p.WorkerId)).Select(p => p.WorkerId).Distinct().ToListAsync(cancellationToken).ConfigureAwait(false);
+        var personIds = workers.Where(w => !withPeriods.Contains(w.Id)).Select(w => w.PersonId).ToList();
+        var people = await db.People.Include(p => p.Identifiers).Where(p => personIds.Contains(p.Id)).ToListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var worker in workers)
+        {
+            if (withPeriods.Contains(worker.Id))
+            {
+                worker.MarkRemovedInCrm();
+            }
+            else
+            {
+                db.Workers.Remove(worker);
+            }
+        }
+
+        db.People.RemoveRange(people);
+        await db.HistoryPeriods.Where(p => ids.Contains(p.WorkerId)).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await db.HistoryIssues.Where(i => ids.Contains(i.WorkerId)).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await db.InvoiceCheckLines.Where(l => l.WorkerId != null && ids.Contains(l.WorkerId.Value)).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return workers.Count;
     }
 
     /// <summary>
@@ -205,7 +261,7 @@ internal sealed class WorkerImportService(WorkforceDbContext db, ICrmStaging sta
     ];
 
     private static WorkerSnapshot Snapshot(Guid crmId, JsonElement row, IReadOnlyDictionary<Guid, string> professions) => new(
-        WorkerNo: Text(row, "new_empidnumber")?.Trim() is { Length: > 0 } no ? Fit(no, 50) : "CRM-" + crmId.ToString("N")[..8].ToUpperInvariant(),
+        WorkerNo: Fit(Text(row, "new_empidnumber")!.Trim(), 50),
         Kind: Int(row, "new_employeetype") == 1 ? WorkerKind.Staff : WorkerKind.Worker,
         ProfessionCrmId: Id(row, "new_professionid"),
         ProfessionCode: Lookup(row, "new_professionid", professions),

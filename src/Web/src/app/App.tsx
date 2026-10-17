@@ -11,6 +11,7 @@ import { DeliveryOrderDetailPage } from '../pages/operations/DeliveryOrderDetail
 import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage';
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
+import { NumberingPage } from '../pages/admin/NumberingPage';
 import { BuildingPage } from '../pages/housing/BuildingPage';
 import { HousingPage } from '../pages/housing/HousingPage';
 import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
@@ -82,6 +83,7 @@ export function App() {
                 <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />
                 <Route path="/workforce/history-issues" element={<HistoryIssuesPage />} />
                 <Route path="/housing" element={<HousingPage />} />
+                <Route path="/admin/numbering" element={<NumberingPage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />

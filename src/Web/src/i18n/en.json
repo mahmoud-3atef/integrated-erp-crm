@@ -343,7 +343,13 @@
     "validation_housing_worker_not_in_housing": "The worker is not in housing.",
     "validation_housing_before_stay": "The date is before the worker's stay in their current room.",
     "validation_housing_same_room": "The worker is already in this room.",
-    "validation_return_room": "Choose a room in use."
+    "validation_return_room": "Choose a room in use.",
+    "validation_numbering_pattern_empty": "Enter the number pattern (40 characters at most).",
+    "validation_numbering_pattern_invalid": "The pattern needs {N} and known tokens only.",
+    "validation_numbering_pattern_year": "A yearly counter needs the year in the pattern.",
+    "validation_numbering_pattern_month": "A monthly counter needs the year and the month in the pattern.",
+    "validation_numbering_start": "Start from a number between 1 and 999,999,999,999.",
+    "not_found_numbering": "Numbered document type not found."
   },
   "menu": {
     "label": "Main menu",
@@ -380,7 +386,8 @@
     "invoiceCheck": "Attendance vs invoices",
     "transferOrders": "Transfer orders",
     "housingSection": "Housing",
-    "housing": "Buildings and rooms"
+    "housing": "Buildings and rooms",
+    "numbering": "Document numbering"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1700,6 +1707,38 @@
       "freeFoot": "Empty beds",
       "withoutRoom": "Without a room",
       "withoutRoomFoot": "of {{count}} in housing"
+    }
+  },
+  "numbering": {
+    "title": "Document numbering",
+    "intro": "How each screen's documents are numbered: the number's pattern, when its counter starts again, and the number it starts from.",
+    "how": "A pattern is fixed text with tokens: {N:5} is the running number on five digits, {YYYY} or {YY} the year, {MM} the month. E.g. DO-{YYYY}-{N:5} gives DO-2026-00001. \"Start from\" continues an old serial (e.g. worker number BSS002869) and never goes back to a number already issued. \"Reserved\" documents have no screen yet; set their serial now for when it is built.",
+    "col": {
+      "document": "Document",
+      "pattern": "Pattern",
+      "reset": "Counter starts again",
+      "next": "Next number",
+      "updated": "Last changed"
+    },
+    "resets": {
+      "Never": "Never",
+      "Yearly": "Every year",
+      "Monthly": "Every month"
+    },
+    "reserved": "Reserved for a coming screen",
+    "customized": "Changed",
+    "default": "Default",
+    "backToDefault": "Back to the default ({{pattern}})",
+    "edit": "Numbering of {{name}}",
+    "patternHint": "Click a token to add it at the end of the pattern.",
+    "startAt": "Start from number",
+    "startHint": "To continue the old system's serial; numbers already issued never repeat.",
+    "preview": "The next number will be",
+    "resetWarning": "Changing when the counter starts again starts a new counter from \"Start from\"; make sure the new pattern cannot give numbers already issued.",
+    "problems": {
+      "pattern": "The pattern needs {N} and known tokens only.",
+      "year": "A yearly counter needs the year in the pattern ({YYYY} or {YY}), or numbers repeat.",
+      "month": "A monthly counter needs the year and the month ({MM}) in the pattern."
     }
   }
 }

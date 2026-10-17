@@ -59,9 +59,9 @@ internal sealed class ReturnOrderService(
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var value = await numbering.NextAsync(db, new NumberRequest("return_order", Period: clock.Today.Year), cancellationToken).ConfigureAwait(false);
+        var number = await numbering.NextNumberAsync(db, "return_order", clock.Today, cancellationToken).ConfigureAwait(false);
         var order = ReturnOrder.Create(
-            DocumentNumberFormat.Format("RT-{YYYY}-{N:5}", value, clock.Today), built.Value.Worker, built.Value.Details,
+            number, built.Value.Worker, built.Value.Details,
             Guid.TryParse(user.UserId, out var userId) ? userId : null, user.DisplayName, clock.UtcNow);
         db.ReturnOrders.Add(order);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

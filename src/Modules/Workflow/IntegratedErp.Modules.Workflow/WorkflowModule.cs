@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Workflow.Api;
@@ -31,6 +32,8 @@ public sealed class WorkflowModule : IModule
         services.AddScoped<InternalRequestService>();
         services.AddScoped<IApprovalRecordAdapter, InternalRequestAdapter>();
         services.AddPermissions(WorkflowPermissions.All);
+        services.AddNumberSequences(
+            new NumberSequenceDefinition("internal_request", WorkflowDbContext.SchemaName, "الطلبات والاعتمادات", "Requests and approvals", "الطلبات الداخلية", "Internal requests", "REQ-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapWorkflowEndpoints();

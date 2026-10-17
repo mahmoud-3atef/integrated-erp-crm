@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Commercial.Api;
@@ -34,6 +35,9 @@ public sealed class CommercialModule : IModule
         services.AddScoped<PricingImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<PricingImportService>());
         services.AddPermissions(CommercialPermissions.All);
+        services.AddNumberSequences(
+            new NumberSequenceDefinition("price_package", CommercialDbContext.SchemaName, "المبيعات والعقود", "Sales and contracts", "الباقات السعرية", "Price packages", "PKG-{N:5}", NumberReset.Never),
+            new NumberSequenceDefinition("invoice", CommercialDbContext.SchemaName, "المبيعات والعقود", "Sales and contracts", "فواتير المشاريع", "Project invoices", "INV{N:5}", NumberReset.Never, InUse: false));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapCommercialEndpoints();

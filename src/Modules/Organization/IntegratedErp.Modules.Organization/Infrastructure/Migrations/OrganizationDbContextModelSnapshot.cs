@@ -340,6 +340,61 @@ namespace IntegratedErp.Modules.Organization.Infrastructure.Migrations
                     b.ToTable("reference_item", "organization");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.Settings.NumberingSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("pattern");
+
+                    b.Property<string>("Reset")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("reset");
+
+                    b.Property<long>("StartAt")
+                        .HasColumnType("bigint")
+                        .HasColumnName("start_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("updated_by_name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_numbering_setting");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_numbering_setting_tenant_id");
+
+                    b.HasIndex("TenantId", "Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_numbering_setting_tenant_id_key");
+
+                    b.ToTable("numbering_setting", "organization");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Organization.Domain.Settings.Setting", b =>
                 {
                     b.Property<Guid>("Id")

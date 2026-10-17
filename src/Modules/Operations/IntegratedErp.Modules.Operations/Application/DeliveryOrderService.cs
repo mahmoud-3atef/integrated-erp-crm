@@ -79,9 +79,9 @@ internal sealed class DeliveryOrderService(
 
         var now = clock.UtcNow;
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var value = await numbering.NextAsync(db, new NumberRequest("delivery_order", Period: clock.Today.Year), cancellationToken).ConfigureAwait(false);
+        var number = await numbering.NextNumberAsync(db, "delivery_order", clock.Today, cancellationToken).ConfigureAwait(false);
         var order = DeliveryOrder.Create(
-            DocumentNumberFormat.Format("DO-{YYYY}-{N:5}", value, clock.Today), built.Value.Header, built.Value.Lines,
+            number, built.Value.Header, built.Value.Lines,
             Guid.TryParse(user.UserId, out var userId) ? userId : null, user.DisplayName, now);
         db.DeliveryOrders.Add(order);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

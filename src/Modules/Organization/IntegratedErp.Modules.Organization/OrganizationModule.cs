@@ -1,5 +1,6 @@
 using IntegratedErp.BuildingBlocks.Attachments;
 using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Reference;
 using IntegratedErp.BuildingBlocks.Security;
@@ -33,6 +34,8 @@ public sealed class OrganizationModule : IModule
 
         services.AddModuleDbContext<OrganizationDbContext>(configuration, OrganizationDbContext.SchemaName);
         services.AddScoped<SettingsService>();
+        services.AddScoped<NumberingService>();
+        services.AddScoped<INumberingRules>(sp => sp.GetRequiredService<NumberingService>());
         services.AddScoped<OrganizationService>();
         services.AddScoped<ITenantSetup>(sp => sp.GetRequiredService<OrganizationService>());
         services.AddScoped<ITenantDirectory, TenantDirectory>();
@@ -58,6 +61,7 @@ public sealed class OrganizationModule : IModule
         var secured = group.MapGroup(string.Empty).RequireAuthorization(PlatformPolicies.CompanyUser);
         secured.MapOrganizationEndpoints();
         secured.MapCompanySetupEndpoints();
+        secured.MapNumberingEndpoints();
 
         if (_devEndpoints)
         {

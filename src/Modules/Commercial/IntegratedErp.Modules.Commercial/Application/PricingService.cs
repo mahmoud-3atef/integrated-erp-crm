@@ -40,8 +40,8 @@ internal sealed class PricingService(CommercialDbContext db, NumberSequenceServi
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var value = await numbering.NextAsync(db, new NumberRequest("price_package"), cancellationToken).ConfigureAwait(false);
-        var created = PricePackage.Create(DocumentNumberFormat.Format("PKG-{N:5}", value, clock.Today), terms.Value);
+        var number = await numbering.NextNumberAsync(db, "price_package", clock.Today, cancellationToken).ConfigureAwait(false);
+        var created = PricePackage.Create(number, terms.Value);
         if (created.IsFailure)
         {
             return Result.Failure<Guid>(created.Error); // rolled back: the number is not used

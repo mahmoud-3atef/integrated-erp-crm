@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.CrmSync.Contracts;
@@ -40,6 +41,10 @@ public sealed class OperationsModule : IModule
         services.AddScoped<TransferOrderQueries>();
         services.AddScoped<IApprovalRecordAdapter, TransferOrderAdapter>();
         services.AddPermissions(OperationsPermissions.All);
+        services.AddNumberSequences(
+            new NumberSequenceDefinition("delivery_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر التسليم", "Delivery orders", "DO-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("return_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر الرجيع", "Return orders", "RT-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("transfer_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر النقل", "Transfer orders", "TR-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
