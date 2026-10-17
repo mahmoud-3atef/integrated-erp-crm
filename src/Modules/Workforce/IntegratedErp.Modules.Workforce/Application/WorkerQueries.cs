@@ -74,13 +74,14 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
         // Counts by status ignore the status filter (the cards show every status of the current search). A worker with a
         // work period opened here (a delivered delivery order) is on the job, whatever the old system still says.
         var openWork = db.Periods.Where(p => p.EndsOn == null && p.Kind == PeriodKind.Work);
+        var openHousing = db.Periods.Where(p => p.EndsOn == null && p.Kind == PeriodKind.Housing);
         var counts = await query
-            .Select(w => openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : w.Placement)
+            .Select(w => openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : openHousing.Any(p => p.WorkerId == w.Id) ? Placement.Housing : w.Placement)
             .GroupBy(x => x).Select(g => new { g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Key.ToString(), x => x.Count, cancellationToken).ConfigureAwait(false);
         if (Enum.TryParse<Placement>(filter.Placement, out var placement))
         {
-            query = query.Where(w => (openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : w.Placement) == placement);
+            query = query.Where(w => (openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : openHousing.Any(p => p.WorkerId == w.Id) ? Placement.Housing : w.Placement) == placement);
         }
 
         var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
@@ -105,7 +106,7 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
             .ToDictionaryAsync(i => i.PersonId, i => i.Number, cancellationToken).ConfigureAwait(false);
 
         var workerIds = page.Select(x => x.Worker.Id).ToList();
-        var periods = await openWork.AsNoTracking().Where(p => workerIds.Contains(p.WorkerId)).ToDictionaryAsync(p => p.WorkerId, cancellationToken).ConfigureAwait(false);
+        var periods = await db.Periods.AsNoTracking().Where(p => p.EndsOn == null && workerIds.Contains(p.WorkerId)).ToDictionaryAsync(p => p.WorkerId, cancellationToken).ConfigureAwait(false);
         var items = page.Select(x => Row(x.Worker, x.Person, iqamas.GetValueOrDefault(x.Person.Id), names, withSalary, periods.GetValueOrDefault(x.Worker.Id))).ToList();
         return new WorkerListDto(total, counts, items);
     }
@@ -123,7 +124,7 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
         var names = await NamesAsync(cancellationToken).ConfigureAwait(false);
         var iqama = person.Identifiers.FirstOrDefault(i => i.Type == IdentifierType.Iqama && i.IsCurrent)?.Number;
         var iqamaProfession = worker.IqamaProfessionCode is { } code ? names.Professions.GetValueOrDefault(code) : default;
-        var period = await db.Periods.AsNoTracking().FirstOrDefaultAsync(p => p.WorkerId == id && p.EndsOn == null && p.Kind == PeriodKind.Work, cancellationToken).ConfigureAwait(false);
+        var period = await db.Periods.AsNoTracking().FirstOrDefaultAsync(p => p.WorkerId == id && p.EndsOn == null, cancellationToken).ConfigureAwait(false);
         return new WorkerDetailDto(
             Row(worker, person, iqama, names, withSalary, period),
             iqamaProfession.Ar,
@@ -149,7 +150,15 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
         var nationality = p.NationalityCode is { } nc ? names.Nationalities.GetValueOrDefault(nc) : default;
         var status = CrmWorkerStatus.Name(w.CrmStatus);
         var today = DateOnly.FromDateTime(clock.UtcNow.ToOffset(TimeSpan.FromHours(3)).DateTime);
-        if (period is not null)
+        if (period is { Kind: PeriodKind.Housing })
+        {
+            return new WorkerRowDto(
+                w.Id, w.WorkerNo, p.NameEn, w.Kind.ToString(), nameof(Placement.Housing), w.CrmStatus, "في السكن", "In housing", iqama,
+                profession.Ar, profession.En, nationality.Ar, nationality.En, w.Sponsor, null, null, null,
+                withSalary ? w.Salary : null, FromLedger: true, CrmStatusAr: status?.Ar, CrmStatusEn: status?.En);
+        }
+
+        if (period is { Kind: PeriodKind.Work })
         {
             int? days = period.StartsOn <= today ? today.DayNumber - period.StartsOn.DayNumber + 1 : null;
             return new WorkerRowDto(

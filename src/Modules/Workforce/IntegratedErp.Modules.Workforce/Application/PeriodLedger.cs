@@ -57,6 +57,46 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IClock clock) : IPerio
         return Result.Success();
     }
 
+    public async Task<Result> StartHousingAsync(HousingStartRequest start, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(start);
+        if (await db.Periods.AnyAsync(p => p.SourceId == start.SourceId && p.WorkerId == start.WorkerId && p.Kind == PeriodKind.Housing, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Success(); // already applied
+        }
+
+        if (!await db.Workers.AnyAsync(w => w.Id == start.WorkerId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(Error.NotFound("worker", "Worker not found."));
+        }
+
+        var mine = await db.Periods.Where(p => p.WorkerId == start.WorkerId).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (mine.Any(p => p.StartsOn >= start.StartsOn || (p.EndsOn is { } end && end > start.StartsOn)))
+        {
+            return Result.Failure(Error.Conflict("period_overlap", "The worker already has a period on or after this date."));
+        }
+
+        if (mine.FirstOrDefault(p => p.IsOpen) is { } open)
+        {
+            if (open.Kind != PeriodKind.Work)
+            {
+                return Result.Failure(Error.Conflict("period_not_work", "The worker is not on the job."));
+            }
+
+            var closed = open.Close(start.StartsOn, start.SourceNo);
+            if (closed.IsFailure)
+            {
+                return closed;
+            }
+        }
+
+        db.Periods.Add(WorkerPeriod.Open(
+            start.WorkerId, PeriodKind.Housing, start.StartsOn, new PeriodProject(null, null, start.HousingName), null,
+            new PeriodSource(start.SourceType, start.SourceId, null, start.SourceNo), clock.UtcNow, start.PaySalary));
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     public async Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken) =>
         (await db.Periods.AsNoTracking().Where(p => p.WorkerId == workerId).OrderByDescending(p => p.StartsOn)
             .ToListAsync(cancellationToken).ConfigureAwait(false))
@@ -71,5 +111,6 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IClock clock) : IPerio
         p.Kind == PeriodKind.Work ? p.Rate.Housing : null,
         p.Kind == PeriodKind.Work ? p.Rate.Transport : null,
         p.Kind == PeriodKind.Work ? p.Rate.TotalPrice : null,
-        p.Rate.IsSpecialPrice);
+        p.Rate.IsSpecialPrice,
+        p.PaySalary);
 }

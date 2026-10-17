@@ -222,7 +222,20 @@
     "conflict_delivery_not_in_approval": "The order is not in approval.",
     "validation_delivery_status_not_settable": "A process cannot set this status.",
     "validation_process_permission_unknown": "A permission in the process does not exist.",
-    "conflict_delivery_not_startable": "An approval can run only on an order under preparation or returned."
+    "conflict_delivery_not_startable": "An approval can run only on an order under preparation or returned.",
+    "validation_return_reason": "Choose the reason for the return.",
+    "validation_return_reason_notes": "Describe the reason.",
+    "validation_return_future": "The arrival date cannot be in the future.",
+    "validation_return_delay_reason": "The arrival date is more than two days ago: write the reason for the delay.",
+    "validation_return_not_on_job": "The worker is not on the job.",
+    "validation_return_before_work": "The arrival date must be after the worker's start of work.",
+    "conflict_return_worker_busy": "The worker is already on another open return order.",
+    "conflict_return_not_editable": "Only an order under preparation or returned can be changed.",
+    "conflict_return_not_cancelable": "This order can no longer be canceled.",
+    "conflict_return_not_in_approval": "The order is not in approval.",
+    "conflict_return_not_startable": "An approval can run only on an order under preparation or returned.",
+    "validation_return_field_not_settable": "A process cannot set this value.",
+    "not_found_return_order": "Return order not found."
   },
   "menu": {
     "label": "Main menu",
@@ -253,7 +266,8 @@
     "projects": "Projects",
     "prices": "Price packages",
     "operations": "Operations",
-    "deliveryOrders": "Delivery orders"
+    "deliveryOrders": "Delivery orders",
+    "returnOrders": "Return orders"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -976,7 +990,9 @@
         "Absconded": "Absconded",
         "Suspended": "Suspended",
         "Out": "Exit"
-      }
+      },
+      "salaryPaid": "Paid",
+      "salaryStopped": "Unpaid"
     },
     "fromLedger": "From the period ledger · old system: {{status}}"
   },
@@ -1279,6 +1295,93 @@
       "279640009": "Sent to the delivery officer",
       "279640010": "Sent to the sales coordinator",
       "279640011": "Waiting for the operations manager"
+    },
+    "return": {
+      "title": "Return orders",
+      "intro": "Workers back from projects to the company's housing, with the customer's wish, approval and the period ledger.",
+      "new": "New return order",
+      "editOrder": "Edit return order {{no}}",
+      "search": "Search by order number, worker name or number, project or housing",
+      "orderNo": "Return order no.",
+      "orderStatus": "Return order status",
+      "workStarted": "Started on the project",
+      "customerWish": "The customer's wish",
+      "wishPending": "Recorded by sales",
+      "salaryInHousing": "Salary in housing",
+      "salaryStops": "Stopped",
+      "salaryPaid": "Paid",
+      "reasonNotes": "Reason details",
+      "stopSalary": "Stop the salary while in housing",
+      "stopSalaryHint": "By default the salary stops from the arrival in housing and resumes from the start of work on the next delivery order.",
+      "arrivedHint": "The arrival day counts as housing; the last working day is the day before.",
+      "housingHint": "Housing or room name (linked to buildings and beds in the housing module later).",
+      "delayHint": "The arrival date is more than two days ago, so a reason is required.",
+      "workerHint": "Workers on the job (from the period ledger, or the old system when nothing was recorded here). Pick the worker by clicking their row.",
+      "workerSearch": "Filter by worker number, name, iqama or project",
+      "chosen": "The worker is on \"{{project}}\" since {{since}}.",
+      "flowHint": "On saving, the order is \"under preparation\" and you get a task to confirm it; then sales record the customer's wish, then the operations manager approves. Then it is \"in housing\": the worker's work period closes and a housing period opens.",
+      "creatorHint": "The order is under preparation: review it, then confirm it with \"Approve\" in the approval stages bar below to send it to sales. You can still change it before confirming.",
+      "completedHint": "In housing: the worker's work period closed on the arrival date and a housing period opened in the period ledger.",
+      "sections": {
+        "worker": "The returning worker ({{count}} on the job)",
+        "details": "The return"
+      },
+      "cards": {
+        "all": "All orders",
+        "allFoot": "All orders",
+        "preparing": "Under preparation",
+        "preparingFoot": "Awaiting the creator's confirmation, or returned",
+        "approval": "In approval",
+        "approvalFoot": "With sales or the operations manager",
+        "completed": "In housing",
+        "completedFoot": "The worker is in housing",
+        "closed": "Rejected or canceled",
+        "closedFoot": "Not completed"
+      },
+      "col": {
+        "worker": "Worker",
+        "project": "Project",
+        "housing": "Housing",
+        "entry": "Entry type",
+        "reason": "Reason",
+        "arrivedOn": "Arrival in housing",
+        "createdBy": "Created by"
+      },
+      "entry": {
+        "ReturnedWorker": "Returned worker",
+        "NewArrival": "New arrival",
+        "BackFromVacation": "Back from vacation"
+      },
+      "reasons": {
+        "ClientNoReason": "The customer returned the worker for no reason",
+        "WorkerRefuses": "The worker refuses to work",
+        "Sick": "Sick",
+        "WorkerAbused": "Abuse of the worker",
+        "ContractCanceled": "Contract with the customer canceled",
+        "Other": "Other"
+      },
+      "wishes": {
+        "Replace": "Replace the worker",
+        "Cancel": "Cancel (fewer workers)",
+        "Nothing": "Nothing"
+      },
+      "status": {
+        "UnderPreparation": "Under preparation",
+        "SentToSales": "Sent to sales",
+        "SentToOperationsManager": "Sent to the operations manager",
+        "InApproval": "In approval",
+        "Returned": "Returned",
+        "Rejected": "Rejected",
+        "Completed": "In housing",
+        "Canceled": "Canceled"
+      },
+      "crmStatus": {
+        "1": "Waiting for the project supervisor",
+        "100000002": "Sent to HR for investigation",
+        "100000007": "Sent to the investigation team",
+        "100000008": "Sent to the project supervisor",
+        "100000005": "The worker didn't arrive in housing"
+      }
     }
   }
 }

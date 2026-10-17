@@ -30,10 +30,19 @@ public sealed class OperationsModule : IModule
         services.AddScoped<IApprovalRecordAdapter, DeliveryOrderAdapter>();
         services.AddScoped<DeliveryOrderImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<DeliveryOrderImportService>());
+        services.AddScoped<ReturnOrderService>();
+        services.AddScoped<ReturnOrderQueries>();
+        services.AddScoped<IApprovalRecordAdapter, ReturnOrderAdapter>();
+        services.AddScoped<ReturnOrderImportService>();
+        services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<ReturnOrderImportService>());
         services.AddPermissions(OperationsPermissions.All);
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapOperationsEndpoints();
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapOperationsEndpoints();
+        endpoints.MapReturnOrderEndpoints();
+    }
 }
 
 internal static class OperationsPermissions
@@ -41,6 +50,10 @@ internal static class OperationsPermissions
     public const string DeliveryView = "operations.delivery.view";
     public const string DeliveryCreate = "operations.delivery.create";
     public const string DeliveryApprove = "operations.delivery.approve";
+    public const string ReturnView = "operations.return.view";
+    public const string ReturnCreate = "operations.return.create";
+    public const string ReturnSales = "operations.return.sales";
+    public const string ReturnApprove = "operations.return.approve";
 
     private const string GroupAr = "العمليات";
     private const string GroupEn = "Operations";
@@ -50,5 +63,9 @@ internal static class OperationsPermissions
         new(DeliveryView, GroupAr, GroupEn, "عرض أوامر التسليم", "View delivery orders"),
         new(DeliveryCreate, GroupAr, GroupEn, "إنشاء أوامر التسليم وتعديلها وإرسالها للاعتماد", "Create, edit and submit delivery orders"),
         new(DeliveryApprove, GroupAr, GroupEn, "اعتماد أوامر التسليم (مدير العمليات)", "Approve delivery orders (operations manager)"),
+        new(ReturnView, GroupAr, GroupEn, "عرض أوامر الرجيع", "View return orders"),
+        new(ReturnCreate, GroupAr, GroupEn, "إنشاء أوامر الرجيع وتعديلها", "Create and edit return orders"),
+        new(ReturnSales, GroupAr, GroupEn, "تسجيل رغبة العميل في أوامر الرجيع (المبيعات)", "Record the customer's wish on return orders (sales)"),
+        new(ReturnApprove, GroupAr, GroupEn, "اعتماد أوامر الرجيع (مدير العمليات)", "Approve return orders (operations manager)"),
     ];
 }

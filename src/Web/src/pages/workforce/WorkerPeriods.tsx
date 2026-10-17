@@ -10,7 +10,7 @@ import { Badge, type Tone } from '../../components/ui';
 
 const kindTone: Record<string, Tone> = { Work: 'success', Housing: 'info', Vacation: 'warning', ClientVacation: 'warning', Absconded: 'danger', Suspended: 'danger', Out: 'neutral' };
 
-const sourceLink: Record<string, string> = { delivery_order: '/operations/delivery-orders/' };
+const sourceLink: Record<string, string> = { delivery_order: '/operations/delivery-orders/', return_order: '/operations/return-orders/' };
 
 /** The worker's period ledger: where they were and when (work on a project with its price, housing…), latest first. */
 export function WorkerPeriods({ kind, workerId }: { kind: WorkerKind; workerId: string }) {
@@ -68,7 +68,7 @@ export function WorkerPeriods({ kind, workerId }: { kind: WorkerKind; workerId: 
                 )}
               </TableCell>
               <TableCell align="center" sx={{ fontWeight: 800, color: tokens.navy800 }}>
-                {money(p.totalPrice)}
+                {p.kind === 'Housing' ? <Badge tone={p.paySalary ? 'info' : 'neutral'}>{t(p.paySalary ? 'workforce.periods.salaryPaid' : 'workforce.periods.salaryStopped')}</Badge> : money(p.totalPrice)}
               </TableCell>
               <TableCell>{p.isSpecialPrice ? <Badge tone="warning">{t('commercial.prices.status.Special')}</Badge> : p.packageNo ? <Badge tone="success">{p.packageNo}</Badge> : '—'}</TableCell>
               <TableCell dir="ltr" sx={{ textAlign: 'start' }}>

@@ -78,6 +78,9 @@ public sealed class WorkerPeriod : ITenantOwned
 
     public string SourceNo { get; private set; }
 
+    /// <summary>Housing periods: the worker is paid while in housing (the default is not).</summary>
+    public bool PaySalary { get; private set; }
+
     /// <summary>The document that closed the period.</summary>
     public string? ClosedByNo { get; private set; }
 
@@ -85,7 +88,7 @@ public sealed class WorkerPeriod : ITenantOwned
 
     public bool IsOpen => EndsOn is null;
 
-    public static WorkerPeriod Open(Guid workerId, PeriodKind kind, DateOnly startsOn, PeriodProject? project, PeriodRate? rate, PeriodSource source, DateTimeOffset at)
+    public static WorkerPeriod Open(Guid workerId, PeriodKind kind, DateOnly startsOn, PeriodProject? project, PeriodRate? rate, PeriodSource source, DateTimeOffset at, bool paySalary = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         return new WorkerPeriod
@@ -102,6 +105,7 @@ public sealed class WorkerPeriod : ITenantOwned
             SourceId = source.Id,
             SourceLineId = source.LineId,
             SourceNo = source.No,
+            PaySalary = paySalary,
             CreatedAt = at,
         };
     }

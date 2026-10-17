@@ -10,6 +10,9 @@ import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
 import { DeliveryOrderDetailPage } from '../pages/operations/DeliveryOrderDetailPage';
 import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage';
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
+import { ReturnOrderDetailPage } from '../pages/operations/ReturnOrderDetailPage';
+import { ReturnOrderFormPage } from '../pages/operations/ReturnOrderFormPage';
+import { ReturnOrdersPage } from '../pages/operations/ReturnOrdersPage';
 import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
 import { CustomersPage } from '../pages/commercial/CustomersPage';
 import { PricesPage } from '../pages/commercial/PricesPage';
@@ -69,6 +72,10 @@ export function App() {
                 <Route path="/operations/delivery-orders/new" element={<DeliveryOrderFormPage />} />
                 <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />
                 <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderFormPage />} />
+                <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />
+                <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
+                <Route path="/operations/return-orders/:id" element={<ReturnOrderDetailPage />} />
+                <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderFormPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

@@ -111,6 +111,8 @@ export interface WorkerCard {
   totalSalary: number;
   projectCrmId: string | null;
   projectName: string | null;
+  projectJoinedOn: string | null;
+  onJob: boolean;
 }
 
 /** An available worker for the order form; busyOrderNo: another open order already has them. */
@@ -191,4 +193,87 @@ export const operationsApi = {
   update: (id: string, input: DeliveryInput) => request<SavedOrder>('PUT', `${base}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${base}/${id}/submit`),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${base}/${id}/cancel`, { comment }),
+};
+
+// ---------------------------------------------------------------- Return orders (worker back to housing)
+
+export type ReturnStatus = 'UnderPreparation' | 'SentToSales' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Completed' | 'Canceled';
+export const returnReasons = ['ClientNoReason', 'WorkerRefuses', 'Sick', 'WorkerAbused', 'ContractCanceled', 'Other'] as const;
+
+export interface ReturnRow {
+  id: string;
+  orderNo: string;
+  source: 'System' | 'Crm';
+  status: ReturnStatus;
+  crmStatus: number | null;
+  entry: 'ReturnedWorker' | 'NewArrival' | 'BackFromVacation';
+  workerId: string | null;
+  workerNo: string;
+  name: string;
+  projectName: string | null;
+  arrivedOn: string | null;
+  reason: string;
+  customerWish: string | null;
+  stopSalary: boolean;
+  housingName: string | null;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface ReturnList {
+  total: number;
+  totals: { all: number; underPreparation: number; inApproval: number; completed: number; closed: number };
+  items: ReturnRow[];
+}
+
+export interface ReturnDetail {
+  summary: ReturnRow;
+  professionAr: string | null;
+  professionEn: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  iqamaNo: string | null;
+  projectId: string | null;
+  workStartedOn: string | null;
+  reasonNotes: string | null;
+  delayReason: string | null;
+  notes: string | null;
+  lastComment: string | null;
+  completedAt: string | null;
+  completedByName: string | null;
+  approval: ApprovalStatus | null;
+  awaitingApproval: boolean;
+  canEdit: boolean;
+  canSubmit: boolean;
+  canCancel: boolean;
+}
+
+export interface ReturnInput {
+  workerId: string;
+  arrivedOn: string;
+  reason: string;
+  reasonNotes: string | null;
+  stopSalary: boolean;
+  housingName: string | null;
+  delayReason: string | null;
+  notes: string | null;
+}
+
+const returnsBase = '/api/v1/operations/return-orders';
+
+export const returnsApi = {
+  list: (q: DeliveryQuery) => {
+    const params = new URLSearchParams({ page: String(q.page), pageSize: String(q.pageSize), desc: String(q.desc ?? true) });
+    if (q.search) params.set('search', q.search);
+    if (q.status) params.set('status', q.status);
+    if (q.source) params.set('source', q.source);
+    if (q.sort) params.set('sort', q.sort);
+    return request<ReturnList>('GET', `${returnsBase}?${params.toString()}`);
+  },
+  get: (id: string) => request<ReturnDetail>('GET', `${returnsBase}/${id}`),
+  onJobWorkers: (orderId?: string) => request<AvailableWorker[]>('GET', `${returnsBase}/on-job-workers${orderId ? `?orderId=${orderId}` : ''}`),
+  create: (input: ReturnInput) => request<SavedOrder>('POST', returnsBase, input),
+  update: (id: string, input: ReturnInput) => request<SavedOrder>('PUT', `${returnsBase}/${id}`, input),
+  submit: (id: string) => request<void>('POST', `${returnsBase}/${id}/submit`),
+  cancel: (id: string, comment: string | null) => request<void>('POST', `${returnsBase}/${id}/cancel`, { comment }),
 };

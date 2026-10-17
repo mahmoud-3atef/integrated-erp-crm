@@ -38,7 +38,8 @@ internal sealed class DeliveryOrderImportService(
 
     public async Task<string> ApplyAsync(CancellationToken cancellationToken)
     {
-        var state = await db.Imports.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        // Shared by the delivery and housing order imports (one scope): reuse the one already loaded or added.
+        var state = db.Imports.Local.FirstOrDefault() ?? await db.Imports.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (state is null)
         {
             state = new OperationsImport();

@@ -509,6 +509,10 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("kind");
 
+                    b.Property<bool>("PaySalary")
+                        .HasColumnType("bit")
+                        .HasColumnName("pay_salary");
+
                     b.Property<Guid?>("ProjectCrmId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("project_crm_id");

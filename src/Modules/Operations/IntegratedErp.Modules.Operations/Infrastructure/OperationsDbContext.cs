@@ -21,6 +21,8 @@ internal sealed class OperationsDbContext(DbContextOptions<OperationsDbContext> 
     public DbSet<DeliveryLine> DeliveryLines => Set<DeliveryLine>();
 
     public DbSet<OperationsImport> Imports => Set<OperationsImport>();
+
+    public DbSet<ReturnOrder> ReturnOrders => Set<ReturnOrder>();
 }
 
 /// <summary>How far the copy of the old system's delivery orders has read.</summary>
@@ -34,11 +36,15 @@ public sealed class OperationsImport : ITenantOwned
 
     public DateTimeOffset? WorkStartsWatermark { get; private set; }
 
+    public DateTimeOffset? HousingOrdersWatermark { get; private set; }
+
     public void Advance(DateTimeOffset? orders, DateTimeOffset? workStarts)
     {
         OrdersWatermark = orders ?? OrdersWatermark;
         WorkStartsWatermark = workStarts ?? WorkStartsWatermark;
     }
+
+    public void AdvanceHousing(DateTimeOffset? housingOrders) => HousingOrdersWatermark = housingOrders ?? HousingOrdersWatermark;
 }
 
 internal sealed class DeliveryOrderConfiguration : IEntityTypeConfiguration<DeliveryOrder>
@@ -92,6 +98,39 @@ internal sealed class DeliveryLineConfiguration : IEntityTypeConfiguration<Deliv
         builder.Property(l => l.SpecialReason).HasMaxLength(500);
         builder.Property(l => l.WorkStartNo).HasMaxLength(100);
         builder.HasIndex(l => new { l.TenantId, l.WorkerId });
+    }
+}
+
+internal sealed class ReturnOrderConfiguration : IEntityTypeConfiguration<ReturnOrder>
+{
+    public void Configure(EntityTypeBuilder<ReturnOrder> builder)
+    {
+        builder.ToTable("return_order");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Id).ValueGeneratedNever();
+        builder.Property(o => o.OrderNo).HasMaxLength(30).IsRequired();
+        builder.Property(o => o.Source).HasConversion<string>().HasMaxLength(10);
+        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(30);
+        builder.Property(o => o.Entry).HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.WorkerNo).HasMaxLength(50).IsRequired();
+        builder.Property(o => o.Name).HasMaxLength(300).IsRequired();
+        builder.Property(o => o.ProfessionCode).HasMaxLength(50);
+        builder.Property(o => o.NationalityCode).HasMaxLength(50);
+        builder.Property(o => o.IqamaNo).HasMaxLength(50);
+        builder.Property(o => o.ProjectName).HasMaxLength(300);
+        builder.Property(o => o.Reason).HasMaxLength(30).IsRequired();
+        builder.Property(o => o.ReasonNotes).HasMaxLength(1000);
+        builder.Property(o => o.CustomerWish).HasMaxLength(20);
+        builder.Property(o => o.HousingName).HasMaxLength(200);
+        builder.Property(o => o.DelayReason).HasMaxLength(500);
+        builder.Property(o => o.Notes).HasMaxLength(2000);
+        builder.Property(o => o.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(o => o.CompletedByName).HasMaxLength(200);
+        builder.Property(o => o.LastComment).HasMaxLength(2000);
+        builder.HasIndex(o => new { o.TenantId, o.OrderNo }).IsUnique();
+        builder.HasIndex(o => new { o.TenantId, o.CrmId }).IsUnique().HasFilter("[crm_id] IS NOT NULL");
+        builder.HasIndex(o => new { o.TenantId, o.WorkerId });
+        builder.HasIndex(o => new { o.TenantId, o.Status });
     }
 }
 

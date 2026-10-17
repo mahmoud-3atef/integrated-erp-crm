@@ -227,12 +227,118 @@ public sealed class DeliveryOrderTests(TestDatabase database)
         }
     }
 
+    [SkippableFact]
+    public async Task A_return_order_goes_through_sales_and_the_operations_manager_and_puts_the_worker_in_housing()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var tenantId = await CreateCompanyAsync();
+        var crm = new FakeCrm();
+        var philippines = crm.Add(CrmEntities.Country, new() { ["new_name"] = "الفلبين", ["new_nameenglish"] = "Philippines" });
+        var labour = crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
+        var project = crm.Add("new_project", new() { ["new_name"] = "مشروع الدمام", ["new_code"] = "pro00600", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
+        var onJob = crm.Add(CrmEntities.Employee, new()
+        {
+            ["new_name"] = "WORKER BSS0201", ["new_empidnumber"] = "BSS0201", ["new_idnumber"] = "2020100000", ["statuscode"] = 100000000, ["new_employeetype"] = 2,
+            ["new_projectid"] = project.ToString(), ["new_projectidname"] = "مشروع الدمام", ["new_projectjoingdate"] = "2025-12-31T21:00:00Z",
+            ["new_nationalityid"] = philippines.ToString(), ["new_professionid"] = labour.ToString(), ["new_totalsalary"] = 1500m,
+        }, created: Created2025);
+
+        // An old housing order of the old system is copied read-only.
+        crm.Add("mw_lodginorderdetails", new()
+        {
+            ["mw_name"] = "HO04306", ["mw_empid"] = onJob.ToString(), ["new_projectid"] = project.ToString(), ["statuscode"] = 100000009,
+            ["new_entertype"] = 100000001, ["new_backreason"] = 279640000, ["mw_arrivedate"] = "2025-09-28T21:00:00Z", ["mw_housingname"] = "سكن الرجال-جدة",
+        }, created: Created2025);
+        await SyncAndImportAsync(tenantId, crm);
+
+        Guid creator, sales, manager;
+        using (var scope = database.Scope(tenantId, user: "setup"))
+        {
+            var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            var catalog = scope.ServiceProvider.GetRequiredService<PermissionCatalog>();
+            async Task<Guid> PersonAsync(string name, params string[] permissions)
+            {
+                var account = UserAccount.Create(name, null);
+                identity.Users.Add(account);
+                var membership = new Membership(account.Id, tenantId);
+                identity.Memberships.Add(membership);
+                var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], name, name, ["operations.return.view", .. permissions], catalog).Value;
+                identity.Roles.Add(role);
+                identity.RoleAssignments.Add(new RoleAssignment(membership.Id, role.Id, null, tenantId));
+                await identity.SaveChangesAsync();
+                return account.Id;
+            }
+
+            creator = await PersonAsync("مشرف المشروع", "operations.return.create");
+            sales = await PersonAsync("المبيعات", "operations.return.sales");
+            manager = await PersonAsync("مدير العمليات", "operations.return.approve");
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+        Guid orderId, workerId;
+        using (var scope = database.Scope(tenantId, user: creator.ToString()))
+        {
+            var queries = scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>();
+            var copied = (await queries.ListAsync(new DeliveryListFilter(null, null, "crm", null, true, 1, 50), default)).Items.Single();
+            Assert.Equal(("HO04306", "Completed", "ClientNoReason", "مشروع الدمام"), (copied.OrderNo, copied.Status, copied.Reason, copied.ProjectName));
+
+            var service = scope.ServiceProvider.GetRequiredService<ReturnOrderService>();
+            var worker = (await service.OnJobAsync(null, default)).Single();
+            Assert.Equal(("مشروع الدمام", new DateOnly(2026, 1, 1)), (worker.Worker.ProjectName, worker.Worker.ProjectJoinedOn));
+            workerId = worker.Worker.Id;
+
+            Assert.Equal("validation.return_reason_notes", (await service.CreateAsync(new ReturnInput(workerId, today, "Other", null, true, null, null, null), default)).Error.Code);
+            Assert.Equal("validation.return_future", (await service.CreateAsync(new ReturnInput(workerId, today.AddDays(1), "Sick", null, true, null, null, null), default)).Error.Code);
+            var saved = await service.CreateAsync(new ReturnInput(workerId, today, "WorkerRefuses", null, true, "سكن الرجال-جدة", null, null), default);
+            Assert.True(saved.IsSuccess, saved.IsFailure ? saved.Error.Code : null);
+            Assert.Null(saved.Value.ApprovalError);
+            orderId = saved.Value.Id;
+            Assert.Equal("conflict.return_worker_busy", (await service.CreateAsync(new ReturnInput(workerId, today, "Sick", null, true, null, null, null), default)).Error.Code);
+
+            // 1. The creator confirms.
+            await DecideAsync(scope, creator, "موافق");
+        }
+
+        using (var scope = database.Scope(tenantId, user: sales.ToString()))
+        {
+            var detail = (await scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("SentToSales", "المبيعات: رغبة العميل"), (detail.Summary.Status, detail.Approval!.CurrentStepAr));
+
+            // 2. Sales record the customer's wish (a required field of their stage).
+            await DecideAsync(scope, sales, "العميل يريد بديلًا", new Dictionary<string, string?> { ["customer_wish"] = "Replace" });
+        }
+
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var detail = (await scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("SentToOperationsManager", "Replace"), (detail.Summary.Status, detail.Summary.CustomerWish));
+
+            // 3. The operations manager approves: the worker is in housing.
+            await DecideAsync(scope, manager, "تم");
+        }
+
+        using (var scope = database.Scope(tenantId))
+        {
+            var detail = (await scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal("Completed", detail.Summary.Status);
+
+            var period = (await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(workerId, default)).Single();
+            Assert.Equal(("Housing", today, (DateOnly?)null, false, detail.Summary.OrderNo), (period.Kind, period.StartsOn, period.EndsOn, period.PaySalary, period.SourceNo));
+
+            // In housing here (the old system still says on the job): available for a delivery order again.
+            var file = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().GetAsync(workerId, WorkerKind.Worker, false, default))!.Summary;
+            Assert.Equal(("Housing", true, "على رأس العمل"), (file.Placement, file.FromLedger, file.CrmStatusAr));
+            Assert.Contains(await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().AvailableAsync(default), w => w.Id == workerId);
+            Assert.DoesNotContain(await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().OnJobAsync(default), w => w.Id == workerId);
+        }
+    }
+
     /// <summary>The user's open approval task on the order, approved.</summary>
-    private static async Task DecideAsync(IServiceScope scope, Guid userId, string comment)
+    private static async Task DecideAsync(IServiceScope scope, Guid userId, string comment, IReadOnlyDictionary<string, string?>? fields = null)
     {
         var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
         var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == userId && w.Status == WorkItemStatus.Pending);
-        var decided = await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Approve, comment, null, default);
+        var decided = await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Approve, comment, fields, default);
         Assert.True(decided.IsSuccess, decided.IsFailure ? decided.Error.Code : null);
     }
 
@@ -242,13 +348,13 @@ public sealed class DeliveryOrderTests(TestDatabase database)
         using var scope = database.Scope(tenantId, user: "setup");
         var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
         var catalog = scope.ServiceProvider.GetRequiredService<PermissionCatalog>();
-        async Task<Guid> PersonAsync(string name, string role, string permission)
+        async Task<Guid> PersonAsync(string name, string role, params string[] permissions)
         {
             var user = UserAccount.Create(name, null);
             identity.Users.Add(user);
             var membership = new Membership(user.Id, tenantId);
             identity.Memberships.Add(membership);
-            var created = Role.Create($"{role}-{Guid.NewGuid():N}"[..20], role, role, ["operations.delivery.view", permission], catalog);
+            var created = Role.Create($"{role}-{Guid.NewGuid():N}"[..20], role, role, ["operations.delivery.view", "operations.return.view", .. permissions], catalog);
             identity.Roles.Add(created.Value);
             identity.RoleAssignments.Add(new RoleAssignment(membership.Id, created.Value.Id, null, tenantId));
             await identity.SaveChangesAsync();

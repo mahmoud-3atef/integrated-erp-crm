@@ -79,11 +79,25 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
         return await CardsAsync(ids, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<WorkerCard>> AvailableAsync(CancellationToken cancellationToken) =>
-        (await CardsWhereAsync(
-            db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active
-                && (w.Placement == Placement.Housing || w.Placement == Placement.New)),
-            cancellationToken).ConfigureAwait(false)).Where(c => c.Available).ToList();
+    public async Task<IReadOnlyList<WorkerCard>> AvailableAsync(CancellationToken cancellationToken)
+    {
+        var open = db.Periods.Where(p => p.EndsOn == null);
+        return (await CardsWhereAsync(
+                db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active
+                    && ((w.Placement == Placement.Housing || w.Placement == Placement.New) || open.Any(p => p.WorkerId == w.Id && p.Kind == PeriodKind.Housing))),
+                cancellationToken).ConfigureAwait(false))
+            .Where(c => c.Available).ToList();
+    }
+
+    public async Task<IReadOnlyList<WorkerCard>> OnJobAsync(CancellationToken cancellationToken)
+    {
+        var open = db.Periods.Where(p => p.EndsOn == null);
+        return (await CardsWhereAsync(
+                db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active
+                    && (w.Placement == Placement.Working || open.Any(p => p.WorkerId == w.Id && p.Kind == PeriodKind.Work))),
+                cancellationToken).ConfigureAwait(false))
+            .Where(c => c.OnJob).OrderBy(c => c.ProjectName, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.WorkerNo, StringComparer.Ordinal).ToList();
+    }
 
     public async Task<IReadOnlyList<WorkerCard>> CardsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
@@ -115,34 +129,35 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
             .ToDictionary(i => i.Code, StringComparer.Ordinal);
         var nationalities = (await reference.ListAllAsync(ReferenceListCodes.Nationalities, cancellationToken).ConfigureAwait(false))
             .ToDictionary(i => i.Code, StringComparer.Ordinal);
-        // A work period opened here (a delivered delivery order) puts the worker on the job, whatever the old system says.
+        // A period opened here (a delivered delivery order, a return to housing) says where the worker is, whatever the
+        // old system still says; without one, the old system's status counts.
         var workerIds = rows.Select(r => r.Worker.Id).ToList();
-        var working = await db.Periods.AsNoTracking().Where(p => workerIds.Contains(p.WorkerId) && p.EndsOn == null && p.Kind == PeriodKind.Work)
+        var open = await db.Periods.AsNoTracking().Where(p => workerIds.Contains(p.WorkerId) && p.EndsOn == null)
             .ToDictionaryAsync(p => p.WorkerId, cancellationToken).ConfigureAwait(false);
         return rows.Select(r =>
             {
                 var w = r.Worker;
-                if (working.TryGetValue(w.Id, out var period))
-                {
-                    var p = professions.GetValueOrDefault(w.ProfessionCode ?? string.Empty);
-                    var n = nationalities.GetValueOrDefault(r.Person.NationalityCode ?? string.Empty);
-                    var i = iqamas.GetValueOrDefault(r.Person.Id);
-                    return new WorkerCard(
-                        w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, nameof(Placement.Working), false, "على رأس العمل (من هذا النظام)", "On the job (this system)",
-                        w.ProfessionCode, p?.NameAr, p?.NameEn, r.Person.NationalityCode, n?.NameAr, n?.NameEn, i?.Number, i?.ExpiresOn,
-                        w.Salary.Total, period.ProjectCrmId, period.ProjectName);
-                }
-
-                var status = CrmWorkerStatus.Name(w.CrmStatus);
                 var profession = w.ProfessionCode is { } pc ? professions.GetValueOrDefault(pc) : null;
                 var nationality = r.Person.NationalityCode is { } nc ? nationalities.GetValueOrDefault(nc) : null;
                 var iqama = iqamas.GetValueOrDefault(r.Person.Id);
-                var available = w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active
-                    && (w.Placement == Placement.Housing || w.Placement == Placement.New);
+                var active = w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active;
+                if (open.TryGetValue(w.Id, out var period))
+                {
+                    var work = period.Kind == PeriodKind.Work;
+                    return new WorkerCard(
+                        w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, work ? nameof(Placement.Working) : nameof(Placement.Housing), active && !work,
+                        work ? "على رأس العمل (من هذا النظام)" : "في السكن (من هذا النظام)", work ? "On the job (this system)" : "In housing (this system)",
+                        w.ProfessionCode, profession?.NameAr, profession?.NameEn, r.Person.NationalityCode, nationality?.NameAr, nationality?.NameEn,
+                        iqama?.Number, iqama?.ExpiresOn, w.Salary.Total,
+                        work ? period.ProjectCrmId : null, work ? period.ProjectName : null, work ? period.StartsOn : null, active && work);
+                }
+
+                var status = CrmWorkerStatus.Name(w.CrmStatus);
+                var available = active && (w.Placement == Placement.Housing || w.Placement == Placement.New);
                 return new WorkerCard(
                     w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, w.Placement.ToString(), available, status?.Ar, status?.En,
                     w.ProfessionCode, profession?.NameAr, profession?.NameEn, r.Person.NationalityCode, nationality?.NameAr, nationality?.NameEn,
-                    iqama?.Number, iqama?.ExpiresOn, w.Salary.Total, w.ProjectCrmId, w.ProjectName);
+                    iqama?.Number, iqama?.ExpiresOn, w.Salary.Total, w.ProjectCrmId, w.ProjectName, w.ProjectJoinedOn, active && w.Placement == Placement.Working);
             })
             .OrderByDescending(c => c.Available).ThenBy(c => c.WorkerNo, StringComparer.Ordinal)
             .ToList();

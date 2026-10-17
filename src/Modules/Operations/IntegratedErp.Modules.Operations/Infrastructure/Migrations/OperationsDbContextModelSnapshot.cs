@@ -457,11 +457,208 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                     b.ToTable("delivery_order", "operations");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Operations.Domain.ReturnOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly?>("ArrivedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("arrived_on");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("CompletedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("completed_by_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<Guid?>("CrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("crm_id");
+
+                    b.Property<int?>("CrmStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("crm_status");
+
+                    b.Property<string>("CustomerWish")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("customer_wish");
+
+                    b.Property<string>("DelayReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("delay_reason");
+
+                    b.Property<string>("Entry")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("entry");
+
+                    b.Property<string>("HousingName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("housing_name");
+
+                    b.Property<string>("IqamaNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("iqama_no");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NationalityCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("nationality_code");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("OrderNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("order_no");
+
+                    b.Property<string>("ProfessionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("profession_code");
+
+                    b.Property<Guid?>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("ReasonNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("reason_notes");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("status");
+
+                    b.Property<bool>("StopSalary")
+                        .HasColumnType("bit")
+                        .HasColumnName("stop_salary");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly?>("WorkStartedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("work_started_on");
+
+                    b.Property<Guid?>("WorkerCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_crm_id");
+
+                    b.Property<Guid?>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("WorkerNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("worker_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_return_order");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_return_order_tenant_id");
+
+                    b.HasIndex("TenantId", "CrmId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_return_order_tenant_id_crm_id")
+                        .HasFilter("[crm_id] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "OrderNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_return_order_tenant_id_order_no");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_return_order_tenant_id_status");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .HasDatabaseName("ix_return_order_tenant_id_worker_id");
+
+                    b.ToTable("return_order", "operations");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Operations.Infrastructure.OperationsImport", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("HousingOrdersWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("housing_orders_watermark");
 
                     b.Property<DateTimeOffset?>("OrdersWatermark")
                         .HasColumnType("datetimeoffset")

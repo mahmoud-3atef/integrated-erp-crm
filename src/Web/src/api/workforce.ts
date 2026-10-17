@@ -116,4 +116,6 @@ export interface WorkerPeriod {
   transport: number | null;
   totalPrice: number | null;
   isSpecialPrice: boolean;
+  /** Housing periods: the worker is paid while in housing. */
+  paySalary: boolean;
 }

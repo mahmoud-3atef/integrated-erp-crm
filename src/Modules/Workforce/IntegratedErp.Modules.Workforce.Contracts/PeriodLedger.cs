@@ -24,6 +24,16 @@ public sealed record WorkStartRequest(
     decimal TotalPrice,
     bool IsSpecialPrice);
 
+/// <summary>A worker back in housing from a movement document (a return order), with or without salary while there.</summary>
+public sealed record HousingStartRequest(
+    Guid WorkerId,
+    DateOnly StartsOn,
+    bool PaySalary,
+    string? HousingName,
+    string SourceType,
+    Guid SourceId,
+    string SourceNo);
+
 /// <summary>A period of a worker's timeline as other modules and screens show it.</summary>
 public sealed record PeriodInfo(
     Guid Id,
@@ -42,7 +52,8 @@ public sealed record PeriodInfo(
     decimal? Housing,
     decimal? Transport,
     decimal? TotalPrice,
-    bool IsSpecialPrice);
+    bool IsSpecialPrice,
+    bool PaySalary = false);
 
 /// <summary>
 /// The period ledger (docs/02-target-architecture/04): each worker's timeline of periods (housing, work on a project,
@@ -55,6 +66,12 @@ public interface IPeriodLedger
     /// closes on the start day. Repeating the same document line does nothing (idempotent).
     /// </summary>
     Task<Result> StartWorkAsync(IReadOnlyList<WorkStartRequest> starts, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Opens a housing period from the start day: the worker's open work period (if any) closes on that day; a worker
+    /// whose timeline starts here (on the job in the old system) gets the housing period only. Idempotent per document.
+    /// </summary>
+    Task<Result> StartHousingAsync(HousingStartRequest start, CancellationToken cancellationToken);
 
     /// <summary>A worker's periods, latest first.</summary>
     Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken);
