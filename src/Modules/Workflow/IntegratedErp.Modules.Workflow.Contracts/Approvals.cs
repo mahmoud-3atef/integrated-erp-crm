@@ -112,9 +112,16 @@ public interface IApprovalRecordAdapter
 
     /// <summary>The approval of the record ended; the module sets its own final state and saves it.</summary>
     Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// An approval is about to start on the record (submitted, or run by an administrator): the module may refuse
+    /// (e.g. an order already delivered) or mark the record as in approval. Must be idempotent and save its changes.
+    /// </summary>
+    Task<Result> StartingAsync(Guid recordId, CancellationToken cancellationToken) => Task.FromResult(Result.Success());
 }
 
-public sealed record ApprovalSubmission(string Screen, Guid RecordId, string Title, Guid? LegalEntityId = null);
+/// <param name="ProcessId">Run this process (an administrator running a process on a record) instead of the first that applies.</param>
+public sealed record ApprovalSubmission(string Screen, Guid RecordId, string Title, Guid? LegalEntityId = null, Guid? ProcessId = null);
 
 public sealed record ApprovalTimelineEntry(
     int Sequence,

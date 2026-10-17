@@ -141,6 +141,29 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
         return Result.Success();
     }
 
+    public async Task<Result> StartingAsync(Guid recordId, CancellationToken cancellationToken)
+    {
+        var order = await db.DeliveryOrders.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(DeliveryErrors.NotFound);
+        }
+
+        if (order.AwaitingApproval)
+        {
+            return Result.Success(); // submitted by the order itself
+        }
+
+        var marked = order.MarkSubmitted(clock.UtcNow);
+        if (marked.IsFailure)
+        {
+            return Result.Failure(Error.Conflict("delivery_not_startable", "An approval can run only on an order under preparation or returned."));
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         var order = await db.DeliveryOrders.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);

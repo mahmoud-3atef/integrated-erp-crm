@@ -221,7 +221,8 @@
     "not_found_delivery_order": "أمر التسليم غير موجود.",
     "conflict_delivery_not_in_approval": "الأمر ليس قيد الاعتماد.",
     "validation_delivery_status_not_settable": "لا يمكن لمسار الاعتماد تعيين هذه الحالة.",
-    "validation_process_permission_unknown": "إحدى الصلاحيات في المسار غير موجودة."
+    "validation_process_permission_unknown": "إحدى الصلاحيات في المسار غير موجودة.",
+    "conflict_delivery_not_startable": "لا يُشغَّل الاعتماد إلا على أمر قيد الإعداد أو مُعاد للتعديل."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -692,7 +693,15 @@
     "noRelatedTables": "لا توجد جداول مرتبطة بهذه الشاشة بعد؛ يُحدَّث سجل الشاشة نفسه.",
     "thisRecord": "سجل الشاشة: {{screen}}",
     "relatedTable": "جدول مرتبط: {{table}}",
-    "assigneeCount": "المعتمدون: {{count}}"
+    "assigneeCount": "المعتمدون: {{count}}",
+    "run": {
+      "button": "تشغيل مسار اعتماد",
+      "title": "تشغيل مسار اعتماد على هذا السجل",
+      "process": "المسار",
+      "hint": "يبدأ المسار المختار على هذا السجل مباشرة مهما كان شرط بدايته، وتكون أنت مقدّم الطلب فيه. يُستخدم مثلًا بعد إلغاء اعتماد توقف بخطأ.",
+      "none": "لا يوجد مسار مفعّل لهذه الشاشة. أنشئه من «عمليات الاعتماد».",
+      "start": "تشغيل"
+    }
   },
   "myApprovals": {
     "title": "طلباتي للاعتماد",

@@ -78,17 +78,24 @@ internal sealed partial class ApprovalEngine(
         await EnsureDefaultProcessAsync(adapter.Screen, cancellationToken).ConfigureAwait(false);
         var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
         var processes = await db.Processes.AsNoTracking().Include(p => p.Versions)
-            .Where(p => p.Screen == submission.Screen && p.IsActive)
+            .Where(p => p.Screen == submission.Screen && p.IsActive && (submission.ProcessId == null || p.Id == submission.ProcessId))
             .OrderBy(p => p.Priority).ThenBy(p => p.NameEn)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+        // A process chosen by an administrator runs whatever its start condition says.
         var match = processes
             .Select(p => (Process: p, Version: p.Current))
             .Where(x => x.Version is not null)
             .Select(x => (x.Process, Version: x.Version!, Definition: DefinitionJson.Read(x.Version!.Definition)))
-            .FirstOrDefault(x => FieldValues.Matches(x.Definition.StartCondition, fields, values));
+            .FirstOrDefault(x => submission.ProcessId is not null || FieldValues.Matches(x.Definition.StartCondition, fields, values));
         if (match.Process is null)
         {
             return Result.Failure<Guid>(NoProcess);
+        }
+
+        var starting = await adapter.StartingAsync(submission.RecordId, cancellationToken).ConfigureAwait(false);
+        if (starting.IsFailure)
+        {
+            return Result.Failure<Guid>(starting.Error);
         }
 
         var instance = new ApprovalInstance(
@@ -422,7 +429,10 @@ internal sealed partial class ApprovalEngine(
                     var opened = await OpenStageAsync(instance, stage, adapter, cancellationToken).ConfigureAwait(false);
                     if (!opened)
                     {
-                        Fail(instance, stage, $"Stage \"{stage.NameEn}\" has no approver.");
+                        Fail(instance, stage,
+                            $"لا يوجد من يعتمد مرحلة «{stage.NameAr}»: لا أحد يحمل الدور أو الصلاحية المحددة لها (ولا يعتمد أحد طلبه بنفسه). "
+                            + "امنح الصلاحية لدور وأسنده لمستخدم من «الأدوار والصلاحيات»، ثم اضغط «إعادة المحاولة». "
+                            + $"/ Stage \"{stage.NameEn}\" has no approver: grant its role or permission to someone, then retry.");
                     }
 
                     return;

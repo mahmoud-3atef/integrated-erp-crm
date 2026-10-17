@@ -221,7 +221,8 @@
     "not_found_delivery_order": "Delivery order not found.",
     "conflict_delivery_not_in_approval": "The order is not in approval.",
     "validation_delivery_status_not_settable": "A process cannot set this status.",
-    "validation_process_permission_unknown": "A permission in the process does not exist."
+    "validation_process_permission_unknown": "A permission in the process does not exist.",
+    "conflict_delivery_not_startable": "An approval can run only on an order under preparation or returned."
   },
   "menu": {
     "label": "Main menu",
@@ -692,7 +693,15 @@
     "noRelatedTables": "This screen has no related tables yet; the screen's own record is updated.",
     "thisRecord": "Screen record: {{screen}}",
     "relatedTable": "Related table: {{table}}",
-    "assigneeCount": "Approvers: {{count}}"
+    "assigneeCount": "Approvers: {{count}}",
+    "run": {
+      "button": "Run an approval process",
+      "title": "Run an approval process on this record",
+      "process": "Process",
+      "hint": "The chosen process starts on this record at once, whatever its start condition, with you as the submitter. Use it, for example, after canceling an approval that stopped with an error.",
+      "none": "No active process for this screen. Create one in Approval processes.",
+      "start": "Run"
+    }
   },
   "myApprovals": {
     "title": "My submissions",

@@ -2,6 +2,7 @@ using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Identity.Contracts;
 using IntegratedErp.Modules.Workflow.Application;
+using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.SharedKernel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -88,6 +89,13 @@ internal static class WorkflowEndpoints
             return ToHttp(await engine.CancelAsync(id, r.Reason, canManage, ct).ConfigureAwait(false));
         });
 
+        // An administrator runs a chosen process on a record (e.g. after a stopped approval was canceled).
+        group.MapPost("/instances/start", async (StartRequest r, ApprovalEngine engine, CancellationToken ct) =>
+                await engine.SubmitAsync(new ApprovalSubmission(r.Screen, r.RecordId, r.Title, null, r.ProcessId), ct).ConfigureAwait(false) is var started && started.IsSuccess
+                    ? Results.Ok(new { id = started.Value })
+                    : Problem(started.Error))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
         group.MapPost("/instances/{id:guid}/retry", async (Guid id, ApprovalEngine engine, CancellationToken ct) =>
                 ToHttp(await engine.RetryAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
@@ -133,3 +141,5 @@ internal static class WorkflowEndpoints
             : StatusCodes.Status400BadRequest,
         title: error.Code);
 }
+
+internal sealed record StartRequest(string Screen, Guid RecordId, Guid ProcessId, string Title);

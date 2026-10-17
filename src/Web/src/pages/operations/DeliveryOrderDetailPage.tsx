@@ -36,6 +36,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { Badge, PillTabs } from '../../components/ui';
 import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
 
@@ -165,7 +166,7 @@ export function DeliveryOrderDetailPage() {
           </Stack>
         )}
 
-        {(order.canEdit || order.canSubmit || order.canCancel) && (
+        {(order.canEdit || order.canSubmit || order.canCancel || (o.source === 'System' && !order.awaitingApproval && order.canEdit)) && (
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.25, mt: 2.5 }}>
             {order.canEdit && (
               <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/delivery-orders/${o.id}/edit`)}>
@@ -176,6 +177,14 @@ export function DeliveryOrderDetailPage() {
               <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy} onClick={() => void run(() => operationsApi.submit(o.id))}>
                 {t('operations.delivery.submit')}
               </Button>
+            )}
+            {o.source === 'System' && !order.awaitingApproval && order.canEdit && (
+              <RunProcessButton
+                screen="operations.delivery_order"
+                recordId={o.id}
+                title={`${o.orderNo} — ${o.projectName}`}
+                onStarted={() => void reload().then(() => approval.reload())}
+              />
             )}
             {order.canCancel && (
               <Button color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCanceling('')}>

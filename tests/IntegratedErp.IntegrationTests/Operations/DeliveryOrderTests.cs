@@ -11,6 +11,7 @@ using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Workflow.Application;
+using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.Modules.Workflow.Domain;
 using IntegratedErp.Modules.Workflow.Infrastructure;
 using IntegratedErp.Modules.Workforce.Contracts;
@@ -155,6 +156,17 @@ public sealed class DeliveryOrderTests(TestDatabase database)
 
             var list = await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().ListAsync(new DeliveryListFilter(null, "delivered", null, null, true, 1, 50), default);
             Assert.Equal(2, list.Totals.Delivered);
+        }
+
+        // An administrator running a process on a delivered order is refused by the order.
+        using (var scope = database.Scope(tenantId, user: operationsManager.ToString()))
+        {
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var process = await workflow.Processes.SingleAsync(p => p.Screen == DeliveryOrderAdapter.ScreenCode);
+            Assert.Equal("اعتماد أمر التسليم", process.NameAr);
+            var run = await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().SubmitAsync(
+                new ApprovalSubmission(DeliveryOrderAdapter.ScreenCode, orderId, "x", null, process.Id), default);
+            Assert.Equal("conflict.delivery_not_startable", run.Error.Code);
         }
     }
 

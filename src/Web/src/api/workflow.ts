@@ -337,6 +337,8 @@ const base = '/api/v1/workflow';
 export const workflowApi = {
   screens: () => request<Screen[]>('GET', `${base}/screens`),
   processes: () => request<ProcessSummary[]>('GET', `${base}/processes`),
+  startInstance: (screen: string, recordId: string, processId: string, title: string) =>
+    request<{ id: string }>('POST', `${base}/instances/start`, { screen, recordId, processId, title }),
   process: (id: string) => request<ProcessDetail>('GET', `${base}/processes/${id}`),
   createProcess: (input: { screen: string; nameAr: string; nameEn: string; priority: number }) => request<ProcessDetail>('POST', `${base}/processes`, input),
   saveDraft: (id: string, input: { nameAr: string; nameEn: string; priority: number; definition: ProcessDefinition }) =>
