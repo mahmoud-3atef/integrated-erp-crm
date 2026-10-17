@@ -277,3 +277,110 @@ export const returnsApi = {
   submit: (id: string) => request<void>('POST', `${returnsBase}/${id}/submit`),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${returnsBase}/${id}/cancel`, { comment }),
 };
+
+// ---------------------------------------------------------------- Transfer orders (between projects)
+
+export type TransferStatus = 'UnderPreparation' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Transferred' | 'Canceled';
+
+export interface TransferRow {
+  id: string;
+  orderNo: string;
+  status: TransferStatus;
+  projectId: string;
+  projectName: string;
+  customerName: string | null;
+  /** The projects the workers leave, joined. */
+  fromProjects: string | null;
+  transferOn: string;
+  workers: number;
+  totalPrice: number;
+  specialPrices: number;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface TransferList {
+  total: number;
+  totals: { all: number; underPreparation: number; withOperations: number; transferred: number; closed: number };
+  items: TransferRow[];
+}
+
+export interface TransferLine {
+  id: string;
+  lineNo: number;
+  workerId: string;
+  workerNo: string;
+  name: string;
+  professionCode: string | null;
+  professionAr: string | null;
+  professionEn: string | null;
+  nationalityCode: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  iqamaNo: string | null;
+  fromProjectId: string | null;
+  fromProjectName: string | null;
+  fromStartedOn: string | null;
+  packageId: string | null;
+  packageNo: string | null;
+  salary: number;
+  serviceFee: number;
+  housing: number;
+  housingBillable: boolean;
+  transport: number;
+  transportBillable: boolean;
+  totalPrice: number;
+  isSpecialPrice: boolean;
+  specialReason: string | null;
+}
+
+export interface TransferDetail {
+  summary: TransferRow;
+  projectCode: string;
+  contractType: ContractType | null;
+  projectManager: string | null;
+  receiverName: string | null;
+  receiverTitle: string | null;
+  delayReason: string | null;
+  notes: string | null;
+  lastComment: string | null;
+  submittedAt: string | null;
+  transferredAt: string | null;
+  transferredByName: string | null;
+  lines: TransferLine[];
+  approval: ApprovalStatus | null;
+  awaitingApproval: boolean;
+  canEdit: boolean;
+  canSubmit: boolean;
+  canCancel: boolean;
+}
+
+export interface TransferInput {
+  projectId: string;
+  transferOn: string;
+  receiverName: string | null;
+  receiverTitle: string | null;
+  delayReason: string | null;
+  notes: string | null;
+  lines: { workerId: string; specialPrice: number | null; specialReason: string | null }[];
+}
+
+const transfersBase = '/api/v1/operations/transfer-orders';
+
+export const transfersApi = {
+  list: (q: DeliveryQuery) => {
+    const params = new URLSearchParams({ page: String(q.page), pageSize: String(q.pageSize), desc: String(q.desc ?? true) });
+    if (q.search) params.set('search', q.search);
+    if (q.status) params.set('status', q.status);
+    if (q.sort) params.set('sort', q.sort);
+    return request<TransferList>('GET', `${transfersBase}?${params.toString()}`);
+  },
+  get: (id: string) => request<TransferDetail>('GET', `${transfersBase}/${id}`),
+  projects: () => request<ProjectOption[]>('GET', `${transfersBase}/projects`),
+  onJobWorkers: (orderId?: string) => request<AvailableWorker[]>('GET', `${transfersBase}/on-job-workers${orderId ? `?orderId=${orderId}` : ''}`),
+  prices: (projectId: string, workerIds: string[], on: string) => request<WorkerPriceQuote[]>('POST', `${transfersBase}/prices`, { projectId, workerIds, on, orderId: null }),
+  create: (input: TransferInput) => request<SavedOrder>('POST', transfersBase, input),
+  update: (id: string, input: TransferInput) => request<SavedOrder>('PUT', `${transfersBase}/${id}`, input),
+  submit: (id: string) => request<void>('POST', `${transfersBase}/${id}/submit`),
+  cancel: (id: string, comment: string | null) => request<void>('POST', `${transfersBase}/${id}/cancel`, { comment }),
+};

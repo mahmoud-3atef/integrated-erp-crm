@@ -23,6 +23,10 @@ internal sealed class OperationsDbContext(DbContextOptions<OperationsDbContext> 
     public DbSet<OperationsImport> Imports => Set<OperationsImport>();
 
     public DbSet<ReturnOrder> ReturnOrders => Set<ReturnOrder>();
+
+    public DbSet<TransferOrder> TransferOrders => Set<TransferOrder>();
+
+    public DbSet<TransferLine> TransferLines => Set<TransferLine>();
 }
 
 /// <summary>How far the copy of the old system's delivery orders has read.</summary>
@@ -131,6 +135,58 @@ internal sealed class ReturnOrderConfiguration : IEntityTypeConfiguration<Return
         builder.HasIndex(o => new { o.TenantId, o.CrmId }).IsUnique().HasFilter("[crm_id] IS NOT NULL");
         builder.HasIndex(o => new { o.TenantId, o.WorkerId });
         builder.HasIndex(o => new { o.TenantId, o.Status });
+    }
+}
+
+internal sealed class TransferOrderConfiguration : IEntityTypeConfiguration<TransferOrder>
+{
+    public void Configure(EntityTypeBuilder<TransferOrder> builder)
+    {
+        builder.ToTable("transfer_order");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Id).ValueGeneratedNever();
+        builder.Property(o => o.OrderNo).HasMaxLength(30).IsRequired();
+        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(30);
+        builder.Property(o => o.ProjectCode).HasMaxLength(100).IsRequired();
+        builder.Property(o => o.ProjectName).HasMaxLength(300).IsRequired();
+        builder.Property(o => o.CustomerName).HasMaxLength(300);
+        builder.Property(o => o.ProjectManager).HasMaxLength(200);
+        builder.Property(o => o.ContractType).HasMaxLength(30);
+        builder.Property(o => o.ReceiverName).HasMaxLength(200);
+        builder.Property(o => o.ReceiverTitle).HasMaxLength(200);
+        builder.Property(o => o.DelayReason).HasMaxLength(500);
+        builder.Property(o => o.Notes).HasMaxLength(2000);
+        builder.Property(o => o.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(o => o.TransferredByName).HasMaxLength(200);
+        builder.Property(o => o.LastComment).HasMaxLength(2000);
+        builder.HasMany(o => o.Lines).WithOne().HasForeignKey(l => l.OrderId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(o => o.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasIndex(o => new { o.TenantId, o.OrderNo }).IsUnique();
+        builder.HasIndex(o => new { o.TenantId, o.Status });
+    }
+}
+
+internal sealed class TransferLineConfiguration : IEntityTypeConfiguration<TransferLine>
+{
+    public void Configure(EntityTypeBuilder<TransferLine> builder)
+    {
+        builder.ToTable("transfer_line");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Id).ValueGeneratedNever();
+        builder.Property(l => l.WorkerNo).HasMaxLength(50).IsRequired();
+        builder.Property(l => l.Name).HasMaxLength(300).IsRequired();
+        builder.Property(l => l.ProfessionCode).HasMaxLength(50);
+        builder.Property(l => l.NationalityCode).HasMaxLength(50);
+        builder.Property(l => l.IqamaNo).HasMaxLength(50);
+        builder.Property(l => l.FromProjectName).HasMaxLength(300);
+        builder.Property(l => l.PackageNo).HasMaxLength(30);
+        builder.Property(l => l.Salary).HasPrecision(18, 2);
+        builder.Property(l => l.ServiceFee).HasPrecision(18, 2);
+        builder.Property(l => l.Housing).HasPrecision(18, 2);
+        builder.Property(l => l.Transport).HasPrecision(18, 2);
+        builder.Property(l => l.TotalPrice).HasPrecision(18, 2);
+        builder.Property(l => l.SpecialReason).HasMaxLength(500);
+        builder.HasIndex(l => new { l.TenantId, l.WorkerId });
     }
 }
 

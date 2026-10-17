@@ -15,6 +15,9 @@ import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
 import { ReturnOrderDetailPage } from '../pages/operations/ReturnOrderDetailPage';
 import { ReturnOrderFormPage } from '../pages/operations/ReturnOrderFormPage';
 import { ReturnOrdersPage } from '../pages/operations/ReturnOrdersPage';
+import { TransferOrderDetailPage } from '../pages/operations/TransferOrderDetailPage';
+import { TransferOrderFormPage } from '../pages/operations/TransferOrderFormPage';
+import { TransferOrdersPage } from '../pages/operations/TransferOrdersPage';
 import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
 import { CustomersPage } from '../pages/commercial/CustomersPage';
 import { PricesPage } from '../pages/commercial/PricesPage';
@@ -80,6 +83,10 @@ export function App() {
                 <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
                 <Route path="/operations/return-orders/:id" element={<ReturnOrderDetailPage />} />
                 <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderFormPage />} />
+                <Route path="/operations/transfer-orders" element={<TransferOrdersPage />} />
+                <Route path="/operations/transfer-orders/new" element={<TransferOrderFormPage />} />
+                <Route path="/operations/transfer-orders/:id" element={<TransferOrderDetailPage />} />
+                <Route path="/operations/transfer-orders/:id/edit" element={<TransferOrderFormPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

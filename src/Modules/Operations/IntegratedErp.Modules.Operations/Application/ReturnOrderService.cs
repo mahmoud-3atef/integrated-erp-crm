@@ -37,7 +37,7 @@ internal sealed class ReturnOrderService(
     ICurrentUser user,
     IClock clock)
 {
-    private static readonly ReturnStatus[] Open =
+    internal static readonly ReturnStatus[] Open =
         [ReturnStatus.UnderPreparation, ReturnStatus.SentToSales, ReturnStatus.SentToOperationsManager, ReturnStatus.InApproval, ReturnStatus.Returned];
 
     public async Task<IReadOnlyList<OnJobWorkerDto>> OnJobAsync(Guid? exceptOrderId, CancellationToken cancellationToken)
@@ -192,16 +192,9 @@ internal sealed class ReturnOrderService(
         static Result<(ReturnWorker, ReturnDetails)> Fail(Error error) => Result.Failure<(ReturnWorker, ReturnDetails)>(error);
     }
 
-    /// <summary>Workers already on another open return order of this system, with that order's number.</summary>
-    private async Task<Dictionary<Guid, string>> BusyAsync(Guid? exceptOrderId, IReadOnlyCollection<Guid> workerIds, CancellationToken cancellationToken)
-    {
-        var ids = workerIds.ToList();
-        var rows = await db.ReturnOrders.AsNoTracking()
-            .Where(o => o.WorkerId != null && ids.Contains(o.WorkerId.Value) && o.Source == DocumentSource.System && o.Id != exceptOrderId && Open.Contains(o.Status))
-            .Select(o => new { o.WorkerId, o.OrderNo })
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-        return rows.GroupBy(r => r.WorkerId!.Value).ToDictionary(g => g.Key, g => g.First().OrderNo);
-    }
+    /// <summary>Workers already on another open return or transfer order of this system, with that order's number.</summary>
+    private Task<Dictionary<Guid, string>> BusyAsync(Guid? exceptOrderId, IReadOnlyCollection<Guid> workerIds, CancellationToken cancellationToken) =>
+        TransferOrderService.BusyAsync(db, exceptOrderId, workerIds, cancellationToken);
 
     private static class Errors
     {
@@ -211,6 +204,6 @@ internal sealed class ReturnOrderService(
         public static readonly Error DelayReason = Error.Validation("return_delay_reason", "The arrival date is more than two days ago: write the reason for the delay.");
         public static readonly Error NotOnJob = Error.Validation("return_not_on_job", "The worker is not on the job.");
         public static readonly Error BeforeWork = Error.Validation("return_before_work", "The arrival date must be after the worker's start of work.");
-        public static readonly Error Busy = Error.Conflict("return_worker_busy", "The worker is already on another open return order.");
+        public static readonly Error Busy = Error.Conflict("return_worker_busy", "The worker is already on another open return or transfer order.");
     }
 }

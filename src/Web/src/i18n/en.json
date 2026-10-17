@@ -229,13 +229,28 @@
     "validation_return_delay_reason": "The arrival date is more than two days ago: write the reason for the delay.",
     "validation_return_not_on_job": "The worker is not on the job.",
     "validation_return_before_work": "The arrival date must be after the worker's start of work.",
-    "conflict_return_worker_busy": "The worker is already on another open return order.",
+    "conflict_return_worker_busy": "The worker is already on another open return or transfer order.",
     "conflict_return_not_editable": "Only an order under preparation or returned can be changed.",
     "conflict_return_not_cancelable": "This order can no longer be canceled.",
     "conflict_return_not_in_approval": "The order is not in approval.",
     "conflict_return_not_startable": "An approval can run only on an order under preparation or returned.",
     "validation_return_field_not_settable": "A process cannot set this value.",
-    "not_found_return_order": "Return order not found."
+    "not_found_return_order": "Return order not found.",
+    "validation_transfer_project": "Choose an active project.",
+    "validation_transfer_delay_reason": "The transfer date is more than two days ago: write the reason for the delay.",
+    "validation_transfer_worker_duplicate": "A worker is on the order twice.",
+    "validation_transfer_not_on_job": "A worker is not on the job.",
+    "validation_transfer_same_project": "A worker is already on the new project.",
+    "validation_transfer_before_work": "The transfer date must be after the worker's start of work on their current project.",
+    "conflict_transfer_worker_busy": "A worker is already on another open transfer or return order.",
+    "validation_transfer_no_price": "There is no package on the new project for a worker's profession and nationality: enter a special price with a reason.",
+    "validation_transfer_special_reason": "A special price needs a reason.",
+    "validation_transfer_price_minimum": "The service price cannot be less than 1,000.",
+    "validation_transfer_price_below_cost": "The service price is less than the salary, housing and transport.",
+    "validation_transfer_no_workers": "Add at least one worker.",
+    "conflict_transfer_not_editable": "Only an order under preparation or returned can be changed.",
+    "conflict_transfer_not_cancelable": "This order can no longer be canceled.",
+    "not_found_transfer_order": "Transfer order not found."
   },
   "menu": {
     "label": "Main menu",
@@ -269,7 +284,8 @@
     "deliveryOrders": "Delivery orders",
     "returnOrders": "Return orders",
     "historyIssues": "Period ledger exceptions",
-    "invoiceCheck": "Attendance vs invoices"
+    "invoiceCheck": "Attendance vs invoices",
+    "transferOrders": "Transfer orders"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1463,6 +1479,63 @@
         "100000008": "Sent to the project supervisor",
         "100000005": "The worker didn't arrive in housing"
       }
+    },
+    "transfer": {
+      "title": "Project transfer orders",
+      "intro": "Move workers on the job from their project straight to another one, without passing through housing, at the new project's package price.",
+      "new": "New transfer order",
+      "editOrder": "Edit transfer order {{no}}",
+      "orderNo": "Transfer order",
+      "toProject": "Transfer to {{project}}",
+      "newProject": "New project",
+      "currentProject": "Current project",
+      "since": "since {{date}}",
+      "alreadyThere": "On the new project",
+      "receiverName": "Receiver on the new project",
+      "search": "Search by order number, project or customer",
+      "empty": "No transfer orders",
+      "dateHint": "The first day on the new project; the current project's period ends the day before.",
+      "delayHint": "The transfer date is more than two days ago: write why it is registered late.",
+      "chooseProject": "Choose the new project to see its package prices.",
+      "noLines": "No workers yet: pick them from the list of workers on the job above.",
+      "flowHint": "Saving sends the order to you first (the creator's confirmation), then to the operations manager. Once approved, each worker's period on their current project closes and one on the new project opens from the transfer date at the line's price.",
+      "creatorHint": "The order waits for your confirmation: review it, then approve it from the approval bar to send it to the operations manager.",
+      "transferredHint": "Transferred: the workers are on the new project from {{date}}; their periods on their previous projects closed the day before.",
+      "parallelNote": "In the parallel phase the transfer is recorded here in the period ledger; the old system's work starts stay as they are until the switchover.",
+      "cancel": "Cancel the order",
+      "cancelTitle": "Cancel transfer order {{no}}",
+      "sections": {
+        "order": "Transfer details",
+        "workers": "Workers transferred ({{count}})"
+      },
+      "picker": {
+        "title": "Workers on the job ({{count}})",
+        "hint": "The workers now working on projects. Filter by current project, profession or nationality, tick them, then \"Add selected\". Workers already on the new project or on an open transfer or return order cannot be picked."
+      },
+      "col": {
+        "order": "Order and new project",
+        "from": "From project",
+        "transferOn": "Transfer date",
+        "newPrice": "New price"
+      },
+      "cards": {
+        "all": "All transfer orders",
+        "allFoot": "Registered in this system",
+        "transferred": "Transferred",
+        "transferredFoot": "Workers on their new projects",
+        "closed": "Rejected or canceled",
+        "closedFoot": "Not transferred"
+      },
+      "status": {
+        "UnderPreparation": "Under preparation",
+        "SentToOperationsManager": "Sent to the operations manager",
+        "InApproval": "In approval",
+        "Returned": "Returned",
+        "Rejected": "Rejected",
+        "Transferred": "Transferred",
+        "Canceled": "Canceled"
+      },
+      "orderStatus": "Transfer order status"
     }
   }
 }

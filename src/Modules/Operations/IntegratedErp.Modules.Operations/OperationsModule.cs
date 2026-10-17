@@ -35,6 +35,9 @@ public sealed class OperationsModule : IModule
         services.AddScoped<IApprovalRecordAdapter, ReturnOrderAdapter>();
         services.AddScoped<ReturnOrderImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<ReturnOrderImportService>());
+        services.AddScoped<TransferOrderService>();
+        services.AddScoped<TransferOrderQueries>();
+        services.AddScoped<IApprovalRecordAdapter, TransferOrderAdapter>();
         services.AddPermissions(OperationsPermissions.All);
     }
 
@@ -42,6 +45,7 @@ public sealed class OperationsModule : IModule
     {
         endpoints.MapOperationsEndpoints();
         endpoints.MapReturnOrderEndpoints();
+        endpoints.MapTransferOrderEndpoints();
     }
 }
 
@@ -54,6 +58,9 @@ internal static class OperationsPermissions
     public const string ReturnCreate = "operations.return.create";
     public const string ReturnSales = "operations.return.sales";
     public const string ReturnApprove = "operations.return.approve";
+    public const string TransferView = "operations.transfer.view";
+    public const string TransferCreate = "operations.transfer.create";
+    public const string TransferApprove = "operations.transfer.approve";
 
     private const string GroupAr = "العمليات";
     private const string GroupEn = "Operations";
@@ -67,5 +74,8 @@ internal static class OperationsPermissions
         new(ReturnCreate, GroupAr, GroupEn, "إنشاء أوامر الرجيع وتعديلها", "Create and edit return orders"),
         new(ReturnSales, GroupAr, GroupEn, "تسجيل رغبة العميل في أوامر الرجيع (المبيعات)", "Record the customer's wish on return orders (sales)"),
         new(ReturnApprove, GroupAr, GroupEn, "اعتماد أوامر الرجيع (مدير العمليات)", "Approve return orders (operations manager)"),
+        new(TransferView, GroupAr, GroupEn, "عرض أوامر النقل بين المشاريع", "View project transfer orders"),
+        new(TransferCreate, GroupAr, GroupEn, "إنشاء أوامر النقل وتعديلها", "Create and edit project transfer orders"),
+        new(TransferApprove, GroupAr, GroupEn, "اعتماد أوامر النقل (مدير العمليات)", "Approve project transfer orders (operations manager)"),
     ];
 }

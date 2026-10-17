@@ -32,25 +32,40 @@ import { sar } from './delivery';
 type Place = 'all' | 'Housing' | 'New';
 
 /**
- * The workers that can be delivered (in housing or new), listed at once: filter by text (or several numbers),
- * status, profession and nationality, tick them, and add them to the order.
+ * The workers that can be put on an order, listed at once: filter by text (or several numbers), status (or current
+ * project), profession and nationality, tick them, and add them to the order. By default the workers that can be
+ * delivered (in housing or new); with <c>onJob</c> the workers on the job (for a transfer), where those already on
+ * <c>targetProjectCrmId</c> cannot be picked.
  */
-export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string; onOrder: string[]; onAdd: (workers: WorkerCard[]) => void }) {
+export function AvailableWorkers({
+  orderId,
+  onOrder,
+  onAdd,
+  onJob,
+  targetProjectCrmId,
+}: {
+  orderId?: string;
+  onOrder: string[];
+  onAdd: (workers: WorkerCard[]) => void;
+  onJob?: { load: (orderId?: string) => Promise<AvailableWorker[]>; titleKey: string; hintKey: string };
+  targetProjectCrmId?: string | null;
+}) {
   const { t } = useTranslation();
-  const { ar } = useCommercialFormat();
+  const { ar, date } = useCommercialFormat();
   const [workers, setWorkers] = useState<AvailableWorker[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [place, setPlace] = useState<Place>('all');
   const [profession, setProfession] = useState('');
   const [nationality, setNationality] = useState('');
+  const [project, setProject] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
 
   useEffect(() => {
-    operationsApi
-      .availableWorkers(orderId)
+    (onJob ? onJob.load(orderId) : operationsApi.availableWorkers(orderId))
       .then(setWorkers)
       .catch((failure: unknown) => setError(errorKey(failure)));
+    // The loader is fixed for the form's lifetime.
   }, [orderId]);
 
   const name = (a: string | null, e: string | null) => (ar ? a : e) ?? '—';
@@ -67,6 +82,7 @@ export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string
   };
   const professions = options((w) => [w.worker.professionCode, w.worker.professionAr, w.worker.professionEn]);
   const nationalities = options((w) => [w.worker.nationalityCode, w.worker.nationalityAr, w.worker.nationalityEn]);
+  const projects = options((w) => [w.worker.projectCrmId, w.worker.projectName, w.worker.projectName]);
 
   const shown = useMemo(() => {
     const tokens = text.split(/[\s,،;]+/).map((x) => x.trim().toUpperCase()).filter(Boolean);
@@ -74,6 +90,7 @@ export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string
       if (place !== 'all' && w.placement !== place) return false;
       if (profession && (w.professionCode ?? '') !== profession) return false;
       if (nationality && (w.nationalityCode ?? '') !== nationality) return false;
+      if (project && (w.projectCrmId ?? '') !== project) return false;
       if (tokens.length > 1) return tokens.includes(w.workerNo.toUpperCase()) || (!!w.iqamaNo && tokens.includes(w.iqamaNo.toUpperCase()));
       if (tokens.length === 1) {
         const q = tokens[0]!;
@@ -81,31 +98,34 @@ export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string
       }
       return true;
     });
-  }, [workers, text, place, profession, nationality]);
+  }, [workers, text, place, profession, nationality, project]);
 
-  const selectable = shown.filter((w) => !w.busyOrderNo && !onOrder.includes(w.worker.id));
+  const onTarget = (w: WorkerCard) => !!targetProjectCrmId && w.projectCrmId === targetProjectCrmId;
+  const selectable = shown.filter((w) => !w.busyOrderNo && !onOrder.includes(w.worker.id) && !onTarget(w.worker));
   const allPicked = selectable.length > 0 && selectable.every((w) => picked.includes(w.worker.id));
   const counts = { all: workers?.length ?? 0, Housing: workers?.filter((w) => w.worker.placement === 'Housing').length ?? 0, New: workers?.filter((w) => w.worker.placement === 'New').length ?? 0 };
-  const filtered = text || place !== 'all' || profession || nationality;
+  const filtered = text || place !== 'all' || profession || nationality || project;
 
   return (
     <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, mb: `${tokens.gap}px` }}>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.5, color: tokens.navy800, '& svg': { color: tokens.navy700 } }}>
         <GroupAddOutlinedIcon />
-        <Typography sx={{ fontSize: 16, fontWeight: 800, flex: 1 }}>{t('operations.delivery.available.title', { count: counts.all })}</Typography>
+        <Typography sx={{ fontSize: 16, fontWeight: 800, flex: 1 }}>{t(onJob?.titleKey ?? 'operations.delivery.available.title', { count: counts.all })}</Typography>
       </Stack>
-      <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mb: 2 }}>{t('operations.delivery.availableHint')}</Typography>
+      <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mb: 2 }}>{t(onJob?.hintKey ?? 'operations.delivery.availableHint')}</Typography>
       <ErrorMessage messageKey={error} />
 
-      <PillTabs
-        value={place}
-        onChange={setPlace}
-        options={[
-          { value: 'all', label: t('operations.delivery.available.all', { count: counts.all }) },
-          { value: 'Housing', label: t('operations.delivery.available.housing', { count: counts.Housing }) },
-          { value: 'New', label: t('operations.delivery.available.new', { count: counts.New }) },
-        ]}
-      />
+      {!onJob && (
+        <PillTabs
+          value={place}
+          onChange={setPlace}
+          options={[
+            { value: 'all', label: t('operations.delivery.available.all', { count: counts.all }) },
+            { value: 'Housing', label: t('operations.delivery.available.housing', { count: counts.Housing }) },
+            { value: 'New', label: t('operations.delivery.available.new', { count: counts.New }) },
+          ]}
+        />
+      )}
       <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, mb: 1.5 }}>
         <TextField
           size="small"
@@ -131,8 +151,18 @@ export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string
             </MenuItem>
           ))}
         </TextField>
+        {onJob && (
+          <TextField select size="small" sx={{ flex: 1, minWidth: 200 }} label={t('operations.transfer.currentProject')} value={project} onChange={(e) => setProject(e.target.value)}>
+            <MenuItem value="">{t('operations.delivery.available.any')}</MenuItem>
+            {projects.map(([code, o]) => (
+              <MenuItem key={code || 'none'} value={code}>
+                {o.label} ({o.count})
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
         {filtered && (
-          <Button startIcon={<FilterAltOffOutlinedIcon />} onClick={() => (setText(''), setPlace('all'), setProfession(''), setNationality(''))}>
+          <Button startIcon={<FilterAltOffOutlinedIcon />} onClick={() => (setText(''), setPlace('all'), setProfession(''), setNationality(''), setProject(''))}>
             {t('workforce.reset')}
           </Button>
         )}
@@ -155,14 +185,15 @@ export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string
               <TableCell>{t('operations.delivery.col.iqama')}</TableCell>
               <TableCell>{t('commercial.prices.col.who')}</TableCell>
               <TableCell>{t('workforce.col.status')}</TableCell>
-              <TableCell>{t('operations.delivery.available.lastProject')}</TableCell>
+              <TableCell>{t(onJob ? 'operations.transfer.currentProject' : 'operations.delivery.available.lastProject')}</TableCell>
               <TableCell align="center">{t('commercial.prices.col.salary')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {shown.map(({ worker: w, busyOrderNo }) => {
               const added = onOrder.includes(w.id);
-              const disabled = added || !!busyOrderNo;
+              const already = onTarget(w);
+              const disabled = added || !!busyOrderNo || already;
               const checked = added || picked.includes(w.id);
               return (
                 <TableRow
@@ -193,11 +224,16 @@ export function AvailableWorkers({ orderId, onOrder, onAdd }: { orderId?: string
                       <Badge tone="primary">{t('operations.delivery.available.added')}</Badge>
                     ) : busyOrderNo ? (
                       <Badge tone="warning">{t('operations.delivery.busy', { no: busyOrderNo })}</Badge>
+                    ) : already ? (
+                      <Badge tone="neutral">{t('operations.transfer.alreadyThere')}</Badge>
                     ) : (
                       <Badge tone={w.placement === 'New' ? 'info' : 'success'}>{(ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`)}</Badge>
                     )}
                   </TableCell>
-                  <TableCell>{w.projectName ?? '—'}</TableCell>
+                  <TableCell>
+                    {w.projectName ?? '—'}
+                    {onJob && w.projectJoinedOn && <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{t('operations.transfer.since', { date: date(w.projectJoinedOn) })}</Typography>}
+                  </TableCell>
                   <TableCell align="center">{sar(w.totalSalary)}</TableCell>
                 </TableRow>
               );
