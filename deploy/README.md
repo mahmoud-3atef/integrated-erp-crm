@@ -49,7 +49,7 @@ cd C:\Integrated-ERP-CRM\deploy
 - **ملف الإعدادات:** `C:\IntegratedErp\config\appsettings.Server.json`، وفيه:
   - الاتصالات و AD و CRM.
   - الشركة: `carepro`.
-  - أول مسؤول: `systemAdmin`.
+  - أول مسؤول: حساب AD `JRCOrepro` (غير رمز الشركة `carepro`).
   - لا يستبدله أي نشر لاحق.
 
 ## ثالثًا: الأسرار (مرة واحدة)
@@ -102,5 +102,5 @@ C:\Integrated-ERP-CRM\deploy\Deploy-Erp.ps1 -Rollback
 
 - **حالة النظام:** `https://newcrm.jrco.local:8003/health`، ويُظهر حالة قاعدة البيانات واتصال CRM.
 - **السجلات:** `C:\IntegratedErp\logs\erp-YYYYMMDD.log`، ملف لكل يوم، وتُحذف بعد 60 يومًا.
-- **أول دخول:** بحساب `systemAdmin` من AD (يجب أن يكون موجودًا في الدومين)، ثم التحقق بخطوتين. بعده يضيف المستخدمين والأدوار من شاشات الإدارة.
+- **أول دخول:** بحساب `carepro` من AD (يجب أن يكون موجودًا في الدومين)، ثم التحقق بخطوتين. بعده يضيف المستخدمين والأدوار من شاشات الإدارة.
 - **حسابات التطوير:** حسابا `dev.admin` و`dev.user` لا يعملان على السيرفر.

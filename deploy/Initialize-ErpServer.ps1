@@ -35,7 +35,7 @@ param(
     [string] $CompanyCode = 'carepro',
     [string] $CompanyNameAr = 'كير برو',
     [string] $CompanyNameEn = 'CarePro',
-    [string[]] $Administrators = @('systemAdmin')
+    [string[]] $Administrators = @('carepro')
 )
 
 $ErrorActionPreference = 'Stop'
