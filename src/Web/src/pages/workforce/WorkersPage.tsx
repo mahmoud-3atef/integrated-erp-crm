@@ -23,22 +23,26 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { workforceApi, type Placement, type WorkerKind, type WorkerList, type WorkerQuery } from '../../api/workforce';
+import { kindPath, workforceApi, type Placement, type WorkerKind, type WorkerList, type WorkerQuery } from '../../api/workforce';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { Initials, PageHeader, PillTabs } from '../../components/ui';
+import { Initials, PageHeader } from '../../components/ui';
 import { placementCards, placementLook } from '../../components/workforce/placement';
 
 type Sort = NonNullable<WorkerQuery['sort']>;
 
-/** Workers and staff: status cards as on the old page (click to filter), search, and the old columns. */
-export function WorkersPage() {
+/**
+ * Workers, or company staff: status cards as on the old page (click to filter), search, and the old columns.
+ * Staff have no supplier and no project work days.
+ */
+export function WorkersPage({ kind }: { kind: WorkerKind }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const ar = i18n.language === 'ar';
   const placement = (params.get('status') ?? '') as Placement | '';
-  const kind = (params.get('kind') ?? '') as WorkerKind | '';
+  const staff = kind === 'Staff';
+  const k = staff ? 'staff' : 'workers';
   const search = params.get('q') ?? '';
   const page = Number(params.get('page') ?? '1');
   const [text, setText] = useState(search);
@@ -65,14 +69,14 @@ export function WorkersPage() {
     let cancelled = false;
     setBusy(true);
     workforceApi
-      .workers({ search, placement, kind, sort, desc, page, pageSize })
+      .list(kind, { search, placement, sort, desc, page, pageSize })
       .then((value) => !cancelled && (setData(value), setError(null)))
       .catch((failure: unknown) => !cancelled && setError(errorKey(failure)))
       .finally(() => !cancelled && setBusy(false));
     return () => {
       cancelled = true;
     };
-  }, [search, placement, kind, sort, desc, page, pageSize]);
+  }, [kind, search, placement, sort, desc, page, pageSize]);
 
   const money = (value: number) => new Intl.NumberFormat(ar ? 'ar-SA-u-nu-latn' : 'en-US', { maximumFractionDigits: 0 }).format(value);
   const date = (value: string | null) =>
@@ -94,15 +98,15 @@ export function WorkersPage() {
 
   return (
     <Box>
-      <PageHeader title={t('workforce.title')} subtitle={t('workforce.intro')} />
+      <PageHeader title={t(`workforce.${k}.title`)} subtitle={t(`workforce.${k}.intro`)} />
       <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: 2 }}>
         {t('workforce.readOnly')}
       </Alert>
       <ErrorMessage messageKey={error} />
 
       {/* Status cards (.cp-kpi): the round icon sits on the card's top edge. */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' }, gap: `${tokens.gap}px`, pt: '22px', mb: `${tokens.gap}px` }}>
-        {placementCards.map((p) => {
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: `repeat(${placementCards[kind].length}, 1fr)` }, gap: `${tokens.gap}px`, pt: '22px', mb: `${tokens.gap}px` }}>
+        {placementCards[kind].map((p) => {
           const look = placementLook[p];
           const active = placement === p;
           return (
@@ -142,13 +146,13 @@ export function WorkersPage() {
                 {look.icon}
               </Box>
               <Box sx={{ p: '12px 16px', textAlign: 'end' }}>
-                <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{t(`workforce.placement.${p}`)}</Typography>
+                <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{t(staff && p === 'Exited' ? 'workforce.staffExited' : `workforce.placement.${p}`)}</Typography>
                 <Typography sx={{ fontSize: 24, fontWeight: 700, lineHeight: 1.25, color: tokens.navy800, fontVariantNumeric: 'tabular-nums' }}>
                   {(data?.counts[p] ?? 0).toLocaleString('en-US')}
                 </Typography>
               </Box>
               <Box sx={{ mt: 'auto', px: 2, py: 1.25, borderTop: `1px solid ${tokens.border}`, fontSize: 12.5, color: active ? look.tone : tokens.gray600, fontWeight: active ? 700 : 400 }}>
-                {active ? `✓ ${t('workforce.currentFilter')}` : t(`workforce.cardFoot.${p}`)}
+                {active ? `✓ ${t('workforce.currentFilter')}` : t(staff ? 'workforce.cardFoot.staff' : `workforce.cardFoot.${p}`)}
               </Box>
             </ButtonBase>
           );
@@ -157,17 +161,6 @@ export function WorkersPage() {
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
-          <Box sx={{ mb: `-${tokens.gap}px` }}>
-            <PillTabs
-              value={kind || 'all'}
-              onChange={(v) => update({ kind: v === 'all' ? null : v })}
-              options={[
-                { value: 'all', label: t('workforce.kind.all') },
-                { value: 'Worker', label: t('workforce.kind.Worker') },
-                { value: 'Staff', label: t('workforce.kind.Staff') },
-              ]}
-            />
-          </Box>
           <Box component="form" sx={{ display: 'flex', gap: 1, flex: 1, minWidth: { md: 320 }, maxWidth: 520 }} onSubmit={(e) => (e.preventDefault(), update({ q: text.trim() || null }))}>
             <TextField
               size="small"
@@ -180,13 +173,13 @@ export function WorkersPage() {
             <Button type="submit" variant="contained">
               {t('workforce.searchButton')}
             </Button>
-            {(search || placement || kind) && (
+            {(search || placement) && (
               <Button onClick={() => (setText(''), setParams(new URLSearchParams(), { replace: true }))}>{t('workforce.reset')}</Button>
             )}
           </Box>
           <Box sx={{ flex: 1 }} />
           <Box sx={{ px: 1.5, py: 0.5, borderRadius: 999, bgcolor: tokens.navy50, color: tokens.navy700, fontWeight: 700, fontSize: 13 }}>
-            {t('workforce.count', { count: data?.total ?? 0 })}
+            {t(`workforce.${k}.count`, { count: data?.total ?? 0 })}
           </Box>
         </Stack>
         {busy && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
@@ -201,7 +194,7 @@ export function WorkersPage() {
                 <TableCell>{t('workforce.col.iqama')}</TableCell>
                 <TableCell>{t('workforce.col.profession')}</TableCell>
                 <TableCell>{t('workforce.col.nationality')}</TableCell>
-                <TableCell>{t('workforce.col.sponsor')}</TableCell>
+                {!staff && <TableCell>{t('workforce.col.sponsor')}</TableCell>}
                 {withSalary && (
                   <>
                     <TableCell align="center">{t('workforce.salary.basic')}</TableCell>
@@ -212,15 +205,15 @@ export function WorkersPage() {
                     <TableCell align="center">{head('salary', t('workforce.salary.total'))}</TableCell>
                   </>
                 )}
-                <TableCell>{head('joined', t('workforce.col.joined'))}</TableCell>
-                <TableCell align="center">{t('workforce.col.workDays')}</TableCell>
+                <TableCell>{head('joined', t(staff ? 'workforce.col.hired' : 'workforce.col.joined'))}</TableCell>
+                {!staff && <TableCell align="center">{t('workforce.col.workDays')}</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {data?.items.map((w) => {
                 const look = placementLook[w.placement];
                 return (
-                  <TableRow key={w.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workforce/workers/${w.id}`)}>
+                  <TableRow key={w.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workforce/${kindPath(kind)}/${w.id}`)}>
                     <TableCell sx={{ minWidth: 220 }}>
                       <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
                         <Initials name={w.name} size={30} />
@@ -243,7 +236,7 @@ export function WorkersPage() {
                     </TableCell>
                     <TableCell>{(ar ? w.professionAr : w.professionEn) ?? '—'}</TableCell>
                     <TableCell>{(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}</TableCell>
-                    <TableCell dir="ltr">{w.sponsor ?? '—'}</TableCell>
+                    {!staff && <TableCell dir="ltr">{w.sponsor ?? '—'}</TableCell>}
                     {withSalary && (
                       <>
                         <TableCell align="center">{w.salary ? money(w.salary.basic) : '—'}</TableCell>
@@ -257,13 +250,13 @@ export function WorkersPage() {
                       </>
                     )}
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>{date(w.projectJoinedOn)}</TableCell>
-                    <TableCell align="center">{w.workDays ?? '—'}</TableCell>
+                    {!staff && <TableCell align="center">{w.workDays ?? '—'}</TableCell>}
                   </TableRow>
                 );
               })}
               {data && data.items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={withSalary ? 15 : 9} align="center" sx={{ py: 5, color: tokens.gray500 }}>
+                  <TableCell colSpan={(withSalary ? 15 : 9) - (staff ? 2 : 0)} align="center" sx={{ py: 5, color: tokens.gray500 }}>
                     {t('workforce.empty')}
                   </TableCell>
                 </TableRow>

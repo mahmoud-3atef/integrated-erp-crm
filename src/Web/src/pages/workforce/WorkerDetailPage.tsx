@@ -30,15 +30,19 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { workforceApi, type WorkerDetail } from '../../api/workforce';
+import { workforceApi, type WorkerDetail, type WorkerKind } from '../../api/workforce';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { placementLook } from '../../components/workforce/placement';
 
-/** One worker's file, laid out as the old employee page: header with the key facts, then the data sections. */
-export function WorkerDetailPage() {
+/**
+ * One worker's or staff member's file, laid out as the old employee page: header with the key facts, then the data
+ * sections. Staff have no supplier, agent, current project or work days; their job section shows the job title and
+ * joining date.
+ */
+export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -48,8 +52,8 @@ export function WorkerDetailPage() {
   const ar = i18n.language === 'ar';
 
   useEffect(() => {
-    workforceApi.worker(id!).then(setWorker).catch((failure: unknown) => setError(errorKey(failure)));
-  }, [id]);
+    workforceApi.get(kind, id!).then(setWorker).catch((failure: unknown) => setError(errorKey(failure)));
+  }, [kind, id]);
 
   if (!worker) {
     return <ErrorMessage messageKey={error} />;
@@ -74,7 +78,8 @@ export function WorkerDetailPage() {
     </Box>
   );
   const days = (value: number | null) => (value === null ? '—' : <>{value.toLocaleString('en-US')}{unit(t('workforce.days'))}</>);
-  const working = w.placement === 'Working';
+  const staff = kind === 'Staff';
+  const working = w.placement === 'Working' && !staff;
   const flip = { transform: i18n.dir() === 'rtl' ? 'scaleX(-1)' : 'none' };
 
   return (
@@ -119,7 +124,7 @@ export function WorkerDetailPage() {
                 </span>
               )}
               <span>
-                <Badge tone={w.kind === 'Staff' ? 'primary' : 'neutral'}>{t(`workforce.kind.${w.kind}`)}</Badge>
+                <Badge tone={staff ? 'primary' : 'neutral'}>{t(`workforce.kind.${w.kind}`)}</Badge>
               </span>
             </Stack>
           </Box>
@@ -129,7 +134,7 @@ export function WorkerDetailPage() {
           {/* Status card (.cp-ed-fact-status). */}
           <Box
             sx={{
-              gridColumn: { xs: 'span 2', md: working ? 'span 3' : '1 / -1' },
+              gridColumn: { xs: 'span 2', md: working || staff ? 'span 3' : '1 / -1' },
               display: 'grid',
               gridTemplateColumns: 'auto 1fr',
               columnGap: 1.5,
@@ -167,15 +172,22 @@ export function WorkerDetailPage() {
               )}
             </Fact>
           )}
-          <Fact icon={<WorkOutlineOutlinedIcon />} label={t('workforce.col.profession')}>
+          {staff && (
+            <Fact wide icon={<CalendarMonthOutlinedIcon />} label={t('workforce.col.hired')}>
+              {date(w.projectJoinedOn)}
+            </Fact>
+          )}
+          <Fact icon={<WorkOutlineOutlinedIcon />} label={t(staff ? 'workforce.field.jobTitle' : 'workforce.col.profession')} wide={staff}>
             {(ar ? w.professionAr : w.professionEn) ?? '—'}
           </Fact>
-          <Fact icon={<FlagOutlinedIcon />} label={t('workforce.col.nationality')}>
+          <Fact icon={<FlagOutlinedIcon />} label={t('workforce.col.nationality')} wide={staff}>
             {(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}
           </Fact>
-          <Fact icon={<LocalShippingOutlinedIcon />} label={t('workforce.col.sponsor')}>
-            <span dir="ltr">{w.sponsor ?? '—'}</span>
-          </Fact>
+          {!staff && (
+            <Fact icon={<LocalShippingOutlinedIcon />} label={t('workforce.col.sponsor')}>
+              <span dir="ltr">{w.sponsor ?? '—'}</span>
+            </Fact>
+          )}
         </Box>
       </Box>
 
@@ -193,7 +205,7 @@ export function WorkerDetailPage() {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5, alignItems: 'start' }}>
             <Stack spacing={2.5}>
               <FieldSection title={t('workforce.sections.basic')} icon={<BadgeOutlinedIcon />}>
-                <FieldBox label={t('workforce.col.number')} icon={<TagOutlinedIcon />}>
+                <FieldBox label={t(staff ? 'workforce.field.employeeNo' : 'workforce.col.number')} icon={<TagOutlinedIcon />}>
                   <span dir="ltr">{w.workerNo}</span>
                 </FieldBox>
                 <FieldBox label={t('workforce.field.iqama')} icon={<CreditCardOutlinedIcon />}>
@@ -212,32 +224,49 @@ export function WorkerDetailPage() {
                 </FieldBox>
               </FieldSection>
 
-              <FieldSection title={t('workforce.sections.job')} icon={<AccountTreeOutlinedIcon />}>
-                <FieldBox label={t('workforce.col.profession')} icon={<WorkOutlineOutlinedIcon />}>
-                  {(ar ? w.professionAr : w.professionEn) ?? '—'}
-                </FieldBox>
-                <FieldBox label={t('workforce.col.sponsor')} icon={<LocalShippingOutlinedIcon />}>
-                  <span dir="ltr">{w.sponsor ?? '—'}</span>
-                </FieldBox>
-                <FieldBox label={t('workforce.field.project')} icon={<AccountTreeOutlinedIcon />} wide>
-                  {w.projectName ?? '—'}
-                </FieldBox>
-                <FieldBox label={t('workforce.field.projectJoined')} icon={<CalendarMonthOutlinedIcon />}>
-                  {date(w.projectJoinedOn)}
-                </FieldBox>
-                <FieldBox label={t('workforce.col.workDays')} icon={<ScheduleOutlinedIcon />}>
-                  {days(w.workDays)}
-                </FieldBox>
-                <FieldBox label={t('workforce.field.iqamaProfession')} icon={<CreditCardOutlinedIcon />}>
-                  {(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn) ?? '—'}
-                </FieldBox>
-                <FieldBox label={t('workforce.field.arrived')} icon={<FlightLandOutlinedIcon />}>
-                  {date(worker.arrivedOn)}
-                </FieldBox>
-                <FieldBox label={t('workforce.field.agent')} icon={<SupportAgentOutlinedIcon />} wide>
-                  <span dir="ltr">{worker.recruitmentAgent ?? '—'}</span>
-                </FieldBox>
-              </FieldSection>
+              {staff ? (
+                <FieldSection title={t('workforce.sections.staffJob')} icon={<WorkOutlineOutlinedIcon />}>
+                  <FieldBox label={t('workforce.field.jobTitle')} icon={<WorkOutlineOutlinedIcon />} wide>
+                    {(ar ? w.professionAr : w.professionEn) ?? '—'}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.col.hired')} icon={<CalendarMonthOutlinedIcon />}>
+                    {date(w.projectJoinedOn)}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.arrived')} icon={<FlightLandOutlinedIcon />}>
+                    {date(worker.arrivedOn)}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.iqamaProfession')} icon={<CreditCardOutlinedIcon />} wide>
+                    {(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn) ?? '—'}
+                  </FieldBox>
+                </FieldSection>
+              ) : (
+                <FieldSection title={t('workforce.sections.job')} icon={<AccountTreeOutlinedIcon />}>
+                  <FieldBox label={t('workforce.col.profession')} icon={<WorkOutlineOutlinedIcon />}>
+                    {(ar ? w.professionAr : w.professionEn) ?? '—'}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.col.sponsor')} icon={<LocalShippingOutlinedIcon />}>
+                    <span dir="ltr">{w.sponsor ?? '—'}</span>
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.project')} icon={<AccountTreeOutlinedIcon />} wide>
+                    {w.projectName ?? '—'}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.projectJoined')} icon={<CalendarMonthOutlinedIcon />}>
+                    {date(w.projectJoinedOn)}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.col.workDays')} icon={<ScheduleOutlinedIcon />}>
+                    {days(w.workDays)}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.iqamaProfession')} icon={<CreditCardOutlinedIcon />}>
+                    {(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn) ?? '—'}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.arrived')} icon={<FlightLandOutlinedIcon />}>
+                    {date(worker.arrivedOn)}
+                  </FieldBox>
+                  <FieldBox label={t('workforce.field.agent')} icon={<SupportAgentOutlinedIcon />} wide>
+                    <span dir="ltr">{worker.recruitmentAgent ?? '—'}</span>
+                  </FieldBox>
+                </FieldSection>
+              )}
             </Stack>
 
             <Stack spacing={2.5}>
@@ -250,7 +279,7 @@ export function WorkerDetailPage() {
                     <FieldBox label={t('workforce.salary.transport')} icon={<DirectionsCarOutlinedIcon />}>{money(w.salary.transport)}</FieldBox>
                     <FieldBox label={t('workforce.salary.overtime')} icon={<MoreTimeOutlinedIcon />}>{money(w.salary.overtime)}</FieldBox>
                     <FieldBox label={t('workforce.salary.other')} icon={<RedeemOutlinedIcon />}>{money(w.salary.other)}</FieldBox>
-                    <FieldBox label={t('workforce.salary.project')} icon={<WorkOutlineOutlinedIcon />}>{money(w.salary.project)}</FieldBox>
+                    <FieldBox label={t(staff ? 'workforce.salary.fixed' : 'workforce.salary.project')} icon={<WorkOutlineOutlinedIcon />}>{money(w.salary.project)}</FieldBox>
                     {w.salary.hardship > 0 && (
                       <FieldBox label={t('workforce.salary.hardship')} icon={<WorkOutlineOutlinedIcon />}>{money(w.salary.hardship)}</FieldBox>
                     )}

@@ -48,8 +48,10 @@ export function App() {
                 <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/roles" element={<RolesPage />} />
                 <Route path="/admin/crm-sync" element={<CrmSyncPage />} />
-                <Route path="/workforce/workers" element={<WorkersPage />} />
-                <Route path="/workforce/workers/:id" element={<WorkerDetailPage />} />
+                <Route path="/workforce/workers" element={<WorkersPage key="workers" kind="Worker" />} />
+                <Route path="/workforce/workers/:id" element={<WorkerDetailPage kind="Worker" />} />
+                <Route path="/workforce/staff" element={<WorkersPage key="staff" kind="Staff" />} />
+                <Route path="/workforce/staff/:id" element={<WorkerDetailPage kind="Staff" />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

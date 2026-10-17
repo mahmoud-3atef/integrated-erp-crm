@@ -5,6 +5,7 @@ using IntegratedErp.Modules.CrmSync.Infrastructure;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workforce.Application;
+using IntegratedErp.Modules.Workforce.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -33,25 +34,31 @@ public sealed class WorkerImportTests(TestDatabase database)
         using (var scope = database.Scope(tenantId))
         {
             var queries = scope.ServiceProvider.GetRequiredService<WorkerQueries>();
-            var list = await queries.ListAsync(new WorkerFilter(null, null, null, "name", false, 1, 50), withSalary: true, default);
-            Assert.Equal(3, list.Total);
-            Assert.Equal(2, list.Counts["Working"]);
+            var list = await queries.ListAsync(new WorkerFilter(WorkerKind.Worker, null, null, "name", false, 1, 50), withSalary: true, default);
+            Assert.Equal(2, list.Total);
+            Assert.Equal(1, list.Counts["Working"]);
             Assert.Equal(1, list.Counts["Housing"]);
 
             var row = list.Items.Single(i => i.WorkerNo == "BSS000196");
             Assert.Equal(("ERON CAPAORAN", "Working", "على رأس العمل", "الفلبين", "2593574755"), (row.Name, row.Placement, row.StatusAr, row.NationalityAr, row.Iqama));
             Assert.Equal(2000m, row.Salary!.Total);
-            Assert.Equal("Staff", list.Items.Single(i => i.WorkerNo == "EMP0001").Kind);
+
+            // Staff are a separate list, and a staff file does not open as a worker (nor the other way round).
+            var staffList = await queries.ListAsync(new WorkerFilter(WorkerKind.Staff, null, null, null, false, 1, 50), withSalary: false, default);
+            var clerk = staffList.Items.Single();
+            Assert.Equal(("EMP0001", "Staff"), (clerk.WorkerNo, clerk.Kind));
+            Assert.Null(await queries.GetAsync(clerk.Id, WorkerKind.Worker, false, default));
+            Assert.NotNull(await queries.GetAsync(clerk.Id, WorkerKind.Staff, false, default));
 
             // The second worker's passport is already the first one's: kept, but not as a current number.
-            var second = await queries.GetAsync(list.Items.Single(i => i.WorkerNo == "BSS000197").Id, withSalary: false, default);
+            var second = await queries.GetAsync(list.Items.Single(i => i.WorkerNo == "BSS000197").Id, WorkerKind.Worker, withSalary: false, default);
             var passport = second!.Identifiers.Single(i => i.Type == "Passport");
             Assert.False(passport.IsCurrent);
             Assert.Null(second.Summary.Salary);
 
             // Search by any identity number.
-            Assert.Equal("BSS000196", (await queries.ListAsync(new WorkerFilter("p1074379b", null, null, null, false, 1, 50), false, default)).Items.Single(i => i.Iqama == "2593574755").WorkerNo);
-            Assert.Equal(2, (await queries.ListAsync(new WorkerFilter(null, "Working", null, null, false, 1, 50), false, default)).Total);
+            Assert.Equal("BSS000196", (await queries.ListAsync(new WorkerFilter(WorkerKind.Worker, "p1074379b", null, null, false, 1, 50), false, default)).Items.Single(i => i.Iqama == "2593574755").WorkerNo);
+            Assert.Equal(1, (await queries.ListAsync(new WorkerFilter(WorkerKind.Worker, null, "Working", null, false, 1, 50), false, default)).Total);
         }
 
         // "worker" merged into "عامل" on the sync screen: the next import follows it without any CRM change.
@@ -64,7 +71,7 @@ public sealed class WorkerImportTests(TestDatabase database)
         {
             var summary = await scope.ServiceProvider.GetRequiredService<WorkerImportService>().ApplyAsync(default);
             Assert.Contains("1 nationalities or professions updated", summary, StringComparison.Ordinal);
-            var detail = await scope.ServiceProvider.GetRequiredService<WorkerQueries>().ListAsync(new WorkerFilter("BSS000196", null, null, null, false, 1, 50), false, default);
+            var detail = await scope.ServiceProvider.GetRequiredService<WorkerQueries>().ListAsync(new WorkerFilter(WorkerKind.Worker, "BSS000196", null, null, false, 1, 50), false, default);
             Assert.Equal("عامل", detail.Items.Single().ProfessionAr);
         }
 
@@ -73,7 +80,7 @@ public sealed class WorkerImportTests(TestDatabase database)
         await SyncAndImportAsync(tenantId, crm, SyncMode.Incremental);
         using (var scope = database.Scope(tenantId))
         {
-            var row = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().ListAsync(new WorkerFilter("BSS000196", null, null, null, false, 1, 50), false, default)).Items.Single();
+            var row = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().ListAsync(new WorkerFilter(WorkerKind.Worker, "BSS000196", null, null, false, 1, 50), false, default)).Items.Single();
             Assert.Equal(("Vacation", "إجازة"), (row.Placement, row.StatusAr));
         }
     }

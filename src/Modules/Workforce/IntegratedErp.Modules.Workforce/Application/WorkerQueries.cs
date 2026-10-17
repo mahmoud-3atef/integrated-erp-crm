@@ -43,7 +43,8 @@ public sealed record WorkerDetailDto(
     bool RemovedInCrm,
     IReadOnlyList<IdentifierDto> Identifiers);
 
-public sealed record WorkerFilter(string? Search, string? Placement, string? Kind, string? Sort, bool Descending, int Page, int PageSize);
+/// <summary>A list of one kind: workers and company staff are separate lists with separate permissions.</summary>
+public sealed record WorkerFilter(WorkerKind Kind, string? Search, string? Placement, string? Sort, bool Descending, int Page, int PageSize);
 
 /// <summary>The workers list (with counts by status, as the old page's cards) and one worker's file.</summary>
 internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData reference, IClock clock)
@@ -52,11 +53,7 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
     {
         ArgumentNullException.ThrowIfNull(filter);
         var names = await NamesAsync(cancellationToken).ConfigureAwait(false);
-        var query = db.Workers.AsNoTracking().Where(w => !w.RemovedInCrm);
-        if (Enum.TryParse<WorkerKind>(filter.Kind, out var kind))
-        {
-            query = query.Where(w => w.Kind == kind);
-        }
+        var query = db.Workers.AsNoTracking().Where(w => !w.RemovedInCrm && w.Kind == filter.Kind);
 
         if (filter.Search?.Trim() is { Length: > 0 } search)
         {
@@ -104,9 +101,10 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
         return new WorkerListDto(total, counts, items);
     }
 
-    public async Task<WorkerDetailDto?> GetAsync(Guid id, bool withSalary, CancellationToken cancellationToken)
+    /// <summary>One file of the given kind (a worker id does not open as staff, and the other way round).</summary>
+    public async Task<WorkerDetailDto?> GetAsync(Guid id, WorkerKind kind, bool withSalary, CancellationToken cancellationToken)
     {
-        var worker = await db.Workers.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id, cancellationToken).ConfigureAwait(false);
+        var worker = await db.Workers.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id && w.Kind == kind, cancellationToken).ConfigureAwait(false);
         if (worker is null)
         {
             return null;

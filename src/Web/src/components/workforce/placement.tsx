@@ -21,5 +21,8 @@ export const placementLook: Record<Placement, { tone: string; soft: string; icon
   Other: { tone: '#66798a', soft: '#edf2f6', icon: <HelpOutlineOutlinedIcon /> },
 };
 
-/** The six status cards of the old employees page, in its order. */
-export const placementCards: Placement[] = ['Working', 'New', 'Housing', 'Vacation', 'Suspended', 'Exited'];
+/** The status cards of each list: the old workers page's six; staff are never in workers' housing. */
+export const placementCards: Record<'Worker' | 'Staff', Placement[]> = {
+  Worker: ['Working', 'New', 'Housing', 'Vacation', 'Suspended', 'Exited'],
+  Staff: ['Working', 'New', 'Vacation', 'Suspended', 'Exited'],
+};

@@ -69,7 +69,6 @@ export interface WorkerDetail {
 export interface WorkerQuery {
   search?: string;
   placement?: Placement | '';
-  kind?: WorkerKind | '';
   sort?: 'name' | 'joined' | 'salary' | 'number';
   desc?: boolean;
   page: number;
@@ -78,15 +77,17 @@ export interface WorkerQuery {
 
 const base = '/api/v1/workforce';
 
+/** Workers and company staff are separate lists (and permissions) on the server. */
+export const kindPath = (kind: WorkerKind) => (kind === 'Staff' ? 'staff' : 'workers');
+
 export const workforceApi = {
-  workers: (q: WorkerQuery) => {
+  list: (kind: WorkerKind, q: WorkerQuery) => {
     const params = new URLSearchParams({ page: String(q.page), pageSize: String(q.pageSize) });
     if (q.search) params.set('search', q.search);
     if (q.placement) params.set('placement', q.placement);
-    if (q.kind) params.set('kind', q.kind);
     if (q.sort) params.set('sort', q.sort);
     if (q.desc) params.set('desc', 'true');
-    return request<WorkerList>('GET', `${base}/workers?${params.toString()}`);
+    return request<WorkerList>('GET', `${base}/${kindPath(kind)}?${params.toString()}`);
   },
-  worker: (id: string) => request<WorkerDetail>('GET', `${base}/workers/${id}`),
+  get: (kind: WorkerKind, id: string) => request<WorkerDetail>('GET', `${base}/${kindPath(kind)}/${id}`),
 };

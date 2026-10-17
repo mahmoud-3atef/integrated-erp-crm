@@ -1,5 +1,6 @@
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import CloudSyncOutlinedIcon from '@mui/icons-material/CloudSyncOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
@@ -54,6 +55,10 @@ const menu: MenuSection[] = [
   {
     titleKey: 'menu.workforce',
     items: [{ path: '/workforce/workers', labelKey: 'menu.workers', icon: <EngineeringOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true }],
+  },
+  {
+    titleKey: 'menu.staffAffairs',
+    items: [{ path: '/workforce/staff', labelKey: 'menu.staff', icon: <BadgeOutlinedIcon />, permission: 'workforce.staff.view', companyWide: true }],
   },
   {
     titleKey: 'menu.approvals',

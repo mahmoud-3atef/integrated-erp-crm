@@ -36,14 +36,20 @@ public sealed class WorkforceModule : IModule
 internal static class WorkforcePermissions
 {
     public const string WorkersView = "workforce.workers.view";
-    public const string SalaryView = "workforce.workers.salary";
+    public const string WorkersSalary = "workforce.workers.salary";
+    public const string StaffView = "workforce.staff.view";
+    public const string StaffSalary = "workforce.staff.salary";
 
-    private const string GroupAr = "العمالة والموظفون";
-    private const string GroupEn = "Workers and staff";
+    private const string WorkersAr = "شؤون العمالة";
+    private const string WorkersEn = "Workers";
+    private const string StaffAr = "شؤون الموظفين";
+    private const string StaffEn = "Staff";
 
     public static readonly PermissionDefinition[] All =
     [
-        new(WorkersView, GroupAr, GroupEn, "عرض العمالة والموظفين", "View workers and staff"),
-        new(SalaryView, GroupAr, GroupEn, "عرض الرواتب والبدلات", "View salaries and allowances"),
+        new(WorkersView, WorkersAr, WorkersEn, "عرض العمالة", "View workers"),
+        new(WorkersSalary, WorkersAr, WorkersEn, "عرض رواتب العمالة وبدلاتها", "View workers' salaries and allowances"),
+        new(StaffView, StaffAr, StaffEn, "عرض موظفي الشركة", "View company staff"),
+        new(StaffSalary, StaffAr, StaffEn, "عرض رواتب الموظفين وبدلاتهم", "View staff salaries and allowances"),
     ];
 }
