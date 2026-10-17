@@ -22,6 +22,12 @@ internal sealed class CommercialDbContext(DbContextOptions<CommercialDbContext> 
     public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<CommercialImport> Imports => Set<CommercialImport>();
+
+    public DbSet<PricePackage> PricePackages => Set<PricePackage>();
+
+    public DbSet<WorkerPrice> WorkerPrices => Set<WorkerPrice>();
+
+    public DbSet<PricingImport> PricingImports => Set<PricingImport>();
 }
 
 internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
@@ -92,6 +98,62 @@ internal sealed class CommercialImportConfiguration : IEntityTypeConfiguration<C
     {
         builder.ToTable("crm_import");
         builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
+        builder.HasIndex(i => i.TenantId).IsUnique();
+    }
+}
+
+internal sealed class PricePackageConfiguration : IEntityTypeConfiguration<PricePackage>
+{
+    public void Configure(EntityTypeBuilder<PricePackage> builder)
+    {
+        builder.ToTable("price_package");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.ProfessionCode).HasMaxLength(50);
+        builder.Property(p => p.NationalityCode).HasMaxLength(50);
+        builder.Property(p => p.Basis).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.TotalPrice).HasPrecision(18, 2);
+        builder.Property(p => p.ServiceFee).HasPrecision(18, 2);
+        builder.Property(p => p.Housing).HasPrecision(18, 2);
+        builder.Property(p => p.Transport).HasPrecision(18, 2);
+        builder.HasOne<Project>().WithMany().HasForeignKey(p => p.ProjectId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Contract>().WithMany().HasForeignKey(p => p.ContractId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(p => new { p.TenantId, p.ProjectId, p.ProfessionCode, p.NationalityCode }).IsUnique().HasFilter(null);
+    }
+}
+
+internal sealed class WorkerPriceConfiguration : IEntityTypeConfiguration<WorkerPrice>
+{
+    public void Configure(EntityTypeBuilder<WorkerPrice> builder)
+    {
+        builder.ToTable("worker_price");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.WorkerNo).HasMaxLength(50).IsRequired();
+        builder.Property(p => p.Name).HasMaxLength(300).IsRequired();
+        builder.Property(p => p.ProfessionCode).HasMaxLength(50);
+        builder.Property(p => p.NationalityCode).HasMaxLength(50);
+        builder.Property(p => p.Salary).HasPrecision(18, 2);
+        builder.Property(p => p.ServicePrice).HasPrecision(18, 2);
+        builder.Property(p => p.Housing).HasPrecision(18, 2);
+        builder.Property(p => p.Transport).HasPrecision(18, 2);
+        builder.Property(p => p.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.WorkStartNo).HasMaxLength(100);
+        builder.HasOne<Project>().WithMany().HasForeignKey(p => p.ProjectId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PricePackage>().WithMany().HasForeignKey(p => p.PackageId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(p => new { p.TenantId, p.WorkerCrmId }).IsUnique();
+        builder.HasIndex(p => new { p.TenantId, p.ProjectId });
+    }
+}
+
+internal sealed class PricingImportConfiguration : IEntityTypeConfiguration<PricingImport>
+{
+    public void Configure(EntityTypeBuilder<PricingImport> builder)
+    {
+        builder.ToTable("pricing_import");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Summary).HasMaxLength(500);
         builder.Property(i => i.Id).ValueGeneratedNever();
         builder.HasIndex(i => i.TenantId).IsUnique();
     }

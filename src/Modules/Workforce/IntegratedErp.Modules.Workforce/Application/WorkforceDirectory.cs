@@ -39,4 +39,11 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
             })
             .ToList();
     }
+
+    public async Task<IReadOnlyList<WorkingWorker>> WorkingAsync(CancellationToken cancellationToken) =>
+        await db.Workers.AsNoTracking()
+            .Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Placement == Placement.Working && w.ProjectCrmId != null)
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new WorkingWorker(
+                w.Id, w.CrmId, w.WorkerNo, p.NameEn, w.ProjectCrmId!.Value, w.ProfessionCode, p.NationalityCode, w.Salary.Total, w.ProjectJoinedOn))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 }

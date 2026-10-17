@@ -347,6 +347,124 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                     b.ToTable("customer", "commercial");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PricePackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Basis")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("basis");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("contract_id");
+
+                    b.Property<DateTimeOffset>("DerivedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("derived_at");
+
+                    b.Property<decimal>("Housing")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("housing");
+
+                    b.Property<string>("NationalityCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("nationality_code");
+
+                    b.Property<string>("ProfessionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("profession_code");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<decimal?>("ServiceFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("service_fee");
+
+                    b.Property<DateOnly?>("Since")
+                        .HasColumnType("date")
+                        .HasColumnName("since");
+
+                    b.Property<int>("SpecialWorkers")
+                        .HasColumnType("int")
+                        .HasColumnName("special_workers");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal?>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_price");
+
+                    b.Property<decimal>("Transport")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("transport");
+
+                    b.Property<int>("Workers")
+                        .HasColumnType("int")
+                        .HasColumnName("workers");
+
+                    b.HasKey("Id")
+                        .HasName("pk_price_package");
+
+                    b.HasIndex("ContractId")
+                        .HasDatabaseName("ix_price_package_contract_id");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_price_package_project_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_price_package_tenant_id");
+
+                    b.HasIndex("TenantId", "ProjectId", "ProfessionCode", "NationalityCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_price_package_tenant_id_project_id_profession_code_nationality_code");
+
+                    b.ToTable("price_package", "commercial");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PricingImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("DerivedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("derived_at");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pricing_import");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pricing_import_tenant_id");
+
+                    b.ToTable("pricing_import", "commercial");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -464,6 +582,115 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                     b.ToTable("project", "commercial");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.WorkerPrice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("FromWorkerDefault")
+                        .HasColumnType("bit")
+                        .HasColumnName("from_worker_default");
+
+                    b.Property<decimal>("Housing")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("housing");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NationalityCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("nationality_code");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("package_id");
+
+                    b.Property<string>("ProfessionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("profession_code");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<decimal>("Salary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("salary");
+
+                    b.Property<decimal?>("ServicePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("service_price");
+
+                    b.Property<DateOnly?>("StartedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("started_on");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("Transport")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("transport");
+
+                    b.Property<string>("WorkStartNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("work_start_no");
+
+                    b.Property<Guid>("WorkerCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_crm_id");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("WorkerNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("worker_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_worker_price");
+
+                    b.HasIndex("PackageId")
+                        .HasDatabaseName("ix_worker_price_package_id");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_worker_price_project_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_worker_price_tenant_id");
+
+                    b.HasIndex("TenantId", "ProjectId")
+                        .HasDatabaseName("ix_worker_price_tenant_id_project_id");
+
+                    b.HasIndex("TenantId", "WorkerCrmId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_worker_price_tenant_id_worker_crm_id");
+
+                    b.ToTable("worker_price", "commercial");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.Contract", b =>
                 {
                     b.HasOne("IntegratedErp.Modules.Commercial.Domain.Customer", null)
@@ -471,6 +698,23 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_contract_customers_customer_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PricePackage", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.Contract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_price_package_contract_contract_id");
+
+                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_price_package_projects_project_id");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.Project", b =>
@@ -487,6 +731,22 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_project_customer_customer_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.WorkerPrice", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.PricePackage", null)
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_worker_price_price_package_package_id");
+
+                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_worker_price_project_project_id");
                 });
 #pragma warning restore 612, 618
         }

@@ -223,7 +223,8 @@
     "staff": "Staff",
     "commercial": "Customers and contracts",
     "customers": "Customers",
-    "projects": "Projects"
+    "projects": "Projects",
+    "prices": "Price packages"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -992,10 +993,12 @@
     },
     "tabs": {
       "workers": "Workers on the project ({{count}} on the job of {{total}})",
-      "projects": "Projects ({{count}}) — workers {{workers}}"
+      "projects": "Projects ({{count}}) — workers {{workers}}",
+      "packages": "Price packages ({{count}})",
+      "prices": "Worker prices ({{count}} special or missing)"
     },
     "contractType": {
-      "CostPlus": "Lump sum",
+      "CostPlus": "Cost plus",
       "TotalCost": "Total cost",
       "TotalCostMultiSalaries": "Total cost, multiple salaries"
     },
@@ -1015,6 +1018,59 @@
     "active": "Active",
     "inactive": "Inactive",
     "projectDetails": "Project details",
-    "customerDetails": "Customer details"
+    "customerDetails": "Customer details",
+    "prices": {
+      "title": "Price packages",
+      "intro": "The price of each profession and nationality on each project's contract, and the workers at a special price or without one.",
+      "derived": "Packages are derived from the prices on the old system's open work starts: the most common price of each project, profession and nationality is the package, and a different one is a special price. On Cost Plus contracts the package is the fee above the worker's salary. They are updated with every sync; prices are changed in the old system at this stage.",
+      "search": "Search by project, customer, profession or nationality",
+      "searchWorkers": "Search by worker name or number, project, profession or nationality",
+      "count": "{{count}} packages",
+      "workersCount": "{{count}} workers",
+      "empty": "Nothing matches this filter",
+      "noPackages": "No packages on this project: no workers on the job with a recorded price.",
+      "salaryPlus": "Salary + {{fee}}",
+      "fromWorkerDefault": "The work start has no price; this is the service price recorded on the worker.",
+      "cards": {
+        "packages": "Packages",
+        "packagesFoot": "On {{count}} projects",
+        "onPackage": "Workers at the package price",
+        "onPackageFoot": "Price matches their package",
+        "special": "Special prices",
+        "specialFoot": "Differ from the package",
+        "missing": "Workers without a price",
+        "missingFoot": "Need a price before the period ledger"
+      },
+      "tabs": {
+        "packages": "Packages",
+        "exceptions": "Special and missing prices"
+      },
+      "basis": {
+        "FixedTotal": "Fixed total",
+        "SalaryPlusFee": "Salary + fee"
+      },
+      "kind": {
+        "Package": "Package price",
+        "Special": "Special price",
+        "Missing": "No price"
+      },
+      "col": {
+        "basis": "Pricing",
+        "price": "Monthly price",
+        "housing": "Housing",
+        "transport": "Transport",
+        "onPackage": "At package price",
+        "special": "Special",
+        "missing": "No price",
+        "since": "Earliest start",
+        "salary": "Total salary",
+        "servicePrice": "Total service price",
+        "packagePrice": "Package price",
+        "difference": "Difference",
+        "kind": "Status",
+        "workStart": "Work start",
+        "who": "Profession / nationality"
+      }
+    }
   }
 }

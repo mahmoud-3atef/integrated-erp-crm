@@ -1,0 +1,124 @@
+using IntegratedErp.IntegrationTests.CrmSync;
+using IntegratedErp.Modules.Commercial.Application;
+using IntegratedErp.Modules.CrmSync.Application;
+using IntegratedErp.Modules.CrmSync.Contracts;
+using IntegratedErp.Modules.CrmSync.Domain;
+using IntegratedErp.Modules.CrmSync.Infrastructure;
+using IntegratedErp.Modules.Organization.Application.Organization;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
+namespace IntegratedErp.IntegrationTests.Commercial;
+
+[Collection(DatabaseTestGroup.Name)]
+public sealed class PricingImportTests(TestDatabase database)
+{
+    private static readonly DateTime Created2025 = new(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+    private int _workerNo;
+
+    [SkippableFact]
+    public async Task Packages_are_the_most_common_price_and_the_others_are_special_prices()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var tenantId = await CreateCompanyAsync();
+        var crm = new FakeCrm();
+        var philippines = crm.Add(CrmEntities.Country, new() { ["new_name"] = "الفلبين", ["new_nameenglish"] = "Philippines" });
+        var india = crm.Add(CrmEntities.Country, new() { ["new_name"] = "الهند", ["new_nameenglish"] = "India" });
+        var labour = crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
+        var totalCost = crm.Add("new_project", new() { ["new_name"] = "مشروع التكلفة الإجمالية", ["new_code"] = "pro00300", ["new_contracttype"] = 2 }, created: Created2025);
+        var costPlus = crm.Add("new_project", new() { ["new_name"] = "مشروع كوست بلس", ["new_code"] = "pro00301", ["new_contracttype"] = 1 }, created: Created2025);
+
+        // Total Cost: three Filipinos at 3,000 (one had 2,500 on an older work start) and one at 3,500.
+        var first = Worker(crm, totalCost, philippines, labour, 1500m);
+        WorkStart(crm, first, totalCost, "2025-07-01T21:00:00Z", 2500m);
+        WorkStart(crm, first, totalCost, "2026-01-01T21:00:00Z", 3000m);
+        WorkStart(crm, Worker(crm, totalCost, philippines, labour, 1600m), totalCost, "2026-02-01T21:00:00Z", 3000m);
+        WorkStart(crm, Worker(crm, totalCost, philippines, labour, 1500m), totalCost, "2026-02-01T21:00:00Z", 3000m);
+        var special = Worker(crm, totalCost, philippines, labour, 1500m);
+        var specialStart = WorkStart(crm, special, totalCost, "2026-03-01T21:00:00Z", 3500m);
+
+        // Indians: one priced only on the worker (default service price), one with no price at all.
+        WorkStart(crm, Worker(crm, totalCost, india, labour, 1400m, defaultPrice: 2800m), totalCost, "2026-03-01T21:00:00Z", 0m);
+        Worker(crm, totalCost, india, labour, 1400m);
+
+        // Cost Plus: different salaries, the same 800 above the salary.
+        WorkStart(crm, Worker(crm, costPlus, philippines, labour, 1500m), costPlus, "2026-01-01T21:00:00Z", 2300m);
+        WorkStart(crm, Worker(crm, costPlus, philippines, labour, 1800m), costPlus, "2026-01-01T21:00:00Z", 2600m);
+
+        await SyncAndImportAsync(tenantId, crm);
+
+        using (var scope = database.Scope(tenantId))
+        {
+            var queries = scope.ServiceProvider.GetRequiredService<PricingQueries>();
+            var list = await queries.PackagesAsync(new ListFilter(null, null, null, true, 1, 50), default);
+            Assert.Equal((3, 2, 6, 1, 1), (list.Totals.Packages, list.Totals.Projects, list.Totals.OnPackage, list.Totals.Special, list.Totals.Missing));
+
+            var filipinos = list.Items.Single(p => p.ProjectName == "مشروع التكلفة الإجمالية" && p.NationalityEn == "Philippines");
+            Assert.Equal(("FixedTotal", 3000m, 3, 1), (filipinos.Basis, filipinos.TotalPrice, filipinos.Workers, filipinos.SpecialWorkers));
+            Assert.Equal(0m, filipinos.Housing);
+
+            var indians = list.Items.Single(p => p.NationalityEn == "India");
+            Assert.Equal((2800m, 1, 1), (indians.TotalPrice, indians.Workers, indians.MissingWorkers));
+
+            var plus = list.Items.Single(p => p.ProjectName == "مشروع كوست بلس");
+            Assert.Equal(("SalaryPlusFee", 800m, (decimal?)null, 2, 0), (plus.Basis, plus.ServiceFee, plus.TotalPrice, plus.Workers, plus.SpecialWorkers));
+
+            var exceptions = await queries.ExceptionsAsync(new ListFilter(null, "special", null, true, 1, 50), default);
+            var row = exceptions.Items.Single();
+            Assert.Equal((3500m, 3000m, 500m), (row.ServicePrice, row.PackagePrice, row.Difference));
+
+            var project = await queries.ProjectAsync(plus.ProjectId, default);
+            Assert.All(project!.Workers, w => Assert.Equal("Package", w.Kind));
+            Assert.Equal([2300m, 2600m], project.Workers.Select(w => w.PackagePrice!.Value).Order());
+        }
+
+        // The special price is corrected in the CRM: the next sync puts the worker on the package.
+        crm.Touch(specialStart, "new_serviceprice", 3000m);
+        await SyncAndImportAsync(tenantId, crm);
+        using (var scope = database.Scope(tenantId))
+        {
+            var list = await scope.ServiceProvider.GetRequiredService<PricingQueries>().PackagesAsync(new ListFilter(null, null, null, true, 1, 50), default);
+            Assert.Equal((3, 7, 0, 1), (list.Totals.Packages, list.Totals.OnPackage, list.Totals.Special, list.Totals.Missing));
+        }
+
+        _ = special;
+    }
+
+    private Guid Worker(FakeCrm crm, Guid project, Guid nationality, Guid profession, decimal salary, decimal? defaultPrice = null)
+    {
+        _workerNo++;
+        return crm.Add(CrmEntities.Employee, new()
+        {
+            ["new_name"] = $"WORKER {_workerNo}", ["new_empidnumber"] = $"BSS9{_workerNo:000}", ["new_idnumber"] = $"25000000{_workerNo:00}",
+            ["statuscode"] = 100000000, ["new_employeetype"] = 2, ["new_projectid"] = project.ToString(),
+            ["new_nationalityid"] = nationality.ToString(), ["new_professionid"] = profession.ToString(),
+            ["new_totalsalary"] = salary, ["new_totalservices"] = defaultPrice,
+        }, created: Created2025);
+    }
+
+    private static Guid WorkStart(FakeCrm crm, Guid worker, Guid project, string startedOn, decimal price, decimal housing = 0m) =>
+        crm.Add("new_empwork", new()
+        {
+            ["new_employeeid"] = worker.ToString(), ["new_projectid"] = project.ToString(), ["new_startdate"] = startedOn,
+            ["new_serviceprice"] = price, ["new_housing"] = housing, ["new_transportation"] = 0m, ["statecode"] = 0,
+            ["new_number"] = $"SW{Guid.NewGuid():N}"[..8],
+        }, created: Created2025);
+
+    private async Task<Guid> CreateCompanyAsync()
+    {
+        using var scope = database.Scope(system: true);
+        var code = $"pr-{Guid.NewGuid():N}"[..16];
+        return (await scope.ServiceProvider.GetRequiredService<OrganizationService>().CreateTenantAsync(code, "شركة الأسعار", "Pricing Co", default)).Value.Id;
+    }
+
+    private async Task SyncAndImportAsync(Guid tenantId, FakeCrm crm)
+    {
+        using var scope = database.Scope(tenantId, user: "crm-sync");
+        var db = scope.ServiceProvider.GetRequiredService<CrmSyncDbContext>();
+        var sync = ActivatorUtilities.CreateInstance<CrmSyncService>(scope.ServiceProvider, (ICrmSource)crm, Options.Create(new CrmSyncOptions()));
+        db.Runs.Add(new SyncRun(SyncMode.Incremental, "test", DateTimeOffset.UtcNow));
+        await db.SaveChangesAsync();
+        var consumers = scope.ServiceProvider.GetServices<ICrmStagingConsumer>().ToList();
+        Assert.True(await sync.RunNextAsync(scope.ServiceProvider.GetRequiredService<ReferenceImportService>(), consumers, default));
+    }
+}

@@ -28,5 +28,17 @@ internal static class CommercialEndpoints
         group.MapGet("/customers/{id:guid}", async (Guid id, CommercialQueries queries, CancellationToken ct) =>
                 await queries.CustomerAsync(id, ct).ConfigureAwait(false) is { } customer ? Results.Ok(customer) : Results.NotFound())
             .RequirePermission(CommercialPermissions.CustomersView, companyWide: true);
+
+        group.MapGet("/prices", async (string? search, string? status, string? sort, bool? desc, int? page, int? pageSize, PricingQueries queries, CancellationToken ct) =>
+                Results.Ok(await queries.PackagesAsync(new ListFilter(search, status, sort, desc ?? true, page ?? 1, pageSize ?? 50), ct).ConfigureAwait(false)))
+            .RequirePermission(CommercialPermissions.PricesView, companyWide: true);
+
+        group.MapGet("/prices/exceptions", async (string? search, string? status, string? sort, bool? desc, int? page, int? pageSize, PricingQueries queries, CancellationToken ct) =>
+                Results.Ok(await queries.ExceptionsAsync(new ListFilter(search, status, sort, desc ?? true, page ?? 1, pageSize ?? 50), ct).ConfigureAwait(false)))
+            .RequirePermission(CommercialPermissions.PricesView, companyWide: true);
+
+        group.MapGet("/projects/{id:guid}/prices", async (Guid id, PricingQueries queries, CancellationToken ct) =>
+                await queries.ProjectAsync(id, ct).ConfigureAwait(false) is { } prices ? Results.Ok(prices) : Results.NotFound())
+            .RequirePermission(CommercialPermissions.PricesView, companyWide: true);
     }
 }

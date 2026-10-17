@@ -19,29 +19,38 @@ import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
 import { Box, Button, Link, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { commercialApi, type ProjectDetail } from '../../api/commercial';
+import { commercialApi, type ProjectDetail, type ProjectPrices } from '../../api/commercial';
+import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, PillTabs } from '../../components/ui';
 import { placementLook } from '../../components/workforce/placement';
+import { PackagesTable, WorkerPricesTable } from './pricing';
 import { contractStatusTone, DaysLeft, useCommercialFormat } from './ProjectsPage';
 
-/** One project, as the old project page: title bar, project and contract sections, then the workers on it. */
+/** One project, as the old project page: title bar, project and contract sections, then its workers, price packages and worker prices. */
 export function ProjectDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
+  const { can } = useSession();
+  const canPrices = can('commercial.prices.view', true);
+  const [params] = useSearchParams();
   const [project, setProject] = useState<ProjectDetail | null>(null);
-  const [tab, setTab] = useState<'workers'>('workers');
+  const [prices, setPrices] = useState<ProjectPrices | null>(null);
+  const [tab, setTab] = useState<'workers' | 'packages' | 'prices'>(() => (params.get('tab') === 'packages' ? 'packages' : 'workers'));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     commercialApi.project(id!).then(setProject).catch((failure: unknown) => setError(errorKey(failure)));
-  }, [id]);
+    if (canPrices) {
+      commercialApi.projectPrices(id!).then(setPrices).catch((failure: unknown) => setError(errorKey(failure)));
+    }
+  }, [id, canPrices]);
 
   if (!project) {
     return <ErrorMessage messageKey={error} />;
@@ -143,8 +152,32 @@ export function ProjectDetailPage() {
       </Box>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
-        <PillTabs value={tab} onChange={setTab} options={[{ value: 'workers', label: t('commercial.tabs.workers', { count: working, total: project.workers.length }) }]} />
-        {project.workers.length === 0 ? (
+        <PillTabs
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'workers', label: t('commercial.tabs.workers', { count: working, total: project.workers.length }) },
+            ...(prices
+              ? [
+                  { value: 'packages' as const, label: t('commercial.tabs.packages', { count: prices.packages.length }) },
+                  { value: 'prices' as const, label: t('commercial.tabs.prices', { count: prices.workers.filter((w) => w.kind !== 'Package').length }) },
+                ]
+              : []),
+          ]}
+        />
+        {tab === 'packages' && prices ? (
+          prices.packages.length === 0 ? (
+            <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('commercial.prices.noPackages')}</Typography>
+          ) : (
+            <PackagesTable rows={prices.packages} />
+          )
+        ) : tab === 'prices' && prices ? (
+          prices.workers.length === 0 ? (
+            <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('commercial.noWorkers')}</Typography>
+          ) : (
+            <WorkerPricesTable rows={prices.workers} />
+          )
+        ) : project.workers.length === 0 ? (
           <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('commercial.noWorkers')}</Typography>
         ) : (
           <TableContainer>
@@ -185,7 +218,7 @@ export function ProjectDetailPage() {
         )}
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 2.5, fontSize: 12.5, color: tokens.gray500 }}>
           <InfoOutlinedIcon sx={{ fontSize: 16 }} />
-          {t('commercial.readOnly')}
+          {tab === 'workers' ? t('commercial.readOnly') : t('commercial.prices.derived')}
         </Stack>
       </Box>
     </Box>

@@ -19,6 +19,7 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -59,6 +60,7 @@ const menu: MenuSection[] = [
     items: [
       { path: '/commercial/customers', labelKey: 'menu.customers', icon: <BusinessOutlinedIcon />, permission: 'commercial.customers.view', companyWide: true },
       { path: '/commercial/projects', labelKey: 'menu.projects', icon: <AccountTreeOutlinedIcon />, permission: 'commercial.projects.view', companyWide: true },
+      { path: '/commercial/prices', labelKey: 'menu.prices', icon: <SellOutlinedIcon />, permission: 'commercial.prices.view', companyWide: true },
     ],
   },
   {

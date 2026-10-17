@@ -9,6 +9,7 @@ import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
 import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
 import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
 import { CustomersPage } from '../pages/commercial/CustomersPage';
+import { PricesPage } from '../pages/commercial/PricesPage';
 import { ProjectDetailPage } from '../pages/commercial/ProjectDetailPage';
 import { ProjectsPage } from '../pages/commercial/ProjectsPage';
 import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
@@ -60,6 +61,7 @@ export function App() {
                 <Route path="/commercial/projects/:id" element={<ProjectDetailPage />} />
                 <Route path="/commercial/customers" element={<CustomersPage />} />
                 <Route path="/commercial/customers/:id" element={<CustomerDetailPage />} />
+                <Route path="/commercial/prices" element={<PricesPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

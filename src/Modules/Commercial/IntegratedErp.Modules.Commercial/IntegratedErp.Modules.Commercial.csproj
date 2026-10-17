@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
     <ProjectReference Include="..\..\CrmSync\IntegratedErp.Modules.CrmSync.Contracts\IntegratedErp.Modules.CrmSync.Contracts.csproj" />
+    <ProjectReference Include="..\..\Organization\IntegratedErp.Modules.Organization.Contracts\IntegratedErp.Modules.Organization.Contracts.csproj" />
     <ProjectReference Include="..\..\Workforce\IntegratedErp.Modules.Workforce.Contracts\IntegratedErp.Modules.Workforce.Contracts.csproj" />
     <ProjectReference Include="..\IntegratedErp.Modules.Commercial.Contracts\IntegratedErp.Modules.Commercial.Contracts.csproj" />
   </ItemGroup>

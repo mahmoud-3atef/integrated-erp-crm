@@ -1,4 +1,4 @@
-// Customers, contracts and projects (src/Modules/Commercial/.../Api/CommercialEndpoints.cs). Read-only in the parallel phase.
+// Customers, contracts, projects and price packages (src/Modules/Commercial/.../Api/CommercialEndpoints.cs). Read-only in the parallel phase.
 import { request } from './auth';
 import type { Placement } from './workforce';
 
@@ -88,6 +88,71 @@ export interface CustomerDetail {
   projects: ProjectRow[];
 }
 
+export type PricingBasis = 'FixedTotal' | 'SalaryPlusFee';
+export type WorkerPriceKind = 'Package' | 'Special' | 'Missing';
+
+export interface PackageRow {
+  id: string;
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  customerName: string | null;
+  contractType: ContractType | null;
+  professionAr: string | null;
+  professionEn: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  basis: PricingBasis;
+  totalPrice: number | null;
+  serviceFee: number | null;
+  housing: number;
+  transport: number;
+  workers: number;
+  specialWorkers: number;
+  missingWorkers: number;
+  since: string | null;
+}
+
+export interface PackageList {
+  total: number;
+  totals: { packages: number; projects: number; onPackage: number; special: number; missing: number };
+  items: PackageRow[];
+}
+
+export interface WorkerPrice {
+  id: string;
+  workerId: string;
+  workerNo: string;
+  name: string;
+  projectId: string;
+  projectName: string;
+  professionAr: string | null;
+  professionEn: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  salary: number;
+  servicePrice: number | null;
+  housing: number;
+  transport: number;
+  kind: WorkerPriceKind;
+  packageId: string | null;
+  packagePrice: number | null;
+  difference: number | null;
+  workStartNo: string | null;
+  startedOn: string | null;
+  fromWorkerDefault: boolean;
+}
+
+export interface WorkerPriceList {
+  total: number;
+  items: WorkerPrice[];
+}
+
+export interface ProjectPrices {
+  packages: PackageRow[];
+  workers: WorkerPrice[];
+}
+
 export interface ListQuery {
   search?: string;
   status?: string;
@@ -112,4 +177,7 @@ export const commercialApi = {
   project: (id: string) => request<ProjectDetail>('GET', `${base}/projects/${id}`),
   customers: (q: ListQuery) => request<CustomerList>('GET', `${base}/customers?${query(q)}`),
   customer: (id: string) => request<CustomerDetail>('GET', `${base}/customers/${id}`),
+  prices: (q: ListQuery) => request<PackageList>('GET', `${base}/prices?${query(q)}`),
+  priceExceptions: (q: ListQuery) => request<WorkerPriceList>('GET', `${base}/prices/exceptions?${query(q)}`),
+  projectPrices: (id: string) => request<ProjectPrices>('GET', `${base}/projects/${id}/prices`),
 };
