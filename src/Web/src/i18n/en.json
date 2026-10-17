@@ -1158,10 +1158,10 @@
       "delayReason": "Reason for the delay",
       "delayHint": "The delivery date is more than two days ago, so a reason is required.",
       "lastComment": "Last comment",
-      "workerSearch": "Search by worker number, name or iqama number (several numbers separated by spaces or commas)",
+      "workerSearch": "Filter by worker number, name, iqama or profession (or several numbers separated by spaces or commas)",
       "noWorkersFound": "No matching workers.",
       "addPicked": "Add selected ({{count}})",
-      "availableHint": "Only available workers can be added: in housing or new, and not on an open delivery order.",
+      "availableHint": "Active workers in housing or new. Tick them by clicking the row, or select all after filtering, then \"Add selected\". Workers on another open order cannot be picked.",
       "chooseProject": "Choose the project to see each worker's package and price.",
       "missingPackage": "Some workers have no package for their profession and nationality on this project: give them a special price with a reason, or add a package in \"Price packages\".",
       "noLines": "No workers yet. Search for workers and add them in the section above.",
@@ -1219,7 +1219,17 @@
         "specialPrice": "Special price",
         "workerStart": "Worker's start"
       },
-      "breakdown": "salary {{salary}} + fee {{fee}}"
+      "breakdown": "salary {{salary}} + fee {{fee}}",
+      "available": {
+        "title": "Workers available for delivery ({{count}})",
+        "all": "All ({{count}})",
+        "housing": "In housing ({{count}})",
+        "new": "New ({{count}})",
+        "any": "All",
+        "lastProject": "Last project",
+        "added": "On this order",
+        "shown": "Showing {{shown}} of {{all}}"
+      }
     },
     "status": {
       "Draft": "Draft",

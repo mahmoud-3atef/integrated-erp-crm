@@ -113,6 +113,12 @@ export interface WorkerCard {
   projectName: string | null;
 }
 
+/** An available worker for the order form; busyOrderNo: another open order already has them. */
+export interface AvailableWorker {
+  worker: WorkerCard;
+  busyOrderNo: string | null;
+}
+
 /** A worker's price on the project from their package (the form shows it before saving). */
 export interface WorkerPriceQuote {
   worker: WorkerCard;
@@ -171,6 +177,7 @@ export const operationsApi = {
   },
   get: (id: string) => request<DeliveryDetail>('GET', `${base}/${id}`),
   projects: () => request<ProjectOption[]>('GET', `${base}/projects`),
+  availableWorkers: (orderId?: string) => request<AvailableWorker[]>('GET', `${base}/available-workers${orderId ? `?orderId=${orderId}` : ''}`),
   workers: (search: string) => request<WorkerCard[]>('GET', `${base}/workers?search=${encodeURIComponent(search)}`),
   prices: (projectId: string, workerIds: string[], on: string, orderId?: string) =>
     request<WorkerPriceQuote[]>('POST', `${base}/prices`, { projectId, workerIds, on, orderId: orderId ?? null }),

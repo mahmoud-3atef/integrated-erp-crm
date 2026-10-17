@@ -79,6 +79,12 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
         return await CardsAsync(ids, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<WorkerCard>> AvailableAsync(CancellationToken cancellationToken) =>
+        await CardsWhereAsync(
+            db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Lifecycle == Lifecycle.Active
+                && (w.Placement == Placement.Housing || w.Placement == Placement.New)),
+            cancellationToken).ConfigureAwait(false);
+
     public async Task<IReadOnlyList<WorkerCard>> CardsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);

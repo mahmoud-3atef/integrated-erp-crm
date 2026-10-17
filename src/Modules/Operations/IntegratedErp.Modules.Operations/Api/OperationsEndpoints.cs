@@ -32,6 +32,10 @@ internal static class OperationsEndpoints
                 Results.Ok(await workforce.SearchAsync(search, 30, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);
 
+        group.MapGet("/available-workers", async (Guid? orderId, DeliveryOrderService service, CancellationToken ct) =>
+                Results.Ok(await service.AvailableAsync(orderId, ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);
+
         group.MapPost("/prices", async (PriceRequest r, DeliveryOrderService service, IClock clock, CancellationToken ct) =>
                 ToHttp(await service.PriceAsync(r.ProjectId, r.WorkerIds, r.On ?? clock.Today, r.OrderId, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);

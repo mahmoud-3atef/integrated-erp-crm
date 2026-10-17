@@ -27,6 +27,9 @@ public sealed record ConfirmInput(IReadOnlyList<ConfirmLineInput> Lines);
 
 public sealed record ConfirmLineInput(Guid LineId, DateOnly StartedOn);
 
+/// <summary>An available worker for the order form; <paramref name="BusyOrderNo"/>: another open order already has them.</summary>
+public sealed record AvailableWorkerDto(WorkerCard Worker, string? BusyOrderNo);
+
 /// <summary>A worker's price on a project from the package that applies to them (for the order form).</summary>
 public sealed record WorkerPriceDto(
     WorkerCard Worker,
@@ -219,6 +222,14 @@ internal sealed class DeliveryOrderService(
         }
 
         return Result.Success<IReadOnlyList<WorkerPriceDto>>(result);
+    }
+
+    /// <summary>Every available worker, with the open order that already has them (if any), for the order form's list.</summary>
+    public async Task<IReadOnlyList<AvailableWorkerDto>> AvailableAsync(Guid? exceptOrderId, CancellationToken cancellationToken)
+    {
+        var cards = await workforce.AvailableAsync(cancellationToken).ConfigureAwait(false);
+        var busy = await BusyAsync(exceptOrderId, cards.Select(c => c.Id).ToList(), cancellationToken).ConfigureAwait(false);
+        return cards.Select(c => new AvailableWorkerDto(c, busy.GetValueOrDefault(c.Id))).ToList();
     }
 
     private async Task<Result<(DeliveryHeader Header, List<DeliveryLineValues> Lines)>> BuildAsync(Guid? orderId, DeliveryInput input, CancellationToken cancellationToken)

@@ -78,6 +78,9 @@ public interface IWorkforceDirectory
     /// </summary>
     Task<IReadOnlyList<WorkerCard>> SearchAsync(string search, int take, CancellationToken cancellationToken);
 
+    /// <summary>Every available worker: an active worker (not staff) in housing or new, who can be delivered to a project.</summary>
+    Task<IReadOnlyList<WorkerCard>> AvailableAsync(CancellationToken cancellationToken);
+
     /// <summary>The cards of these workers (unknown ids are left out).</summary>
     Task<IReadOnlyList<WorkerCard>> CardsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 

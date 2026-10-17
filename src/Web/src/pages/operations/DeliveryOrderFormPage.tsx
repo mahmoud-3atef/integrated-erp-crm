@@ -1,9 +1,6 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
-import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
-import SearchIcon from '@mui/icons-material/Search';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import {
   Alert,
@@ -12,7 +9,6 @@ import {
   Button,
   Checkbox,
   IconButton,
-  InputAdornment,
   Stack,
   Table,
   TableBody,
@@ -24,7 +20,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
@@ -33,6 +29,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { Badge } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
+import { AvailableWorkers } from './AvailableWorkers';
 import { isoToday, sar } from './delivery';
 
 interface Line {
@@ -74,9 +71,7 @@ export function DeliveryOrderFormPage() {
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [quotes, setQuotes] = useState<Record<string, WorkerPriceQuote>>({});
-  const [search, setSearch] = useState('');
-  const [found, setFound] = useState<WorkerCard[] | null>(null);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [cards, setCards] = useState<Record<string, WorkerCard>>({});
   const [orderNo, setOrderNo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,24 +119,12 @@ export function DeliveryOrderFormPage() {
 
   const project = projects.find((p) => p.id === projectId) ?? null;
   const late = deliverOn && daysAgo(deliverOn) > 2;
-  const searchWorkers = useCallback(async () => {
-    if (!search.trim()) {
-      return;
-    }
-    try {
-      setFound(await operationsApi.workers(search.trim()));
-      setPicked([]);
-    } catch (failure) {
-      setError(errorKey(failure));
-    }
-  }, [search]);
-
-  const add = (workerIds: string[]) => {
+  const add = (workers: WorkerCard[]) => {
+    setCards((current) => ({ ...current, ...Object.fromEntries(workers.map((w) => [w.id, w])) }));
     setLines((current) => [
       ...current,
-      ...workerIds.filter((w) => !current.some((l) => l.workerId === w)).map((w) => ({ workerId: w, startOn: '', special: false, specialPrice: '', specialReason: '' })),
+      ...workers.filter((w) => !current.some((l) => l.workerId === w.id)).map((w) => ({ workerId: w.id, startOn: '', special: false, specialPrice: '', specialReason: '' })),
     ]);
-    setPicked([]);
   };
   const change = (workerId: string, patch: Partial<Line>) => setLines((current) => current.map((l) => (l.workerId === workerId ? { ...l, ...patch } : l)));
 
@@ -258,83 +241,7 @@ export function DeliveryOrderFormPage() {
         </Box>
       </Section>
 
-      <Section title={t('operations.delivery.sections.add')} icon={<GroupAddOutlinedIcon />}>
-        <Box component="form" sx={{ display: 'flex', gap: 1, maxWidth: 720 }} onSubmit={(e) => (e.preventDefault(), void searchWorkers())}>
-          <TextField
-            size="small"
-            fullWidth
-            placeholder={t('operations.delivery.workerSearch')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
-          />
-          <Button type="submit" variant="contained">
-            {t('workforce.searchButton')}
-          </Button>
-        </Box>
-        {found && (
-          <Box sx={{ mt: 2 }}>
-            {found.length === 0 ? (
-              <Typography sx={{ color: tokens.gray500, py: 2 }}>{t('operations.delivery.noWorkersFound')}</Typography>
-            ) : (
-              <>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell padding="checkbox" />
-                        <TableCell>{t('workforce.col.name')}</TableCell>
-                        <TableCell>{t('workforce.col.number')}</TableCell>
-                        <TableCell>{t('operations.delivery.col.iqama')}</TableCell>
-                        <TableCell>{t('commercial.prices.col.who')}</TableCell>
-                        <TableCell>{t('workforce.col.status')}</TableCell>
-                        <TableCell>{t('commercial.col.project')}</TableCell>
-                        <TableCell align="center">{t('commercial.prices.col.salary')}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {found.map((w) => {
-                        const onOrder = lines.some((l) => l.workerId === w.id);
-                        return (
-                          <TableRow key={w.id} sx={{ opacity: w.available ? 1 : 0.55 }}>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                disabled={!w.available || onOrder}
-                                checked={onOrder || picked.includes(w.id)}
-                                onChange={(e) => setPicked((p) => (e.target.checked ? [...p, w.id] : p.filter((x) => x !== w.id)))}
-                              />
-                            </TableCell>
-                            <TableCell dir="ltr" sx={{ fontWeight: 700, color: tokens.navy800, textAlign: 'start' }}>
-                              {w.name}
-                            </TableCell>
-                            <TableCell dir="ltr">{w.workerNo}</TableCell>
-                            <TableCell dir="ltr">{w.iqamaNo ?? '—'}</TableCell>
-                            <TableCell>
-                              {(ar ? w.professionAr : w.professionEn) ?? '—'}
-                              <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Badge tone={w.available ? 'success' : 'neutral'}>{(ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`)}</Badge>
-                            </TableCell>
-                            <TableCell>{w.projectName ?? '—'}</TableCell>
-                            <TableCell align="center">{sar(w.totalSalary)}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mt: 1.5 }}>
-                  <Button variant="contained" startIcon={<PersonAddAlt1OutlinedIcon />} disabled={picked.length === 0} onClick={() => add(picked)}>
-                    {t('operations.delivery.addPicked', { count: picked.length })}
-                  </Button>
-                  <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('operations.delivery.availableHint')}</Typography>
-                </Stack>
-              </>
-            )}
-          </Box>
-        )}
-      </Section>
+      <AvailableWorkers orderId={id} onOrder={lines.map((l) => l.workerId)} onAdd={add} />
 
       <Section
         title={t('operations.delivery.sections.workers', { count: lines.length })}
@@ -368,7 +275,7 @@ export function DeliveryOrderFormPage() {
               <TableBody>
                 {lines.map((line) => {
                   const q = quotes[line.workerId];
-                  const w = q?.worker;
+                  const w = q?.worker ?? cards[line.workerId];
                   return (
                     <TableRow key={line.workerId}>
                       <TableCell sx={{ minWidth: 170 }}>
