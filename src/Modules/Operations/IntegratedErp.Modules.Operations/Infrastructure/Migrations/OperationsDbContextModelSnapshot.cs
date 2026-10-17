@@ -584,6 +584,10 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                         .HasColumnType("nvarchar(1000)")
                         .HasColumnName("reason_notes");
 
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("room_id");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(10)

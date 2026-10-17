@@ -23,6 +23,7 @@ import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
 import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
+import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -74,6 +75,10 @@ const menu: MenuSection[] = [
       { path: '/operations/return-orders', labelKey: 'menu.returnOrders', icon: <KeyboardReturnOutlinedIcon />, permission: 'operations.return.view', companyWide: true },
       { path: '/operations/transfer-orders', labelKey: 'menu.transferOrders', icon: <SwapHorizIcon />, permission: 'operations.transfer.view', companyWide: true },
     ],
+  },
+  {
+    titleKey: 'menu.housingSection',
+    items: [{ path: '/housing', labelKey: 'menu.housing', icon: <ApartmentOutlinedIcon />, permission: 'housing.view', companyWide: true }],
   },
   {
     titleKey: 'menu.workforce',

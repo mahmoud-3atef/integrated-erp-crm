@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Time;
+using IntegratedErp.Modules.Housing.Contracts;
 using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.Modules.Operations.Infrastructure;
 using IntegratedErp.Modules.Workflow.Contracts;
@@ -16,7 +17,7 @@ namespace IntegratedErp.Modules.Operations.Application;
 /// wish ⇒ the operations manager approves ⇒ completed: the worker's work period closes on the arrival day and a housing
 /// period opens in the period ledger.
 /// </summary>
-internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IHousingRooms housing, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "operations.return_order";
     public const string SourceType = "return_order";
@@ -208,6 +209,18 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
                         order.ReturnForFix(opened.Error.Code == "conflict.period_overlap"
                             ? "لم يكتمل التسكين: تاريخ الوصول يتداخل مع فترة أخرى في سجل فترات العامل. عدّل التاريخ وأعد الحفظ."
                             : $"لم يكتمل التسكين: {opened.Error.Message}");
+                    }
+                    else if (order.RoomId is { } roomId)
+                    {
+                        // The worker is in housing now: into the chosen room from the arrival day.
+                        var housed = await housing.AssignAsync(
+                            new RoomAssignRequest(order.WorkerId.Value, roomId, order.ArrivedOn.Value, SourceType, order.OrderNo), cancellationToken).ConfigureAwait(false);
+                        if (housed.IsFailure)
+                        {
+                            order.RoomNotAssigned(housed.Error.Code == "conflict.housing_room_full"
+                                ? "لم يُسكَّن في الغرفة المختارة لامتلائها؛ سكّنه من شاشة المساكن."
+                                : "لم يُسكَّن في الغرفة المختارة؛ سكّنه من شاشة المساكن.");
+                        }
                     }
                 }
 

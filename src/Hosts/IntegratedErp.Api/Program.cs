@@ -7,6 +7,7 @@ using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Web;
 using IntegratedErp.Modules.Commercial;
+using IntegratedErp.Modules.Housing;
 using IntegratedErp.Modules.Operations;
 using IntegratedErp.Modules.CrmSync;
 using IntegratedErp.Modules.Documents;
@@ -49,7 +50,8 @@ builder.Services.AddModules(
     new CrmSyncModule(),
     new WorkforceModule(),
     new CommercialModule(),
-    new OperationsModule());
+    new OperationsModule(),
+    new HousingModule());
 
 // Development only: local test accounts (dev.*) for exercising the sign-in UI without real passwords.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Identity:DevDirectory:Enabled", false))

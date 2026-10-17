@@ -50,7 +50,8 @@ public sealed record ReturnDetailDto(
     bool AwaitingApproval,
     bool CanEdit,
     bool CanSubmit,
-    bool CanCancel);
+    bool CanCancel,
+    Guid? RoomId = null);
 
 internal sealed class ReturnOrderQueries(OperationsDbContext db, IReferenceData reference, IApprovalService approvals, IPermissionService permissions)
 {
@@ -121,7 +122,8 @@ internal sealed class ReturnOrderQueries(OperationsDbContext db, IReferenceData 
             o.ReasonNotes, o.DelayReason, o.Notes, o.LastComment, o.CompletedAt, o.CompletedByName, approval, o.AwaitingApproval,
             CanEdit: canCreate && o.IsEditable,
             CanSubmit: canCreate && o.IsEditable && !o.AwaitingApproval,
-            CanCancel: canCreate && o.IsEditable && !o.AwaitingApproval);
+            CanCancel: canCreate && o.IsEditable && !o.AwaitingApproval,
+            RoomId: o.RoomId);
     }
 
     private static ReturnRowDto Row(ReturnOrder o) => new(

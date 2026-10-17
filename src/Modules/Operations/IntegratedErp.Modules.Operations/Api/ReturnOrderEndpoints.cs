@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Security;
+using IntegratedErp.Modules.Housing.Contracts;
 using IntegratedErp.Modules.Operations.Application;
 using IntegratedErp.SharedKernel;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +25,10 @@ internal static class ReturnOrderEndpoints
 
         group.MapGet("/on-job-workers", async (Guid? orderId, ReturnOrderService service, CancellationToken ct) =>
                 Results.Ok(await service.OnJobAsync(orderId, ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.ReturnCreate, companyWide: true);
+
+        group.MapGet("/rooms", async (IHousingRooms housing, CancellationToken ct) =>
+                Results.Ok(await housing.RoomsAsync(ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.ReturnCreate, companyWide: true);
 
         group.MapPost("/", async (ReturnInput input, ReturnOrderService service, CancellationToken ct) =>

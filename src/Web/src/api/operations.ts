@@ -1,6 +1,7 @@
 // Delivery orders (src/Modules/Operations/.../Api/OperationsEndpoints.cs): written here, or copied from the old system.
 import { request } from './auth';
 import type { ContractType } from './commercial';
+import type { RoomOption } from './housing';
 import type { ApprovalStatus } from './workflow';
 import type { Placement } from './workforce';
 
@@ -246,6 +247,7 @@ export interface ReturnDetail {
   canEdit: boolean;
   canSubmit: boolean;
   canCancel: boolean;
+  roomId: string | null;
 }
 
 export interface ReturnInput {
@@ -257,6 +259,7 @@ export interface ReturnInput {
   housingName: string | null;
   delayReason: string | null;
   notes: string | null;
+  roomId: string | null;
 }
 
 const returnsBase = '/api/v1/operations/return-orders';
@@ -272,6 +275,7 @@ export const returnsApi = {
   },
   get: (id: string) => request<ReturnDetail>('GET', `${returnsBase}/${id}`),
   onJobWorkers: (orderId?: string) => request<AvailableWorker[]>('GET', `${returnsBase}/on-job-workers${orderId ? `?orderId=${orderId}` : ''}`),
+  rooms: () => request<RoomOption[]>('GET', `${returnsBase}/rooms`),
   create: (input: ReturnInput) => request<SavedOrder>('POST', returnsBase, input),
   update: (id: string, input: ReturnInput) => request<SavedOrder>('PUT', `${returnsBase}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${returnsBase}/${id}/submit`),

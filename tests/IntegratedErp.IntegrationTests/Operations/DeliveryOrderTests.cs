@@ -275,7 +275,7 @@ public sealed class DeliveryOrderTests(TestDatabase database)
         }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
-        Guid orderId, workerId;
+        Guid orderId, workerId, roomId;
         using (var scope = database.Scope(tenantId, user: creator.ToString()))
         {
             var queries = scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>();
@@ -289,7 +289,10 @@ public sealed class DeliveryOrderTests(TestDatabase database)
 
             Assert.Equal("validation.return_reason_notes", (await service.CreateAsync(new ReturnInput(workerId, today, "Other", null, true, null, null, null), default)).Error.Code);
             Assert.Equal("validation.return_future", (await service.CreateAsync(new ReturnInput(workerId, today.AddDays(1), "Sick", null, true, null, null, null), default)).Error.Code);
-            var saved = await service.CreateAsync(new ReturnInput(workerId, today, "WorkerRefuses", null, true, "سكن الرجال-جدة", null, null), default);
+            var housing = scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Housing.Application.HousingService>();
+            var building = (await housing.CreateBuildingAsync(new IntegratedErp.Modules.Housing.Application.BuildingInput("سكن الرجال-جدة", "Company", "جدة", null, null, null), default)).Value;
+            roomId = (await housing.CreateRoomAsync(building, new IntegratedErp.Modules.Housing.Application.RoomInput("FLAT NO. 2", null, 8, null), default)).Value;
+            var saved = await service.CreateAsync(new ReturnInput(workerId, today, "WorkerRefuses", null, true, null, null, null, roomId), default);
             Assert.True(saved.IsSuccess, saved.IsFailure ? saved.Error.Code : null);
             Assert.Null(saved.Value.ApprovalError);
             orderId = saved.Value.Id;
@@ -332,6 +335,11 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             var file = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().GetAsync(workerId, WorkerKind.Worker, false, default))!.Summary;
             Assert.Equal(("Housing", true, "على رأس العمل"), (file.Placement, file.FromLedger, file.CrmStatusAr));
             Assert.Contains(await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().AvailableAsync(default), w => w.Id == workerId);
+
+            // In the room chosen on the order, from the arrival day.
+            Assert.Equal("سكن الرجال-جدة — FLAT NO. 2", detail.Summary.HousingName);
+            var stay = (await scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Housing.Application.HousingQueries>().StaysAsync(workerId, default)).Single();
+            Assert.Equal((roomId, today, (DateOnly?)null, detail.Summary.OrderNo), (stay.RoomId, stay.StartsOn, stay.EndsOn, stay.SourceNo));
             Assert.DoesNotContain(await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().OnJobAsync(default), w => w.Id == workerId);
         }
     }

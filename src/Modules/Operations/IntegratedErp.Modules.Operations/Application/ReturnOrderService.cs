@@ -2,6 +2,7 @@ using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Commercial.Contracts;
+using IntegratedErp.Modules.Housing.Contracts;
 using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.Modules.Operations.Infrastructure;
 using IntegratedErp.Modules.Workflow.Contracts;
@@ -19,7 +20,8 @@ public sealed record ReturnInput(
     bool StopSalary,
     string? HousingName,
     string? DelayReason,
-    string? Notes);
+    string? Notes,
+    Guid? RoomId = null);
 
 /// <summary>A worker on the job for the return form, with the open return order that already has them (if any).</summary>
 public sealed record OnJobWorkerDto(WorkerCard Worker, string? BusyOrderNo);
@@ -33,6 +35,7 @@ internal sealed class ReturnOrderService(
     IWorkforceDirectory workforce,
     IProjectDirectory projects,
     IApprovalService approvals,
+    IHousingRooms housing,
     NumberSequenceService numbering,
     ICurrentUser user,
     IClock clock)
@@ -187,7 +190,19 @@ internal sealed class ReturnOrderService(
         var worker = new ReturnWorker(
             card.Id, card.CrmId, card.WorkerNo, card.Name, card.ProfessionCode, card.NationalityCode, card.IqamaNo,
             project?.Id, card.ProjectCrmId, project?.Name ?? card.ProjectName, card.ProjectJoinedOn);
-        return Result.Success((worker, new ReturnDetails(input.ArrivedOn, input.Reason, input.ReasonNotes, input.StopSalary, input.HousingName, input.DelayReason, input.Notes)));
+        var housingName = input.HousingName;
+        if (input.RoomId is { } roomId)
+        {
+            var room = await housing.FindAsync(roomId, cancellationToken).ConfigureAwait(false);
+            if (room is null || !room.IsActive)
+            {
+                return Fail(Errors.Room);
+            }
+
+            housingName = room.Label;
+        }
+
+        return Result.Success((worker, new ReturnDetails(input.ArrivedOn, input.Reason, input.ReasonNotes, input.StopSalary, housingName, input.DelayReason, input.Notes, input.RoomId)));
 
         static Result<(ReturnWorker, ReturnDetails)> Fail(Error error) => Result.Failure<(ReturnWorker, ReturnDetails)>(error);
     }
@@ -199,6 +214,7 @@ internal sealed class ReturnOrderService(
     private static class Errors
     {
         public static readonly Error Reason = Error.Validation("return_reason", "Choose the reason for the return.");
+        public static readonly Error Room = Error.Validation("return_room", "Choose a room in use.");
         public static readonly Error ReasonNotes = Error.Validation("return_reason_notes", "Describe the reason.");
         public static readonly Error Future = Error.Validation("return_future", "The arrival date cannot be in the future.");
         public static readonly Error DelayReason = Error.Validation("return_delay_reason", "The arrival date is more than two days ago: write the reason for the delay.");

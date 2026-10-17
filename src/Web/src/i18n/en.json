@@ -250,7 +250,24 @@
     "validation_transfer_no_workers": "Add at least one worker.",
     "conflict_transfer_not_editable": "Only an order under preparation or returned can be changed.",
     "conflict_transfer_not_cancelable": "This order can no longer be canceled.",
-    "not_found_transfer_order": "Transfer order not found."
+    "not_found_transfer_order": "Transfer order not found.",
+    "not_found_building": "Building not found.",
+    "not_found_room": "Room not found.",
+    "validation_housing_building_name": "Enter the building's name.",
+    "validation_housing_building_project": "Choose the project whose housing this is.",
+    "validation_housing_building_type": "Choose the housing type.",
+    "conflict_housing_building_duplicate": "There is already a building with this name.",
+    "validation_housing_room_number": "Enter the room's number.",
+    "conflict_housing_room_duplicate": "The building already has a room with this number.",
+    "validation_housing_room_capacity": "The capacity is between 1 and 500.",
+    "validation_housing_room_capacity_below": "The capacity cannot be less than the occupants now.",
+    "conflict_housing_room_occupied": "Move the occupants out first.",
+    "validation_housing_room_inactive": "The room or its building is not in use.",
+    "conflict_housing_room_full": "The room is full.",
+    "validation_housing_worker_not_in_housing": "The worker is not in housing.",
+    "validation_housing_before_stay": "The date is before the worker's stay in their current room.",
+    "validation_housing_same_room": "The worker is already in this room.",
+    "validation_return_room": "Choose a room in use."
   },
   "menu": {
     "label": "Main menu",
@@ -285,7 +302,9 @@
     "returnOrders": "Return orders",
     "historyIssues": "Period ledger exceptions",
     "invoiceCheck": "Attendance vs invoices",
-    "transferOrders": "Transfer orders"
+    "transferOrders": "Transfer orders",
+    "housingSection": "Housing",
+    "housing": "Buildings and rooms"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1478,7 +1497,9 @@
         "100000007": "Sent to the investigation team",
         "100000008": "Sent to the project supervisor",
         "100000005": "The worker didn't arrive in housing"
-      }
+      },
+      "room": "Room in housing",
+      "roomHint": "The worker is put in it from the arrival date when the order completes (optional)."
     },
     "transfer": {
       "title": "Project transfer orders",
@@ -1536,6 +1557,70 @@
         "Canceled": "Canceled"
       },
       "orderStatus": "Transfer order status"
+    }
+  },
+  "housing": {
+    "title": "Housing",
+    "intro": "The housing buildings and their rooms with each room's capacity, who lives in each room, and the workers in housing not yet in a room.",
+    "newBuilding": "New building",
+    "editBuilding": "Edit building",
+    "buildingName": "Building name",
+    "type": "Housing type",
+    "types": {
+      "Company": "Company housing",
+      "Rented": "Rented",
+      "Project": "Project housing"
+    },
+    "city": "City",
+    "address": "Address",
+    "inactive": "Not in use",
+    "activate": "Put back in use",
+    "deactivate": "Take out of use",
+    "newRoom": "New room",
+    "editRoom": "Edit room {{no}}",
+    "roomNo": "Room or flat number",
+    "roomNoHint": "e.g. ROOM 10 or FLAT NO. 2",
+    "floor": "Floor",
+    "floorN": "Floor {{floor}}",
+    "capacity": "Capacity (beds)",
+    "capacityHint": "{{count}} live in it now; the capacity cannot be lower.",
+    "room": "Room",
+    "occupancy": "{{occupied}} of {{capacity}} — {{free}} free",
+    "full": "Full",
+    "freeCount": "{{count}} free",
+    "since": "since {{date}}",
+    "addOccupant": "Add an occupant",
+    "assign": "House",
+    "assignWorker": "House {{name}}",
+    "assignRoom": "Add an occupant to {{room}}",
+    "workerWithoutRoom": "Worker",
+    "workerWithoutRoomHint": "Workers in housing (or new) without a room: {{count}}",
+    "from": "From",
+    "move": "Move to another room",
+    "leave": "Take out of the room",
+    "leaveTitle": "Take {{name}} out of the room",
+    "leaveHint": "Takes the worker out of their room (e.g. moved to a hospital); they stay in housing without a room. Leaving housing itself (delivered to a project) frees the room by itself.",
+    "leaveOn": "Out on",
+    "noBuildings": "No buildings yet: add the housing buildings and their rooms.",
+    "noRooms": "This building has no rooms yet.",
+    "searchWorker": "Search by worker number, name or iqama",
+    "withoutHint": "A room frees itself when its worker leaves housing.",
+    "allHoused": "Every worker in housing is in a room.",
+    "tabs": {
+      "buildings": "Buildings ({{count}})",
+      "without": "Without a room ({{count}})"
+    },
+    "cards": {
+      "buildings": "Buildings",
+      "rooms": "{{count}} rooms",
+      "capacity": "Capacity",
+      "capacityFoot": "Beds of the rooms in use",
+      "occupied": "Occupied",
+      "occupiedFoot": "Workers in rooms now",
+      "free": "Free",
+      "freeFoot": "Empty beds",
+      "withoutRoom": "Without a room",
+      "withoutRoomFoot": "of {{count}} in housing"
     }
   }
 }

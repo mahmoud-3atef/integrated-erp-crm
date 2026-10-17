@@ -12,6 +12,8 @@
     <Project Path="src/Modules/Commercial/IntegratedErp.Modules.Commercial/IntegratedErp.Modules.Commercial.csproj" />
     <Project Path="src/Modules/Operations/IntegratedErp.Modules.Operations.Contracts/IntegratedErp.Modules.Operations.Contracts.csproj" />
     <Project Path="src/Modules/Operations/IntegratedErp.Modules.Operations/IntegratedErp.Modules.Operations.csproj" />
+    <Project Path="src/Modules/Housing/IntegratedErp.Modules.Housing.Contracts/IntegratedErp.Modules.Housing.Contracts.csproj" />
+    <Project Path="src/Modules/Housing/IntegratedErp.Modules.Housing/IntegratedErp.Modules.Housing.csproj" />
   </Folder>
   <Folder Name="/src/Modules/CrmSync/">
     <Project Path="src/Modules/CrmSync/IntegratedErp.Modules.CrmSync.Contracts/IntegratedErp.Modules.CrmSync.Contracts.csproj" />

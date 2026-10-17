@@ -4,6 +4,7 @@ import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlin
 import SearchIcon from '@mui/icons-material/Search';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import {
+  Autocomplete,
   Alert,
   Box,
   Button,
@@ -27,6 +28,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
+import type { RoomOption } from '../../api/housing';
 import { returnReasons, returnsApi, type AvailableWorker, type ReturnInput } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
@@ -63,6 +65,8 @@ export function ReturnOrderFormPage() {
   const [reasonNotes, setReasonNotes] = useState('');
   const [stopSalary, setStopSalary] = useState(true);
   const [housingName, setHousingName] = useState('');
+  const [rooms, setRooms] = useState<RoomOption[] | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
   const [delayReason, setDelayReason] = useState('');
   const [notes, setNotes] = useState('');
   const [orderNo, setOrderNo] = useState<string | null>(null);
@@ -71,6 +75,7 @@ export function ReturnOrderFormPage() {
 
   useEffect(() => {
     returnsApi.onJobWorkers(id).then(setWorkers).catch((failure: unknown) => setError(errorKey(failure)));
+    returnsApi.rooms().then(setRooms).catch(() => setRooms([]));
     if (id) {
       returnsApi
         .get(id)
@@ -82,6 +87,7 @@ export function ReturnOrderFormPage() {
           setReasonNotes(o.reasonNotes ?? '');
           setStopSalary(o.summary.stopSalary);
           setHousingName(o.summary.housingName ?? '');
+          setRoomId(o.roomId);
           setDelayReason(o.delayReason ?? '');
           setNotes(o.notes ?? '');
         })
@@ -110,7 +116,8 @@ export function ReturnOrderFormPage() {
       reason,
       reasonNotes: reasonNotes.trim() || null,
       stopSalary,
-      housingName: housingName.trim() || null,
+      housingName: roomId ? null : housingName.trim() || null,
+      roomId,
       delayReason: late ? delayReason.trim() || null : null,
       notes: notes.trim() || null,
     };
@@ -246,7 +253,30 @@ export function ReturnOrderFormPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField label={t('operations.return.col.housing')} value={housingName} onChange={(e) => setHousingName(e.target.value)} helperText={t('operations.return.housingHint')} slotProps={{ htmlInput: { maxLength: 200 } }} />
+          {rooms && rooms.length > 0 ? (
+            <Autocomplete
+              options={rooms}
+              value={rooms.find((r) => r.id === roomId) ?? null}
+              onChange={(_, v) => setRoomId(v?.id ?? null)}
+              getOptionLabel={(r) => r.label}
+              getOptionDisabled={(r) => r.free === 0 && r.id !== roomId}
+              groupBy={(r) => r.buildingName}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              renderOption={(props, r) => (
+                <li {...props} key={r.id}>
+                  <Stack direction="row" sx={{ width: '100%', justifyContent: 'space-between', gap: 2 }}>
+                    <span>{r.roomNo}</span>
+                    <Typography component="span" sx={{ fontSize: 12.5, color: r.free === 0 ? tokens.danger : tokens.gray500 }}>
+                      {r.free === 0 ? t('housing.full') : t('housing.freeCount', { count: r.free })}
+                    </Typography>
+                  </Stack>
+                </li>
+              )}
+              renderInput={(params) => <TextField {...params} label={t('operations.return.room')} helperText={t('operations.return.roomHint')} />}
+            />
+          ) : (
+            <TextField label={t('operations.return.col.housing')} value={housingName} onChange={(e) => setHousingName(e.target.value)} helperText={t('operations.return.housingHint')} slotProps={{ htmlInput: { maxLength: 200 } }} />
+          )}
           <TextField
             sx={{ gridColumn: { md: '1 / -1' } }}
             label={t('operations.return.reasonNotes')}

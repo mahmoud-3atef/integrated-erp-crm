@@ -250,7 +250,24 @@
     "validation_transfer_no_workers": "أضف عاملًا واحدًا على الأقل.",
     "conflict_transfer_not_editable": "لا يمكن تعديل الأمر إلا وهو قيد الإعداد أو مُعاد للتعديل.",
     "conflict_transfer_not_cancelable": "لا يمكن إلغاء هذا الأمر الآن.",
-    "not_found_transfer_order": "أمر النقل غير موجود."
+    "not_found_transfer_order": "أمر النقل غير موجود.",
+    "not_found_building": "المبنى غير موجود.",
+    "not_found_room": "الغرفة غير موجودة.",
+    "validation_housing_building_name": "اكتب اسم المبنى.",
+    "validation_housing_building_project": "اختر المشروع الذي يتبعه السكن.",
+    "validation_housing_building_type": "اختر نوع السكن.",
+    "conflict_housing_building_duplicate": "يوجد مبنى بهذا الاسم.",
+    "validation_housing_room_number": "اكتب رقم الغرفة.",
+    "conflict_housing_room_duplicate": "في المبنى غرفة بهذا الرقم.",
+    "validation_housing_room_capacity": "السعة بين 1 و500.",
+    "validation_housing_room_capacity_below": "لا تقل السعة عن عدد الساكنين الآن.",
+    "conflict_housing_room_occupied": "أخرِج الساكنين أولًا.",
+    "validation_housing_room_inactive": "الغرفة أو مبناها غير مستخدم.",
+    "conflict_housing_room_full": "الغرفة ممتلئة.",
+    "validation_housing_worker_not_in_housing": "العامل ليس في السكن.",
+    "validation_housing_before_stay": "التاريخ قبل دخول العامل غرفته الحالية.",
+    "validation_housing_same_room": "العامل في هذه الغرفة بالفعل.",
+    "validation_return_room": "اختر غرفة مستخدمة."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -285,7 +302,9 @@
     "returnOrders": "أوامر الرجيع",
     "historyIssues": "استثناءات سجل الفترات",
     "invoiceCheck": "مطابقة الحضور بالفواتير",
-    "transferOrders": "أوامر النقل"
+    "transferOrders": "أوامر النقل",
+    "housingSection": "السكن",
+    "housing": "المساكن"
   },
   "roles": {
     "title": "الأدوار والصلاحيات",
@@ -1478,7 +1497,9 @@
         "100000007": "مرسل لفريق التحقيق",
         "100000008": "مرسل لمشرف المشروع",
         "100000005": "العامل لم يصل إلى السكن"
-      }
+      },
+      "room": "الغرفة في السكن",
+      "roomHint": "يُسكَّن العامل فيها من تاريخ الوصول عند اكتمال الأمر (اختياري)."
     },
     "transfer": {
       "title": "أوامر النقل بين المشاريع",
@@ -1536,6 +1557,70 @@
         "Canceled": "ملغى"
       },
       "orderStatus": "حالة أمر النقل"
+    }
+  },
+  "housing": {
+    "title": "المساكن",
+    "intro": "مباني السكن وغرفها وسعة كل غرفة، ومن يسكن في كل غرفة، والعمالة في السكن التي لم تُسكَّن في غرفة بعد.",
+    "newBuilding": "مبنى جديد",
+    "editBuilding": "تعديل المبنى",
+    "buildingName": "اسم المبنى",
+    "type": "نوع السكن",
+    "types": {
+      "Company": "سكن الشركة",
+      "Rented": "مستأجر",
+      "Project": "سكن مشروع"
+    },
+    "city": "المدينة",
+    "address": "العنوان",
+    "inactive": "غير مستخدم",
+    "activate": "إعادة للاستخدام",
+    "deactivate": "إيقاف الاستخدام",
+    "newRoom": "غرفة جديدة",
+    "editRoom": "تعديل الغرفة {{no}}",
+    "roomNo": "رقم الغرفة أو الشقة",
+    "roomNoHint": "مثل: ROOM 10 أو FLAT NO. 2",
+    "floor": "الدور",
+    "floorN": "الدور {{floor}}",
+    "capacity": "السعة (عدد الأسرّة)",
+    "capacityHint": "فيها الآن {{count}}؛ لا تقل السعة عنهم.",
+    "room": "الغرفة",
+    "occupancy": "{{occupied}} من {{capacity}} — متاح {{free}}",
+    "full": "ممتلئة",
+    "freeCount": "متاح {{count}}",
+    "since": "منذ {{date}}",
+    "addOccupant": "إضافة ساكن",
+    "assign": "تسكين",
+    "assignWorker": "تسكين {{name}}",
+    "assignRoom": "إضافة ساكن إلى {{room}}",
+    "workerWithoutRoom": "العامل",
+    "workerWithoutRoomHint": "العمالة في السكن (أو الجديدة) التي ليست في غرفة: {{count}}",
+    "from": "من تاريخ",
+    "move": "نقل إلى غرفة أخرى",
+    "leave": "إخراج من الغرفة",
+    "leaveTitle": "إخراج {{name}} من الغرفة",
+    "leaveHint": "يُخرج العامل من غرفته (مثل نقله إلى مستشفى) ويبقى في السكن بلا غرفة. الخروج من السكن نفسه (تسليم لمشروع) يُفرغ الغرفة تلقائيًا.",
+    "leaveOn": "تاريخ الخروج",
+    "noBuildings": "لا توجد مبانٍ بعد: أضف مباني السكن وغرفها.",
+    "noRooms": "لا توجد غرف في هذا المبنى بعد.",
+    "searchWorker": "ابحث برقم العامل أو اسمه أو الإقامة",
+    "withoutHint": "تُفرغ الغرفة تلقائيًا عند خروج العامل من السكن.",
+    "allHoused": "كل العمالة في السكن مُسكَّنة في غرف.",
+    "tabs": {
+      "buildings": "المباني ({{count}})",
+      "without": "بلا غرفة ({{count}})"
+    },
+    "cards": {
+      "buildings": "المباني",
+      "rooms": "{{count}} غرفة",
+      "capacity": "السعة",
+      "capacityFoot": "أسرّة الغرف المستخدمة",
+      "occupied": "المشغول",
+      "occupiedFoot": "عمالة في غرف الآن",
+      "free": "المتاح",
+      "freeFoot": "أسرّة شاغرة",
+      "withoutRoom": "بلا غرفة",
+      "withoutRoomFoot": "من {{count}} في السكن"
     }
   }
 }

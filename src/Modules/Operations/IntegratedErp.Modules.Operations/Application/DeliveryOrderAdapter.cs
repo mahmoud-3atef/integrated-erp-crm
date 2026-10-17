@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Time;
+using IntegratedErp.Modules.Housing.Contracts;
 using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.Modules.Operations.Infrastructure;
 using IntegratedErp.Modules.Workflow.Contracts;
@@ -16,7 +17,7 @@ namespace IntegratedErp.Modules.Operations.Application;
 /// default process (the creator confirms ⇒ sent to the operations manager ⇒ delivered), and the end of the approval.
 /// When the last stage approves, the order is delivered and every worker's work period opens in the period ledger.
 /// </summary>
-internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IHousingRooms housing, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "operations.delivery_order";
     public const string SourceType = "delivery_order";
@@ -212,6 +213,14 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
             order.ReturnForFix(opened.Error.Code == "conflict.period_overlap"
                 ? "لم يكتمل التسليم: تاريخ مباشرة أحد العمال يتداخل مع فترة أخرى في سجل فتراته. عدّل التاريخ وأعد الحفظ."
                 : $"لم يكتمل التسليم: {opened.Error.Message}");
+        }
+        else
+        {
+            // Out of housing: their rooms are free from their start of work.
+            foreach (var day in starts.GroupBy(s => s.StartsOn))
+            {
+                await housing.ReleaseAsync(day.Select(s => s.WorkerId).ToList(), day.Key, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

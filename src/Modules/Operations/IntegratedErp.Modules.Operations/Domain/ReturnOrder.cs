@@ -77,7 +77,7 @@ public sealed record ReturnWorker(
     string? ProjectName,
     DateOnly? WorkStartedOn);
 
-public sealed record ReturnDetails(DateOnly ArrivedOn, string Reason, string? ReasonNotes, bool StopSalary, string? HousingName, string? DelayReason, string? Notes);
+public sealed record ReturnDetails(DateOnly ArrivedOn, string Reason, string? ReasonNotes, bool StopSalary, string? HousingName, string? DelayReason, string? Notes, Guid? RoomId = null);
 
 /// <summary>
 /// A return order (docs/02-target-architecture/05 §2.3): a worker back from a project to the company's housing. Saved
@@ -146,8 +146,11 @@ public sealed class ReturnOrder : ITenantOwned
     /// <summary>The salary stops while in housing (the default).</summary>
     public bool StopSalary { get; private set; } = true;
 
-    /// <summary>The housing the worker went to (free text until the housing module).</summary>
+    /// <summary>The housing the worker went to: the room's "building — room" when one is chosen.</summary>
     public string? HousingName { get; private set; }
+
+    /// <summary>The room the worker goes to (Housing module); they are put in it when the order completes.</summary>
+    public Guid? RoomId { get; private set; }
 
     public string? DelayReason { get; private set; }
 
@@ -330,6 +333,9 @@ public sealed class ReturnOrder : ITenantOwned
         WorkStartedOn = w.WorkStartedOn;
     }
 
+    /// <summary>Completed, but the worker could not be put in the chosen room (e.g. it filled up meanwhile).</summary>
+    public void RoomNotAssigned(string reason) => LastComment = string.IsNullOrWhiteSpace(LastComment) ? reason : $"{LastComment} — {reason}";
+
     private void SetDetails(ReturnDetails d)
     {
         ArgumentNullException.ThrowIfNull(d);
@@ -338,6 +344,7 @@ public sealed class ReturnOrder : ITenantOwned
         ReasonNotes = Clean(d.ReasonNotes);
         StopSalary = d.StopSalary;
         HousingName = Clean(d.HousingName);
+        RoomId = d.RoomId;
         DelayReason = Clean(d.DelayReason);
         Notes = Clean(d.Notes);
     }
