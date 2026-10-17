@@ -28,6 +28,9 @@ public abstract record Step
 {
     /// <summary>Stable id within the definition (set by the editor), used by running approvals to know where they are.</summary>
     public required string Id { get; init; }
+
+    /// <summary>A short name the designer gives the step, e.g. "Check the amount" (shown in the editor and history).</summary>
+    public string? Label { get; init; }
 }
 
 public enum AssigneeKind
@@ -94,9 +97,15 @@ public sealed record ConditionStep : Step
 
 public sealed record ConditionBranch(ConditionGroup Condition, IReadOnlyList<Step> Steps);
 
-/// <summary>Sets updatable fields of the record (a constant, or the value of another field), e.g. its status.</summary>
+/// <summary>
+/// Sets updatable fields (a constant, or the value of a field of the record) of the record itself or, with
+/// <see cref="Target"/>, of a related table the screen declares.
+/// </summary>
 public sealed record UpdateStep : Step
 {
+    /// <summary>Null: the record itself; otherwise the key of a declared related table.</summary>
+    public string? Target { get; init; }
+
     public required IReadOnlyList<FieldChange> Changes { get; init; }
 }
 
@@ -209,6 +218,11 @@ public static class DefinitionRules
                     errors.Add("Every step needs a unique id.");
                 }
 
+                if (step.Label?.Length > 200)
+                {
+                    errors.Add("A step label is limited to 200 characters.");
+                }
+
                 switch (step)
                 {
                     case ApprovalStep a:
@@ -273,9 +287,25 @@ public static class DefinitionRules
                             errors.Add("An update step needs at least one field.");
                         }
 
+                        // The table to update: the record, or a related table the screen declares.
+                        Dictionary<string, RecordField> targetFields;
+                        if (u.Target is null)
+                        {
+                            targetFields = fields;
+                        }
+                        else if (screen.RelatedTables.FirstOrDefault(r => r.Key == u.Target) is { } relation)
+                        {
+                            targetFields = relation.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+                        }
+                        else
+                        {
+                            errors.Add($"\"{u.Target}\" is not a table related to this screen.");
+                            break;
+                        }
+
                         foreach (var change in u.Changes)
                         {
-                            if (!fields.TryGetValue(change.FieldKey, out var field) || !field.Updatable)
+                            if (!targetFields.TryGetValue(change.FieldKey, out var field) || !field.Updatable)
                             {
                                 errors.Add($"Field \"{change.FieldKey}\" cannot be updated by a process.");
                             }

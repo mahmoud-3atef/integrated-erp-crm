@@ -16,6 +16,12 @@ public sealed class ProcessDefinitionTests
             new("manager", "المدير", "Manager", RecordFieldType.User, Updatable: false),
             new("status", "الحالة", "Status", RecordFieldType.Choice, Updatable: true, [new("UnderReview", "قيد المراجعة", "Under review")]),
             new("notes", "ملاحظات", "Notes", RecordFieldType.Text, Updatable: true),
+        ],
+        [
+            new("project", "المشروع", "Project", [
+                new("phase", "المرحلة", "Phase", RecordFieldType.Text, Updatable: true),
+                new("budget", "الميزانية", "Budget", RecordFieldType.Money, Updatable: false),
+            ]),
         ]);
 
     private static readonly Dictionary<string, RecordField> Fields = Screen.Fields.ToDictionary(f => f.Key);
@@ -51,6 +57,18 @@ public sealed class ProcessDefinitionTests
         AssertInvalid(new ProcessDefinition(null, [Stage("a", new UpdateStep { Id = "u", Changes = [new FieldChange("status", "Approved")] })]), "not valid");
         AssertInvalid(new ProcessDefinition(new ConditionGroup(true, [new ConditionRule("category", ConditionOperator.GreaterThan, "PURCHASE")]), [Stage("a")]), "not valid for its type");
         AssertInvalid(new ProcessDefinition(null, [Stage("a") with { RequiredFields = ["amount"] }]), "updatable");
+    }
+
+    [Fact]
+    public void An_update_step_may_change_only_a_declared_related_table()
+    {
+        static ProcessDefinition With(UpdateStep update) => new(null, [Stage("a", update)]);
+
+        Assert.True(DefinitionRules.Validate(With(new UpdateStep { Id = "u", Label = "تحديث المشروع", Target = "project", Changes = [new FieldChange("phase", "Closed")] }), Screen).IsSuccess);
+        Assert.True(DefinitionRules.Validate(With(new UpdateStep { Id = "u", Target = "project", Changes = [new FieldChange("phase", null, FromField: "notes")] }), Screen).IsSuccess);
+        AssertInvalid(With(new UpdateStep { Id = "u", Target = "warehouse", Changes = [new FieldChange("phase", "Closed")] }), "not a table related");
+        AssertInvalid(With(new UpdateStep { Id = "u", Target = "project", Changes = [new FieldChange("budget", "5")] }), "cannot be updated");
+        AssertInvalid(With(new UpdateStep { Id = "u", Target = "project", Changes = [new FieldChange("status", "UnderReview")] }), "cannot be updated");
     }
 
     private static void AssertInvalid(ProcessDefinition definition, string expected)

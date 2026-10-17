@@ -239,9 +239,15 @@ internal sealed class InternalRequestAdapter(WorkflowDbContext db) : IApprovalRe
             };
     }
 
-    public async Task<Result> ApplyAsync(Guid recordId, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken)
+    public async Task<Result> ApplyAsync(Guid recordId, string? relation, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(changes);
+        if (relation is not null)
+        {
+            // Internal requests declare no related tables yet.
+            return Result.Failure(Error.Validation("request_relation_unknown", $"\"{relation}\" is not a table related to internal requests."));
+        }
+
         var request = await db.InternalRequests.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
         if (request is null)
         {

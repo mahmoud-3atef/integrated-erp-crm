@@ -473,6 +473,14 @@
       "ADVANCE": "سلفة",
       "LEAVE": "إجازة",
       "OTHER": "أخرى"
+    },
+    "tabs": {
+      "data": "بيانات الطلب",
+      "approval": "سجل التعميد"
+    },
+    "sections": {
+      "main": "بيانات الطلب",
+      "people": "الأطراف"
     }
   },
   "routes": {
@@ -627,7 +635,18 @@
       "In": "ضمن",
       "IsEmpty": "فارغ",
       "IsNotEmpty": "غير فارغ"
-    }
+    },
+    "stepNumber": "الخطوة {{number}}",
+    "stepLabel": "اسم الخطوة",
+    "stageNameAr": "اسم المرحلة (عربي)",
+    "stageNameEn": "اسم المرحلة (إنجليزي)",
+    "dueIn": "المهلة {{hours}} ساعة",
+    "table": "الجدول المراد تحديثه",
+    "tableHint": "سجل الشاشة نفسه، أو جدول مرتبط به بعلاقة معرَّفة.",
+    "noRelatedTables": "لا توجد جداول مرتبطة بهذه الشاشة بعد؛ يُحدَّث سجل الشاشة نفسه.",
+    "thisRecord": "سجل الشاشة: {{screen}}",
+    "relatedTable": "جدول مرتبط: {{table}}",
+    "assigneeCount": "المعتمدون: {{count}}"
   },
   "myApprovals": {
     "title": "طلباتي للاعتماد",
@@ -638,5 +657,29 @@
     "title": "متابعة الاعتمادات",
     "intro": "جميع الاعتمادات في الشركة وحالاتها، بما فيها المتوقفة بخطأ.",
     "all": "الكل"
+  },
+  "tracker": {
+    "title": "مراحل التعميد",
+    "count": "{{done}} من {{total}} مرحلة منتهية",
+    "submitted": "تقديم الطلب",
+    "future": "مرحلة قادمة",
+    "futureHint": "تتحدد بعد اعتماد المرحلة الحالية",
+    "onBehalf": "نيابةً عن {{name}}",
+    "openSince": "مفتوحة منذ {{time}}",
+    "horizontal": "عرض أفقي",
+    "vertical": "عرض رأسي",
+    "lessThanMinute": "أقل من دقيقة",
+    "minutes": "{{count}} د",
+    "hours": "{{count}} س",
+    "state": {
+      "Done": "معتمد",
+      "Submitted": "مُرسل",
+      "Current": "المرحلة الحالية",
+      "Rejected": "مرفوض",
+      "Returned": "مُعاد للتعديل",
+      "Canceled": "ملغاة",
+      "Future": "قادمة"
+    },
+    "days": "{{count}} يوم"
   }
 }

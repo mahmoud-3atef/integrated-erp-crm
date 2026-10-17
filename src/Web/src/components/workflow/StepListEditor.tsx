@@ -95,23 +95,26 @@ export function StepListEditor({ steps, onChange, emptyHint }: { steps: Step[]; 
   };
 
   return (
-    <Stack spacing={1}>
+    <Stack>
       {steps.length === 0 && emptyHint && <Typography sx={{ fontSize: 12.5, color: tokens.gray500, fontStyle: 'italic' }}>{emptyHint}</Typography>}
       {steps.map((step, index) => (
-        <StepCard
-          key={step.id}
-          step={step}
-          number={index + 1}
-          onChange={(s) => replace(index, s)}
-          onRemove={() => onChange(steps.filter((_, i) => i !== index))}
-          onMove={(by) => move(index, by)}
-          isFirst={index === 0}
-          isLast={index === steps.length - 1}
-        />
+        <Box key={step.id}>
+          {/* Each step is its own section, with a short connector to the next so the order reads at a glance. */}
+          {index > 0 && <Box aria-hidden sx={{ width: 2, height: 18, mx: 'auto', bgcolor: tokens.gray300 }} />}
+          <StepCard
+            step={step}
+            number={index + 1}
+            onChange={(s) => replace(index, s)}
+            onRemove={() => onChange(steps.filter((_, i) => i !== index))}
+            onMove={(by) => move(index, by)}
+            isFirst={index === 0}
+            isLast={index === steps.length - 1}
+          />
+        </Box>
       ))}
       {!readOnly && (
-        <Box>
-          <Button size="small" startIcon={<AddIcon />} onClick={(e) => setMenu(e.currentTarget)}>
+        <Box sx={{ mt: steps.length > 0 ? 1.5 : 0 }}>
+          <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={(e) => setMenu(e.currentTarget)}>
             {t('process.addStep')}
           </Button>
           <Menu anchorEl={menu} open={menu !== null} onClose={() => setMenu(null)}>
@@ -151,16 +154,23 @@ function StepCard({ step, number, onChange, onRemove, onMove, isFirst, isLast }:
   const { readOnly } = useEditor();
   const [open, setOpen] = useState(true);
   const summary = useStepSummary(step);
+  const title = useStepTitle(step);
+  const color = colors[step.type];
 
   return (
-    <Box sx={{ borderRadius: `${tokens.radius}px`, bgcolor: '#fff', border: `1px solid ${tokens.border}`, borderInlineStart: `4px solid ${colors[step.type]}`, boxShadow: tokens.shadowXs }}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, px: 1.5, py: 1 }}>
-        <Box sx={{ display: 'grid', placeItems: 'center', color: colors[step.type], '& svg': { fontSize: 22 } }}>{icons[step.type]}</Box>
+    <Box component="section" sx={{ borderRadius: `${tokens.radius}px`, bgcolor: '#fff', border: `1.5px solid ${color}55`, boxShadow: tokens.shadowXs, overflow: 'hidden' }}>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, px: 1.5, py: 1, bgcolor: `${color}12`, borderBottom: open ? `1px solid ${color}33` : 'none' }}>
+        <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 30, height: 30, borderRadius: '9px', bgcolor: color, color: '#fff', '& svg': { fontSize: 18 } }}>{icons[step.type]}</Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: tokens.navy800 }}>
-            {number}. {t(`process.type.${step.type}`)}
-          </Typography>
-          <Typography noWrap sx={{ fontSize: 12, color: tokens.gray600 }}>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+            <Box component="span" sx={{ flex: '0 0 auto', px: 1, borderRadius: 999, fontSize: 11, fontWeight: 800, color, bgcolor: '#fff', border: `1px solid ${color}55` }}>
+              {t('process.stepNumber', { number })} · {t(`process.type.${step.type}`)}
+            </Box>
+            <Typography noWrap sx={{ fontSize: 14, fontWeight: 800, color: tokens.navy800 }}>
+              {title}
+            </Typography>
+          </Stack>
+          <Typography noWrap sx={{ fontSize: 12, color: tokens.gray600, mt: 0.25 }}>
             {summary}
           </Typography>
         </Box>
@@ -184,7 +194,20 @@ function StepCard({ step, number, onChange, onRemove, onMove, isFirst, isLast }:
         </IconButton>
       </Stack>
       {open && (
-        <Box sx={{ px: 1.5, pb: 1.5, pt: 0.5, borderTop: `1px solid ${tokens.gray100}` }}>
+        <Box sx={{ px: 1.75, pb: 1.75, pt: 1 }}>
+          {step.type !== 'approval' && (
+            <TextField
+              size="small"
+              fullWidth
+              label={t('process.stepLabel')}
+              placeholder={t(`process.type.${step.type}`)}
+              value={step.label ?? ''}
+              disabled={readOnly}
+              onChange={(e) => onChange({ ...step, label: e.target.value || null })}
+              sx={{ mt: 0.5, mb: 0.5 }}
+              slotProps={{ htmlInput: { maxLength: 200 } }}
+            />
+          )}
           {step.type === 'approval' && <ApprovalEditor step={step} onChange={onChange} />}
           {step.type === 'condition' && <ConditionStepEditor step={step} onChange={onChange} />}
           {step.type === 'update' && <UpdateEditor step={step} onChange={onChange} />}
@@ -196,16 +219,33 @@ function StepCard({ step, number, onChange, onRemove, onMove, isFirst, isLast }:
   );
 }
 
+/** The step's name in its header: the stage name, or the label the designer gave it, or its type. */
+function useStepTitle(step: Step) {
+  const { t, i18n } = useTranslation();
+  if (step.type === 'approval') {
+    return (i18n.language === 'ar' ? step.nameAr : step.nameEn) || step.label || t('process.unnamedStage');
+  }
+  return step.label || t(`process.type.${step.type}`);
+}
+
 function useStepSummary(step: Step) {
   const { t, i18n } = useTranslation();
   const label = useFieldLabel();
+  const { screen } = useEditor();
   switch (step.type) {
     case 'approval':
-      return (i18n.language === 'ar' ? step.nameAr : step.nameEn) || t('process.unnamedStage');
+      return t('process.assigneeCount', { count: step.assignees.length }) + (step.dueHours ? ` — ${t('process.dueIn', { hours: step.dueHours })}` : '');
     case 'condition':
       return t('process.branchCount', { count: step.branches.length });
-    case 'update':
-      return step.changes.map((c) => label(c.fieldKey)).join('، ') || t('process.noChanges');
+    case 'update': {
+      const relation = step.target ? screen.relations?.find((r) => r.key === step.target) : undefined;
+      const table = relation ? localName(relation, i18n.language) : localName(screen, i18n.language);
+      const names = step.changes.map((c) => {
+        const field = (relation ? relation.fields : screen.fields).find((f) => f.key === c.fieldKey);
+        return field ? localName(field, i18n.language) : label(c.fieldKey);
+      });
+      return `${table}: ${names.join('، ') || t('process.noChanges')}`;
+    }
     case 'notify':
       return (i18n.language === 'ar' ? step.titleAr : step.titleEn) || '—';
     default:
@@ -237,8 +277,8 @@ function ApprovalEditor({ step, onChange }: { step: ApprovalStep; onChange: (ste
   return (
     <Stack spacing={1.5} sx={{ mt: 1 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-        <TextField size="small" label={t('fields.NameAr')} value={step.nameAr} disabled={readOnly} onChange={(e) => set({ nameAr: e.target.value })} slotProps={{ htmlInput: { dir: 'rtl', maxLength: 200 } }} />
-        <TextField size="small" label={t('fields.NameEn')} value={step.nameEn} disabled={readOnly} onChange={(e) => set({ nameEn: e.target.value })} slotProps={{ htmlInput: { dir: 'ltr', maxLength: 200 } }} />
+        <TextField size="small" label={t('process.stageNameAr')} value={step.nameAr} disabled={readOnly} onChange={(e) => set({ nameAr: e.target.value })} slotProps={{ htmlInput: { dir: 'rtl', maxLength: 200 } }} />
+        <TextField size="small" label={t('process.stageNameEn')} value={step.nameEn} disabled={readOnly} onChange={(e) => set({ nameEn: e.target.value })} slotProps={{ htmlInput: { dir: 'ltr', maxLength: 200 } }} />
       </Stack>
 
       <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: tokens.navy800 }}>{t('process.assignees')}</Typography>
@@ -399,21 +439,43 @@ function ConditionStepEditor({ step, onChange }: { step: ConditionStep; onChange
 
 // ---------------------------------------------------------------- Update record
 
+const recordTable = '__record';
+
 function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: Step) => void }) {
   const { t, i18n } = useTranslation();
   const { screen, readOnly } = useEditor();
-  const updatable = screen.fields.filter((f) => f.updatable);
+  const relations = (screen.relations ?? []).filter((r) => r.fields.some((f) => f.updatable));
+  const relation = step.target ? (screen.relations ?? []).find((r) => r.key === step.target) : undefined;
+  const tableFields = relation ? relation.fields : screen.fields;
+  const updatable = tableFields.filter((f) => f.updatable);
   const setChange = (index: number, change: Partial<UpdateStep['changes'][number]>) =>
     onChange({ ...step, changes: step.changes.map((c, i) => (i === index ? { ...c, ...change } : c)) });
 
-  if (updatable.length === 0) {
-    return <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mt: 1 }}>{t('process.nothingUpdatable')}</Typography>;
-  }
-
   return (
-    <Stack spacing={1} sx={{ mt: 1 }}>
+    <Stack spacing={1.25} sx={{ mt: 1 }}>
+      {/* 1. The table: the screen's own record, or a table related to it. */}
+      <TextField
+        select
+        size="small"
+        label={t('process.table')}
+        helperText={relations.length === 0 ? t('process.noRelatedTables') : t('process.tableHint')}
+        value={step.target ?? recordTable}
+        disabled={readOnly}
+        onChange={(e) => onChange({ ...step, target: e.target.value === recordTable ? null : e.target.value, changes: [] })}
+        sx={{ maxWidth: 420 }}
+      >
+        <MenuItem value={recordTable}>{t('process.thisRecord', { screen: localName(screen, i18n.language) })}</MenuItem>
+        {relations.map((r) => (
+          <MenuItem key={r.key} value={r.key}>
+            {t('process.relatedTable', { table: localName(r, i18n.language) })}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      {/* 2. The fields of that table. */}
+      {updatable.length === 0 && <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('process.nothingUpdatable')}</Typography>}
       {step.changes.map((change, index) => {
-        const field = screen.fields.find((f) => f.key === change.fieldKey);
+        const field = tableFields.find((f) => f.key === change.fieldKey);
         const sameType = screen.fields.filter((f) => f.type === field?.type && f.key !== field?.key);
         const fromField = change.fromField !== null && change.fromField !== undefined;
         return (
@@ -465,7 +527,7 @@ function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: S
       })}
       {!readOnly && (
         <Box>
-          <Button size="small" startIcon={<AddIcon />} onClick={() => onChange({ ...step, changes: [...step.changes, { fieldKey: updatable[0]!.key, value: null }] })}>
+          <Button size="small" startIcon={<AddIcon />} disabled={updatable.length === 0} onClick={() => onChange({ ...step, changes: [...step.changes, { fieldKey: updatable[0]!.key, value: null }] })}>
             {t('process.addField')}
           </Button>
         </Box>

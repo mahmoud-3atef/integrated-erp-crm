@@ -22,12 +22,21 @@ export interface RecordField {
   options: FieldOption[] | null;
 }
 
+/** A table related to the screen's record whose fields a process may update. */
+export interface RecordRelation {
+  key: string;
+  nameAr: string;
+  nameEn: string;
+  fields: RecordField[];
+}
+
 export interface Screen {
   code: string;
   nameAr: string;
   nameEn: string;
   linkTemplate: string;
   fields: RecordField[];
+  relations: RecordRelation[] | null;
 }
 
 // ---------------------------------------------------------------- Process definition (same JSON as the server)
@@ -66,6 +75,7 @@ export interface Recipient {
 export interface ApprovalStep {
   type: 'approval';
   id: string;
+  label?: string | null;
   nameAr: string;
   nameEn: string;
   assignees: Assignee[];
@@ -82,6 +92,7 @@ export interface ApprovalStep {
 export interface ConditionStep {
   type: 'condition';
   id: string;
+  label?: string | null;
   branches: { condition: ConditionGroup; steps: Step[] }[];
   else: Step[];
 }
@@ -89,12 +100,16 @@ export interface ConditionStep {
 export interface UpdateStep {
   type: 'update';
   id: string;
+  label?: string | null;
+  /** Null: the record itself; otherwise the key of a related table. */
+  target?: string | null;
   changes: { fieldKey: string; value?: string | null; fromField?: string | null }[];
 }
 
 export interface NotifyStep {
   type: 'notify';
   id: string;
+  label?: string | null;
   to: Recipient[];
   titleAr: string;
   titleEn: string;
@@ -105,6 +120,7 @@ export interface NotifyStep {
 export interface StopStep {
   type: 'stop';
   id: string;
+  label?: string | null;
   outcome: 'Approved' | 'Rejected' | 'Canceled';
 }
 
@@ -223,6 +239,19 @@ export interface HistoryEntry {
   at: string;
 }
 
+export interface ApprovalStage {
+  stepId: string;
+  nameAr: string;
+  nameEn: string;
+  state: 'Done' | 'Rejected' | 'Returned' | 'Current' | 'Canceled';
+  assignees: string[];
+  decidedBy: string | null;
+  onBehalfOf: string | null;
+  openedAt: string;
+  decidedAt: string | null;
+  comment: string | null;
+}
+
 export interface ApprovalStatus {
   instanceId: string;
   processNameAr: string;
@@ -234,6 +263,7 @@ export interface ApprovalStatus {
   waitingFor: string[];
   submittedBy: string;
   submittedAt: string;
+  stages: ApprovalStage[];
   history: HistoryEntry[];
 }
 

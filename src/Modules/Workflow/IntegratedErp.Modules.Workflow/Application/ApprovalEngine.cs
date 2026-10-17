@@ -308,14 +308,42 @@ internal sealed partial class ApprovalEngine(
             ? await db.WorkItems.AsNoTracking().Where(w => w.InstanceId == instance.Id && w.Status == WorkItemStatus.Pending)
                 .Select(w => w.AssigneeName).ToListAsync(cancellationToken).ConfigureAwait(false)
             : [];
+        var items = await db.WorkItems.AsNoTracking().Where(w => w.InstanceId == instance.Id)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         return new ApprovalStatusInfo(
             instance.Id, instance.ProcessNameAr, instance.ProcessNameEn, instance.Version, instance.Status.ToString(),
             instance.WaitingStepAr, instance.WaitingStepEn, waiting, instance.SubmittedByName, instance.SubmittedAt,
+            Stages(items),
             history.Select(h => new ApprovalTimelineEntry(
                 h.Sequence, h.Kind, h.StepNameAr, h.StepNameEn, h.ActorName, h.OnBehalfOf, h.Outcome, h.Comment,
                 h.Kind == nameof(HistoryKind.RecordUpdated) && h.Details is not null ? JsonSerializer.Deserialize<Dictionary<string, string?>>(h.Details) : null,
                 h.At)).ToList());
     }
+
+    /// <summary>Each opening of a stage (step and round), in order, as the stage bar shows it.</summary>
+    private static List<ApprovalStageInfo> Stages(List<ApprovalWorkItem> items) =>
+        items.GroupBy(w => (w.StepId, w.Round))
+            .OrderBy(g => g.Min(w => w.CreatedAt))
+            .Select(g =>
+            {
+                var decided = g.Where(w => w.Status is WorkItemStatus.Approved or WorkItemStatus.Rejected or WorkItemStatus.Returned)
+                    .OrderByDescending(w => w.DecidedAt).ToList();
+                var state = g.Any(w => w.Status == WorkItemStatus.Rejected) ? "Rejected"
+                    : g.Any(w => w.Status == WorkItemStatus.Returned) ? "Returned"
+                    : g.Any(w => w.IsOpen) ? "Current"
+                    : decided.Count > 0 ? "Done"
+                    : "Canceled";
+                var last = decided.FirstOrDefault();
+                var onBehalf = last?.DelegatedFrom is { } from ? g.FirstOrDefault(w => w.AssigneeUserId == from)?.AssigneeName : null;
+                var first = g.OrderBy(w => w.CreatedAt).First();
+                return new ApprovalStageInfo(
+                    g.Key.StepId, first.StepNameAr, first.StepNameEn, state,
+                    g.Where(w => w.Status != WorkItemStatus.Delegated).Select(w => w.AssigneeName).Distinct().ToList(),
+                    last?.AssigneeName, onBehalf, first.CreatedAt,
+                    state == "Current" ? null : last?.DecidedAt ?? g.Max(w => w.DecidedAt),
+                    last?.Comment);
+            })
+            .ToList();
 
     public async Task<bool> IsParticipantAsync(string screen, Guid recordId, CancellationToken cancellationToken)
     {
@@ -404,14 +432,16 @@ internal sealed partial class ApprovalEngine(
                         c => c.FieldKey,
                         c => c.FromField is { } from ? values.GetValueOrDefault(from) : c.Value,
                         StringComparer.Ordinal);
-                    var applied = await adapter.ApplyAsync(instance.RecordId, changes, cancellationToken).ConfigureAwait(false);
+                    var applied = await adapter.ApplyAsync(instance.RecordId, update.Target, changes, cancellationToken).ConfigureAwait(false);
                     if (applied.IsFailure)
                     {
                         Fail(instance, step, $"The record refused the update: {applied.Error.Message}");
                         return;
                     }
 
-                    History(instance, HistoryKind.RecordUpdated, details: JsonSerializer.Serialize(changes), stepId: step.Id);
+                    // Changes of a related table are recorded as "table.field" so the history says which table changed.
+                    var recorded = update.Target is { } table ? changes.ToDictionary(c => $"{table}.{c.Key}", c => c.Value, StringComparer.Ordinal) : changes;
+                    History(instance, HistoryKind.RecordUpdated, details: JsonSerializer.Serialize(recorded), stepId: step.Id);
                     cursor.Advance(step, null, definition);
                     break;
                 }
@@ -536,7 +566,7 @@ internal sealed partial class ApprovalEngine(
             return Result.Success();
         }
 
-        var applied = await adapter.ApplyAsync(instance.RecordId, changes, cancellationToken).ConfigureAwait(false);
+        var applied = await adapter.ApplyAsync(instance.RecordId, null, changes, cancellationToken).ConfigureAwait(false);
         if (applied.IsFailure)
         {
             return applied;

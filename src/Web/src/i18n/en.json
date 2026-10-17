@@ -473,6 +473,14 @@
       "ADVANCE": "Advance",
       "LEAVE": "Leave",
       "OTHER": "Other"
+    },
+    "tabs": {
+      "data": "Request data",
+      "approval": "Approval log"
+    },
+    "sections": {
+      "main": "Request details",
+      "people": "People"
     }
   },
   "routes": {
@@ -627,7 +635,18 @@
       "In": "is one of",
       "IsEmpty": "is empty",
       "IsNotEmpty": "is not empty"
-    }
+    },
+    "stepNumber": "Step {{number}}",
+    "stepLabel": "Step name",
+    "stageNameAr": "Stage name (Arabic)",
+    "stageNameEn": "Stage name (English)",
+    "dueIn": "due in {{hours}} h",
+    "table": "Table to update",
+    "tableHint": "The screen's own record, or a table linked to it by a declared relation.",
+    "noRelatedTables": "This screen has no related tables yet; the screen's own record is updated.",
+    "thisRecord": "Screen record: {{screen}}",
+    "relatedTable": "Related table: {{table}}",
+    "assigneeCount": "Approvers: {{count}}"
   },
   "myApprovals": {
     "title": "My submissions",
@@ -638,5 +657,29 @@
     "title": "Approval monitor",
     "intro": "Every approval in the company and its state, including those stopped by an error.",
     "all": "All"
+  },
+  "tracker": {
+    "title": "Approval stages",
+    "count": "{{done}} of {{total}} stages finished",
+    "submitted": "Submitted",
+    "future": "Next stage",
+    "futureHint": "Decided once the current stage is approved",
+    "onBehalf": "on behalf of {{name}}",
+    "openSince": "Open for {{time}}",
+    "horizontal": "Horizontal view",
+    "vertical": "Vertical view",
+    "lessThanMinute": "less than a minute",
+    "minutes": "{{count}} min",
+    "hours": "{{count}} h",
+    "state": {
+      "Done": "Approved",
+      "Submitted": "Sent",
+      "Current": "Current stage",
+      "Rejected": "Rejected",
+      "Returned": "Returned",
+      "Canceled": "Canceled",
+      "Future": "Upcoming"
+    },
+    "days": "{{count}} d"
   }
 }

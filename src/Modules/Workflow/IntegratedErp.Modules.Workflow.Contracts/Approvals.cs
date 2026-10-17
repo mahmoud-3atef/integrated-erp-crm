@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using IntegratedErp.SharedKernel;
 
 namespace IntegratedErp.Modules.Workflow.Contracts;
@@ -50,10 +51,26 @@ public sealed record RecordField(
 /// A screen whose records go through approval processes. <paramref name="LinkTemplate"/> is the in-app page of one
 /// record with <c>{id}</c>.
 /// </summary>
-public sealed record ApprovalScreen(string Code, string NameAr, string NameEn, string LinkTemplate, IReadOnlyList<RecordField> Fields)
+public sealed record ApprovalScreen(
+    string Code,
+    string NameAr,
+    string NameEn,
+    string LinkTemplate,
+    IReadOnlyList<RecordField> Fields,
+    IReadOnlyList<RecordRelation>? Relations = null)
 {
+    [JsonIgnore]
+    public IReadOnlyList<RecordRelation> RelatedTables => Relations ?? [];
+
     public string LinkTo(Guid recordId) => LinkTemplate.Replace("{id}", recordId.ToString(), StringComparison.Ordinal);
 }
+
+/// <summary>
+/// A table related to the screen's record (e.g. an invoice's project, a movement's worker) whose fields a process may
+/// update. Only declared relations exist, so a process can change another table only through a real relation, and
+/// the owning module applies the change (through that table's module contract when it belongs to another module).
+/// </summary>
+public sealed record RecordRelation(string Key, string NameAr, string NameEn, IReadOnlyList<RecordField> Fields);
 
 /// <summary>How an approval ended, as told to the module that owns the record.</summary>
 public enum ApprovalEnd
@@ -79,8 +96,11 @@ public interface IApprovalRecordAdapter
     /// <summary>Current values of the declared fields; null when the record does not exist in the current company.</summary>
     Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken);
 
-    /// <summary>Sets updatable fields (already type-checked by the engine). Must be idempotent and save its changes.</summary>
-    Task<Result> ApplyAsync(Guid recordId, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken);
+    /// <summary>
+    /// Sets updatable fields of the record (<paramref name="relation"/> null) or of the related table with that key
+    /// (already type-checked by the engine). Must be idempotent and save its changes.
+    /// </summary>
+    Task<Result> ApplyAsync(Guid recordId, string? relation, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken);
 
     /// <summary>The approval of the record ended; the module sets its own final state and saves it.</summary>
     Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken);
@@ -100,6 +120,22 @@ public sealed record ApprovalTimelineEntry(
     IReadOnlyDictionary<string, string?>? Changes,
     DateTimeOffset At);
 
+/// <summary>
+/// One approval stage as people read it (the stage bar): who it is (or was) with, who decided what and when, and how
+/// long it took since the previous stage. <paramref name="State"/>: Done, Rejected, Returned, Current, Canceled.
+/// </summary>
+public sealed record ApprovalStageInfo(
+    string StepId,
+    string NameAr,
+    string NameEn,
+    string State,
+    IReadOnlyList<string> Assignees,
+    string? DecidedBy,
+    string? OnBehalfOf,
+    DateTimeOffset OpenedAt,
+    DateTimeOffset? DecidedAt,
+    string? Comment);
+
 /// <summary>The latest approval of a record: where it stands, who it waits for, and its full history.</summary>
 public sealed record ApprovalStatusInfo(
     Guid InstanceId,
@@ -112,6 +148,7 @@ public sealed record ApprovalStatusInfo(
     IReadOnlyList<string> WaitingFor,
     string SubmittedBy,
     DateTimeOffset SubmittedAt,
+    IReadOnlyList<ApprovalStageInfo> Stages,
     IReadOnlyList<ApprovalTimelineEntry> History);
 
 /// <summary>Used by modules that own records: start, follow and cancel approvals.</summary>

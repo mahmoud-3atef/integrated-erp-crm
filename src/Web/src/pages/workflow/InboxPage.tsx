@@ -62,7 +62,7 @@ export function InboxPage() {
             </TableHead>
             <TableBody>
               {items.map((item) => (
-                <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workflow/approvals/${item.instanceId}`)}>
+                <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(item.link ?? `/workflow/approvals/${item.instanceId}`)}>
                   <TableCell sx={{ whiteSpace: 'normal', minWidth: 220 }}>
                     <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{ar ? item.screenNameAr : item.screenNameEn}</Typography>
                     <Typography sx={{ fontSize: 13, fontWeight: 600, color: tokens.gray900 }}>{item.title}</Typography>
@@ -127,7 +127,7 @@ export function InstancesTable({ rows, empty }: { rows: InstanceSummary[]; empty
           </TableHead>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workflow/approvals/${row.id}`)}>
+              <TableRow key={row.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(row.link ?? `/workflow/approvals/${row.id}`)}>
                 <TableCell sx={{ whiteSpace: 'normal', minWidth: 220 }}>
                   <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{ar ? row.screenNameAr : row.screenNameEn}</Typography>
                   <Typography sx={{ fontSize: 13, fontWeight: 600, color: tokens.gray900 }}>{row.title}</Typography>
