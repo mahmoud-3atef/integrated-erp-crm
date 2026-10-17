@@ -154,6 +154,11 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
             </Typography>
             <Typography component="dd" sx={{ m: 0, fontSize: 15, fontWeight: 800, color: look.tone }}>
               {status}
+              {w.fromLedger && (
+                <Typography component="span" sx={{ display: 'block', fontSize: 11.5, fontWeight: 500, color: tokens.gray500 }}>
+                  {t('workforce.fromLedger', { status: (ar ? w.crmStatusAr : w.crmStatusEn) ?? '—' })}
+                </Typography>
+              )}
             </Typography>
           </Box>
           {working && (

@@ -24,7 +24,10 @@ public sealed record WorkerRowDto(
     string? ProjectName,
     DateOnly? ProjectJoinedOn,
     int? WorkDays,
-    Salary? Salary);
+    Salary? Salary,
+    bool FromLedger = false,
+    string? CrmStatusAr = null,
+    string? CrmStatusEn = null);
 
 public sealed record WorkerListDto(int Total, IReadOnlyDictionary<string, int> Counts, IReadOnlyList<WorkerRowDto> Items);
 
@@ -68,12 +71,16 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
                 || (w.ProfessionCode != null && professionCodes.Contains(w.ProfessionCode)));
         }
 
-        // Counts by status ignore the status filter (the cards show every status of the current search).
-        var counts = await query.GroupBy(w => w.Placement).Select(g => new { g.Key, Count = g.Count() })
+        // Counts by status ignore the status filter (the cards show every status of the current search). A worker with a
+        // work period opened here (a delivered delivery order) is on the job, whatever the old system still says.
+        var openWork = db.Periods.Where(p => p.EndsOn == null && p.Kind == PeriodKind.Work);
+        var counts = await query
+            .Select(w => openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : w.Placement)
+            .GroupBy(x => x).Select(g => new { g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Key.ToString(), x => x.Count, cancellationToken).ConfigureAwait(false);
         if (Enum.TryParse<Placement>(filter.Placement, out var placement))
         {
-            query = query.Where(w => w.Placement == placement);
+            query = query.Where(w => (openWork.Any(p => p.WorkerId == w.Id) ? Placement.Working : w.Placement) == placement);
         }
 
         var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
@@ -97,7 +104,9 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
             .Where(i => personIds.Contains(i.PersonId) && i.Type == IdentifierType.Iqama && i.IsCurrent)
             .ToDictionaryAsync(i => i.PersonId, i => i.Number, cancellationToken).ConfigureAwait(false);
 
-        var items = page.Select(x => Row(x.Worker, x.Person, iqamas.GetValueOrDefault(x.Person.Id), names, withSalary)).ToList();
+        var workerIds = page.Select(x => x.Worker.Id).ToList();
+        var periods = await openWork.AsNoTracking().Where(p => workerIds.Contains(p.WorkerId)).ToDictionaryAsync(p => p.WorkerId, cancellationToken).ConfigureAwait(false);
+        var items = page.Select(x => Row(x.Worker, x.Person, iqamas.GetValueOrDefault(x.Person.Id), names, withSalary, periods.GetValueOrDefault(x.Worker.Id))).ToList();
         return new WorkerListDto(total, counts, items);
     }
 
@@ -114,8 +123,9 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
         var names = await NamesAsync(cancellationToken).ConfigureAwait(false);
         var iqama = person.Identifiers.FirstOrDefault(i => i.Type == IdentifierType.Iqama && i.IsCurrent)?.Number;
         var iqamaProfession = worker.IqamaProfessionCode is { } code ? names.Professions.GetValueOrDefault(code) : default;
+        var period = await db.Periods.AsNoTracking().FirstOrDefaultAsync(p => p.WorkerId == id && p.EndsOn == null && p.Kind == PeriodKind.Work, cancellationToken).ConfigureAwait(false);
         return new WorkerDetailDto(
-            Row(worker, person, iqama, names, withSalary),
+            Row(worker, person, iqama, names, withSalary, period),
             iqamaProfession.Ar,
             iqamaProfession.En,
             worker.RecruitmentAgent,
@@ -129,12 +139,25 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
                 .Select(i => new IdentifierDto(i.Type.ToString(), i.Number, i.ExpiresOn, i.IsCurrent)).ToList());
     }
 
-    private WorkerRowDto Row(Worker w, Person p, string? iqama, Names names, bool withSalary)
+    /// <summary>
+    /// A worker's row. With an open work period from this system (<paramref name="period"/>) the worker is on the job on
+    /// its project from its start; the old system's status is kept beside it until the switchover.
+    /// </summary>
+    private WorkerRowDto Row(Worker w, Person p, string? iqama, Names names, bool withSalary, WorkerPeriod? period = null)
     {
         var profession = w.ProfessionCode is { } pc ? names.Professions.GetValueOrDefault(pc) : default;
         var nationality = p.NationalityCode is { } nc ? names.Nationalities.GetValueOrDefault(nc) : default;
         var status = CrmWorkerStatus.Name(w.CrmStatus);
         var today = DateOnly.FromDateTime(clock.UtcNow.ToOffset(TimeSpan.FromHours(3)).DateTime);
+        if (period is not null)
+        {
+            int? days = period.StartsOn <= today ? today.DayNumber - period.StartsOn.DayNumber + 1 : null;
+            return new WorkerRowDto(
+                w.Id, w.WorkerNo, p.NameEn, w.Kind.ToString(), nameof(Placement.Working), w.CrmStatus, "على رأس العمل", "On the job", iqama,
+                profession.Ar, profession.En, nationality.Ar, nationality.En, w.Sponsor, period.ProjectName, period.StartsOn, days,
+                withSalary ? w.Salary : null, FromLedger: true, CrmStatusAr: status?.Ar, CrmStatusEn: status?.En);
+        }
+
         int? workDays = w.Placement == Placement.Working && w.ProjectJoinedOn is { } joined && joined <= today
             ? today.DayNumber - joined.DayNumber + 1
             : null;

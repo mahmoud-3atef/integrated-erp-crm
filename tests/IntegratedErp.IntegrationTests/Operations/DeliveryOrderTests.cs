@@ -14,7 +14,9 @@ using IntegratedErp.Modules.Workflow.Application;
 using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.Modules.Workflow.Domain;
 using IntegratedErp.Modules.Workflow.Infrastructure;
+using IntegratedErp.Modules.Workforce.Application;
 using IntegratedErp.Modules.Workforce.Contracts;
+using IntegratedErp.Modules.Workforce.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -149,6 +151,14 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             Assert.Equal(("Work", "مشروع الرياض", deliverOn.AddDays(2), (DateOnly?)null, 3000m, detail.Summary.OrderNo),
                 (period.Kind, period.ProjectName, period.StartsOn, period.EndsOn, period.TotalPrice, period.SourceNo));
             Assert.Equal((3200m, true), ((await ledger.PeriodsAsync(second, default)).Single().TotalPrice, (await ledger.PeriodsAsync(second, default)).Single().IsSpecialPrice));
+
+            // The worker's file shows them on the job from the ledger, with the old system's status beside it.
+            var file = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().GetAsync(first, WorkerKind.Worker, false, default))!.Summary;
+            Assert.Equal(("Working", true, "مشروع الرياض", deliverOn.AddDays(2), "في السكن"),
+                (file.Placement, file.FromLedger, file.ProjectName, file.ProjectJoinedOn, file.CrmStatusAr));
+            var counts = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().ListAsync(
+                new WorkerFilter(WorkerKind.Worker, null, "Working", null, false, 1, 50), false, default));
+            Assert.Equal(3, counts.Total); // the two delivered here and the one on the job in the old system
 
             // On the job here: no longer available for another delivery order.
             var available = await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().AvailableAsync(default);

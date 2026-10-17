@@ -977,7 +977,8 @@
         "Suspended": "Suspended",
         "Out": "Exit"
       }
-    }
+    },
+    "fromLedger": "From the period ledger · old system: {{status}}"
   },
   "commercial": {
     "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync. Only customers and projects created from 1 January 2025 are brought over.",

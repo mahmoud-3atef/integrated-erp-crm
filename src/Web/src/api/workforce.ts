@@ -37,6 +37,10 @@ export interface WorkerRow {
   workDays: number | null;
   /** Null without the salary permission. */
   salary: Salary | null;
+  /** On the job from a work period opened here (a delivered delivery order); the old system's status is kept beside it. */
+  fromLedger: boolean;
+  crmStatusAr: string | null;
+  crmStatusEn: string | null;
 }
 
 export interface WorkerList {
