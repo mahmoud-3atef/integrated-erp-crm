@@ -20,6 +20,10 @@ internal static class OperationsEndpoints
                 Results.Ok(await queries.ListAsync(new DeliveryListFilter(search, status, source, sort, desc ?? true, page ?? 1, pageSize ?? 50), ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.DeliveryView, companyWide: true);
 
+        endpoints.MapGet("/api/v1/operations/dashboard", async (OperationsDashboard dashboard, CancellationToken ct) => Results.Ok(await dashboard.GetAsync(ct).ConfigureAwait(false)))
+            .WithTags("Operations").RequireAuthorization(PlatformPolicies.CompanyUser)
+            .RequirePermission(OperationsPermissions.DeliveryView, companyWide: true);
+
         group.MapGet("/{id:guid}", async (Guid id, DeliveryOrderQueries queries, CancellationToken ct) =>
                 await queries.GetAsync(id, ct).ConfigureAwait(false) is { } order ? Results.Ok(order) : Results.NotFound())
             .RequirePermission(OperationsPermissions.DeliveryView, companyWide: true);

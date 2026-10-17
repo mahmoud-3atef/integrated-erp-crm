@@ -82,7 +82,83 @@
     "intro": "You are signed in. Modules will appear here as they are released.",
     "platformAdmin": "Platform administrator",
     "logout": "Sign out",
-    "noPermissions": "Your account belongs to this company but has no role yet. Please ask the company administrator for the access you need."
+    "noPermissions": "Your account belongs to this company but has no role yet. Please ask the company administrator for the access you need.",
+    "morning": "Good morning",
+    "evening": "Good evening",
+    "open": "View all",
+    "stats": {
+      "active": "Active workers",
+      "activeFoot": "Without final exits and absconders",
+      "onJob": "On the job",
+      "share": "{{percent}}% of the active",
+      "available": "In housing and new",
+      "availableFoot": "Available for delivery",
+      "projects": "Projects with workers",
+      "projectsFoot": "With workers now"
+    },
+    "where": {
+      "title": "Where the workers are",
+      "subtitle": "From the period ledger, then the old system's status",
+      "center": "active workers",
+      "gone": "Besides {{exited}} final exits and {{absconded}} absconders."
+    },
+    "moves": {
+      "title": "Monthly movements",
+      "subtitle": "The last 12 months of the period ledger",
+      "starts": "Work starts (delivery or transfer)",
+      "returns": "Back to housing"
+    },
+    "projects": {
+      "title": "Largest projects",
+      "subtitle": "By workers on the job — of {{count}} projects"
+    },
+    "nationalities": {
+      "title": "Nationalities",
+      "subtitle": "Active workers",
+      "center": "workers"
+    },
+    "professions": {
+      "title": "Professions",
+      "subtitle": "Active workers"
+    },
+    "month": {
+      "title": "This month",
+      "delivered": "Delivered",
+      "returned": "Returned",
+      "transferred": "Transferred"
+    },
+    "waiting": {
+      "title": "Waiting for action",
+      "subtitle": "{{count}} open documents in this system",
+      "preparing": "Preparing",
+      "approval": "In approval"
+    },
+    "kinds": {
+      "delivery": "Delivery orders",
+      "return": "Return orders",
+      "transfer": "Transfer orders"
+    },
+    "recent": {
+      "title": "Latest documents",
+      "subtitle": "Recorded in this system",
+      "empty": "No documents recorded in this system yet."
+    },
+    "housing": {
+      "title": "Housing occupancy",
+      "subtitle": "{{count}} buildings in use",
+      "occupancy": "Occupancy",
+      "empty": "No buildings and rooms added yet."
+    },
+    "quality": {
+      "title": "Data quality",
+      "subtitle": "Before relying on this system for attendance and invoicing",
+      "match": "{{month}} invoice match",
+      "noCheck": "No check yet",
+      "issues": "Period ledger exceptions",
+      "iqama30": "Iqamas expiring within 30 days",
+      "iqamaExpired": "Expired iqamas",
+      "noExpiry": "No expiry dates recorded in the old system"
+    }
   },
   "common": {
     "back": "Back",

@@ -36,6 +36,7 @@ public sealed class OperationsModule : IModule
         services.AddScoped<ReturnOrderImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<ReturnOrderImportService>());
         services.AddScoped<TransferOrderService>();
+        services.AddScoped<OperationsDashboard>();
         services.AddScoped<TransferOrderQueries>();
         services.AddScoped<IApprovalRecordAdapter, TransferOrderAdapter>();
         services.AddPermissions(OperationsPermissions.All);

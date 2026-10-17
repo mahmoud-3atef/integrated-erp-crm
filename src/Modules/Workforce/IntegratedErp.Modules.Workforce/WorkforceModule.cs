@@ -35,6 +35,7 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<InvoiceCheckBuilder>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<InvoiceCheckBuilder>());
         services.AddScoped<InvoiceCheckQueries>();
+        services.AddScoped<WorkforceDashboard>();
         services.AddPermissions(WorkforcePermissions.All);
     }
 

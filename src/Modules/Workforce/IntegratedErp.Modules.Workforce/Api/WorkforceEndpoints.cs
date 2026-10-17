@@ -20,6 +20,9 @@ internal static class WorkforceEndpoints
         Map(group, "workers", WorkerKind.Worker, WorkforcePermissions.WorkersView, WorkforcePermissions.WorkersSalary);
         Map(group, "staff", WorkerKind.Staff, WorkforcePermissions.StaffView, WorkforcePermissions.StaffSalary);
 
+        group.MapGet("/dashboard", async (WorkforceDashboard dashboard, CancellationToken ct) => Results.Ok(await dashboard.GetAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+
         group.MapGet("/invoice-check", async (DateOnly? month, string? result, string? search, int? page, int? pageSize, InvoiceCheckQueries queries, CancellationToken ct) =>
                 Results.Ok(await queries.ListAsync(month, result, search, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
