@@ -353,19 +353,114 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
-                    b.Property<string>("Basis")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("basis");
+                    b.Property<decimal>("Housing")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("housing");
 
-                    b.Property<Guid>("ContractId")
+                    b.Property<bool>("HousingBillable")
+                        .HasColumnType("bit")
+                        .HasColumnName("housing_billable");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("NationalityCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("nationality_code");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("PackageNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("package_no");
+
+                    b.Property<string>("ProfessionCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("profession_code");
+
+                    b.Property<Guid?>("ProjectId")
                         .HasColumnType("uniqueidentifier")
-                        .HasColumnName("contract_id");
+                        .HasColumnName("project_id");
+
+                    b.Property<decimal>("Salary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("salary");
+
+                    b.Property<decimal>("ServiceFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("service_fee");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_price");
+
+                    b.Property<decimal>("Transport")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("transport");
+
+                    b.Property<bool>("TransportBillable")
+                        .HasColumnType("bit")
+                        .HasColumnName("transport_billable");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_to");
+
+                    b.HasKey("Id")
+                        .HasName("pk_price_package");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_price_package_project_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_price_package_tenant_id");
+
+                    b.HasIndex("TenantId", "PackageNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_price_package_tenant_id_package_no");
+
+                    b.HasIndex("TenantId", "ProfessionCode", "ProjectId")
+                        .HasDatabaseName("ix_price_package_tenant_id_profession_code_project_id");
+
+                    b.ToTable("price_package", "commercial");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PriceSuggestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("DerivedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("derived_at");
+
+                    b.Property<decimal?>("FeeAboveSalary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("fee_above_salary");
 
                     b.Property<decimal>("Housing")
                         .HasPrecision(18, 2)
@@ -377,6 +472,10 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("nationality_code");
 
+                    b.Property<int>("OtherPrices")
+                        .HasColumnType("int")
+                        .HasColumnName("other_prices");
+
                     b.Property<string>("ProfessionCode")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
@@ -386,24 +485,20 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("project_id");
 
-                    b.Property<decimal?>("ServiceFee")
+                    b.Property<decimal>("Salary")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
-                        .HasColumnName("service_fee");
+                        .HasColumnName("salary");
 
                     b.Property<DateOnly?>("Since")
                         .HasColumnType("date")
                         .HasColumnName("since");
 
-                    b.Property<int>("SpecialWorkers")
-                        .HasColumnType("int")
-                        .HasColumnName("special_workers");
-
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("tenant_id");
 
-                    b.Property<decimal?>("TotalPrice")
+                    b.Property<decimal>("TotalPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("total_price");
@@ -413,27 +508,28 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("transport");
 
+                    b.Property<int>("WithoutPrice")
+                        .HasColumnType("int")
+                        .HasColumnName("without_price");
+
                     b.Property<int>("Workers")
                         .HasColumnType("int")
                         .HasColumnName("workers");
 
                     b.HasKey("Id")
-                        .HasName("pk_price_package");
-
-                    b.HasIndex("ContractId")
-                        .HasDatabaseName("ix_price_package_contract_id");
+                        .HasName("pk_price_suggestion");
 
                     b.HasIndex("ProjectId")
-                        .HasDatabaseName("ix_price_package_project_id");
+                        .HasDatabaseName("ix_price_suggestion_project_id");
 
                     b.HasIndex("TenantId")
-                        .HasDatabaseName("ix_price_package_tenant_id");
+                        .HasDatabaseName("ix_price_suggestion_tenant_id");
 
                     b.HasIndex("TenantId", "ProjectId", "ProfessionCode", "NationalityCode")
                         .IsUnique()
-                        .HasDatabaseName("ix_price_package_tenant_id_project_id_profession_code_nationality_code");
+                        .HasDatabaseName("ix_price_suggestion_tenant_id_project_id_profession_code_nationality_code");
 
-                    b.ToTable("price_package", "commercial");
+                    b.ToTable("price_suggestion", "commercial");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PricingImport", b =>
@@ -597,12 +693,6 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("housing");
 
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("kind");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -613,10 +703,6 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("nationality_code");
-
-                    b.Property<Guid?>("PackageId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("package_id");
 
                     b.Property<string>("ProfessionCode")
                         .HasMaxLength(50)
@@ -672,9 +758,6 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_worker_price");
 
-                    b.HasIndex("PackageId")
-                        .HasDatabaseName("ix_worker_price_package_id");
-
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("ix_worker_price_project_id");
 
@@ -702,19 +785,21 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
 
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PricePackage", b =>
                 {
-                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.Contract", null)
+                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.Project", null)
                         .WithMany()
-                        .HasForeignKey("ContractId")
+                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_price_package_contract_contract_id");
+                        .HasConstraintName("fk_price_package_projects_project_id");
+                });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.PriceSuggestion", b =>
+                {
                     b.HasOne("IntegratedErp.Modules.Commercial.Domain.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_price_package_projects_project_id");
+                        .HasConstraintName("fk_price_suggestion_projects_project_id");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.Project", b =>
@@ -735,12 +820,6 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
 
             modelBuilder.Entity("IntegratedErp.Modules.Commercial.Domain.WorkerPrice", b =>
                 {
-                    b.HasOne("IntegratedErp.Modules.Commercial.Domain.PricePackage", null)
-                        .WithMany()
-                        .HasForeignKey("PackageId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_worker_price_price_package_package_id");
-
                     b.HasOne("IntegratedErp.Modules.Commercial.Domain.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")

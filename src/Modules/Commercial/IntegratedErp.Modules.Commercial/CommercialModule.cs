@@ -15,7 +15,7 @@ namespace IntegratedErp.Modules.Commercial;
 /// <summary>
 /// Commercial module: customers, their contracts and the projects workers are placed on. In the parallel phase they
 /// are built from the old CRM's copy after every sync (customers and projects created from 2025 only), and the price
-/// packages are derived from the prices on the open work starts.
+/// packages are created by the user (with suggestions from the prices on the old system's open work starts).
 /// </summary>
 public sealed class CommercialModule : IModule
 {
@@ -26,6 +26,8 @@ public sealed class CommercialModule : IModule
         services.AddModuleDbContext<CommercialDbContext>(configuration, CommercialDbContext.SchemaName);
         services.AddScoped<CommercialQueries>();
         services.AddScoped<PricingQueries>();
+        services.AddScoped<PricingService>();
+        services.AddScoped<IPriceCatalog>(sp => sp.GetRequiredService<PricingService>());
         services.AddScoped<CommercialImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<CommercialImportService>());
         services.AddScoped<PricingImportService>();
@@ -41,6 +43,7 @@ internal static class CommercialPermissions
     public const string CustomersView = "commercial.customers.view";
     public const string ProjectsView = "commercial.projects.view";
     public const string PricesView = "commercial.prices.view";
+    public const string PricesManage = "commercial.prices.manage";
 
     private const string GroupAr = "العملاء والعقود";
     private const string GroupEn = "Customers and contracts";
@@ -50,5 +53,6 @@ internal static class CommercialPermissions
         new(CustomersView, GroupAr, GroupEn, "عرض العملاء", "View customers"),
         new(ProjectsView, GroupAr, GroupEn, "عرض المشاريع والعقود", "View projects and contracts"),
         new(PricesView, GroupAr, GroupEn, "عرض الباقات السعرية وأسعار العمالة", "View price packages and worker prices"),
+        new(PricesManage, GroupAr, GroupEn, "إضافة الباقات السعرية وتعديلها وإيقافها", "Add, edit and stop price packages"),
     ];
 }

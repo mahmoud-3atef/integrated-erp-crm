@@ -1,5 +1,6 @@
 using IntegratedErp.IntegrationTests.CrmSync;
 using IntegratedErp.Modules.Commercial.Application;
+using IntegratedErp.Modules.Commercial.Contracts;
 using IntegratedErp.Modules.CrmSync.Application;
 using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.CrmSync.Domain;
@@ -17,7 +18,7 @@ public sealed class PricingImportTests(TestDatabase database)
     private int _workerNo;
 
     [SkippableFact]
-    public async Task Packages_are_the_most_common_price_and_the_others_are_special_prices()
+    public async Task Packages_are_created_by_the_user_and_price_the_workers_on_them()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
         var tenantId = await CreateCompanyAsync();
@@ -47,29 +48,70 @@ public sealed class PricingImportTests(TestDatabase database)
 
         await SyncAndImportAsync(tenantId, crm);
 
+        // Before any package: the current prices are suggested, and no worker is on a package.
+        string labourCode, philippinesCode, indiaCode;
+        Guid totalCostId, costPlusId;
+        using (var scope = database.Scope(tenantId))
+        {
+            var queries = scope.ServiceProvider.GetRequiredService<PricingQueries>();
+            var suggestions = await queries.SuggestionsAsync(new ListFilter(null, null, null, true, 1, 50), default);
+            Assert.Equal(3, suggestions.Total);
+            var filipinos = suggestions.Items.Single(r => r.ProjectName == "مشروع التكلفة الإجمالية" && r.NationalityEn == "Philippines");
+            Assert.Equal((3000m, 1500m, 3, 1), (filipinos.TotalPrice, filipinos.Salary, filipinos.Workers, filipinos.OtherPrices));
+            var plus = suggestions.Items.Single(r => r.ProjectName == "مشروع كوست بلس");
+            Assert.Equal((800m, 2), (plus.FeeAboveSalary, plus.Workers));
+
+            var none = await queries.PackagesAsync(new ListFilter(null, null, null, true, 1, 50), default);
+            Assert.Equal((0, 0, 0, 7, 1), (none.Totals.Packages, none.Totals.OnPackage, none.Totals.Special, none.Totals.WithoutPackage, none.Totals.WithoutPrice));
+
+            var options = await queries.OptionsAsync(null, default);
+            labourCode = options.Professions.Single().Code;
+            philippinesCode = options.Nationalities.Single(n => n.NameEn == "Philippines").Code;
+            indiaCode = options.Nationalities.Single(n => n.NameEn == "India").Code;
+            totalCostId = filipinos.ProjectId;
+            costPlusId = plus.ProjectId;
+        }
+
+        // The user creates packages: the Total Cost project's Filipinos, the Cost Plus project's fee, and a
+        // general package for any nationality.
+        var from = new DateOnly(2026, 1, 1);
+        using (var scope = database.Scope(tenantId))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<PricingService>();
+            Assert.True((await service.CreateAsync(new PackageInput(totalCostId, labourCode, philippinesCode, 1500m, 1300m, 200m, true, 0m, false, from, null, null), default)).IsSuccess);
+            Assert.True((await service.CreateAsync(new PackageInput(costPlusId, labourCode, philippinesCode, 1500m, 800m, 0m, false, 0m, false, from, null, null), default)).IsSuccess);
+            Assert.True((await service.CreateAsync(new PackageInput(null, labourCode, null, 1400m, 1400m, 0m, false, 0m, false, from, null, "عامة"), default)).IsSuccess);
+
+            // Same project, profession and nationality over an overlapping period: refused.
+            var overlap = await service.CreateAsync(new PackageInput(totalCostId, labourCode, philippinesCode, 1500m, 1500m, 0m, false, 0m, false, new DateOnly(2026, 6, 1), null, null), default);
+            Assert.Equal("conflict.package_overlap", overlap.Error.Code);
+            var negative = await service.CreateAsync(new PackageInput(null, labourCode, indiaCode, -1m, 100m, 0m, false, 0m, false, from, null, null), default);
+            Assert.Equal("validation.package_negative", negative.Error.Code);
+
+            // The delivery order lookup: the project's own package first, then the general one.
+            var catalog = scope.ServiceProvider.GetRequiredService<IPriceCatalog>();
+            var own = await catalog.FindAsync(totalCostId, labourCode, philippinesCode, new DateOnly(2026, 10, 1), default);
+            Assert.Equal(("PKG-00001", 3000m, true), (own!.PackageNo, own.TotalPrice, own.HousingBillable));
+            var general = await catalog.FindAsync(totalCostId, labourCode, indiaCode, new DateOnly(2026, 10, 1), default);
+            Assert.Equal(("PKG-00003", 2800m, true), (general!.PackageNo, general.TotalPrice, general.AnyNationality));
+            Assert.Null(await catalog.FindAsync(totalCostId, labourCode, philippinesCode, new DateOnly(2025, 12, 31), default));
+        }
+
         using (var scope = database.Scope(tenantId))
         {
             var queries = scope.ServiceProvider.GetRequiredService<PricingQueries>();
             var list = await queries.PackagesAsync(new ListFilter(null, null, null, true, 1, 50), default);
-            Assert.Equal((3, 2, 6, 1, 1), (list.Totals.Packages, list.Totals.Projects, list.Totals.OnPackage, list.Totals.Special, list.Totals.Missing));
+            Assert.Equal((3, 6, 1, 0, 1), (list.Totals.Packages, list.Totals.OnPackage, list.Totals.Special, list.Totals.WithoutPackage, list.Totals.WithoutPrice));
+            Assert.Equal(3, list.Items.Single(p => p.PackageNo == "PKG-00001").Workers);
 
-            var filipinos = list.Items.Single(p => p.ProjectName == "مشروع التكلفة الإجمالية" && p.NationalityEn == "Philippines");
-            Assert.Equal(("FixedTotal", 3000m, 3, 1), (filipinos.Basis, filipinos.TotalPrice, filipinos.Workers, filipinos.SpecialWorkers));
-            Assert.Equal(0m, filipinos.Housing);
+            var specialRow = (await queries.WorkersAsync(new ListFilter(null, "special", null, true, 1, 50), default)).Items.Single();
+            Assert.Equal((3500m, 3000m, 500m, "PKG-00001"), (specialRow.ServicePrice, specialRow.PackagePrice, specialRow.Difference, specialRow.PackageNo));
 
-            var indians = list.Items.Single(p => p.NationalityEn == "India");
-            Assert.Equal((2800m, 1, 1), (indians.TotalPrice, indians.Workers, indians.MissingWorkers));
-
-            var plus = list.Items.Single(p => p.ProjectName == "مشروع كوست بلس");
-            Assert.Equal(("SalaryPlusFee", 800m, (decimal?)null, 2, 0), (plus.Basis, plus.ServiceFee, plus.TotalPrice, plus.Workers, plus.SpecialWorkers));
-
-            var exceptions = await queries.ExceptionsAsync(new ListFilter(null, "special", null, true, 1, 50), default);
-            var row = exceptions.Items.Single();
-            Assert.Equal((3500m, 3000m, 500m), (row.ServicePrice, row.PackagePrice, row.Difference));
-
-            var project = await queries.ProjectAsync(plus.ProjectId, default);
-            Assert.All(project!.Workers, w => Assert.Equal("Package", w.Kind));
+            // Cost Plus: each worker's own salary + the package's fee.
+            var project = await queries.ProjectAsync(costPlusId, default);
+            Assert.All(project!.Workers, w => Assert.Equal("Package", w.Status));
             Assert.Equal([2300m, 2600m], project.Workers.Select(w => w.PackagePrice!.Value).Order());
+            Assert.Equal("PKG-00002", project.Suggestions.Single().CoveredByNo);
         }
 
         // The special price is corrected in the CRM: the next sync puts the worker on the package.
@@ -78,7 +120,7 @@ public sealed class PricingImportTests(TestDatabase database)
         using (var scope = database.Scope(tenantId))
         {
             var list = await scope.ServiceProvider.GetRequiredService<PricingQueries>().PackagesAsync(new ListFilter(null, null, null, true, 1, 50), default);
-            Assert.Equal((3, 7, 0, 1), (list.Totals.Packages, list.Totals.OnPackage, list.Totals.Special, list.Totals.Missing));
+            Assert.Equal((7, 0, 1), (list.Totals.OnPackage, list.Totals.Special, list.Totals.WithoutPrice));
         }
 
         _ = special;

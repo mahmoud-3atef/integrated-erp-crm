@@ -3,45 +3,175 @@ using IntegratedErp.SharedKernel;
 
 namespace IntegratedErp.Modules.Commercial.Domain;
 
-/// <summary>
-/// How a package prices a worker: a fixed monthly total (Total Cost contracts), or the worker's own salary plus a
-/// fixed service fee (Cost Plus contracts, where the salary passes through to the customer).
-/// </summary>
-public enum PricingBasis
+/// <summary>The amounts of a package (docs/02-target-architecture/04 §4.3).</summary>
+public sealed record PackageAmounts(decimal Salary, decimal ServiceFee, decimal Housing, bool HousingBillable, decimal Transport, bool TransportBillable)
 {
-    FixedTotal,
-    SalaryPlusFee,
-}
-
-/// <summary>Where a worker's current price comes from.</summary>
-public enum WorkerPriceKind
-{
-    /// <summary>The worker's price is the package's price.</summary>
-    Package,
-
-    /// <summary>A price different from the package's ("special price").</summary>
-    Special,
-
-    /// <summary>No price on the work start nor on the worker: needs a price before the period ledger.</summary>
-    Missing,
+    /// <summary>The full monthly service price: salary + service fee + housing + transport.</summary>
+    public decimal Total => Salary + ServiceFee + Housing + Transport;
 }
 
 /// <summary>
-/// A price package: the monthly price of a profession and nationality on a project's contract
-/// (docs/02-target-architecture/04 §4.3). In the parallel phase it is derived from the prices on the open work
-/// starts: the most common price of each project × profession × nationality; the others are special prices.
+/// A price package: the monthly service price of a profession (and a nationality, or any) on one project's contract,
+/// or a general package for every project. Created and maintained by the user; a delivery order line picks the
+/// package of the worker's profession and nationality (<see cref="PackageResolution"/>) instead of typing a price.
 /// </summary>
-public sealed class PricePackage : ITenantOwned, INotAudited
+public sealed class PricePackage : ITenantOwned
 {
     private PricePackage()
     {
+        PackageNo = string.Empty;
+        ProfessionCode = string.Empty;
     }
 
-    public PricePackage(Guid projectId, Guid contractId, string? professionCode, string? nationalityCode)
+    public Guid Id { get; private set; }
+
+    public Guid TenantId { get; private set; }
+
+    /// <summary>Gap-free number, e.g. PKG-00001.</summary>
+    public string PackageNo { get; private set; }
+
+    /// <summary>The project the package is for; null = a general package for all projects.</summary>
+    public Guid? ProjectId { get; private set; }
+
+    public string ProfessionCode { get; private set; }
+
+    /// <summary>Null = any nationality.</summary>
+    public string? NationalityCode { get; private set; }
+
+    public decimal Salary { get; private set; }
+
+    /// <summary>The company's service fee on top of the salary.</summary>
+    public decimal ServiceFee { get; private set; }
+
+    public decimal Housing { get; private set; }
+
+    /// <summary>Housing is a separate line on the customer's invoice.</summary>
+    public bool HousingBillable { get; private set; }
+
+    public decimal Transport { get; private set; }
+
+    /// <summary>Transport is a separate line on the customer's invoice.</summary>
+    public bool TransportBillable { get; private set; }
+
+    /// <summary>The full monthly service price (stored for lists and reports).</summary>
+    public decimal TotalPrice { get; private set; }
+
+    public DateOnly ValidFrom { get; private set; }
+
+    /// <summary>Last valid day; null = open-ended.</summary>
+    public DateOnly? ValidTo { get; private set; }
+
+    public bool IsActive { get; private set; }
+
+    public string? Notes { get; private set; }
+
+    public static Result<PricePackage> Create(string packageNo, PackageTerms terms)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageNo);
+        var package = new PricePackage { Id = Guid.CreateVersion7(), PackageNo = packageNo, IsActive = true };
+        var applied = package.Apply(terms);
+        return applied.IsFailure ? Result.Failure<PricePackage>(applied.Error) : Result.Success(package);
+    }
+
+    public Result Update(PackageTerms terms) => Apply(terms);
+
+    public void SetActive(bool active) => IsActive = active;
+
+    /// <summary>Whether the package is valid on a day.</summary>
+    public bool IsValidOn(DateOnly day) => IsActive && ValidFrom <= day && (ValidTo is null || day <= ValidTo);
+
+    /// <summary>Whether a validity period shares a day with this package's.</summary>
+    public bool Overlaps(DateOnly from, DateOnly? to) => ValidFrom <= (to ?? DateOnly.MaxValue) && from <= (ValidTo ?? DateOnly.MaxValue);
+
+    /// <summary>
+    /// A worker's monthly price on this package. On Cost Plus contracts the salary passes through to the customer,
+    /// so the worker's own salary replaces the package's.
+    /// </summary>
+    public decimal PriceFor(bool costPlus, decimal workerSalary) => costPlus ? workerSalary + ServiceFee + Housing + Transport : TotalPrice;
+
+    private Result Apply(PackageTerms t)
+    {
+        ArgumentNullException.ThrowIfNull(t);
+        var a = t.Amounts;
+        if (string.IsNullOrWhiteSpace(t.ProfessionCode))
+        {
+            return Result.Failure(Error.Validation("package_profession", "A profession is required."));
+        }
+
+        if (a.Salary < 0 || a.ServiceFee < 0 || a.Housing < 0 || a.Transport < 0)
+        {
+            return Result.Failure(Error.Validation("package_negative", "Amounts cannot be negative."));
+        }
+
+        if (a.Total <= 0)
+        {
+            return Result.Failure(Error.Validation("package_total", "The package price must be more than zero."));
+        }
+
+        if (t.ValidTo is { } to && to < t.ValidFrom)
+        {
+            return Result.Failure(Error.Validation("package_dates", "The end date is before the start date."));
+        }
+
+        ProjectId = t.ProjectId;
+        ProfessionCode = t.ProfessionCode.Trim();
+        NationalityCode = string.IsNullOrWhiteSpace(t.NationalityCode) ? null : t.NationalityCode.Trim();
+        Salary = Math.Round(a.Salary, 2);
+        ServiceFee = Math.Round(a.ServiceFee, 2);
+        Housing = Math.Round(a.Housing, 2);
+        HousingBillable = a.HousingBillable;
+        Transport = Math.Round(a.Transport, 2);
+        TransportBillable = a.TransportBillable;
+        TotalPrice = Salary + ServiceFee + Housing + Transport;
+        ValidFrom = t.ValidFrom;
+        ValidTo = t.ValidTo;
+        Notes = string.IsNullOrWhiteSpace(t.Notes) ? null : t.Notes.Trim();
+        return Result.Success();
+    }
+}
+
+public sealed record PackageTerms(Guid? ProjectId, string ProfessionCode, string? NationalityCode, PackageAmounts Amounts, DateOnly ValidFrom, DateOnly? ValidTo, string? Notes);
+
+/// <summary>Which package applies to a worker: the most specific valid one.</summary>
+public static class PackageResolution
+{
+    /// <summary>
+    /// The project's package for the profession and nationality, then the project's for any nationality, then the
+    /// general package for the nationality, then the general one for any nationality.
+    /// </summary>
+    public static PricePackage? Resolve(IEnumerable<PricePackage> packages, Guid? projectId, string? professionCode, string? nationalityCode, DateOnly on)
+    {
+        ArgumentNullException.ThrowIfNull(packages);
+        if (string.IsNullOrWhiteSpace(professionCode))
+        {
+            return null;
+        }
+
+        return packages
+            .Where(p => p.IsValidOn(on) && p.ProfessionCode == professionCode
+                && (p.ProjectId == null || p.ProjectId == projectId)
+                && (p.NationalityCode == null || p.NationalityCode == nationalityCode))
+            .OrderBy(p => p.ProjectId == null ? 1 : 0)
+            .ThenBy(p => p.NationalityCode == null ? 1 : 0)
+            .ThenByDescending(p => p.ValidFrom)
+            .FirstOrDefault();
+    }
+}
+
+/// <summary>
+/// A suggested package derived from the prices on the open work starts in the old system: the most common price of a
+/// project × profession × nationality, to create real packages from quickly. Rebuilt after every sync.
+/// </summary>
+public sealed class PriceSuggestion : ITenantOwned, INotAudited
+{
+    private PriceSuggestion()
+    {
+    }
+
+    public PriceSuggestion(Guid projectId, string? professionCode, string? nationalityCode)
     {
         Id = Guid.CreateVersion7();
         ProjectId = projectId;
-        ContractId = contractId;
         ProfessionCode = professionCode;
         NationalityCode = nationalityCode;
     }
@@ -52,59 +182,58 @@ public sealed class PricePackage : ITenantOwned, INotAudited
 
     public Guid ProjectId { get; private set; }
 
-    public Guid ContractId { get; private set; }
-
-    /// <summary>Profession reference code (after any merge); null when the workers have none.</summary>
     public string? ProfessionCode { get; private set; }
 
-    /// <summary>Nationality reference code; null when the workers have none.</summary>
     public string? NationalityCode { get; private set; }
 
-    public PricingBasis Basis { get; private set; }
+    /// <summary>The most common full service price (salary included) of the workers at it.</summary>
+    public decimal TotalPrice { get; private set; }
 
-    /// <summary>The fixed monthly total (fixed-total packages).</summary>
-    public decimal? TotalPrice { get; private set; }
+    /// <summary>The most common salary of the workers at the suggested price.</summary>
+    public decimal Salary { get; private set; }
 
-    /// <summary>The service fee on top of the salary (salary-plus-fee packages).</summary>
-    public decimal? ServiceFee { get; private set; }
+    /// <summary>On Cost Plus: the fee above each worker's own salary (the suggestion is compared on it).</summary>
+    public decimal? FeeAboveSalary { get; private set; }
 
-    /// <summary>Housing part of the price.</summary>
     public decimal Housing { get; private set; }
 
-    /// <summary>Transport part of the price.</summary>
     public decimal Transport { get; private set; }
 
-    /// <summary>Workers priced at the package.</summary>
+    /// <summary>Workers at the suggested price.</summary>
     public int Workers { get; private set; }
 
-    /// <summary>Workers of this profession and nationality on the project at a special price.</summary>
-    public int SpecialWorkers { get; private set; }
+    /// <summary>Workers of this profession and nationality on the project at another price.</summary>
+    public int OtherPrices { get; private set; }
 
-    /// <summary>The earliest work start priced at the package.</summary>
+    /// <summary>Workers without any price.</summary>
+    public int WithoutPrice { get; private set; }
+
     public DateOnly? Since { get; private set; }
 
     public DateTimeOffset DerivedAt { get; private set; }
 
-    public void Derive(PricingBasis basis, decimal amount, decimal housing, decimal transport, int workers, int specialWorkers, DateOnly? since, DateTimeOffset at)
+    public void Derive(PriceSuggestionValues v, DateTimeOffset at)
     {
-        Basis = basis;
-        TotalPrice = basis == PricingBasis.FixedTotal ? amount : null;
-        ServiceFee = basis == PricingBasis.SalaryPlusFee ? amount : null;
-        Housing = housing;
-        Transport = transport;
-        Workers = workers;
-        SpecialWorkers = specialWorkers;
-        Since = since;
+        ArgumentNullException.ThrowIfNull(v);
+        TotalPrice = v.TotalPrice;
+        Salary = v.Salary;
+        FeeAboveSalary = v.FeeAboveSalary;
+        Housing = v.Housing;
+        Transport = v.Transport;
+        Workers = v.Workers;
+        OtherPrices = v.OtherPrices;
+        WithoutPrice = v.WithoutPrice;
+        Since = v.Since;
         DerivedAt = at;
     }
-
-    /// <summary>The monthly price of a worker with this salary.</summary>
-    public decimal PriceFor(decimal salary) => Basis == PricingBasis.FixedTotal ? TotalPrice ?? 0 : salary + (ServiceFee ?? 0);
 }
 
+public sealed record PriceSuggestionValues(
+    decimal TotalPrice, decimal Salary, decimal? FeeAboveSalary, decimal Housing, decimal Transport, int Workers, int OtherPrices, int WithoutPrice, DateOnly? Since);
+
 /// <summary>
-/// A worker's current price on their project: from their latest work start there (CRM new_empwork), or the
-/// worker's default service price when the work start has none.
+/// A worker's current price on their project in the old system: from their latest work start there (CRM new_empwork),
+/// or the worker's default service price when the work start has none.
 /// </summary>
 public sealed class WorkerPrice : ITenantOwned, INotAudited
 {
@@ -150,10 +279,6 @@ public sealed class WorkerPrice : ITenantOwned, INotAudited
 
     public decimal Transport { get; private set; }
 
-    public WorkerPriceKind Kind { get; private set; }
-
-    public Guid? PackageId { get; private set; }
-
     /// <summary>The work start's number (SW000000) the price was read from.</summary>
     public string? WorkStartNo { get; private set; }
 
@@ -179,12 +304,6 @@ public sealed class WorkerPrice : ITenantOwned, INotAudited
         StartedOn = s.StartedOn;
         FromWorkerDefault = s.FromWorkerDefault;
     }
-
-    public void Classify(WorkerPriceKind kind, Guid? packageId)
-    {
-        Kind = kind;
-        PackageId = packageId;
-    }
 }
 
 public sealed record WorkerPriceSnapshot(
@@ -202,7 +321,7 @@ public sealed record WorkerPriceSnapshot(
     DateOnly? StartedOn,
     bool FromWorkerDefault);
 
-/// <summary>When the packages were last derived, and the outcome.</summary>
+/// <summary>When the suggestions were last derived, and the outcome.</summary>
 public sealed class PricingImport : ITenantOwned
 {
     public Guid Id { get; private set; } = Guid.CreateVersion7();

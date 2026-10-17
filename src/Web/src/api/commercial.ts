@@ -88,35 +88,74 @@ export interface CustomerDetail {
   projects: ProjectRow[];
 }
 
-export type PricingBasis = 'FixedTotal' | 'SalaryPlusFee';
-export type WorkerPriceKind = 'Package' | 'Special' | 'Missing';
+export type WorkerPriceStatus = 'Package' | 'Special' | 'NoPackage' | 'Missing';
 
+/** A price package (src/Modules/Commercial/.../Domain/Pricing.cs): a general one when projectId is null. */
 export interface PackageRow {
   id: string;
-  projectId: string;
-  projectCode: string;
-  projectName: string;
+  packageNo: string;
+  projectId: string | null;
+  projectCode: string | null;
+  projectName: string | null;
   customerName: string | null;
   contractType: ContractType | null;
+  professionCode: string;
   professionAr: string | null;
   professionEn: string | null;
+  nationalityCode: string | null;
   nationalityAr: string | null;
   nationalityEn: string | null;
-  basis: PricingBasis;
-  totalPrice: number | null;
-  serviceFee: number | null;
+  salary: number;
+  serviceFee: number;
   housing: number;
+  housingBillable: boolean;
   transport: number;
+  transportBillable: boolean;
+  totalPrice: number;
+  validFrom: string;
+  validTo: string | null;
+  isActive: boolean;
+  isCurrent: boolean;
   workers: number;
-  specialWorkers: number;
-  missingWorkers: number;
-  since: string | null;
+  notes: string | null;
 }
 
 export interface PackageList {
   total: number;
-  totals: { packages: number; projects: number; onPackage: number; special: number; missing: number };
+  totals: { packages: number; onPackage: number; special: number; withoutPackage: number; withoutPrice: number };
   items: PackageRow[];
+}
+
+/** A package suggested from the prices on the old system's open work starts. */
+export interface Suggestion {
+  id: string;
+  projectId: string;
+  projectName: string;
+  customerName: string | null;
+  contractType: ContractType | null;
+  professionCode: string | null;
+  professionAr: string | null;
+  professionEn: string | null;
+  nationalityCode: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  totalPrice: number;
+  salary: number;
+  feeAboveSalary: number | null;
+  housing: number;
+  transport: number;
+  workers: number;
+  otherPrices: number;
+  withoutPrice: number;
+  since: string | null;
+  coveredById: string | null;
+  coveredByNo: string | null;
+}
+
+export interface SuggestionList {
+  total: number;
+  covered: number;
+  items: Suggestion[];
 }
 
 export interface WorkerPrice {
@@ -134,8 +173,9 @@ export interface WorkerPrice {
   servicePrice: number | null;
   housing: number;
   transport: number;
-  kind: WorkerPriceKind;
+  status: WorkerPriceStatus;
   packageId: string | null;
+  packageNo: string | null;
   packagePrice: number | null;
   difference: number | null;
   workStartNo: string | null;
@@ -150,7 +190,35 @@ export interface WorkerPriceList {
 
 export interface ProjectPrices {
   packages: PackageRow[];
+  suggestions: Suggestion[];
   workers: WorkerPrice[];
+}
+
+export interface Option {
+  code: string;
+  nameAr: string;
+  nameEn: string;
+}
+
+export interface PackageOptions {
+  projects: { id: string; code: string; name: string; contractType: ContractType | null }[];
+  nationalities: Option[];
+  professions: Option[];
+}
+
+export interface PackageInput {
+  projectId: string | null;
+  professionCode: string;
+  nationalityCode: string | null;
+  salary: number;
+  serviceFee: number;
+  housing: number;
+  housingBillable: boolean;
+  transport: number;
+  transportBillable: boolean;
+  validFrom: string;
+  validTo: string | null;
+  notes: string | null;
 }
 
 export interface ListQuery {
@@ -178,6 +246,11 @@ export const commercialApi = {
   customers: (q: ListQuery) => request<CustomerList>('GET', `${base}/customers?${query(q)}`),
   customer: (id: string) => request<CustomerDetail>('GET', `${base}/customers/${id}`),
   prices: (q: ListQuery) => request<PackageList>('GET', `${base}/prices?${query(q)}`),
-  priceExceptions: (q: ListQuery) => request<WorkerPriceList>('GET', `${base}/prices/exceptions?${query(q)}`),
+  suggestions: (q: ListQuery) => request<SuggestionList>('GET', `${base}/prices/suggestions?${query(q)}`),
+  priceWorkers: (q: ListQuery) => request<WorkerPriceList>('GET', `${base}/prices/workers?${query(q)}`),
+  priceOptions: (search?: string) => request<PackageOptions>('GET', `${base}/prices/options${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  createPackage: (input: PackageInput) => request<{ id: string }>('POST', `${base}/prices`, input),
+  updatePackage: (id: string, input: PackageInput) => request<void>('PUT', `${base}/prices/${id}`, input),
+  setPackageActive: (id: string, active: boolean) => request<void>('POST', `${base}/prices/${id}/active`, { active }),
   projectPrices: (id: string) => request<ProjectPrices>('GET', `${base}/projects/${id}/prices`),
 };

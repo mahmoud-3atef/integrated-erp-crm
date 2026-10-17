@@ -1,4 +1,5 @@
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
@@ -21,14 +22,14 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { commercialApi, type ProjectDetail, type ProjectPrices } from '../../api/commercial';
+import { commercialApi, type PackageRow, type ProjectDetail, type ProjectPrices } from '../../api/commercial';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, PillTabs } from '../../components/ui';
 import { placementLook } from '../../components/workforce/placement';
-import { PackagesTable, WorkerPricesTable } from './pricing';
+import { draftFromSuggestion, PackageDialog, PackagesTable, SuggestionsTable, WorkerPricesTable, type PackageDraft } from './pricing';
 import { contractStatusTone, DaysLeft, useCommercialFormat } from './ProjectsPage';
 
 /** One project, as the old project page: title bar, project and contract sections, then its workers, price packages and worker prices. */
@@ -39,6 +40,9 @@ export function ProjectDetailPage() {
   const { ar, date } = useCommercialFormat();
   const { can } = useSession();
   const canPrices = can('commercial.prices.view', true);
+  const canManage = can('commercial.prices.manage', true);
+  const [dialog, setDialog] = useState<{ package?: PackageRow; draft?: PackageDraft } | null>(null);
+  const [reload, setReload] = useState(0);
   const [params] = useSearchParams();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [prices, setPrices] = useState<ProjectPrices | null>(null);
@@ -47,10 +51,22 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     commercialApi.project(id!).then(setProject).catch((failure: unknown) => setError(errorKey(failure)));
+  }, [id]);
+
+  useEffect(() => {
     if (canPrices) {
       commercialApi.projectPrices(id!).then(setPrices).catch((failure: unknown) => setError(errorKey(failure)));
     }
-  }, [id, canPrices]);
+  }, [id, canPrices, reload]);
+
+  const toggle = async (row: PackageRow) => {
+    try {
+      await commercialApi.setPackageActive(row.id, !row.isActive);
+      setReload((n) => n + 1);
+    } catch (failure) {
+      setError(errorKey(failure));
+    }
+  };
 
   if (!project) {
     return <ErrorMessage messageKey={error} />;
@@ -160,17 +176,39 @@ export function ProjectDetailPage() {
             ...(prices
               ? [
                   { value: 'packages' as const, label: t('commercial.tabs.packages', { count: prices.packages.length }) },
-                  { value: 'prices' as const, label: t('commercial.tabs.prices', { count: prices.workers.filter((w) => w.kind !== 'Package').length }) },
+                  { value: 'prices' as const, label: t('commercial.tabs.prices', { count: prices.workers.filter((w) => w.status !== 'Package').length }) },
                 ]
               : []),
           ]}
         />
         {tab === 'packages' && prices ? (
-          prices.packages.length === 0 ? (
-            <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('commercial.prices.noPackages')}</Typography>
-          ) : (
-            <PackagesTable rows={prices.packages} />
-          )
+          <>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+              <Typography sx={{ fontSize: 13, color: tokens.gray600 }}>{t('commercial.prices.projectPackagesIntro')}</Typography>
+              {canManage && (
+                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setDialog({ draft: { projectId: p.id } })}>
+                  {t('commercial.prices.new')}
+                </Button>
+              )}
+            </Stack>
+            {prices.packages.length === 0 ? (
+              <Typography sx={{ py: 3, textAlign: 'center', color: tokens.gray500 }}>{t('commercial.prices.noPackages')}</Typography>
+            ) : (
+              <PackagesTable
+                rows={prices.packages}
+                showProject
+                onEdit={canManage ? (row) => setDialog({ package: row }) : undefined}
+                onToggle={canManage ? (row) => void toggle(row) : undefined}
+              />
+            )}
+            {prices.suggestions.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800 }}>{t('commercial.prices.tabs.suggestions')}</Typography>
+                <Typography sx={{ fontSize: 13, color: tokens.gray600, mb: 1 }}>{t('commercial.prices.suggestionsIntro')}</Typography>
+                <SuggestionsTable rows={prices.suggestions} onCreate={canManage ? (row) => setDialog({ draft: draftFromSuggestion(row) }) : undefined} />
+              </Box>
+            )}
+          </>
         ) : tab === 'prices' && prices ? (
           prices.workers.length === 0 ? (
             <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('commercial.noWorkers')}</Typography>
@@ -218,9 +256,10 @@ export function ProjectDetailPage() {
         )}
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 2.5, fontSize: 12.5, color: tokens.gray500 }}>
           <InfoOutlinedIcon sx={{ fontSize: 16 }} />
-          {tab === 'workers' ? t('commercial.readOnly') : t('commercial.prices.derived')}
+          {tab === 'prices' ? t('commercial.prices.workersNote') : t('commercial.readOnly')}
         </Stack>
       </Box>
+      {dialog && <PackageDialog package={dialog.package} draft={dialog.draft} onClose={() => setDialog(null)} onSaved={() => (setDialog(null), setReload((n) => n + 1))} />}
     </Box>
   );
 }

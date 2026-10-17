@@ -195,7 +195,15 @@
     "validation_crm_sync_not_synced": "Run the sync first so countries and professions are copied.",
     "validation_crm_sync_item_unknown": "Choose an active item of the list.",
     "validation_crm_sync_same_item": "An item cannot be merged into itself.",
-    "not_found_crm_mapping": "CRM record not found."
+    "not_found_crm_mapping": "CRM record not found.",
+    "validation_package_profession": "Choose a profession from the list.",
+    "validation_package_nationality": "Choose a nationality from the list.",
+    "validation_package_project": "Project not found.",
+    "validation_package_negative": "Amounts cannot be negative.",
+    "validation_package_total": "The package price must be more than zero.",
+    "validation_package_dates": "The end date is before the start date.",
+    "conflict_package_overlap": "An active package for the same project, profession and nationality covers part of this period. Change its dates or stop it first.",
+    "not_found_price_package": "Package not found."
   },
   "menu": {
     "label": "Main menu",
@@ -995,7 +1003,7 @@
       "workers": "Workers on the project ({{count}} on the job of {{total}})",
       "projects": "Projects ({{count}}) — workers {{workers}}",
       "packages": "Price packages ({{count}})",
-      "prices": "Worker prices ({{count}} special or missing)"
+      "prices": "Worker prices ({{count}} off package)"
     },
     "contractType": {
       "CostPlus": "Cost plus",
@@ -1021,55 +1029,92 @@
     "customerDetails": "Customer details",
     "prices": {
       "title": "Price packages",
-      "intro": "The price of each profession and nationality on each project's contract, and the workers at a special price or without one.",
-      "derived": "Packages are derived from the prices on the old system's open work starts: the most common price of each project, profession and nationality is the package, and a different one is a special price. On Cost Plus contracts the package is the fee above the worker's salary. They are updated with every sync; prices are changed in the old system at this stage.",
-      "search": "Search by project, customer, profession or nationality",
+      "intro": "A package for each profession and nationality, with service fee, salary, housing and transport; the delivery order picks it automatically from the worker's profession and nationality.",
+      "search": "Search by package number, project, customer, profession or nationality",
       "searchWorkers": "Search by worker name or number, project, profession or nationality",
-      "count": "{{count}} packages",
-      "workersCount": "{{count}} workers",
       "empty": "Nothing matches this filter",
-      "noPackages": "No packages on this project: no workers on the job with a recorded price.",
+      "noPackages": "No packages apply to this project yet.",
+      "noPackagesYet": "No packages yet. Add a package, or create one from \"Suggestions from current prices\".",
       "salaryPlus": "Salary + {{fee}}",
       "fromWorkerDefault": "The work start has no price; this is the service price recorded on the worker.",
+      "new": "New package",
+      "general": "General, all projects",
+      "anyNationality": "Any nationality",
+      "openEnded": "Open-ended",
+      "stop": "Stop the package",
+      "activate": "Reactivate the package",
+      "coveredBy": "Covered by {{no}}",
+      "createFromSuggestion": "Create package",
+      "noPackageYet": "No package",
+      "sar": "SAR",
+      "scope": "Package scope",
+      "forProject": "One project",
+      "forAllProjects": "General, all projects",
+      "costPlusHint": "This project's contract is Cost Plus: the worker's actual salary is invoiced, and the package sets the service fee, housing and transport on top of it. The salary here is for reference.",
+      "professionHint": "Current workers' professions are listed; type two letters to search all professions.",
+      "feeHint": "What the company charges on top of the salary.",
+      "billable": "A separate line on the customer's invoice",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "validToHint": "Leave empty for an open-ended package.",
+      "notes": "Notes",
+      "suggestionsIntro": "The most common price of each project, profession and nationality on the old system's current work starts. \"Create package\" opens a new package filled with these amounts to review and save.",
+      "projectPackagesIntro": "This project's packages, and the general packages that apply to its workers' professions.",
+      "workersNote": "Workers' prices from the old system (each worker's latest work start), compared with the package that applies to them today.",
       "cards": {
-        "packages": "Packages",
-        "packagesFoot": "On {{count}} projects",
-        "onPackage": "Workers at the package price",
-        "onPackageFoot": "Price matches their package",
+        "packages": "Current packages",
+        "packagesFoot": "Show current",
+        "onPackage": "Workers at their package price",
+        "onPackageFoot": "Price matches the package",
         "special": "Special prices",
         "specialFoot": "Differ from the package",
+        "noPackage": "Workers without a package",
+        "noPackageFoot": "No package for their profession and nationality",
         "missing": "Workers without a price",
-        "missingFoot": "Need a price before the period ledger"
+        "missingFoot": "No price in the old system"
       },
       "tabs": {
         "packages": "Packages",
-        "exceptions": "Special and missing prices"
+        "suggestions": "Suggestions from current prices",
+        "workers": "Worker prices"
       },
-      "basis": {
-        "FixedTotal": "Fixed total",
-        "SalaryPlusFee": "Salary + fee"
+      "count": {
+        "packages": "{{count}} packages",
+        "suggestions": "{{count}} suggestions",
+        "workers": "{{count}} workers"
       },
-      "kind": {
+      "state": {
+        "current": "Current",
+        "upcoming": "Not started",
+        "ended": "Ended",
+        "stopped": "Stopped"
+      },
+      "status": {
         "Package": "Package price",
         "Special": "Special price",
+        "NoPackage": "No package",
         "Missing": "No price"
       },
       "col": {
-        "basis": "Pricing",
-        "price": "Monthly price",
-        "housing": "Housing",
-        "transport": "Transport",
-        "onPackage": "At package price",
-        "special": "Special",
+        "package": "Package",
+        "scope": "Project",
+        "who": "Profession / nationality",
+        "salary": "Salary",
+        "serviceFee": "Service fee",
+        "total": "Monthly service price",
+        "validity": "Validity",
+        "onPackage": "Workers on it",
+        "state": "Status",
+        "currentPrice": "Current price",
+        "atPrice": "At this price",
+        "otherPrices": "Other prices",
         "missing": "No price",
-        "since": "Earliest start",
-        "salary": "Total salary",
-        "servicePrice": "Total service price",
+        "servicePrice": "Price in the old system",
         "packagePrice": "Package price",
         "difference": "Difference",
-        "kind": "Status",
         "workStart": "Work start",
-        "who": "Profession / nationality"
+        "housing": "Housing",
+        "transport": "Transport"
       }
     }
   }

@@ -10,18 +10,17 @@ using Microsoft.EntityFrameworkCore;
 namespace IntegratedErp.Modules.Commercial.Application;
 
 /// <summary>
-/// Derives the price packages from the prices on the open work starts (docs/03-migration-plan/02 "أسعار المباشرات
-/// المفتوحة"): every worker on the job gets the price of their latest work start on their project (or their default
-/// service price when it has none); the most common price of each project × profession × nationality is the package
-/// and the others are special prices. On Cost Plus contracts the salary passes through, so the package is the fee
-/// above the salary. Runs after the workers and projects are imported, after every sync: it reads the whole copy (a few
+/// Reads the current prices from the old system: every worker on the job gets the price of their latest work start on
+/// their project (or their default service price when it has none), compared later with the user's price packages.
+/// It also suggests packages: the most common price of each project × profession × nationality (on Cost Plus
+/// contracts the salary passes through, so prices are compared on the fee above the salary). Runs after the workers and projects are imported, after every sync: it reads the whole copy (a few
 /// thousand records), so a manual merge of professions or nationalities regroups the packages at once.
 /// </summary>
 internal sealed class PricingImportService(CommercialDbContext db, ICrmStaging staging, IWorkforceDirectory workforce, IClock clock) : ICrmStagingConsumer
 {
     private static readonly TimeSpan Riyadh = TimeSpan.FromHours(3);
 
-    public string Name => "price packages";
+    public string Name => "current prices";
 
     public async Task<string> ApplyAsync(CancellationToken cancellationToken)
     {
@@ -34,7 +33,7 @@ internal sealed class PricingImportService(CommercialDbContext db, ICrmStaging s
 
         var now = clock.UtcNow;
         var projects = await db.Projects.AsNoTracking().Where(p => !p.RemovedInCrm)
-            .Join(db.Contracts, p => p.ContractId, c => c.Id, (p, c) => new { p.Id, p.CrmId, p.ContractId, c.Type })
+            .Join(db.Contracts, p => p.ContractId, c => c.Id, (p, c) => new { p.Id, p.CrmId, c.Type })
             .ToDictionaryAsync(p => p.CrmId, cancellationToken).ConfigureAwait(false);
 
         // The latest active work start of each worker on each project.
@@ -74,7 +73,7 @@ internal sealed class PricingImportService(CommercialDbContext db, ICrmStaging s
 
         // Each worker's current price.
         var existingPrices = await db.WorkerPrices.ToDictionaryAsync(p => p.WorkerCrmId, cancellationToken).ConfigureAwait(false);
-        var priced = new List<(WorkerPrice Price, Guid ContractId, PricingBasis Basis)>();
+        var priced = new List<(WorkerPrice Price, bool CostPlus)>();
         foreach (var worker in await workforce.WorkingAsync(cancellationToken).ConfigureAwait(false))
         {
             if (!projects.TryGetValue(worker.ProjectCrmId, out var project))
@@ -100,77 +99,67 @@ internal sealed class PricingImportService(CommercialDbContext db, ICrmStaging s
             workerPrice.Update(new WorkerPriceSnapshot(
                 worker.Id, worker.WorkerNo, worker.Name, project.Id, worker.ProfessionCode, worker.NationalityCode, Math.Round(worker.TotalSalary, 2),
                 price, start?.Housing ?? 0, start?.Transport ?? 0, start?.Number, start?.StartedOn ?? worker.JoinedOn, fromDefault));
-            priced.Add((workerPrice, project.ContractId, project.Type == ContractType.CostPlus ? PricingBasis.SalaryPlusFee : PricingBasis.FixedTotal));
+            priced.Add((workerPrice, project.Type == ContractType.CostPlus));
         }
 
         db.WorkerPrices.RemoveRange(existingPrices.Values); // no longer on the job
 
-        // Packages: the most common price of each project × profession × nationality.
-        var existingPackages = (await db.PricePackages.ToListAsync(cancellationToken).ConfigureAwait(false)).ToDictionary(p => (p.ProjectId, p.ProfessionCode, p.NationalityCode));
-        int total = 0, added = 0, removed = 0, special = 0, missing = 0, onPackage = 0;
+        // Suggestions: the most common price of each project × profession × nationality.
+        var existing = (await db.PriceSuggestions.ToListAsync(cancellationToken).ConfigureAwait(false))
+            .ToDictionary(p => (p.ProjectId, p.ProfessionCode, p.NationalityCode));
+        int total = 0, atSuggested = 0, other = 0, missing = 0;
         foreach (var group in priced.GroupBy(p => (p.Price.ProjectId, p.Price.ProfessionCode, p.Price.NationalityCode)))
         {
-            var basis = group.First().Basis;
-            var withPrice = group.Where(p => p.Price.ServicePrice is not null).ToList();
+            var costPlus = group.First().CostPlus;
+            var withPrice = group.Where(p => p.Price.ServicePrice is not null).Select(p => p.Price).ToList();
             var chosen = withPrice
-                .GroupBy(p => Variant(p.Price, basis))
+                .GroupBy(p => Variant(p, costPlus))
                 .OrderByDescending(g => g.Count())
-                .ThenByDescending(g => g.Max(p => p.Price.StartedOn ?? DateOnly.MinValue))
+                .ThenByDescending(g => g.Max(p => p.StartedOn ?? DateOnly.MinValue))
                 .ThenByDescending(g => g.Key.Amount)
                 .FirstOrDefault();
-            existingPackages.Remove(group.Key, out var package);
+            existing.Remove(group.Key, out var suggestion);
             if (chosen is null)
             {
-                if (package is not null)
+                if (suggestion is not null)
                 {
-                    db.PricePackages.Remove(package);
-                    removed++;
+                    db.PriceSuggestions.Remove(suggestion);
                 }
 
-                foreach (var (price, _, _) in group)
-                {
-                    price.Classify(WorkerPriceKind.Missing, null);
-                    missing++;
-                }
-
+                missing += group.Count();
                 continue;
             }
 
-            if (package is null)
+            if (suggestion is null)
             {
-                package = new PricePackage(group.Key.ProjectId, group.First().ContractId, group.Key.ProfessionCode, group.Key.NationalityCode);
-                db.PricePackages.Add(package);
-                added++;
+                suggestion = new PriceSuggestion(group.Key.ProjectId, group.Key.ProfessionCode, group.Key.NationalityCode);
+                db.PriceSuggestions.Add(suggestion);
             }
 
-            var specials = withPrice.Count - chosen.Count();
-            package.Derive(basis, chosen.Key.Amount, chosen.Key.Housing, chosen.Key.Transport, chosen.Count(), specials, chosen.Min(p => p.Price.StartedOn), now);
-            foreach (var (price, _, _) in group)
-            {
-                var kind = price.ServicePrice is null ? WorkerPriceKind.Missing
-                    : Variant(price, basis) == chosen.Key ? WorkerPriceKind.Package
-                    : WorkerPriceKind.Special;
-                price.Classify(kind, package.Id);
-            }
-
+            var salary = chosen.GroupBy(p => p.Salary).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).First().Key;
+            var others = withPrice.Count - chosen.Count();
+            var noPrice = group.Count() - withPrice.Count;
+            suggestion.Derive(
+                new PriceSuggestionValues(
+                    costPlus ? salary + chosen.Key.Amount : chosen.Key.Amount, salary, costPlus ? chosen.Key.Amount : null,
+                    chosen.Key.Housing, chosen.Key.Transport, chosen.Count(), others, noPrice, chosen.Min(p => p.StartedOn)),
+                now);
             total++;
-            onPackage += chosen.Count();
-            special += specials;
-            missing += group.Count() - withPrice.Count;
+            atSuggested += chosen.Count();
+            other += others;
+            missing += noPrice;
         }
 
-        db.PricePackages.RemoveRange(existingPackages.Values);
-        removed += existingPackages.Count;
-        var summary = $"{total} packages ({added} new, {removed} removed); "
-            + $"workers: {onPackage} on a package, {special} special prices, {missing} without a price";
+        db.PriceSuggestions.RemoveRange(existing.Values);
+        var summary = $"{total} suggested packages; workers: {atSuggested} at the suggested price, {other} at another price, {missing} without a price";
         state.Derived(now, summary);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return summary;
     }
 
     /// <summary>What a worker's price is compared on: the total, or the fee above the salary on Cost Plus.</summary>
-    private static (decimal Amount, decimal Housing, decimal Transport) Variant(WorkerPrice price, PricingBasis basis) =>
-        (basis == PricingBasis.SalaryPlusFee ? price.ServicePrice!.Value - price.Salary : price.ServicePrice!.Value, price.Housing, price.Transport);
+    private static (decimal Amount, decimal Housing, decimal Transport) Variant(WorkerPrice price, bool costPlus) =>
+        (costPlus ? price.ServicePrice!.Value - price.Salary : price.ServicePrice!.Value, price.Housing, price.Transport);
 
     private sealed record WorkStart(string? Number, DateOnly? StartedOn, string CreatedOn, decimal? Price, decimal Housing, decimal Transport)
     {
