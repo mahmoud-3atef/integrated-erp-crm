@@ -11,6 +11,7 @@ import { DeliveryOrderDetailPage } from '../pages/operations/DeliveryOrderDetail
 import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage';
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
+import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
 import { ReturnOrderDetailPage } from '../pages/operations/ReturnOrderDetailPage';
 import { ReturnOrderFormPage } from '../pages/operations/ReturnOrderFormPage';
 import { ReturnOrdersPage } from '../pages/operations/ReturnOrdersPage';
@@ -75,6 +76,7 @@ export function App() {
                 <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderFormPage />} />
                 <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />
                 <Route path="/workforce/history-issues" element={<HistoryIssuesPage />} />
+                <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
                 <Route path="/operations/return-orders/:id" element={<ReturnOrderDetailPage />} />
                 <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderFormPage />} />

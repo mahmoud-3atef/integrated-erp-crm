@@ -139,7 +139,15 @@ internal sealed class HistoryBuilder(WorkforceDbContext db, ICrmStaging staging,
                         $"{ordered.Count} حركات في يوم واحد ({string.Join("، ", ordered.Select(e => e.SourceNo))})؛ اعتُمدت الأخيرة {ordered[^1].SourceNo}.", ordered[^1].SourceNo));
                 }
 
-                kept.Add(ordered[^1]);
+                // A duplicate work start on the same project often carries the price the kept one lacks.
+                var latest = ordered[^1];
+                if (latest.Kind == PeriodKind.Work && latest.NoPrice
+                    && ordered.LastOrDefault(e => e.Kind == PeriodKind.Work && !e.NoPrice && e.ProjectCrmId == latest.ProjectCrmId) is { } priced)
+                {
+                    latest = latest with { Rate = priced.Rate, NoPrice = false };
+                }
+
+                kept.Add(latest);
             }
 
             for (var i = 0; i < kept.Count; i++)

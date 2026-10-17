@@ -23,6 +23,7 @@ import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
 import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -78,6 +79,7 @@ const menu: MenuSection[] = [
     items: [
       { path: '/workforce/workers', labelKey: 'menu.workers', icon: <EngineeringOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
       { path: '/workforce/history-issues', labelKey: 'menu.historyIssues', icon: <RuleOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
+      { path: '/workforce/invoice-check', labelKey: 'menu.invoiceCheck', icon: <FactCheckOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
     ],
   },
   {

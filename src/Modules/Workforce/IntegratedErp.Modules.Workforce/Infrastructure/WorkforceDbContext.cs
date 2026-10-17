@@ -30,6 +30,49 @@ internal sealed class WorkforceDbContext(DbContextOptions<WorkforceDbContext> op
     public DbSet<HistoryIssue> HistoryIssues => Set<HistoryIssue>();
 
     public DbSet<HistoryImport> HistoryImports => Set<HistoryImport>();
+
+    public DbSet<InvoiceCheckLine> InvoiceCheckLines => Set<InvoiceCheckLine>();
+
+    public DbSet<InvoiceCheckImport> InvoiceCheckImports => Set<InvoiceCheckImport>();
+}
+
+internal sealed class InvoiceCheckLineConfiguration : IEntityTypeConfiguration<InvoiceCheckLine>
+{
+    public void Configure(EntityTypeBuilder<InvoiceCheckLine> builder)
+    {
+        builder.ToTable("invoice_check");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Id).ValueGeneratedNever();
+        builder.Property(l => l.WorkerNo).HasMaxLength(30).IsRequired();
+        builder.Property(l => l.Name).HasMaxLength(200).IsRequired();
+        builder.Property(l => l.ProjectName).HasMaxLength(300);
+        builder.Property(l => l.InvoiceNo).HasMaxLength(50);
+        builder.Property(l => l.MonthDays).HasPrecision(9, 2);
+        builder.Property(l => l.WorkingDays).HasPrecision(9, 2);
+        builder.Property(l => l.AbsentDays).HasPrecision(9, 2);
+        builder.Property(l => l.LedgerDays).HasPrecision(9, 2);
+        builder.Property(l => l.InvoicedPrice).HasPrecision(18, 2);
+        builder.Property(l => l.Amount).HasPrecision(18, 2);
+        builder.Property(l => l.LedgerPrice).HasPrecision(18, 2);
+        builder.Property(l => l.LedgerSources).HasMaxLength(300);
+        builder.Property(l => l.Result).HasMaxLength(30).IsRequired();
+        builder.Property(l => l.Details).HasMaxLength(1000).IsRequired();
+        builder.HasIndex(l => new { l.TenantId, l.Month, l.Result });
+        builder.HasIndex(l => new { l.TenantId, l.WorkerId });
+    }
+}
+
+internal sealed class InvoiceCheckImportConfiguration : IEntityTypeConfiguration<InvoiceCheckImport>
+{
+    public void Configure(EntityTypeBuilder<InvoiceCheckImport> builder)
+    {
+        builder.ToTable("invoice_check_import");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
+        builder.Property(i => i.LedgerSignature).HasMaxLength(100);
+        builder.Property(i => i.Summary).HasMaxLength(500);
+        builder.HasIndex(i => i.TenantId).IsUnique();
+    }
 }
 
 internal sealed class HistoryPeriodConfiguration : IEntityTypeConfiguration<HistoryPeriod>

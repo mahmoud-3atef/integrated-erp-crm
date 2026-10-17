@@ -380,6 +380,167 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                     b.ToTable("history_period", "workforce");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.InvoiceCheckImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("BuiltAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("built_at");
+
+                    b.Property<DateTimeOffset?>("InvoicesWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("invoices_watermark");
+
+                    b.Property<string>("LedgerSignature")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ledger_signature");
+
+                    b.Property<DateTimeOffset?>("LinesWatermark")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("lines_watermark");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_check_import");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_check_import_tenant_id");
+
+                    b.ToTable("invoice_check_import", "workforce");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.InvoiceCheckLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("AbsentDays")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)")
+                        .HasColumnName("absent_days");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("details");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date")
+                        .HasColumnName("from");
+
+                    b.Property<string>("InvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("invoice_no");
+
+                    b.Property<decimal?>("InvoicedPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("invoiced_price");
+
+                    b.Property<decimal?>("LedgerDays")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)")
+                        .HasColumnName("ledger_days");
+
+                    b.Property<decimal?>("LedgerPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ledger_price");
+
+                    b.Property<string>("LedgerSources")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("ledger_sources");
+
+                    b.Property<DateOnly>("Month")
+                        .HasColumnType("date")
+                        .HasColumnName("month");
+
+                    b.Property<decimal>("MonthDays")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)")
+                        .HasColumnName("month_days");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("result");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date")
+                        .HasColumnName("to");
+
+                    b.Property<Guid?>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("WorkerNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("worker_no");
+
+                    b.Property<decimal?>("WorkingDays")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)")
+                        .HasColumnName("working_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_check");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_invoice_check_tenant_id");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .HasDatabaseName("ix_invoice_check_tenant_id_worker_id");
+
+                    b.HasIndex("TenantId", "Month", "Result")
+                        .HasDatabaseName("ix_invoice_check_tenant_id_month_result");
+
+                    b.ToTable("invoice_check", "workforce");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.Person", b =>
                 {
                     b.Property<Guid>("Id")

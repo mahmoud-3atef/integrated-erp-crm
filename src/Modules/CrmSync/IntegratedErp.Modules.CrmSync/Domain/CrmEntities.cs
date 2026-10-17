@@ -39,6 +39,8 @@ public static class CrmEntities
         new("new_ajeercontract", "الأسرّة", "Beds"),
         new("new_thijridate", "تسكين الأسرّة", "Bed assignments"),
         new("hr_vicrequest", "طلبات الإجازات", "Vacation requests"),
+        new("new_invoice", "فواتير المشاريع", "Project invoices"),
+        new("new_invoicdetail", "تفاصيل الفواتير", "Invoice lines"),
     ];
 
     public static CrmEntity? Find(string name) => All.FirstOrDefault(e => e.Name == name);

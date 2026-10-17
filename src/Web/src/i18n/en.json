@@ -268,7 +268,8 @@
     "operations": "Operations",
     "deliveryOrders": "Delivery orders",
     "returnOrders": "Return orders",
-    "historyIssues": "Period ledger exceptions"
+    "historyIssues": "Period ledger exceptions",
+    "invoiceCheck": "Attendance vs invoices"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1033,6 +1034,46 @@
         "OnJobWithoutWorkStart": "The worker is \"on the job\" in the old system without any work start to show it.",
         "StatusMismatch": "The worker's status in the old system does not match the last movement of their history (e.g. last housed but on the job).",
         "ProjectMismatch": "The worker is on the job on another project than their last work start."
+      }
+    },
+    "invoiceCheck": {
+      "title": "Attendance vs invoices",
+      "intro": "Each line of the old system's project invoices against the days and price in the period ledger for the same worker, project and invoice period.",
+      "how": "The invoice's days are its working days (an absent day is still a day on the project, deducted from the amount); the ledger's days are the days of work periods on the project within the invoice's period (a fully covered period counts as the invoice's month days). An invoice belongs to the month it ends in; canceled ones are left out. The check starts in September 2026, the first month whose invoices were matched with the periods before being made. Rebuilt after every sync.",
+      "builtAt": "Last built: {{at}}",
+      "rate": "Match rate",
+      "rateOf": "Match rate — {{month}}",
+      "rateDetail": "{{match}} of {{total}} lines in {{invoices}} invoices",
+      "target": "Target: 99% before the ledger is relied on for invoicing",
+      "all": "All lines",
+      "search": "Search by worker number or name, project or invoice number",
+      "count": "{{count}} lines",
+      "empty": "No matching lines",
+      "none": "No invoices to check yet; they appear after the next sync.",
+      "invoice": "Invoice",
+      "invoiceDays": "Invoice days",
+      "ledgerDays": "Ledger days",
+      "invoicePrice": "Invoice price",
+      "ledgerPrice": "Ledger price",
+      "result": "Result",
+      "absent": "{{days}} absent",
+      "results": {
+        "Match": "Match",
+        "DaysDiff": "Days differ",
+        "PriceDiff": "Price differs",
+        "DaysAndPriceDiff": "Days and price differ",
+        "NotInLedger": "Invoiced, not in the ledger",
+        "NotInvoiced": "In the ledger, not invoiced",
+        "ProjectNotInvoiced": "Project without an invoice"
+      },
+      "explain": {
+        "Match": "The same working days and the same monthly price.",
+        "DaysDiff": "The invoice's working days differ from the ledger's work days: a missing or wrong movement in the old system (work start, return or vacation), or days changed by hand on the invoice.",
+        "PriceDiff": "The same days at another monthly price, or a work start without a price in the ledger: check the work start's price in the old system.",
+        "DaysAndPriceDiff": "Both the days and the price differ.",
+        "NotInLedger": "The worker is invoiced on the project, but the ledger does not have them there in the invoice's period (e.g. in housing per the ledger).",
+        "NotInvoiced": "The ledger has the worker on the project, the project has an invoice for the month, but the worker is not on it.",
+        "ProjectNotInvoiced": "Workers on projects without an invoice for the month (internal projects such as head office, or an invoice not made yet). Not counted in the match rate."
       }
     }
   },

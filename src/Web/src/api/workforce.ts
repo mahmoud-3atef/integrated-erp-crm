@@ -94,6 +94,13 @@ export const workforceApi = {
     return request<WorkerList>('GET', `${base}/${kindPath(kind)}?${params.toString()}`);
   },
   get: (kind: WorkerKind, id: string) => request<WorkerDetail>('GET', `${base}/${kindPath(kind)}/${id}`),
+  invoiceCheck: (q: { month?: string; result?: string; search?: string; page: number; pageSize: number }) => {
+    const params = new URLSearchParams({ page: String(q.page), pageSize: String(q.pageSize) });
+    if (q.month) params.set('month', q.month);
+    if (q.result) params.set('result', q.result);
+    if (q.search) params.set('search', q.search);
+    return request<InvoiceCheckList>('GET', `${base}/invoice-check?${params.toString()}`);
+  },
   historyIssues: (q: { code?: string; search?: string; workerId?: string; page: number; pageSize: number }) => {
     const params = new URLSearchParams({ page: String(q.page), pageSize: String(q.pageSize) });
     if (q.code) params.set('code', q.code);
@@ -130,6 +137,40 @@ export interface WorkerPeriod {
 }
 
 export const historyIssueCodes = ['SameDay', 'Gap', 'EndBeforeStart', 'EndAfterNext', 'WorkWithoutPrice', 'ReturnWithoutWork', 'OnJobWithoutWorkStart', 'StatusMismatch', 'ProjectMismatch'] as const;
+
+export const invoiceCheckResults = ['Match', 'DaysDiff', 'PriceDiff', 'DaysAndPriceDiff', 'NotInLedger', 'NotInvoiced', 'ProjectNotInvoiced'] as const;
+
+export interface InvoiceCheckLine {
+  id: string;
+  workerId: string | null;
+  workerNo: string;
+  name: string;
+  projectName: string | null;
+  invoiceNo: string | null;
+  from: string;
+  to: string;
+  monthDays: number;
+  workingDays: number | null;
+  absentDays: number | null;
+  invoicedPrice: number | null;
+  amount: number | null;
+  ledgerDays: number | null;
+  ledgerPrice: number | null;
+  ledgerSources: string | null;
+  result: string;
+  details: string;
+}
+
+export interface InvoiceCheckList {
+  months: string[];
+  month: string | null;
+  counts: Record<string, number>;
+  matchRate: number;
+  invoices: number;
+  builtAt: string | null;
+  total: number;
+  items: InvoiceCheckLine[];
+}
 
 export interface HistoryIssue {
   id: string;

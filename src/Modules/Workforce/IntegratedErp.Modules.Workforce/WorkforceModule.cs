@@ -32,6 +32,9 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<HistoryBuilder>();
         services.AddScoped<HistoryQueries>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<HistoryBuilder>());
+        services.AddScoped<InvoiceCheckBuilder>();
+        services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<InvoiceCheckBuilder>());
+        services.AddScoped<InvoiceCheckQueries>();
         services.AddPermissions(WorkforcePermissions.All);
     }
 
