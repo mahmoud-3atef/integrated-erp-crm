@@ -24,6 +24,8 @@
 [CmdletBinding()]
 param(
     [string] $HostName = 'newcrm.jrco.local',
+    # Internal test port first; the old system stays live on port 80.
+    [int] $Port = 8003,
     [string] $SiteName = 'IntegratedErp',
     [string] $Root = 'C:\IntegratedErp',
     [string] $SqlServer = '.',
@@ -33,7 +35,7 @@ param(
     [string] $CompanyCode = 'carepro',
     [string] $CompanyNameAr = 'كير برو',
     [string] $CompanyNameEn = 'CarePro',
-    [string[]] $Administrators = @('jehan')
+    [string[]] $Administrators = @('systemAdmin')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -125,21 +127,29 @@ if ($CertificateThumbprint) {
 Ok "$($certificate.Subject) until $($certificate.NotAfter.ToString('yyyy-MM-dd')) ($($certificate.Thumbprint))"
 
 # ---------------------------------------------------------------- Site
-Step "IIS site https://$HostName"
+Step "IIS site https://${HostName}:$Port"
 if (-not (Get-Website -Name $SiteName)) {
-    New-Website -Name $SiteName -PhysicalPath (Join-Path $Root 'app') -ApplicationPool $SiteName -HostHeader $HostName -Port 443 -Ssl -SslFlags 1 | Out-Null
+    New-Website -Name $SiteName -PhysicalPath (Join-Path $Root 'app') -ApplicationPool $SiteName -HostHeader $HostName -Port $Port -Ssl -SslFlags 1 | Out-Null
     Ok "Created site $SiteName"
 } else {
     Ok "Site $SiteName exists"
 }
-$binding = Get-WebBinding -Name $SiteName -Protocol https
+# One HTTPS binding on the chosen port (moving the site to another port later = run again with -Port).
+Get-WebBinding -Name $SiteName -Protocol https | Where-Object { $_.bindingInformation -ne "*:${Port}:$HostName" } | Remove-WebBinding
+if (-not (Get-WebBinding -Name $SiteName -Protocol https -Port $Port -HostHeader $HostName)) {
+    New-WebBinding -Name $SiteName -Protocol https -Port $Port -HostHeader $HostName -SslFlags 1
+}
+$binding = Get-WebBinding -Name $SiteName -Protocol https -Port $Port -HostHeader $HostName
 $binding.AddSslCertificate($certificate.Thumbprint, 'My')
 Set-ItemProperty "IIS:\Sites\$SiteName" -Name applicationDefaults.preloadEnabled -Value $true
 Ok 'Certificate bound'
-if (-not (Get-NetFirewallRule -DisplayName 'Integrated ERP (HTTPS)' -ErrorAction SilentlyContinue)) {
-    New-NetFirewallRule -DisplayName 'Integrated ERP (HTTPS)' -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow -Profile Domain | Out-Null
+$rule = Get-NetFirewallRule -DisplayName 'Integrated ERP (HTTPS)' -ErrorAction SilentlyContinue
+if ($rule) {
+    $rule | Set-NetFirewallRule -LocalPort $Port
+} else {
+    New-NetFirewallRule -DisplayName 'Integrated ERP (HTTPS)' -Direction Inbound -Protocol TCP -LocalPort $Port -Action Allow -Profile Domain | Out-Null
 }
-Ok 'Firewall: HTTPS (443) open on the domain network'
+Ok "Firewall: HTTPS ($Port) open on the domain network"
 
 # ---------------------------------------------------------------- Database
 Step "Database $Database on $SqlServer"
@@ -197,5 +207,6 @@ Write-Host @"
         C:\Integrated-ERP-CRM\tools\Set-ErpSecret.ps1 -Name Identity:Ldap:BindUser -Scope LocalMachine
         C:\Integrated-ERP-CRM\tools\Set-ErpSecret.ps1 -Name Identity:Ldap:BindPassword -Secret -Scope LocalMachine
    2. On SQLCRM, give the login JRCO\$env:COMPUTERNAME`$ the role db_datareader on Care_Pro_MSCRM (read only).
-   3. Deploy:  C:\Integrated-ERP-CRM\deploy\Deploy-Erp.ps1
+   3. Make sure the AD account(s) $($Administrators -join ', ') exist: the first sign-in makes them administrators.
+   4. Deploy:  C:\Integrated-ERP-CRM\deploy\Deploy-Erp.ps1
 "@

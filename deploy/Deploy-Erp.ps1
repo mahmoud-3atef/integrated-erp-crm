@@ -19,6 +19,7 @@
 [CmdletBinding()]
 param(
     [string] $HostName = 'newcrm.jrco.local',
+    [int] $Port = 8003,
     [string] $SiteName = 'IntegratedErp',
     [string] $Root = 'C:\IntegratedErp',
     [switch] $SkipTests,
@@ -121,11 +122,12 @@ try {
 }
 
 # ---------------------------------------------------------------- Health
-Step "Checking https://$HostName/health"
+$url = "https://${HostName}:$Port"
+Step "Checking $url/health"
 $healthy = $false
 for ($i = 0; $i -lt 10 -and -not $healthy; $i++) {
     try {
-        $response = Invoke-WebRequest -Uri "https://$HostName/health" -UseBasicParsing -TimeoutSec 30
+        $response = Invoke-WebRequest -Uri "$url/health" -UseBasicParsing -TimeoutSec 30
         Write-Host "   $($response.Content)"
         $healthy = $response.StatusCode -eq 200
     } catch {
@@ -136,7 +138,7 @@ if (-not $healthy) {
     Write-Host "   The site did not report healthy. See the logs in $Root\logs, or roll back with: Deploy-Erp.ps1 -Rollback" -ForegroundColor Red
     exit 1
 }
-Ok "https://$HostName is running"
+Ok "$url is running"
 
 # ---------------------------------------------------------------- Keep the last releases
 Get-ChildItem $releases -Directory | Sort-Object Name -Descending | Select-Object -Skip $KeepReleases | Remove-Item -Recurse -Force
