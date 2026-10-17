@@ -12,6 +12,8 @@ export interface EntityStatus {
   records: number;
   deleted: number;
   lastChangeCopied: string | null;
+  /** Only records created on or after this date are copied. */
+  createdFrom: string | null;
   lastSucceededAt: string | null;
   lastFailedAt: string | null;
   lastError: string | null;
@@ -24,6 +26,7 @@ export interface EntityResult {
   updated: number;
   deleted: number;
   error: string | null;
+  excluded: number;
 }
 
 export interface SyncRun {

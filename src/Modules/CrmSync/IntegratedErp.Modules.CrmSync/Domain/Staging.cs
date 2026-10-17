@@ -16,11 +16,12 @@ public sealed class StagedRecord : ITenantOwned, INotAudited
         PayloadHash = string.Empty;
     }
 
-    public StagedRecord(string entity, Guid crmId, DateTime? modifiedOn, int? stateCode, string payload, string payloadHash, Guid runId, DateTimeOffset now)
+    public StagedRecord(string entity, Guid crmId, DateTime? createdOn, DateTime? modifiedOn, int? stateCode, string payload, string payloadHash, Guid runId, DateTimeOffset now)
     {
         Id = Guid.CreateVersion7();
         Entity = entity;
         CrmId = crmId;
+        CreatedOn = createdOn;
         ModifiedOn = modifiedOn;
         StateCode = stateCode;
         Payload = payload;
@@ -37,6 +38,9 @@ public sealed class StagedRecord : ITenantOwned, INotAudited
     public string Entity { get; private set; }
 
     public Guid CrmId { get; private set; }
+
+    /// <summary>CRM <c>createdon</c> (UTC).</summary>
+    public DateTime? CreatedOn { get; private set; }
 
     /// <summary>CRM <c>modifiedon</c> (UTC).</summary>
     public DateTime? ModifiedOn { get; private set; }
@@ -57,9 +61,10 @@ public sealed class StagedRecord : ITenantOwned, INotAudited
     public bool IsDeleted { get; private set; }
 
     /// <summary>Records the latest copy; returns whether anything changed.</summary>
-    public bool Refresh(DateTime? modifiedOn, int? stateCode, string payload, string payloadHash, Guid runId, DateTimeOffset now)
+    public bool Refresh(DateTime? createdOn, DateTime? modifiedOn, int? stateCode, string payload, string payloadHash, Guid runId, DateTimeOffset now)
     {
         LastSeenRunId = runId;
+        CreatedOn = createdOn;
         if (PayloadHash == payloadHash && !IsDeleted)
         {
             return false;
@@ -153,7 +158,8 @@ public enum SyncRunStatus
 }
 
 /// <summary>What one entity's sync did in a run.</summary>
-public sealed record EntitySyncResult(string Entity, int Read, int Inserted, int Updated, int Deleted, string? Error);
+/// <summary>What one entity's sync did in a run (<paramref name="Excluded"/>: staged records older than the entity's start date, removed).</summary>
+public sealed record EntitySyncResult(string Entity, int Read, int Inserted, int Updated, int Deleted, string? Error, int Excluded = 0);
 
 /// <summary>One run of the sync job: who or what started it, and what each entity did.</summary>
 public sealed class SyncRun : ITenantOwned

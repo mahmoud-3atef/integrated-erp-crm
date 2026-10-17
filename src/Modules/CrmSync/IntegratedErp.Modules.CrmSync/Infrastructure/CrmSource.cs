@@ -7,16 +7,17 @@ using Microsoft.Extensions.Options;
 namespace IntegratedErp.Modules.CrmSync.Infrastructure;
 
 /// <summary>One CRM record: its id, change time, state, and every readable column (lower-case names).</summary>
-public sealed record CrmRow(Guid Id, DateTime ModifiedOn, int? StateCode, IReadOnlyDictionary<string, object?> Values);
+public sealed record CrmRow(Guid Id, DateTime ModifiedOn, DateTime? CreatedOn, int? StateCode, IReadOnlyDictionary<string, object?> Values);
 
 /// <summary>Reads the old CRM. Read-only by construction: there is no way to write through it.</summary>
 public interface ICrmSource
 {
     /// <summary>
     /// The next page of records changed after (<paramref name="afterModifiedOn"/>, <paramref name="afterId"/>), in
-    /// (modifiedon, id) order; null watermark = from the start.
+    /// (modifiedon, id) order; null watermark = from the start. With <paramref name="createdFrom"/>, only records
+    /// created on or after that date.
     /// </summary>
-    Task<IReadOnlyList<CrmRow>> ReadPageAsync(CrmEntity entity, DateTime? afterModifiedOn, Guid? afterId, int pageSize, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CrmRow>> ReadPageAsync(CrmEntity entity, DateTime? afterModifiedOn, Guid? afterId, DateTime? createdFrom, int pageSize, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -32,7 +33,7 @@ internal sealed partial class SqlCrmSource(IOptions<CrmSyncOptions> options) : I
 {
     private static readonly DateTime NoChange = new(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    public async Task<IReadOnlyList<CrmRow>> ReadPageAsync(CrmEntity entity, DateTime? afterModifiedOn, Guid? afterId, int pageSize, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CrmRow>> ReadPageAsync(CrmEntity entity, DateTime? afterModifiedOn, Guid? afterId, DateTime? createdFrom, int pageSize, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(entity);
         if (!CrmEntity.IsValidName(entity.Name))
@@ -44,9 +45,10 @@ internal sealed partial class SqlCrmSource(IOptions<CrmSyncOptions> options) : I
         var sql = $"""
             SELECT TOP (@pageSize) *
             FROM [dbo].[{entity.Name}]
-            WHERE @afterModifiedOn IS NULL
-               OR ISNULL([modifiedon], '19000101') > @afterModifiedOn
-               OR (ISNULL([modifiedon], '19000101') = @afterModifiedOn AND [{entity.IdColumn}] > @afterId)
+            WHERE (@createdFrom IS NULL OR [createdon] >= @createdFrom)
+              AND (@afterModifiedOn IS NULL
+                   OR ISNULL([modifiedon], '19000101') > @afterModifiedOn
+                   OR (ISNULL([modifiedon], '19000101') = @afterModifiedOn AND [{entity.IdColumn}] > @afterId))
             ORDER BY ISNULL([modifiedon], '19000101'), [{entity.IdColumn}]
             """;
         EnsureReadOnly(sql);
@@ -61,6 +63,7 @@ internal sealed partial class SqlCrmSource(IOptions<CrmSyncOptions> options) : I
             command.Parameters.Add(new SqlParameter("@pageSize", SqlDbType.Int) { Value = pageSize });
             command.Parameters.Add(new SqlParameter("@afterModifiedOn", SqlDbType.DateTime) { Value = (object?)afterModifiedOn ?? DBNull.Value });
             command.Parameters.Add(new SqlParameter("@afterId", SqlDbType.UniqueIdentifier) { Value = (object?)afterId ?? Guid.Empty });
+            command.Parameters.Add(new SqlParameter("@createdFrom", SqlDbType.DateTime) { Value = (object?)createdFrom ?? DBNull.Value });
 
             var rows = new List<CrmRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -80,7 +83,8 @@ internal sealed partial class SqlCrmSource(IOptions<CrmSyncOptions> options) : I
                 var id = (Guid)reader.GetValue(reader.GetOrdinal(idName));
                 var modified = values.GetValueOrDefault("modifiedon") is DateTime m ? m : NoChange;
                 var state = values.GetValueOrDefault("statecode") is int s ? s : (int?)null;
-                rows.Add(new CrmRow(id, modified, state, values));
+                var created = values.GetValueOrDefault("createdon") as DateTime?;
+                rows.Add(new CrmRow(id, modified, created, state, values));
             }
 
             return rows;
@@ -129,4 +133,13 @@ public sealed class CrmSyncOptions
     public int PageSize { get; set; } = 1000;
 
     public int CommandTimeoutSeconds { get; set; } = 120;
+
+    /// <summary>
+    /// Entities copied only from a creation date (CRM <c>createdon</c>), e.g. <c>"systemuser": "2025-01-01"</c>.
+    /// Older records are never read, and any already in staging are removed.
+    /// </summary>
+    public Dictionary<string, DateTime> CreatedFrom { get; set; } = new(StringComparer.Ordinal);
+
+    public DateTime? CreatedFromFor(string entity) =>
+        CreatedFrom.TryGetValue(entity, out var date) ? DateTime.SpecifyKind(date.Date, DateTimeKind.Utc) : null;
 }

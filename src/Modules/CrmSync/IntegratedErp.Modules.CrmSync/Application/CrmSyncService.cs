@@ -42,6 +42,7 @@ public sealed record EntityStatusDto(
     int Records,
     int Deleted,
     DateTime? LastChangeCopied,
+    DateTime? CreatedFrom,
     DateTimeOffset? LastSucceededAt,
     DateTimeOffset? LastFailedAt,
     string? LastError);
@@ -105,7 +106,7 @@ internal sealed class CrmSyncService(
             var state = states.GetValueOrDefault(e.Name);
             return new EntityStatusDto(
                 e.Name, e.NameAr, e.NameEn, count?.Live ?? 0, count?.Deleted ?? 0,
-                state?.WatermarkModifiedOn, state?.LastSucceededAt, state?.LastFailedAt, state?.LastError);
+                state?.WatermarkModifiedOn, options.Value.CreatedFromFor(e.Name), state?.LastSucceededAt, state?.LastFailedAt, state?.LastError);
         }).ToList();
         var runs = await db.Runs.AsNoTracking().OrderByDescending(r => r.RequestedAt).Take(10)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -216,10 +217,11 @@ internal sealed class CrmSyncService(
         }
 
         var pageSize = Math.Clamp(options.Value.PageSize, 50, 5000);
+        var createdFrom = options.Value.CreatedFromFor(entity.Name);
         int read = 0, inserted = 0, updated = 0;
         while (true)
         {
-            var page = await crm.ReadPageAsync(entity, state.WatermarkModifiedOn, state.WatermarkId, pageSize, cancellationToken).ConfigureAwait(false);
+            var page = await crm.ReadPageAsync(entity, state.WatermarkModifiedOn, state.WatermarkId, createdFrom, pageSize, cancellationToken).ConfigureAwait(false);
             if (page.Count == 0)
             {
                 break;
@@ -235,11 +237,11 @@ internal sealed class CrmSyncService(
                 var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
                 if (existing.TryGetValue(row.Id, out var record))
                 {
-                    updated += record.Refresh(row.ModifiedOn, row.StateCode, payload, hash, run.Id, now) ? 1 : 0;
+                    updated += record.Refresh(row.CreatedOn, row.ModifiedOn, row.StateCode, payload, hash, run.Id, now) ? 1 : 0;
                 }
                 else
                 {
-                    db.Records.Add(new StagedRecord(entity.Name, row.Id, row.ModifiedOn, row.StateCode, payload, hash, run.Id, now));
+                    db.Records.Add(new StagedRecord(entity.Name, row.Id, row.CreatedOn, row.ModifiedOn, row.StateCode, payload, hash, run.Id, now));
                     inserted++;
                 }
             }
@@ -262,9 +264,18 @@ internal sealed class CrmSyncService(
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsDeleted, true), cancellationToken).ConfigureAwait(false);
         }
 
+        // Records older than the entity's start date are not wanted at all: remove any copied before the date was set.
+        var excluded = 0;
+        if (createdFrom is { } from)
+        {
+            excluded = await db.Records
+                .Where(r => r.Entity == entity.Name && (r.CreatedOn == null || r.CreatedOn < from))
+                .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         state.Succeeded(clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return new EntitySyncResult(entity.Name, read, inserted, updated, deleted, null);
+        return new EntitySyncResult(entity.Name, read, inserted, updated, deleted, null, excluded);
     }
 
     private async Task<SyncState> StateAsync(string entity, CancellationToken cancellationToken)

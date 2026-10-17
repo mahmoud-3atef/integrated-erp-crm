@@ -246,6 +246,10 @@ namespace IntegratedErp.Modules.CrmSync.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_on");
+
                     b.Property<Guid>("CrmId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("crm_id");

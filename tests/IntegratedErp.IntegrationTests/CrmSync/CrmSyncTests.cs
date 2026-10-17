@@ -5,6 +5,7 @@ using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Organization.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.IntegrationTests.CrmSync;
 
@@ -116,6 +117,35 @@ public sealed class CrmSyncTests(TestDatabase database)
         }
     }
 
+    [SkippableFact]
+    public async Task Entities_with_a_start_date_copy_only_newer_records_and_drop_older_ones_already_copied()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var tenantId = await CreateCompanyAsync();
+        var crm = new FakeCrm();
+        var old = crm.Add("systemuser", new() { ["fullname"] = "مستخدم قديم" }, created: new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        var recent = crm.Add("systemuser", new() { ["fullname"] = "مستخدم حديث" }, created: new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc));
+        var oldCountry = crm.Add(CrmEntities.Country, new() { ["new_name"] = "مصر" }, created: new DateTime(2016, 11, 16, 0, 0, 0, DateTimeKind.Utc));
+
+        // Copied before the start date was configured.
+        await RunAsync(tenantId, crm, SyncMode.Incremental);
+        Assert.Equal(3, await CountAsync(tenantId, _ => true));
+
+        var options = new CrmSyncOptions { CreatedFrom = { ["systemuser"] = new DateTime(2025, 1, 1) } };
+        crm.Touch(recent, "fullname", "مستخدم حديث معدّل");
+        var run = await RunAsync(tenantId, crm, SyncMode.Incremental, options);
+        var users = run.Results.Single(r => r.Entity == "systemuser");
+        Assert.Equal((1, 1, 1), (users.Read, users.Updated, users.Excluded));
+        Assert.Equal(0, await CountAsync(tenantId, r => r.CrmId == old));
+        Assert.Equal(1, await CountAsync(tenantId, r => r.CrmId == recent));
+        Assert.Equal(1, await CountAsync(tenantId, r => r.CrmId == oldCountry));
+
+        // A full run never brings the old one back.
+        var full = await RunAsync(tenantId, crm, SyncMode.Full, options);
+        Assert.Equal(1, full.Results.Single(r => r.Entity == "systemuser").Read);
+        Assert.Equal(0, await CountAsync(tenantId, r => r.CrmId == old));
+    }
+
     private async Task<Guid> CreateCompanyAsync()
     {
         using var scope = database.Scope(system: true);
@@ -124,11 +154,11 @@ public sealed class CrmSyncTests(TestDatabase database)
         return created.Value.Id;
     }
 
-    private async Task<SyncRunDto> RunAsync(Guid tenantId, FakeCrm crm, SyncMode mode)
+    private async Task<SyncRunDto> RunAsync(Guid tenantId, FakeCrm crm, SyncMode mode, CrmSyncOptions? options = null)
     {
         using var scope = database.Scope(tenantId, user: "crm-sync");
         var db = scope.ServiceProvider.GetRequiredService<CrmSyncDbContext>();
-        var service = ActivatorUtilities.CreateInstance<CrmSyncService>(scope.ServiceProvider, (ICrmSource)crm);
+        var service = ActivatorUtilities.CreateInstance<CrmSyncService>(scope.ServiceProvider, (ICrmSource)crm, Options.Create(options ?? new CrmSyncOptions()));
         var run = new SyncRun(mode, "test", DateTimeOffset.UtcNow);
         db.Runs.Add(run);
         await db.SaveChangesAsync();
@@ -148,11 +178,11 @@ public sealed class CrmSyncTests(TestDatabase database)
         private readonly Dictionary<string, Dictionary<Guid, Dictionary<string, object?>>> _entities = [];
         private DateTime _clock = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        public Guid Add(string entity, Dictionary<string, object?> values)
+        public Guid Add(string entity, Dictionary<string, object?> values, DateTime? created = null)
         {
             var id = Guid.NewGuid();
             values["statecode"] = 0;
-            values["createdon"] = _clock;
+            values["createdon"] = created ?? _clock;
             values["modifiedon"] = _clock = _clock.AddSeconds(1);
             Records(entity)[id] = values;
             return id;
@@ -167,11 +197,12 @@ public sealed class CrmSyncTests(TestDatabase database)
 
         public void Remove(Guid id) => _entities.Values.Single(e => e.ContainsKey(id)).Remove(id);
 
-        public Task<IReadOnlyList<CrmRow>> ReadPageAsync(CrmEntity entity, DateTime? afterModifiedOn, Guid? afterId, int pageSize, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<CrmRow>> ReadPageAsync(CrmEntity entity, DateTime? afterModifiedOn, Guid? afterId, DateTime? createdFrom, int pageSize, CancellationToken cancellationToken)
         {
             // Same order and paging as the SQL source (Guid order differs, but ties never happen here).
             IReadOnlyList<CrmRow> page = Records(entity.Name)
-                .Select(r => new CrmRow(r.Key, (DateTime)r.Value["modifiedon"]!, 0, r.Value))
+                .Select(r => new CrmRow(r.Key, (DateTime)r.Value["modifiedon"]!, (DateTime)r.Value["createdon"]!, 0, r.Value))
+                .Where(r => createdFrom is null || r.CreatedOn >= createdFrom)
                 .Where(r => afterModifiedOn is null || r.ModifiedOn > afterModifiedOn || (r.ModifiedOn == afterModifiedOn && r.Id.CompareTo(afterId) > 0))
                 .OrderBy(r => r.ModifiedOn).ThenBy(r => r.Id)
                 .Take(pageSize)

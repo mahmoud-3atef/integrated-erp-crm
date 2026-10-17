@@ -783,6 +783,7 @@
     "mergeInto": "Merge into another item",
     "mergeTitle": "Merge an item into another",
     "mergeHint": "All CRM records of “{{name}}” (used by {{count}} employees) move to the item you choose, and “{{name}}” is switched off. Later imports keep this merge.",
-    "target": "Target item"
+    "target": "Target item",
+    "createdFrom": "From {{date}} only"
   }
 }

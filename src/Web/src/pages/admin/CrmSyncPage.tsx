@@ -46,7 +46,7 @@ const pageSize = 100;
 
 /** Copying the old CRM into staging, and turning its countries and professions into the company's lists without duplicates. */
 export function CrmSyncPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { can } = useSession();
   const canRun = can('crm_sync.run', true);
   const [status, setStatus] = useState<SyncStatus | null>(null);
@@ -104,6 +104,7 @@ export function CrmSyncPage() {
   };
 
   const when = useDate();
+  const day = (value: string) => new Intl.DateTimeFormat(i18n.language === 'ar' ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value));
   const synced = (status?.entities.find((e) => e.entity === 'new_country')?.records ?? 0) > 0;
 
   return (
@@ -162,6 +163,7 @@ export function CrmSyncPage() {
                     <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }} dir="ltr">
                       {e.entity}
                     </Typography>
+                    {e.createdFrom && <Badge tone="warning">{t('crmSync.createdFrom', { date: day(e.createdFrom) })}</Badge>}
                   </TableCell>
                   <TableCell align="center">{e.records.toLocaleString('en-US')}</TableCell>
                   <TableCell align="center">{e.deleted || '—'}</TableCell>
@@ -187,7 +189,7 @@ export function CrmSyncPage() {
             <Typography sx={{ fontWeight: 700, color: tokens.navy800, mb: 1 }}>{t('crmSync.runs')}</Typography>
             <Stack spacing={0.75}>
               {status.runs.slice(0, 5).map((r) => {
-                const totals = r.results.reduce((a, x) => ({ read: a.read + x.read, inserted: a.inserted + x.inserted, updated: a.updated + x.updated, deleted: a.deleted + x.deleted }), { read: 0, inserted: 0, updated: 0, deleted: 0 });
+                const totals = r.results.reduce((a, x) => ({ read: a.read + x.read, inserted: a.inserted + x.inserted, updated: a.updated + x.updated, deleted: a.deleted + x.deleted + (x.excluded ?? 0) }), { read: 0, inserted: 0, updated: 0, deleted: 0 });
                 return (
                   <Stack key={r.id} direction="row" sx={{ gap: 1.25, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5, color: tokens.gray600 }}>
                     <Badge tone={runTone[r.status]}>{t(`crmSync.status.${r.status}`)}</Badge>
