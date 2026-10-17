@@ -60,7 +60,9 @@ public sealed record WorkerCard(
     Guid? ProjectCrmId,
     string? ProjectName,
     DateOnly? ProjectJoinedOn = null,
-    bool OnJob = false);
+    bool OnJob = false,
+    string? Sponsor = null,
+    decimal BasicSalary = 0);
 
 /// <summary>Workers (not company staff) by CRM project, for the project and customer pages.</summary>
 public interface IWorkforceDirectory

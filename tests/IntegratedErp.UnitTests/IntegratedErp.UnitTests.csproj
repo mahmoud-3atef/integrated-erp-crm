@@ -28,5 +28,6 @@
     <ProjectReference Include="..\..\src\Modules\Commercial\IntegratedErp.Modules.Commercial\IntegratedErp.Modules.Commercial.csproj" />
     <ProjectReference Include="..\..\src\Modules\Operations\IntegratedErp.Modules.Operations\IntegratedErp.Modules.Operations.csproj" />
     <ProjectReference Include="..\..\src\Modules\Housing\IntegratedErp.Modules.Housing\IntegratedErp.Modules.Housing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Billing\IntegratedErp.Modules.Billing\IntegratedErp.Modules.Billing.csproj" />
   </ItemGroup>
 </Project>

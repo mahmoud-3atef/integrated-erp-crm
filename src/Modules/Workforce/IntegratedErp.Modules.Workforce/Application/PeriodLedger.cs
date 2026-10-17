@@ -4,10 +4,11 @@ using IntegratedErp.Modules.Workforce.Domain;
 using IntegratedErp.Modules.Workforce.Infrastructure;
 using IntegratedErp.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
-internal sealed class PeriodLedger(WorkforceDbContext db, IClock clock) : IPeriodLedger
+internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOptions> options, IClock clock) : IPeriodLedger
 {
     public async Task<Result> StartWorkAsync(IReadOnlyList<WorkStartRequest> starts, CancellationToken cancellationToken)
     {
@@ -114,6 +115,37 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IClock clock) : IPerio
                 p.Kind == PeriodKind.Work && p.Rate.TotalPrice > 0 ? p.Rate.TotalPrice : null,
                 false, false, FromOldSystem: true));
         return recorded.Concat(history).OrderByDescending(p => p.StartsOn).ToList();
+    }
+
+    public async Task<IReadOnlyList<WorkSpan>> WorkAsync(Guid? projectCrmId, DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var after = to.AddDays(1);
+        var firstRecorded = await db.Periods.AsNoTracking().GroupBy(p => p.WorkerId).Select(g => new { g.Key, First = g.Min(p => p.StartsOn) })
+            .ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken).ConfigureAwait(false);
+        var recorded = (await db.Periods.AsNoTracking()
+                .Where(p => p.Kind == PeriodKind.Work && p.ProjectCrmId != null && (projectCrmId == null || p.ProjectCrmId == projectCrmId)
+                    && p.StartsOn < after && (p.EndsOn == null || p.EndsOn > from))
+                .ToListAsync(cancellationToken).ConfigureAwait(false))
+            .Select(p => new WorkSpan(
+                p.Id.ToString("N"), p.WorkerId, p.ProjectCrmId!.Value, p.ProjectName, p.StartsOn, p.EndsOn, p.Rate.PackageNo, p.Rate.Salary, p.Rate.ServiceFee,
+                p.Rate.Housing, p.Rate.HousingBillable, p.Rate.Transport, p.Rate.TransportBillable, p.Rate.TotalPrice, p.Rate.IsSpecialPrice,
+                p.SourceType, p.SourceNo, FromOldSystem: false));
+        var history = (await db.HistoryPeriods.AsNoTracking()
+                .Where(p => p.Kind == PeriodKind.Work && p.ProjectCrmId != null && (projectCrmId == null || p.ProjectCrmId == projectCrmId)
+                    && p.StartsOn < after && (p.EndsOn == null || p.EndsOn > from))
+                .ToListAsync(cancellationToken).ConfigureAwait(false))
+            .Where(p => !firstRecorded.TryGetValue(p.WorkerId, out var over) || p.StartsOn < over)
+            .Select(p =>
+            {
+                var ends = firstRecorded.TryGetValue(p.WorkerId, out var over) && (p.EndsOn is null || p.EndsOn > over) ? over : p.EndsOn;
+                return new WorkSpan(
+                    p.SourceCrmId.ToString("N"), p.WorkerId, p.ProjectCrmId!.Value, p.Place, p.StartsOn, ends, null, 0, 0,
+                    p.Rate.Housing, p.Rate.HousingBillable, p.Rate.Transport, p.Rate.TransportBillable, p.Rate.TotalPrice, false,
+                    p.SourceType, p.SourceNo, FromOldSystem: true);
+            })
+            .Where(p => p.EndsOn is null || p.EndsOn > from);
+        var settings = options.Value;
+        return recorded.Concat(history).Where(p => !settings.IsInactiveProject(p.ProjectName)).OrderBy(p => p.WorkerId).ThenBy(p => p.StartsOn).ToList();
     }
 
     internal static PeriodInfo Info(WorkerPeriod p) => new(

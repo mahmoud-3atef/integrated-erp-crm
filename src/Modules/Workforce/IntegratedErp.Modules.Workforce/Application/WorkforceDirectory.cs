@@ -149,7 +149,8 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
                         work ? "على رأس العمل (من هذا النظام)" : "في السكن (من هذا النظام)", work ? "On the job (this system)" : "In housing (this system)",
                         w.ProfessionCode, profession?.NameAr, profession?.NameEn, r.Person.NationalityCode, nationality?.NameAr, nationality?.NameEn,
                         iqama?.Number, iqama?.ExpiresOn, w.Salary.Total,
-                        work ? period.ProjectCrmId : null, work ? period.ProjectName : null, work ? period.StartsOn : null, active && work);
+                        work ? period.ProjectCrmId : null, work ? period.ProjectName : null, work ? period.StartsOn : null, active && work,
+                        w.Sponsor, w.Salary.Basic);
                 }
 
                 var status = CrmWorkerStatus.Name(w.CrmStatus);
@@ -157,7 +158,8 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
                 return new WorkerCard(
                     w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, w.Placement.ToString(), available, status?.Ar, status?.En,
                     w.ProfessionCode, profession?.NameAr, profession?.NameEn, r.Person.NationalityCode, nationality?.NameAr, nationality?.NameEn,
-                    iqama?.Number, iqama?.ExpiresOn, w.Salary.Total, w.ProjectCrmId, w.ProjectName, w.ProjectJoinedOn, active && w.Placement == Placement.Working);
+                    iqama?.Number, iqama?.ExpiresOn, w.Salary.Total, w.ProjectCrmId, w.ProjectName, w.ProjectJoinedOn, active && w.Placement == Placement.Working,
+                    w.Sponsor, w.Salary.Basic);
             })
             .OrderByDescending(c => c.Available).ThenBy(c => c.WorkerNo, StringComparer.Ordinal)
             .ToList();

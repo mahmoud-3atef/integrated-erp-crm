@@ -79,4 +79,36 @@ public interface IPeriodLedger
     /// the periods recorded here.
     /// </summary>
     Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The work periods overlapping a date range (both days included), as the timelines show them: the old system's
+    /// history up to each worker's first period recorded here, then the recorded periods. One project, or all of them
+    /// (<paramref name="projectCrmId"/> null). Work on an inactive project ("InActive Employee") is left out.
+    /// </summary>
+    Task<IReadOnlyList<WorkSpan>> WorkAsync(Guid? projectCrmId, DateOnly from, DateOnly to, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// A work period for a timesheet: the worker, the project, the days (<see cref="EndsOn"/> is the first day no longer
+/// there) and the price. A period from the old system has only its total price and housing/transport parts: its
+/// salary is 0 (the worker's salary stands for it).
+/// </summary>
+public sealed record WorkSpan(
+    string Key,
+    Guid WorkerId,
+    Guid ProjectCrmId,
+    string? ProjectName,
+    DateOnly StartsOn,
+    DateOnly? EndsOn,
+    string? PackageNo,
+    decimal Salary,
+    decimal ServiceFee,
+    decimal Housing,
+    bool HousingBillable,
+    decimal Transport,
+    bool TransportBillable,
+    decimal TotalPrice,
+    bool IsSpecialPrice,
+    string SourceType,
+    string SourceNo,
+    bool FromOldSystem);

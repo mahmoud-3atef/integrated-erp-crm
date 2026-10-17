@@ -78,6 +78,10 @@ const menu: MenuSection[] = [
     ],
   },
   {
+    titleKey: 'menu.billingSection',
+    items: [{ path: '/billing/timesheets', labelKey: 'menu.timesheets', icon: <FactCheckOutlinedIcon />, permission: 'billing.timesheets.view', companyWide: true }],
+  },
+  {
     titleKey: 'menu.housingSection',
     items: [{ path: '/housing', labelKey: 'menu.housing', icon: <ApartmentOutlinedIcon />, permission: 'housing.view', companyWide: true }],
   },

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\Commercial\IntegratedErp.Modules.Commercial.Contracts\IntegratedErp.Modules.Commercial.Contracts.csproj" />
+    <ProjectReference Include="..\..\Organization\IntegratedErp.Modules.Organization.Contracts\IntegratedErp.Modules.Organization.Contracts.csproj" />
+    <ProjectReference Include="..\..\Workflow\IntegratedErp.Modules.Workflow.Contracts\IntegratedErp.Modules.Workflow.Contracts.csproj" />
+    <ProjectReference Include="..\..\Workforce\IntegratedErp.Modules.Workforce.Contracts\IntegratedErp.Modules.Workforce.Contracts.csproj" />
+    <ProjectReference Include="..\IntegratedErp.Modules.Billing.Contracts\IntegratedErp.Modules.Billing.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="IntegratedErp.UnitTests" />
+    <InternalsVisibleTo Include="IntegratedErp.IntegrationTests" />
+  </ItemGroup>
+</Project>

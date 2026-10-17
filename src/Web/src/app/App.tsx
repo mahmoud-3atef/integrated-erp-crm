@@ -12,6 +12,8 @@ import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
+import { TimesheetPage } from '../pages/billing/TimesheetPage';
+import { TimesheetsPage } from '../pages/billing/TimesheetsPage';
 import { BuildingPage } from '../pages/housing/BuildingPage';
 import { HousingPage } from '../pages/housing/HousingPage';
 import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
@@ -84,6 +86,8 @@ export function App() {
                 <Route path="/workforce/history-issues" element={<HistoryIssuesPage />} />
                 <Route path="/housing" element={<HousingPage />} />
                 <Route path="/admin/numbering" element={<NumberingPage />} />
+                <Route path="/billing/timesheets" element={<TimesheetsPage />} />
+                <Route path="/billing/timesheets/:id" element={<TimesheetPage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
