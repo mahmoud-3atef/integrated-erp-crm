@@ -170,6 +170,53 @@ public sealed class DeliveryOrderTests(TestDatabase database)
         }
     }
 
+    [SkippableFact]
+    public async Task A_stage_without_approver_stops_and_running_the_process_again_replaces_the_stopped_approval()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var tenantId = await CreateCompanyAsync();
+        var crm = new FakeCrm();
+        var philippines = crm.Add(CrmEntities.Country, new() { ["new_name"] = "الفلبين", ["new_nameenglish"] = "Philippines" });
+        var labour = crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
+        crm.Add("new_project", new() { ["new_name"] = "مشروع جدة", ["new_code"] = "pro00500", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
+        Worker(crm, "BSS0101", philippines, labour, 279640001, null);
+        await SyncAndImportAsync(tenantId, crm);
+
+        // Nobody holds the operations manager's permission (and the company has no other administrator).
+        var (creator, _) = await PeopleAsync(tenantId, withManager: false);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        Guid orderId;
+        using (var scope = database.Scope(tenantId, user: creator.ToString()))
+        {
+            var projectId = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().ProjectsAsync(default)).Single().Id;
+            var worker = (await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().AvailableAsync(default)).Single().Id;
+            var saved = await scope.ServiceProvider.GetRequiredService<DeliveryOrderService>().CreateAsync(
+                new DeliveryInput(projectId, today, today, "مستلم", null, null, null, [new DeliveryLineInput(worker, null, 3000m, "اختبار")]), default);
+            orderId = saved.Value.Id;
+            await DecideAsync(scope, creator, "موافق");
+        }
+
+        using (var scope = database.Scope(tenantId, user: creator.ToString()))
+        {
+            var detail = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("SentToOperationsManager", "Failed"), (detail.Summary.Status, detail.Approval!.Status));
+
+            // Running the process again cancels the stopped approval and starts from the beginning.
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var process = await workflow.Processes.SingleAsync(p => p.Screen == DeliveryOrderAdapter.ScreenCode);
+            var run = await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().RunOnRecordAsync(
+                new ApprovalSubmission(DeliveryOrderAdapter.ScreenCode, orderId, "x", null, process.Id), default);
+            Assert.True(run.IsSuccess, run.IsFailure ? run.Error.Code : null);
+        }
+
+        using (var scope = database.Scope(tenantId, user: creator.ToString()))
+        {
+            var detail = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("UnderPreparation", true, "InProgress"), (detail.Summary.Status, detail.AwaitingApproval, detail.Approval!.Status));
+            Assert.Equal("تأكيد منشئ أمر التسليم", detail.Approval.CurrentStepAr);
+        }
+    }
+
     /// <summary>The user's open approval task on the order, approved.</summary>
     private static async Task DecideAsync(IServiceScope scope, Guid userId, string comment)
     {
@@ -180,7 +227,7 @@ public sealed class DeliveryOrderTests(TestDatabase database)
     }
 
     /// <summary>Two members of the company: a creator of delivery orders and an operations manager (approve permission).</summary>
-    private async Task<(Guid Creator, Guid OperationsManager)> PeopleAsync(Guid tenantId)
+    private async Task<(Guid Creator, Guid OperationsManager)> PeopleAsync(Guid tenantId, bool withManager = true)
     {
         using var scope = database.Scope(tenantId, user: "setup");
         var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
@@ -198,7 +245,8 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             return user.Id;
         }
 
-        return (await PersonAsync("منشئ الأمر", "sales", "operations.delivery.create"), await PersonAsync("مدير العمليات", "operations", "operations.delivery.approve"));
+        var creator = await PersonAsync("منشئ الأمر", "sales", "operations.delivery.create");
+        return (creator, withManager ? await PersonAsync("مدير العمليات", "operations", "operations.delivery.approve") : Guid.Empty);
     }
 
     private static Guid Worker(FakeCrm crm, string number, Guid nationality, Guid profession, int status, Guid? project) =>

@@ -306,6 +306,28 @@ internal sealed partial class ApprovalEngine(
         return await SaveAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// An administrator runs a chosen process on a record. An approval of the record that stopped with an error is
+    /// canceled first (the new process replaces it); a running one must be canceled by hand.
+    /// </summary>
+    public async Task<Result<Guid>> RunOnRecordAsync(ApprovalSubmission submission, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        var stopped = await db.Instances.FirstOrDefaultAsync(
+            i => i.Screen == submission.Screen && i.RecordId == submission.RecordId && i.Status == InstanceStatus.Failed, cancellationToken).ConfigureAwait(false);
+        if (stopped is not null && AdapterFor(stopped.Screen) is { } adapter)
+        {
+            await CompleteAsync(stopped, adapter, InstanceStatus.Canceled, "أُلغي لتشغيل مسار آخر على السجل / Canceled to run another process", cancellationToken).ConfigureAwait(false);
+            var saved = await SaveAsync(cancellationToken).ConfigureAwait(false);
+            if (saved.IsFailure)
+            {
+                return Result.Failure<Guid>(saved.Error);
+            }
+        }
+
+        return await SubmitAsync(submission, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Runs a failed approval again from the step that failed (after the cause was fixed).</summary>
     public async Task<Result> RetryAsync(Guid instanceId, CancellationToken cancellationToken)
     {

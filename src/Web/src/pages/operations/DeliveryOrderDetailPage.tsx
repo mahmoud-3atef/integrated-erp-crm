@@ -83,6 +83,8 @@ export function DeliveryOrderDetailPage() {
   }
 
   const o = order.summary;
+  // Run a process: on an order being prepared without an approval, or to replace an approval that stopped with an error.
+  const canRun = o.source === 'System' && ((!order.awaitingApproval && order.canEdit) || approval.detail?.summary.status === 'Failed');
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
     setError(null);
@@ -166,7 +168,7 @@ export function DeliveryOrderDetailPage() {
           </Stack>
         )}
 
-        {(order.canEdit || order.canSubmit || order.canCancel || (o.source === 'System' && !order.awaitingApproval && order.canEdit)) && (
+        {(order.canEdit || order.canSubmit || order.canCancel || canRun) && (
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.25, mt: 2.5 }}>
             {order.canEdit && (
               <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/delivery-orders/${o.id}/edit`)}>
@@ -178,7 +180,7 @@ export function DeliveryOrderDetailPage() {
                 {t('operations.delivery.submit')}
               </Button>
             )}
-            {o.source === 'System' && !order.awaitingApproval && order.canEdit && (
+            {canRun && (
               <RunProcessButton
                 screen="operations.delivery_order"
                 recordId={o.id}

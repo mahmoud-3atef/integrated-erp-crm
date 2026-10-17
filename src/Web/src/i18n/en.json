@@ -698,7 +698,7 @@
       "button": "Run an approval process",
       "title": "Run an approval process on this record",
       "process": "Process",
-      "hint": "The chosen process starts on this record at once, whatever its start condition, with you as the submitter. Use it, for example, after canceling an approval that stopped with an error.",
+      "hint": "The chosen process starts on this record at once, whatever its start condition, with you as the submitter. An approval of the record that stopped with an error is canceled and replaced.",
       "none": "No active process for this screen. Create one in Approval processes.",
       "start": "Run"
     }

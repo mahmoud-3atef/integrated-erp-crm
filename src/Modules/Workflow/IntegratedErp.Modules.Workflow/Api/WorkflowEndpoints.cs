@@ -91,7 +91,7 @@ internal static class WorkflowEndpoints
 
         // An administrator runs a chosen process on a record (e.g. after a stopped approval was canceled).
         group.MapPost("/instances/start", async (StartRequest r, ApprovalEngine engine, CancellationToken ct) =>
-                await engine.SubmitAsync(new ApprovalSubmission(r.Screen, r.RecordId, r.Title, null, r.ProcessId), ct).ConfigureAwait(false) is var started && started.IsSuccess
+                await engine.RunOnRecordAsync(new ApprovalSubmission(r.Screen, r.RecordId, r.Title, null, r.ProcessId), ct).ConfigureAwait(false) is var started && started.IsSuccess
                     ? Results.Ok(new { id = started.Value })
                     : Problem(started.Error))
             .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
