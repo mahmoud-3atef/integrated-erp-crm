@@ -53,6 +53,11 @@ if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Ident
 
 var app = builder.Build();
 
+if (!app.Configuration.GetValue("Identity:MfaRequired", true))
+{
+    app.Logger.LogWarning("Two-step verification (MFA) is OFF (Identity:MfaRequired = false): sign-in needs the password only. Turn it back on after the test period.");
+}
+
 // "migrate": create/upgrade the database (all enabled modules) and exit.
 if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
 {

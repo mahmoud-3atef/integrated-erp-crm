@@ -147,6 +147,26 @@ public sealed class SignInFlowTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task With_mfa_switched_off_the_password_opens_the_company_session()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+
+        using var factory = _factory!.WithWebHostBuilder(builder => builder.UseSetting("Identity:MfaRequired", "false"));
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), HandleCookies = true });
+        client.DefaultRequestHeaders.Add(PlatformAuthentication.CsrfHeader, "1");
+
+        var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { userName = $@"TEST\{_admin}", password = "Correct-Horse-1" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        Assert.Equal("done", (await Json(login)).GetProperty("next").GetString());
+        var me = await Json(await client.GetAsync("/api/v1/auth/me"));
+        Assert.Equal(CompanyId, me.GetProperty("company").GetProperty("id").GetGuid());
+
+        // A wrong password is still refused.
+        var wrong = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login", new { userName = $@"TEST\{_admin}", password = "wrong" });
+        Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
+    }
+
+    [SkippableFact]
     public async Task Without_a_session_company_endpoints_are_closed()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");

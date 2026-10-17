@@ -22,6 +22,12 @@ public sealed class IdentityOptions
     public IList<string> BootstrapAdmins { get; } = [];
 
     public string? BootstrapTenantCode { get; set; }
+
+    /// <summary>
+    /// Two-step verification at sign-in (on by default). Turned off only in a server's own settings for a limited test
+    /// period; the system logs a warning at every start while it is off.
+    /// </summary>
+    public bool MfaRequired { get; set; } = true;
 }
 
 /// <summary>Where a sign-in stands and what the client must do next.</summary>
@@ -137,6 +143,21 @@ internal sealed class SignInService(
         await ApplyBootstrapAsync(account, directoryUser.SamAccountName, cancellationToken).ConfigureAwait(false);
 
         SignInStep step;
+        if (!options.Value.MfaRequired)
+        {
+            // Two-step verification is switched off for this server (test period): the password is enough.
+            // Saved with the log entry (with a first sign-in's account and bootstrap access) before companies are read.
+            account.RegisterSuccess(now);
+            await LogAsync(name, provider, account.Id, "password_ok_mfa_off", ipAddress, cancellationToken).ConfigureAwait(false);
+            var companies = await CompaniesAsync(account.Id, cancellationToken).ConfigureAwait(false);
+            return Result.Success(companies.Count switch
+            {
+                0 => new SignInStep(SignInNext.NoCompany, account.Id, account.DisplayName, account.IsPlatformAdmin, Companies: companies),
+                1 => new SignInStep(SignInNext.Done, account.Id, account.DisplayName, account.IsPlatformAdmin, Companies: companies, Company: companies[0]),
+                _ => new SignInStep(SignInNext.ChooseCompany, account.Id, account.DisplayName, account.IsPlatformAdmin, Companies: companies),
+            });
+        }
+
         if (account.MfaEnabled)
         {
             step = new SignInStep(SignInNext.Mfa, account.Id, account.DisplayName, account.IsPlatformAdmin);

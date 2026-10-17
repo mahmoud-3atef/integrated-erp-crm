@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Identity.Api;
 
@@ -142,8 +143,12 @@ internal static class AuthEndpoints
                 new(ErpClaims.Name, step.DisplayName),
                 new(ErpClaims.TenantId, company.Id.ToString()),
                 new(ErpClaims.AuthMethods, "pwd"),
-                new(ErpClaims.AuthMethods, "otp"),
             };
+            if (http.RequestServices.GetRequiredService<IOptions<IdentityOptions>>().Value.MfaRequired)
+            {
+                claims.Add(new Claim(ErpClaims.AuthMethods, "otp"));
+            }
+
             if (step.IsPlatformAdmin)
             {
                 claims.Add(new Claim(ErpClaims.PlatformAdmin, "true"));
