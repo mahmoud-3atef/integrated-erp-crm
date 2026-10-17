@@ -49,7 +49,7 @@ cd C:\Integrated-ERP-CRM\deploy
 - **ملف الإعدادات:** `C:\IntegratedErp\config\appsettings.Server.json`، وفيه:
   - الاتصالات و AD و CRM.
   - الشركة: `carepro`.
-  - أول مسؤول: حساب AD `JRCOrepro` (غير رمز الشركة `carepro`).
+  - أول مسؤول: حساب AD `JRCO\carepro` (غير رمز الشركة `carepro`).
   - لا يستبدله أي نشر لاحق.
 
 ## ثالثًا: الأسرار (مرة واحدة)
