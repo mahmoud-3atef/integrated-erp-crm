@@ -7,6 +7,7 @@ using IntegratedErp.Modules.Documents;
 using IntegratedErp.Modules.Identity;
 using IntegratedErp.Modules.Organization;
 using IntegratedErp.Modules.Workflow;
+using IntegratedErp.Modules.Workforce;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,7 +97,7 @@ public sealed class TestDatabase : IAsyncLifetime
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
         services.AddPlatformCore();
-        services.AddModules(configuration, new OrganizationModule(), new IdentityModule(), new DocumentsModule(), new WorkflowModule(), new CrmSyncModule());
+        services.AddModules(configuration, new OrganizationModule(), new IdentityModule(), new DocumentsModule(), new WorkflowModule(), new CrmSyncModule(), new WorkforceModule());
         _services = services.BuildServiceProvider();
 
         await _services.GetRequiredService<DatabaseMigrator>().MigrateAsync(CancellationToken.None);

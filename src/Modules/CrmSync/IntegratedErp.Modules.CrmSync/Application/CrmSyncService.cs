@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Time;
+using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.CrmSync.Domain;
 using IntegratedErp.Modules.CrmSync.Infrastructure;
 using IntegratedErp.Modules.Organization.Contracts;
@@ -56,7 +57,8 @@ public sealed record SyncRunDto(
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
     IReadOnlyList<EntitySyncResult> Results,
-    string? Error);
+    string? Error,
+    string? FollowUp);
 
 public sealed record SyncStatusDto(
     bool Configured,
@@ -145,9 +147,14 @@ internal sealed class CrmSyncService(
         return Result.Success(ToDto(run));
     }
 
-    /// <summary>Runs the oldest queued run, if any (called by the worker in the company's context).</summary>
-    public async Task<bool> RunNextAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Runs the oldest queued run, if any (called by the worker in the company's context); after a run that copied
+    /// something, refreshes the reference lists and the modules built from the copy.
+    /// </summary>
+    public async Task<bool> RunNextAsync(ReferenceImportService references, IEnumerable<ICrmStagingConsumer> consumers, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(references);
+        ArgumentNullException.ThrowIfNull(consumers);
         var run = await db.Runs.Where(r => r.Status == SyncRunStatus.Queued).OrderBy(r => r.RequestedAt)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (run is null)
@@ -156,6 +163,29 @@ internal sealed class CrmSyncService(
         }
 
         await RunAsync(run, cancellationToken).ConfigureAwait(false);
+        if (run.Status is SyncRunStatus.Succeeded or SyncRunStatus.PartlyFailed)
+        {
+            var notes = new List<string>();
+            var imported = await references.ImportAsync(cancellationToken).ConfigureAwait(false);
+            notes.Add(imported.IsSuccess
+                ? $"references: {imported.Value.Nationalities.Created} nationalities and {imported.Value.Professions.Created} professions added"
+                : $"references: {imported.Error.Message}");
+            foreach (var consumer in consumers)
+            {
+                try
+                {
+                    notes.Add($"{consumer.Name}: {await consumer.ApplyAsync(cancellationToken).ConfigureAwait(false)}");
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    notes.Add($"{consumer.Name}: failed — {ex.Message}");
+                }
+            }
+
+            run.RecordFollowUp(string.Join(Environment.NewLine, notes));
+            await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+
         return true;
     }
 
@@ -261,7 +291,7 @@ internal sealed class CrmSyncService(
         {
             deleted = await db.Records
                 .Where(r => r.Entity == entity.Name && r.LastSeenRunId != run.Id && !r.IsDeleted)
-                .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsDeleted, true), cancellationToken).ConfigureAwait(false);
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsDeleted, true).SetProperty(r => r.LastSyncedAt, clock.UtcNow), cancellationToken).ConfigureAwait(false);
         }
 
         // Records older than the entity's start date are not wanted at all: remove any copied before the date was set.
@@ -302,5 +332,6 @@ internal sealed class CrmSyncService(
     private static SyncRunDto ToDto(SyncRun r) => new(
         r.Id, r.Mode.ToString(), r.Status.ToString(), r.RequestedBy, r.RequestedAt, r.StartedAt, r.FinishedAt,
         r.Results is null ? [] : JsonSerializer.Deserialize<List<EntitySyncResult>>(r.Results) ?? [],
-        r.Error);
+        r.Error,
+        r.FollowUp);
 }

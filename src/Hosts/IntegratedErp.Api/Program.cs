@@ -13,6 +13,7 @@ using IntegratedErp.Modules.Identity.Infrastructure.Ldap;
 using IntegratedErp.Modules.Organization;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workflow;
+using IntegratedErp.Modules.Workforce;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,7 +44,8 @@ builder.Services.AddModules(
     new IdentityModule(),
     new DocumentsModule(),
     new WorkflowModule(),
-    new CrmSyncModule());
+    new CrmSyncModule(),
+    new WorkforceModule());
 
 // Development only: local test accounts (dev.*) for exercising the sign-in UI without real passwords.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Identity:DevDirectory:Enabled", false))

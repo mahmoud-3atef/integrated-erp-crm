@@ -199,6 +199,9 @@ public sealed class SyncRun : ITenantOwned
 
     public string? Error { get; private set; }
 
+    /// <summary>What happened after the copy: reference lists and the modules built from it (one line each).</summary>
+    public string? FollowUp { get; private set; }
+
     public bool IsActive => Status is SyncRunStatus.Queued or SyncRunStatus.Running;
 
     public void Start(DateTimeOffset at)
@@ -206,6 +209,8 @@ public sealed class SyncRun : ITenantOwned
         Status = SyncRunStatus.Running;
         StartedAt = at;
     }
+
+    public void RecordFollowUp(string followUp) => FollowUp = followUp.Length > 4000 ? followUp[..4000] : followUp;
 
     public void Finish(SyncRunStatus status, string results, string? error, DateTimeOffset at)
     {

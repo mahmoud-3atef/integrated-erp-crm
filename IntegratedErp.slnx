@@ -27,6 +27,10 @@
     <Project Path="src/Modules/Workflow/IntegratedErp.Modules.Workflow.Contracts/IntegratedErp.Modules.Workflow.Contracts.csproj" />
     <Project Path="src/Modules/Workflow/IntegratedErp.Modules.Workflow/IntegratedErp.Modules.Workflow.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Workforce/">
+    <Project Path="src/Modules/Workforce/IntegratedErp.Modules.Workforce.Contracts/IntegratedErp.Modules.Workforce.Contracts.csproj" />
+    <Project Path="src/Modules/Workforce/IntegratedErp.Modules.Workforce/IntegratedErp.Modules.Workforce.csproj" />
+  </Folder>
   <Folder Name="/src/SharedKernel/">
     <Project Path="src/SharedKernel/IntegratedErp.SharedKernel/IntegratedErp.SharedKernel.csproj" />
   </Folder>

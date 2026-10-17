@@ -65,6 +65,7 @@ internal sealed class SyncRunConfiguration : IEntityTypeConfiguration<SyncRun>
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.RequestedBy).HasMaxLength(200).IsRequired();
         builder.Property(r => r.Error).HasMaxLength(1000);
+        builder.Property(r => r.FollowUp).HasMaxLength(4000);
         builder.Ignore(r => r.IsActive);
         builder.HasIndex(r => new { r.TenantId, r.RequestedAt });
     }

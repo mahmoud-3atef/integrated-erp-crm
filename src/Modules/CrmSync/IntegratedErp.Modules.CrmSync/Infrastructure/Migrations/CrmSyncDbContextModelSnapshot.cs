@@ -330,6 +330,11 @@ namespace IntegratedErp.Modules.CrmSync.Infrastructure.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("finished_at");
 
+                    b.Property<string>("FollowUp")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("follow_up");
+
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(20)

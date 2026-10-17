@@ -182,6 +182,15 @@ internal sealed class CompanySetupService(OrganizationDbContext db, ReferenceLis
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<ReferenceItemInfo>> ListAllAsync(string listCode, CancellationToken cancellationToken)
+    {
+        await EnsureSystemItemsAsync(cancellationToken).ConfigureAwait(false);
+        return await db.ReferenceItems.AsNoTracking().Where(i => i.ListCode == listCode)
+            .OrderBy(i => i.SortOrder).ThenBy(i => i.Code)
+            .Select(i => new ReferenceItemInfo(i.ListCode, i.Code, i.NameAr, i.NameEn, i.IsActive))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<bool> IsValidAsync(string listCode, string code, CancellationToken cancellationToken)
     {
         await EnsureSystemItemsAsync(cancellationToken).ConfigureAwait(false);

@@ -1,5 +1,6 @@
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import CloudSyncOutlinedIcon from '@mui/icons-material/CloudSyncOutlined';
+import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
@@ -50,6 +51,10 @@ interface MenuSection {
 /** The menu grows with each module; an item without its permission is not shown at all. */
 const menu: MenuSection[] = [
   { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> }] },
+  {
+    titleKey: 'menu.workforce',
+    items: [{ path: '/workforce/workers', labelKey: 'menu.workers', icon: <EngineeringOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true }],
+  },
   {
     titleKey: 'menu.approvals',
     items: [

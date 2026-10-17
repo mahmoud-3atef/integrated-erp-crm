@@ -216,7 +216,9 @@
     "myApprovals": "My submissions",
     "monitor": "Approval monitor",
     "processes": "Approval processes",
-    "crmSync": "Sync from old system"
+    "crmSync": "Sync from old system",
+    "workforce": "Workforce",
+    "workers": "Workers and staff"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -785,5 +787,120 @@
     "mergeHint": "All CRM records of “{{name}}” (used by {{count}} employees) move to the item you choose, and “{{name}}” is switched off. Later imports keep this merge.",
     "target": "Target item",
     "createdFrom": "From {{date}} only"
+  },
+  "workforce": {
+    "title": "Workers and staff",
+    "intro": "Worker and staff files, updated automatically from the old system after every sync.",
+    "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync (hourly).",
+    "currentFilter": "Current filter",
+    "cardFoot": {
+      "Working": "Show employees",
+      "New": "Not delivered yet",
+      "Housing": "Awaiting delivery",
+      "Vacation": "Show employees",
+      "Suspended": "Show employees",
+      "Exited": "Show employees"
+    },
+    "placement": {
+      "Working": "On the job",
+      "New": "New",
+      "Housing": "In housing",
+      "Vacation": "On vacation",
+      "Suspended": "Suspended",
+      "Exited": "Final exit",
+      "Absconded": "Absconded",
+      "Other": "Other"
+    },
+    "kind": {
+      "all": "All",
+      "Worker": "Workers",
+      "Staff": "Company staff"
+    },
+    "search": "Search by name, number, Iqama, passport or profession",
+    "searchButton": "Search",
+    "reset": "Reset",
+    "count": "{{count}} employees",
+    "empty": "No data to show",
+    "perPage": "Rows",
+    "rows": "{{from}}–{{to}} of {{count}}",
+    "col": {
+      "name": "Employee name",
+      "number": "Number",
+      "status": "Status",
+      "iqama": "Iqama",
+      "profession": "Profession",
+      "nationality": "Nationality",
+      "sponsor": "Supplier",
+      "joined": "Joining date",
+      "workDays": "Work days"
+    },
+    "salary": {
+      "basic": "Basic",
+      "housing": "Housing allowance",
+      "food": "Food allowance",
+      "transport": "Transport allowance",
+      "overtime": "Overtime",
+      "other": "Other allowances",
+      "project": "Project allowance",
+      "hardship": "Hardship allowance",
+      "total": "Total salary"
+    },
+    "sar": "SAR",
+    "days": "days",
+    "months": "months",
+    "createdOn": "Created",
+    "currentProject": "Current project",
+    "startedOn": "Started",
+    "workDaysSuffix": "work days",
+    "removedInCrm": "This employee was deleted in the old system; the file stays here for reference.",
+    "noSalaryPermission": "You do not have permission to view salaries and allowances.",
+    "tabs": {
+      "info": "Employee data",
+      "ids": "IDs and documents ({{count}})"
+    },
+    "sections": {
+      "basic": "Basic data",
+      "job": "Job and project",
+      "salary": "Salary",
+      "contract": "Contract",
+      "leave": "Leave balance"
+    },
+    "field": {
+      "iqama": "ID / Iqama number",
+      "name": "Name",
+      "project": "Project name",
+      "projectJoined": "Project joining date",
+      "iqamaProfession": "Profession in Iqama",
+      "arrived": "Arrival in the Kingdom",
+      "agent": "Agent",
+      "contractStart": "Contract start",
+      "contractMonths": "Contract term",
+      "contractEnd": "Contract end"
+    },
+    "leave": {
+      "annual": "Annual leave",
+      "balance": "Leave balance",
+      "oldConsumed": "Old consumed balance",
+      "consumed": "Consumed balance",
+      "remaining": "Remaining balance"
+    },
+    "noIds": "No identity numbers recorded.",
+    "ids": {
+      "type": "Type",
+      "number": "Number",
+      "expires": "Expiry date",
+      "expired": "expired",
+      "soon": "expires soon",
+      "current": "Current",
+      "duplicate": "Previous or held by another person — review"
+    },
+    "idType": {
+      "Iqama": "Iqama / ID",
+      "Passport": "Passport",
+      "BorderNumber": "Border number",
+      "Visa": "Embassy visa",
+      "WorkPermit": "Work permit",
+      "Gosi": "Social insurance (GOSI)"
+    }
   }
 }

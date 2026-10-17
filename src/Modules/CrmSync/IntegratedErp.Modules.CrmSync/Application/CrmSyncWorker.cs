@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.CrmSync.Infrastructure;
 using IntegratedErp.Modules.Organization.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,7 +75,9 @@ internal sealed partial class CrmSyncWorker(IServiceScopeFactory scopes, CrmSync
                 await sync.QueueScheduledAsync(stoppingToken).ConfigureAwait(false);
             }
 
-            while (await sync.RunNextAsync(stoppingToken).ConfigureAwait(false))
+            var references = scope.ServiceProvider.GetRequiredService<ReferenceImportService>();
+            var consumers = scope.ServiceProvider.GetServices<ICrmStagingConsumer>().ToList();
+            while (await sync.RunNextAsync(references, consumers, stoppingToken).ConfigureAwait(false))
             {
                 LogRunFinished(logger);
             }

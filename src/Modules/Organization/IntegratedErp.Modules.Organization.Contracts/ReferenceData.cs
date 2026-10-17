@@ -14,6 +14,9 @@ public interface IReferenceData
     /// <summary>Active items of a list, in display order.</summary>
     Task<IReadOnlyList<ReferenceItemInfo>> ListAsync(string listCode, CancellationToken cancellationToken);
 
+    /// <summary>All items of a list, switched-off ones included (to show the name of a code stored earlier).</summary>
+    Task<IReadOnlyList<ReferenceItemInfo>> ListAllAsync(string listCode, CancellationToken cancellationToken);
+
     /// <summary>Whether <paramref name="code"/> is an active item of the list (codes are case-insensitive).</summary>
     Task<bool> IsValidAsync(string listCode, string code, CancellationToken cancellationToken);
 }

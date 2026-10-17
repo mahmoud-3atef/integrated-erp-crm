@@ -7,6 +7,8 @@ import { SignInFlowProvider } from '../auth/SignInFlow';
 import { directionOf, type Language } from '../i18n';
 import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
 import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
+import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
+import { WorkersPage } from '../pages/workforce/WorkersPage';
 import { RolesPage } from '../pages/admin/RolesPage';
 import { UsersPage } from '../pages/admin/UsersPage';
 import { HomePage } from '../pages/HomePage';
@@ -46,6 +48,8 @@ export function App() {
                 <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/roles" element={<RolesPage />} />
                 <Route path="/admin/crm-sync" element={<CrmSyncPage />} />
+                <Route path="/workforce/workers" element={<WorkersPage />} />
+                <Route path="/workforce/workers/:id" element={<WorkerDetailPage />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />

@@ -28,6 +28,7 @@ public sealed class CrmSyncModule : IModule
         services.AddSingleton<CrmSyncSignal>();
         services.AddScoped<CrmSyncService>();
         services.AddScoped<ReferenceImportService>();
+        services.AddScoped<ICrmStaging, CrmStaging>();
         services.AddHostedService<CrmSyncWorker>();
         services.AddPermissions(CrmSyncPermissions.All);
     }
