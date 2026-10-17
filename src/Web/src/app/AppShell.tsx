@@ -1,49 +1,40 @@
-import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
-import CloudSyncOutlinedIcon from "@mui/icons-material/CloudSyncOutlined";
-import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
-import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
-import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
-import EngineeringOutlinedIcon from "@mui/icons-material/EngineeringOutlined";
-import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
-import AltRouteOutlinedIcon from "@mui/icons-material/AltRouteOutlined";
-import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import MonitorHeartOutlinedIcon from "@mui/icons-material/MonitorHeartOutlined";
-import OutboxOutlinedIcon from "@mui/icons-material/OutboxOutlined";
-import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
-import BusinessIcon from "@mui/icons-material/Business";
-import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
-import ListAltOutlinedIcon from "@mui/icons-material/ListAltOutlined";
-import StoreOutlinedIcon from "@mui/icons-material/StoreOutlined";
-import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
-import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
-import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
-import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
-import KeyboardReturnOutlinedIcon from "@mui/icons-material/KeyboardReturnOutlined";
-import RuleOutlinedIcon from "@mui/icons-material/RuleOutlined";
-import {
-  Box,
-  ButtonBase,
-  Drawer,
-  IconButton,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
-import { useEffect, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { authApi } from "../api/auth";
-import { workflowApi } from "../api/workflow";
-import { LanguageSwitch } from "../auth/AuthLayout";
-import { NotificationsBell } from "../components/NotificationsBell";
-import { Initials } from "../components/ui";
-import { companyName } from "../pages/ChooseCompanyPage";
-import { SessionProvider, useSession } from "./session";
-import { tokens } from "./theme";
+import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import CloudSyncOutlinedIcon from '@mui/icons-material/CloudSyncOutlined';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
+import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
+import OutboxOutlinedIcon from '@mui/icons-material/OutboxOutlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
+import BusinessIcon from '@mui/icons-material/Business';
+import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import StoreOutlinedIcon from '@mui/icons-material/StoreOutlined';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
+import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { authApi } from '../api/auth';
+import { workflowApi } from '../api/workflow';
+import { LanguageSwitch } from '../auth/AuthLayout';
+import { NotificationsBell } from '../components/NotificationsBell';
+import { Initials } from '../components/ui';
+import { companyName } from '../pages/ChooseCompanyPage';
+import { SessionProvider, useSession } from './session';
+import { tokens } from './theme';
 
 interface MenuItem {
   path: string;
@@ -66,172 +57,58 @@ interface MenuSection {
 
 /** The menu grows with each module; an item without its permission is not shown at all. */
 const menu: MenuSection[] = [
-  { items: [{ path: "/", labelKey: "menu.home", icon: <HomeOutlinedIcon /> }] },
+  { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> }] },
   {
-    titleKey: "menu.commercial",
+    titleKey: 'menu.commercial',
     items: [
-      {
-        path: "/commercial/customers",
-        labelKey: "menu.customers",
-        icon: <BusinessOutlinedIcon />,
-        permission: "commercial.customers.view",
-        companyWide: true,
-      },
-      {
-        path: "/commercial/projects",
-        labelKey: "menu.projects",
-        icon: <AccountTreeOutlinedIcon />,
-        permission: "commercial.projects.view",
-        companyWide: true,
-      },
-      {
-        path: "/commercial/prices",
-        labelKey: "menu.prices",
-        icon: <SellOutlinedIcon />,
-        permission: "commercial.prices.view",
-        companyWide: true,
-      },
+      { path: '/commercial/customers', labelKey: 'menu.customers', icon: <BusinessOutlinedIcon />, permission: 'commercial.customers.view', companyWide: true },
+      { path: '/commercial/projects', labelKey: 'menu.projects', icon: <AccountTreeOutlinedIcon />, permission: 'commercial.projects.view', companyWide: true },
+      { path: '/commercial/prices', labelKey: 'menu.prices', icon: <SellOutlinedIcon />, permission: 'commercial.prices.view', companyWide: true },
     ],
   },
   {
-    titleKey: "menu.operations",
+    titleKey: 'menu.operations',
     items: [
-      {
-        path: "/operations/delivery-orders",
-        labelKey: "menu.deliveryOrders",
-        icon: <LocalShippingOutlinedIcon />,
-        permission: "operations.delivery.view",
-        companyWide: true,
-      },
-      {
-        path: "/operations/return-orders",
-        labelKey: "menu.returnOrders",
-        icon: <KeyboardReturnOutlinedIcon />,
-        permission: "operations.return.view",
-        companyWide: true,
-      },
+      { path: '/operations/delivery-orders', labelKey: 'menu.deliveryOrders', icon: <LocalShippingOutlinedIcon />, permission: 'operations.delivery.view', companyWide: true },
+      { path: '/operations/return-orders', labelKey: 'menu.returnOrders', icon: <KeyboardReturnOutlinedIcon />, permission: 'operations.return.view', companyWide: true },
     ],
   },
   {
-    titleKey: "menu.workforce",
+    titleKey: 'menu.workforce',
     items: [
-      {
-        path: "/workforce/workers",
-        labelKey: "menu.workers",
-        icon: <EngineeringOutlinedIcon />,
-        permission: "workforce.workers.view",
-        companyWide: true,
-      },
-      {
-        path: "/workforce/history-issues",
-        labelKey: "menu.historyIssues",
-        icon: <RuleOutlinedIcon />,
-        permission: "workforce.workers.view",
-        companyWide: true,
-      },
+      { path: '/workforce/workers', labelKey: 'menu.workers', icon: <EngineeringOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
+      { path: '/workforce/history-issues', labelKey: 'menu.historyIssues', icon: <RuleOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
     ],
   },
   {
-    titleKey: "menu.staffAffairs",
+    titleKey: 'menu.staffAffairs',
+    items: [{ path: '/workforce/staff', labelKey: 'menu.staff', icon: <BadgeOutlinedIcon />, permission: 'workforce.staff.view', companyWide: true }],
+  },
+  {
+    titleKey: 'menu.approvals',
     items: [
-      {
-        path: "/workforce/staff",
-        labelKey: "menu.staff",
-        icon: <BadgeOutlinedIcon />,
-        permission: "workforce.staff.view",
-        companyWide: true,
-      },
+      { path: '/workflow/inbox', labelKey: 'menu.tasks', icon: <TaskAltOutlinedIcon />, showTaskCount: true },
+      { path: '/workflow/my-requests', labelKey: 'menu.myApprovals', icon: <OutboxOutlinedIcon /> },
+      { path: '/workflow/requests', labelKey: 'menu.requests', icon: <DescriptionOutlinedIcon />, anyOf: ['workflow.requests.create', 'workflow.requests.view'] },
+      { path: '/workflow/monitor', labelKey: 'menu.monitor', icon: <MonitorHeartOutlinedIcon />, permission: 'workflow.instances.view', companyWide: true },
+      { path: '/workflow/processes', labelKey: 'menu.processes', icon: <AltRouteOutlinedIcon />, permission: 'workflow.processes.view', companyWide: true },
     ],
   },
   {
-    titleKey: "menu.approvals",
+    titleKey: 'menu.companySetup',
     items: [
-      {
-        path: "/workflow/inbox",
-        labelKey: "menu.tasks",
-        icon: <TaskAltOutlinedIcon />,
-        showTaskCount: true,
-      },
-      {
-        path: "/workflow/my-requests",
-        labelKey: "menu.myApprovals",
-        icon: <OutboxOutlinedIcon />,
-      },
-      {
-        path: "/workflow/requests",
-        labelKey: "menu.requests",
-        icon: <DescriptionOutlinedIcon />,
-        anyOf: ["workflow.requests.create", "workflow.requests.view"],
-      },
-      {
-        path: "/workflow/monitor",
-        labelKey: "menu.monitor",
-        icon: <MonitorHeartOutlinedIcon />,
-        permission: "workflow.instances.view",
-        companyWide: true,
-      },
-      {
-        path: "/workflow/processes",
-        labelKey: "menu.processes",
-        icon: <AltRouteOutlinedIcon />,
-        permission: "workflow.processes.view",
-        companyWide: true,
-      },
+      { path: '/setup/legal-entities', labelKey: 'menu.legalEntities', icon: <AccountBalanceOutlinedIcon />, permission: 'organization.legal_entities.view' },
+      { path: '/setup/branches', labelKey: 'menu.branches', icon: <StoreOutlinedIcon />, permission: 'organization.branches.view' },
+      { path: '/setup/reference-lists', labelKey: 'menu.referenceLists', icon: <ListAltOutlinedIcon />, permission: 'organization.reference_data.view' },
+      { path: '/setup/modules', labelKey: 'menu.modules', icon: <ExtensionOutlinedIcon />, permission: 'organization.modules.view' },
     ],
   },
   {
-    titleKey: "menu.companySetup",
+    titleKey: 'menu.administration',
     items: [
-      {
-        path: "/setup/legal-entities",
-        labelKey: "menu.legalEntities",
-        icon: <AccountBalanceOutlinedIcon />,
-        permission: "organization.legal_entities.view",
-      },
-      {
-        path: "/setup/branches",
-        labelKey: "menu.branches",
-        icon: <StoreOutlinedIcon />,
-        permission: "organization.branches.view",
-      },
-      {
-        path: "/setup/reference-lists",
-        labelKey: "menu.referenceLists",
-        icon: <ListAltOutlinedIcon />,
-        permission: "organization.reference_data.view",
-      },
-      {
-        path: "/setup/modules",
-        labelKey: "menu.modules",
-        icon: <ExtensionOutlinedIcon />,
-        permission: "organization.modules.view",
-      },
-    ],
-  },
-  {
-    titleKey: "menu.administration",
-    items: [
-      {
-        path: "/admin/users",
-        labelKey: "menu.users",
-        icon: <GroupOutlinedIcon />,
-        permission: "identity.users.view",
-        companyWide: true,
-      },
-      {
-        path: "/admin/roles",
-        labelKey: "menu.roles",
-        icon: <AdminPanelSettingsOutlinedIcon />,
-        permission: "identity.roles.view",
-        companyWide: true,
-      },
-      {
-        path: "/admin/crm-sync",
-        labelKey: "menu.crmSync",
-        icon: <CloudSyncOutlinedIcon />,
-        permission: "crm_sync.view",
-        companyWide: true,
-      },
+      { path: '/admin/users', labelKey: 'menu.users', icon: <GroupOutlinedIcon />, permission: 'identity.users.view', companyWide: true },
+      { path: '/admin/roles', labelKey: 'menu.roles', icon: <AdminPanelSettingsOutlinedIcon />, permission: 'identity.roles.view', companyWide: true },
+      { path: '/admin/crm-sync', labelKey: 'menu.crmSync', icon: <CloudSyncOutlinedIcon />, permission: 'crm_sync.view', companyWide: true },
     ],
   },
 ];
@@ -248,75 +125,41 @@ function Shell() {
   const { t } = useTranslation();
   const { can } = useSession();
   const theme = useTheme();
-  const wide = useMediaQuery(theme.breakpoints.up("md"));
+  const wide = useMediaQuery(theme.breakpoints.up('md'));
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
   const sections = menu
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) =>
-        item.anyOf
-          ? item.anyOf.some((code) => can(code))
-          : !item.permission || can(item.permission, item.companyWide),
-      ),
-    }))
+    .map((section) => ({ ...section, items: section.items.filter((item) => (item.anyOf ? item.anyOf.some((code) => can(code)) : !item.permission || can(item.permission, item.companyWide))) }))
     .filter((section) => section.items.length > 0);
-  const current = sections
-    .flatMap((s) => s.items)
-    .find((item) => isActive(item.path, location.pathname));
+  const current = sections.flatMap((s) => s.items).find((item) => isActive(item.path, location.pathname));
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        gap: `${tokens.gap}px`,
-        minHeight: "100dvh",
-        p: { xs: 1, md: `${tokens.gap}px` },
-        bgcolor: "background.default",
-      }}
-    >
+    <Box sx={{ display: 'flex', gap: `${tokens.gap}px`, minHeight: '100dvh', p: { xs: 1, md: `${tokens.gap}px` }, bgcolor: 'background.default' }}>
       {wide ? (
         <Box
           component="aside"
           sx={{
-            position: "sticky",
+            position: 'sticky',
             top: tokens.gap,
             flex: `0 0 ${tokens.sidebarWidth}px`,
             height: `calc(100dvh - ${tokens.gap * 2}px)`,
             borderRadius: `${tokens.radiusLg}px`,
             boxShadow: tokens.shadowMd,
-            overflow: "hidden",
+            overflow: 'hidden',
           }}
         >
           <Sidebar sections={sections} />
         </Box>
       ) : (
-        <Drawer
-          open={open}
-          onClose={() => setOpen(false)}
-          slotProps={{
-            paper: { sx: { width: tokens.sidebarWidth, border: 0 } },
-          }}
-        >
+        <Drawer open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: tokens.sidebarWidth, border: 0 } } }}>
           <Sidebar sections={sections} onNavigate={() => setOpen(false)} />
         </Drawer>
       )}
 
-      <Box
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: `${tokens.gap}px`,
-        }}
-      >
-        <TopBar
-          title={current ? t(current.labelKey) : t("app.name")}
-          onMenu={wide ? undefined : () => setOpen(true)}
-        />
-        <Box component="main" sx={{ width: "100%", px: { xs: 0.5, md: 0 } }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: `${tokens.gap}px` }}>
+        <TopBar title={current ? t(current.labelKey) : t('app.name')} onMenu={wide ? undefined : () => setOpen(true)} />
+        <Box component="main" sx={{ width: '100%', px: { xs: 0.5, md: 0 } }}>
           <Outlet />
         </Box>
       </Box>
@@ -324,100 +167,29 @@ function Shell() {
   );
 }
 
-function Sidebar({
-  sections,
-  onNavigate,
-}: {
-  sections: MenuSection[];
-  onNavigate?: () => void;
-}) {
+function Sidebar({ sections, onNavigate }: { sections: MenuSection[]; onNavigate?: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const taskCount = useTaskCount(location.pathname);
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        bgcolor: tokens.navy700,
-        color: "#fff",
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          px: 2.5,
-          pt: 2.75,
-          pb: 2.25,
-        }}
-      >
-        <Box
-          sx={{
-            display: "grid",
-            placeItems: "center",
-            flex: "0 0 auto",
-            width: 46,
-            height: 46,
-            borderRadius: "50%",
-            bgcolor: "#fff",
-            overflow: "hidden",
-          }}
-        >
-          <Box
-            component="img"
-            src="/brand/carepro-logo.png"
-            alt=""
-            sx={{ width: 40, height: "auto" }}
-          />
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: tokens.navy700, color: '#fff' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2.5, pt: 2.75, pb: 2.25 }}>
+        <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 46, height: 46, borderRadius: '50%', bgcolor: '#fff', overflow: 'hidden' }}>
+          <Box component="img" src="/brand/carepro-logo.png" alt="" sx={{ width: 40, height: 'auto' }} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
-          <Typography
-            sx={{
-              fontWeight: 700,
-              fontSize: 15.5,
-              lineHeight: 1.2,
-              color: "#fff",
-            }}
-          >
-            {t("app.name")}
-          </Typography>
-          <Typography sx={{ fontSize: 11.5, color: "rgba(255,255,255,.6)" }}>
-            {t("app.tagline")}
-          </Typography>
+          <Typography sx={{ fontWeight: 700, fontSize: 15.5, lineHeight: 1.2, color: '#fff' }}>{t('app.name')}</Typography>
+          <Typography sx={{ fontSize: 11.5, color: 'rgba(255,255,255,.6)' }}>{t('app.tagline')}</Typography>
         </Box>
       </Box>
 
-      <Box
-        component="nav"
-        aria-label={t("menu.label")}
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          px: 1.5,
-          pb: 1.5,
-          scrollbarWidth: "thin",
-        }}
-      >
+      <Box component="nav" aria-label={t('menu.label')} sx={{ flex: 1, overflowY: 'auto', px: 1.5, pb: 1.5, scrollbarWidth: 'thin' }}>
         {sections.map((section, index) => (
           <Box key={section.titleKey ?? index}>
             {section.titleKey && (
-              <Typography
-                sx={{
-                  px: 1.5,
-                  pt: 2,
-                  pb: 0.75,
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: "rgba(255,255,255,.45)",
-                }}
-              >
-                {t(section.titleKey)}
-              </Typography>
+              <Typography sx={{ px: 1.5, pt: 2, pb: 0.75, fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,.45)' }}>{t(section.titleKey)}</Typography>
             )}
             {section.items.map((item) => {
               const active = isActive(item.path, location.pathname);
@@ -428,31 +200,25 @@ function Sidebar({
                     navigate(item.path);
                     onNavigate?.();
                   }}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={active ? 'page' : undefined}
                   sx={{
-                    display: "flex",
-                    justifyContent: "flex-start",
+                    display: 'flex',
+                    justifyContent: 'flex-start',
                     gap: 1.5,
-                    width: "100%",
+                    width: '100%',
                     px: 1.75,
                     py: 1.25,
                     mb: 0.4,
                     borderRadius: 999,
                     fontSize: 13.5,
                     fontWeight: active ? 700 : 500,
-                    textAlign: "start",
-                    color: active ? tokens.navy700 : "rgba(255,255,255,.86)",
-                    bgcolor: active ? "#fff" : "transparent",
-                    boxShadow: active ? "0 6px 16px rgba(0,0,0,.14)" : "none",
-                    transition: "background-color .15s, color .15s",
-                    "&:hover": {
-                      bgcolor: active ? "#fff" : "rgba(255,255,255,.09)",
-                      color: active ? tokens.navy700 : "#fff",
-                    },
-                    "& svg": {
-                      fontSize: 20,
-                      color: active ? tokens.navy700 : "rgba(255,255,255,.9)",
-                    },
+                    textAlign: 'start',
+                    color: active ? tokens.navy700 : 'rgba(255,255,255,.86)',
+                    bgcolor: active ? '#fff' : 'transparent',
+                    boxShadow: active ? '0 6px 16px rgba(0,0,0,.14)' : 'none',
+                    transition: 'background-color .15s, color .15s',
+                    '&:hover': { bgcolor: active ? '#fff' : 'rgba(255,255,255,.09)', color: active ? tokens.navy700 : '#fff' },
+                    '& svg': { fontSize: 20, color: active ? tokens.navy700 : 'rgba(255,255,255,.9)' },
                   }}
                 >
                   {item.icon}
@@ -460,17 +226,17 @@ function Sidebar({
                   {item.showTaskCount && taskCount > 0 && (
                     <Box
                       component="span"
-                      aria-label={t("tasks.waiting", { count: taskCount })}
+                      aria-label={t('tasks.waiting', { count: taskCount })}
                       sx={{
-                        marginInlineStart: "auto",
+                        marginInlineStart: 'auto',
                         minWidth: 22,
                         px: 0.9,
                         borderRadius: 999,
                         fontSize: 11,
                         fontWeight: 700,
-                        textAlign: "center",
-                        bgcolor: active ? tokens.navy700 : "#fff",
-                        color: active ? "#fff" : tokens.navy700,
+                        textAlign: 'center',
+                        bgcolor: active ? tokens.navy700 : '#fff',
+                        color: active ? '#fff' : tokens.navy700,
                       }}
                     >
                       {taskCount}
@@ -493,67 +259,44 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
 
   const logout = async () => {
     await authApi.logout().catch(() => undefined);
-    navigate("/login", { replace: true });
+    navigate('/login', { replace: true });
   };
 
   return (
     <Box
       component="header"
       sx={{
-        position: "sticky",
+        position: 'sticky',
         top: { xs: 8, md: tokens.gap },
         zIndex: 30,
-        display: "flex",
-        alignItems: "center",
+        display: 'flex',
+        alignItems: 'center',
         gap: 1,
         minHeight: 62,
         px: { xs: 1, sm: 2 },
         py: 1,
-        bgcolor: "#fff",
+        bgcolor: '#fff',
         borderRadius: `${tokens.radiusLg}px`,
         boxShadow: tokens.shadowSm,
         // Covers the gap above the bar so content does not show through while scrolling.
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          insetInline: -4,
-          bottom: "100%",
-          height: tokens.gap + 2,
-          bgcolor: "background.default",
-        },
+        '&::before': { content: '""', position: 'absolute', insetInline: -4, bottom: '100%', height: tokens.gap + 2, bgcolor: 'background.default' },
       }}
     >
       {onMenu && (
-        <IconButton onClick={onMenu} aria-label={t("menu.open")}>
+        <IconButton onClick={onMenu} aria-label={t('menu.open')}>
           <MenuIcon />
         </IconButton>
       )}
-      <Typography
-        noWrap
-        sx={{
-          fontSize: 17,
-          fontWeight: 700,
-          color: tokens.navy700,
-          flexShrink: 1,
-          minWidth: 0,
-        }}
-      >
+      <Typography noWrap sx={{ fontSize: 17, fontWeight: 700, color: tokens.navy700, flexShrink: 1, minWidth: 0 }}>
         {title}
       </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-          marginInlineStart: "auto",
-        }}
-      >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, marginInlineStart: 'auto' }}>
         {me.company && (
           <Box
             sx={{
-              display: { xs: "none", sm: "inline-flex" },
-              alignItems: "center",
+              display: { xs: 'none', sm: 'inline-flex' },
+              alignItems: 'center',
               gap: 0.75,
               px: 1.5,
               height: 34,
@@ -562,7 +305,7 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
               color: tokens.navy700,
               fontSize: 13,
               fontWeight: 600,
-              "& svg": { fontSize: 18 },
+              '& svg': { fontSize: 18 },
             }}
           >
             <BusinessIcon />
@@ -570,54 +313,28 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
           </Box>
         )}
         {me.companies.length > 1 && (
-          <Tooltip title={t("company.switch")}>
-            <IconButton
-              onClick={() => navigate("/login/company")}
-              aria-label={t("company.switch")}
-            >
+          <Tooltip title={t('company.switch')}>
+            <IconButton onClick={() => navigate('/login/company')} aria-label={t('company.switch')}>
               <SwapHorizIcon />
             </IconButton>
           </Tooltip>
         )}
         <NotificationsBell />
         <LanguageSwitch />
-        <Box
-          sx={{
-            width: "1px",
-            height: 26,
-            mx: 0.75,
-            bgcolor: tokens.border,
-            display: { xs: "none", sm: "block" },
-          }}
-        />
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-          <Box sx={{ display: { xs: "none", md: "block" }, textAlign: "end" }}>
-            <Typography
-              noWrap
-              sx={{
-                fontWeight: 600,
-                fontSize: 13,
-                color: tokens.navy700,
-                lineHeight: 1.2,
-              }}
-            >
+        <Box sx={{ width: '1px', height: 26, mx: 0.75, bgcolor: tokens.border, display: { xs: 'none', sm: 'block' } }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'end' }}>
+            <Typography noWrap sx={{ fontWeight: 600, fontSize: 13, color: tokens.navy700, lineHeight: 1.2 }}>
               {me.displayName}
             </Typography>
             <Typography noWrap sx={{ fontSize: 11.5, color: tokens.gray500 }}>
-              {me.isPlatformAdmin
-                ? t("home.platformAdmin")
-                : me.company
-                  ? companyName(me.company, i18n.language)
-                  : ""}
+              {me.isPlatformAdmin ? t('home.platformAdmin') : me.company ? companyName(me.company, i18n.language) : ''}
             </Typography>
           </Box>
           <Initials name={me.displayName} />
         </Box>
-        <Tooltip title={t("home.logout")}>
-          <IconButton
-            onClick={() => void logout()}
-            aria-label={t("home.logout")}
-          >
+        <Tooltip title={t('home.logout')}>
+          <IconButton onClick={() => void logout()} aria-label={t('home.logout')}>
             <LogoutIcon />
           </IconButton>
         </Tooltip>
@@ -628,20 +345,14 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
 
 /** Home matches only itself; other items also match their sub-pages (e.g. a chosen reference list). */
 function isActive(path: string, pathname: string) {
-  return path === "/"
-    ? pathname === "/"
-    : pathname === path || pathname.startsWith(`${path}/`);
+  return path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
 }
 
 /** Tasks waiting for the user: refreshed every minute and on each page change. */
 function useTaskCount(pathname: string) {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    const load = () =>
-      workflowApi
-        .inboxCount()
-        .then((r) => setCount(r.pending))
-        .catch(() => undefined);
+    const load = () => workflowApi.inboxCount().then((r) => setCount(r.pending)).catch(() => undefined);
     void load();
     const timer = window.setInterval(load, 60_000);
     return () => window.clearInterval(timer);
