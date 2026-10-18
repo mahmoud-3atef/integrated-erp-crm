@@ -63,6 +63,8 @@ public sealed record TimesheetLineDto(
     decimal CustomerLoans,
     decimal FeeDays,
     decimal OtherCosts,
+    decimal InternalAdditions,
+    decimal InternalDeductions,
     decimal DueSalary,
     decimal AbsenceAmount,
     decimal DueFees,
@@ -88,7 +90,8 @@ public sealed record InvoicePreviewDto(
 /// <summary>A worker's month for the payroll or a supplier's statement (all their lines together).</summary>
 public sealed record WorkerPayDto(
     Guid WorkerId, string WorkerNo, string Name, string? IqamaNo, decimal PaySalary, decimal WorkDays, decimal AbsenceDays, decimal OvertimeHours,
-    decimal PayDueSalary, decimal PayAbsence, decimal Overtime, decimal ClientAdditions, decimal ClientDeductions, decimal CustomerLoans, decimal Net);
+    decimal PayDueSalary, decimal PayAbsence, decimal Overtime, decimal ClientAdditions, decimal ClientDeductions, decimal CustomerLoans,
+    decimal InternalAdditions, decimal InternalDeductions, decimal Net);
 
 public sealed record SupplierStatementDto(string SupplierName, int Workers, decimal WorkDays, decimal Net, IReadOnlyList<WorkerPayDto> Items);
 
@@ -192,7 +195,7 @@ internal sealed class TimesheetQueries(
                     l.Id, l.WorkerId, l.WorkerNo, l.Name, l.IqamaNo, profession?.NameAr, profession?.NameEn, nationality?.NameAr, nationality?.NameEn,
                     l.Source.ToString(), l.SupplierName, l.LineFrom, l.LineTo, l.WorkDays, l.PackageNo, l.BillSalary, l.TotalPrice, l.Housing, l.HousingBillable,
                     l.Transport, l.TransportBillable, l.IsSpecialPrice, l.PaySalary, l.SourceNo, l.FromOldSystem, l.AbsenceDays, l.OvertimeHours,
-                    l.ClientAdditions, l.ClientDeductions, l.CustomerLoans, l.FeeDays, l.OtherCosts, l.DueSalary, l.AbsenceAmount, l.DueFees,
+                    l.ClientAdditions, l.ClientDeductions, l.CustomerLoans, l.FeeDays, l.OtherCosts, l.InternalAdditions, l.InternalDeductions, l.DueSalary, l.AbsenceAmount, l.DueFees,
                     l.DueHousing, l.DueTransport, l.Overtime, l.Gosi, l.InvoiceAmount, l.Vat, l.InvoiceTotal, l.PayDueSalary, l.PayAbsence, l.WorkerNet);
             })
             .ToList();
@@ -207,7 +210,7 @@ internal sealed class TimesheetQueries(
                 return (Line: l0, Pay: new WorkerPayDto(
                     g.Key, l0.WorkerNo, l0.Name, l0.IqamaNo, l0.PaySalary, g.Sum(l => l.WorkDays), g.Sum(l => l.AbsenceDays), g.Sum(l => l.OvertimeHours),
                     g.Sum(l => l.PayDueSalary), g.Sum(l => l.PayAbsence), g.Sum(l => l.Overtime), g.Sum(l => l.ClientAdditions), g.Sum(l => l.ClientDeductions),
-                    g.Sum(l => l.CustomerLoans), g.Sum(l => l.WorkerNet)));
+                    g.Sum(l => l.CustomerLoans), g.Sum(l => l.InternalAdditions), g.Sum(l => l.InternalDeductions), g.Sum(l => l.WorkerNet)));
             })
             .OrderBy(x => x.Pay.WorkerNo, StringComparer.Ordinal)
             .ToList();

@@ -952,6 +952,16 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("housing_billable");
 
+                    b.Property<decimal>("InternalAdditions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("internal_additions");
+
+                    b.Property<decimal>("InternalDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("internal_deductions");
+
                     b.Property<decimal>("InvoiceAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")

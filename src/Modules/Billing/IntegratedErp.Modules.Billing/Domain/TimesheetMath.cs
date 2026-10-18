@@ -23,7 +23,9 @@ public sealed record LineInputs(
     decimal ClientDeductions,
     decimal CustomerLoans,
     decimal FeeDaysAdjust,
-    decimal OtherCosts);
+    decimal OtherCosts,
+    decimal InternalAdditions = 0,
+    decimal InternalDeductions = 0);
 
 /// <summary>The project's billing rules for overtime, GOSI and VAT.</summary>
 public sealed record BillingRules(decimal OvertimeMultiplier, decimal MonthlyHours, decimal? OvertimeHourlyRate, decimal GosiRate, decimal VatRate, bool CostPlus);
@@ -56,6 +58,7 @@ public sealed record LineAmounts(
 /// invoice      = due salary − absence + overtime + customer additions − customer deductions − customer loans
 ///                + due fees + other costs + GOSI;   VAT on it
 /// worker's net = the same from the worker's own salary: due − absence + overtime + additions − deductions − loans
+///                + the company's internal additions − its internal deductions   (the pay only, never the invoice)
 /// </code>
 /// R: the line's work days, Q: 30 (or the cycle's days), S: R ± an approved fee-days adjustment.
 /// </summary>
@@ -83,7 +86,7 @@ public static class TimesheetMath
         var vat = Round(invoice * rules.VatRate);
         var payDue = Round(r / q * i.PaySalary);
         var payAbsence = Round(i.PaySalary / q * i.AbsenceDays);
-        var net = payDue - payAbsence + overtime + i.ClientAdditions - i.ClientDeductions - i.CustomerLoans;
+        var net = payDue - payAbsence + overtime + i.ClientAdditions - i.ClientDeductions - i.CustomerLoans + i.InternalAdditions - i.InternalDeductions;
         return new LineAmounts(s, dueSalary, absence, dueFees, dueHousing, dueTransport, overtime, gosi, invoice, vat, invoice + vat, payDue, payAbsence, net);
     }
 

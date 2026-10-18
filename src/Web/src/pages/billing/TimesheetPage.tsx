@@ -468,6 +468,7 @@ function PayTable({ rows }: { rows: WorkerPay[] }) {
             <TableCell align="center">{t('timesheets.col.overtime')}</TableCell>
             <TableCell align="center">{t('timesheets.pay.additions')}</TableCell>
             <TableCell align="center">{t('timesheets.pay.deductions')}</TableCell>
+            <TableCell align="center">{t('timesheets.pay.internal')}</TableCell>
             <TableCell align="center">{t('timesheets.col.net')}</TableCell>
           </TableRow>
         </TableHead>
@@ -489,6 +490,9 @@ function PayTable({ rows }: { rows: WorkerPay[] }) {
               <TableCell align="center">{p.overtime > 0 ? sar(p.overtime) : '—'}</TableCell>
               <TableCell align="center">{p.clientAdditions > 0 ? sar(p.clientAdditions) : '—'}</TableCell>
               <TableCell align="center">{p.clientDeductions + p.customerLoans > 0 ? `−${sar(p.clientDeductions + p.customerLoans)}` : '—'}</TableCell>
+              <TableCell align="center" sx={{ color: p.internalAdditions - p.internalDeductions < 0 ? tokens.danger : undefined }}>
+                {p.internalAdditions === 0 && p.internalDeductions === 0 ? '—' : sar(p.internalAdditions - p.internalDeductions)}
+              </TableCell>
               <TableCell align="center" sx={{ fontWeight: 800, color: tokens.navy800 }}>
                 {sar(p.net)}
               </TableCell>
@@ -505,6 +509,7 @@ function PayTable({ rows }: { rows: WorkerPay[] }) {
             <TableCell align="center">{total((p) => p.overtime)}</TableCell>
             <TableCell align="center">{total((p) => p.clientAdditions)}</TableCell>
             <TableCell align="center">{total((p) => p.clientDeductions + p.customerLoans)}</TableCell>
+            <TableCell align="center">{total((p) => p.internalAdditions - p.internalDeductions)}</TableCell>
             <TableCell align="center">{total((p) => p.net)}</TableCell>
           </TableRow>
         </TableFooter>

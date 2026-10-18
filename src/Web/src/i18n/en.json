@@ -1839,7 +1839,8 @@
       "due": "Due by days",
       "additions": "Customer additions",
       "deductions": "Customer deductions and loans",
-      "total": "Total ({{count}} workers)"
+      "total": "Total ({{count}} workers)",
+      "internal": "Internal additions and deductions"
     },
     "invoice": {
       "salary": "Salaries by days",
@@ -1879,7 +1880,9 @@
       "ClientDeduction": "Customer deduction",
       "CustomerLoan": "Customer's loan",
       "FeeDays": "Fee days adjustment",
-      "OtherCost": "Other cost on the customer"
+      "OtherCost": "Other cost on the customer",
+      "InternalAddition": "Internal addition",
+      "InternalDeduction": "Internal deduction"
     },
     "units": {
       "Absence": "Days",
@@ -1888,7 +1891,9 @@
       "ClientDeduction": "Amount",
       "CustomerLoan": "Amount",
       "FeeDays": "Days (±)",
-      "OtherCost": "Amount"
+      "OtherCost": "Amount",
+      "InternalAddition": "Amount",
+      "InternalDeduction": "Amount"
     },
     "adjustmentHints": {
       "Absence": "Off the salary part of the invoice and the worker's pay; the fees stay. Not more than the work days.",
@@ -1897,7 +1902,9 @@
       "ClientDeduction": "A deduction the customer asks for: off the invoice and the worker.",
       "CustomerLoan": "A loan the customer paid the worker: off the invoice and the worker.",
       "FeeDays": "When fee days differ from work days (+ or −): the fee part only.",
-      "OtherCost": "Another cost on the customer: invoice only."
+      "OtherCost": "Another cost on the customer: invoice only.",
+      "InternalAddition": "An amount the company adds to the worker (bonus, allowance): added to the worker's pay only, not to the invoice.",
+      "InternalDeduction": "An amount the company deducts from the worker (penalty, a company loan): taken off the worker's pay only, never the invoice."
     },
     "cards": {
       "projects": "Projects with work",
@@ -1955,7 +1962,11 @@
         "excel_reason_missing": "The row has a change without a reason.",
         "excel_missing_worker": "The worker was removed from the file (do not delete rows)."
       }
-    }
+    },
+    "search": "Search by project, customer, manager or timesheet number",
+    "filtered": "Showing {{shown}} of {{total}} projects.",
+    "clearFilter": "Clear the filter",
+    "noMatch": "No projects match the filter."
   },
   "invoices": {
     "title": "Customer invoices",

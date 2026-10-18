@@ -4,7 +4,7 @@ import type { ApprovalStatus } from './workflow';
 
 export type TimesheetStatus = 'Draft' | 'InApproval' | 'Returned' | 'Approved';
 export type WorkerSource = 'Company' | 'Supplier' | 'Unknown';
-export const adjustmentTypes = ['Absence', 'Overtime', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost'] as const;
+export const adjustmentTypes = ['Absence', 'Overtime', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost', 'InternalAddition', 'InternalDeduction'] as const;
 export type AdjustmentType = (typeof adjustmentTypes)[number];
 
 export interface MonthProject {
@@ -63,6 +63,8 @@ export interface TimesheetLine {
   customerLoans: number;
   feeDays: number;
   otherCosts: number;
+  internalAdditions: number;
+  internalDeductions: number;
   dueSalary: number;
   absenceAmount: number;
   dueFees: number;
@@ -120,6 +122,8 @@ export interface WorkerPay {
   clientAdditions: number;
   clientDeductions: number;
   customerLoans: number;
+  internalAdditions: number;
+  internalDeductions: number;
   net: number;
 }
 

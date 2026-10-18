@@ -73,6 +73,19 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.True((await service.AdjustAsync(id, new AdjustmentInput(companyId, "Absence", 2, "غياب بإفادة المشرف"), default)).IsSuccess);
             Assert.True((await service.AdjustAsync(id, new AdjustmentInput(companyId, "Overtime", 8, "عمل إضافي يوم الجمعة"), default)).IsSuccess);
 
+            // The company's own addition and deduction: the worker's pay only, never the invoice.
+            var before = (await queries.GetAsync(id, default))!.Lines.Single(l => l.WorkerNo == "BSS0701");
+            Assert.True((await service.AdjustAsync(id, new AdjustmentInput(companyId, "InternalAddition", 200, "مكافأة من الشركة"), default)).IsSuccess);
+            Assert.True((await service.AdjustAsync(id, new AdjustmentInput(companyId, "InternalDeduction", 150, "جزاء إداري"), default)).IsSuccess);
+            var after = (await queries.GetAsync(id, default))!.Lines.Single(l => l.WorkerNo == "BSS0701");
+            Assert.Equal((before.InvoiceAmount, before.WorkerNet + 50), (after.InvoiceAmount, after.WorkerNet));
+            Assert.Equal((200m, 150m), (after.InternalAdditions, after.InternalDeductions));
+            var internals = (await queries.GetAsync(id, default))!.Adjustments.Where(a => a.Type.StartsWith("Internal", StringComparison.Ordinal)).ToList();
+            foreach (var adjustment in internals)
+            {
+                Assert.True((await service.RemoveAdjustmentAsync(id, adjustment.Id, default)).IsSuccess);
+            }
+
             // Generated again (e.g. after a movement): the adjustments stay on the worker.
             Assert.True((await service.GenerateAsync(new GenerateInput(projectId, september), default)).IsSuccess);
             sheet = (await queries.GetAsync(id, default))!;
@@ -97,7 +110,7 @@ public sealed class TimesheetTests(TestDatabase database)
                 Assert.Equal(2m, ws.Cell(7, 9).GetValue<decimal>()); // the absence entered on the screen
                 ws.Cell(8, 9).Value = 3; // BSS0702: 3 absent days
                 ws.Cell(8, 11).Value = 250; // and a customer addition
-                ws.Cell(8, 16).Value = "كشف حضور العميل";
+                ws.Cell(8, 18).Value = "كشف حضور العميل";
                 ws.Cell(9, 10).Value = 4; // BSS0703: overtime, but no reason
             });
             var preview = (await service.PreviewAsync(id, new MemoryStream(filled), default)).Value;
@@ -105,7 +118,7 @@ public sealed class TimesheetTests(TestDatabase database)
 
             // Nothing is applied while the file has a problem.
             Assert.Single((await service.ApplyExcelAsync(id, new MemoryStream(filled), default)).Value.Problems);
-            var fixedFile = Edit(filled, ws => ws.Cell(9, 16).Value = "عمل إضافي معتمد");
+            var fixedFile = Edit(filled, ws => ws.Cell(9, 18).Value = "عمل إضافي معتمد");
             var applied = (await service.ApplyExcelAsync(id, new MemoryStream(fixedFile), default)).Value;
             Assert.Equal((0, 3), (applied.Problems.Count, applied.Changes.Count));
 

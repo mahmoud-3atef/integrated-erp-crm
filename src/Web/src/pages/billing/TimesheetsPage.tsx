@@ -6,10 +6,12 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   Box,
   Button,
   IconButton,
+  InputAdornment,
   LinearProgress,
   Stack,
   Table,
@@ -18,6 +20,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -25,7 +28,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { billingApi, type TimesheetMonth } from '../../api/billing';
+import { billingApi, type MonthProject, type TimesheetMonth } from '../../api/billing';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
@@ -34,6 +37,17 @@ import { Badge, Initials, PageHeader } from '../../components/ui';
 import { sar } from '../operations/delivery';
 import { InvoiceStatusBadge } from './invoices';
 import { TimesheetStatusBadge } from './timesheets';
+
+type CardFilter = 'all' | 'generated' | 'inApproval' | 'approved' | 'invoiced';
+
+/** Which projects a card shows: all, with a timesheet, in approval, approved, or with an issued invoice. */
+const cardFilters: Record<CardFilter, (p: MonthProject) => boolean> = {
+  all: () => true,
+  generated: (p) => p.timesheetId !== null,
+  inApproval: (p) => p.status === 'InApproval',
+  approved: (p) => p.status === 'Approved',
+  invoiced: (p) => p.invoiceDoc?.status === 'Issued',
+};
 
 const monthIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
 
@@ -47,6 +61,8 @@ export function TimesheetsPage() {
   const month = params.get('month') ?? monthIso(new Date());
   const [data, setData] = useState<TimesheetMonth | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [card, setCard] = useState<CardFilter>('all');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const canManage = can('billing.timesheets.manage', true);
 
@@ -100,6 +116,11 @@ export function TimesheetsPage() {
   };
 
   const missing = data?.projects.filter((p) => !p.timesheetId && p.projectId).length ?? 0;
+  const term = search.trim().toLowerCase();
+  const rows = (data?.projects ?? []).filter(
+    (p) => cardFilters[card](p) && (!term || [p.projectName, p.customerName, p.projectManager, p.timesheetNo, p.invoiceDoc?.invoiceNo].some((v) => v?.toLowerCase().includes(term))),
+  );
+  const toggle = (value: CardFilter) => setCard(card === value ? 'all' : value);
 
   return (
     <Box>
@@ -129,14 +150,32 @@ export function TimesheetsPage() {
       <ErrorMessage messageKey={error} />
 
       <KpiGrid count={5}>
-        <KpiCard label={t('timesheets.cards.projects')} value={String(data?.totals.projects ?? 0)} foot={t('timesheets.cards.projectsFoot')} icon={<BusinessCenterOutlinedIcon />} tone={tokens.navy700} />
-        <KpiCard label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedFoot', { count: missing })} icon={<PostAddOutlinedIcon />} tone="#6b7a90" />
-        <KpiCard label={t('timesheets.cards.inApproval')} value={String(data?.totals.inApproval ?? 0)} foot={t('timesheets.cards.inApprovalFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
-        <KpiCard label={t('timesheets.cards.approved')} value={String(data?.totals.approved ?? 0)} foot={t('timesheets.cards.approvedFoot')} icon={<AssignmentTurnedInOutlinedIcon />} tone="#1f9d55" />
-        <KpiCard label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot', { count: data?.totals.invoiced ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
+        <KpiCard active={card === 'all'} onClick={() => toggle('all')} label={t('timesheets.cards.projects')} value={String(data?.totals.projects ?? 0)} foot={t('timesheets.cards.projectsFoot')} icon={<BusinessCenterOutlinedIcon />} tone={tokens.navy700} />
+        <KpiCard active={card === 'generated'} onClick={() => toggle('generated')} label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedFoot', { count: missing })} icon={<PostAddOutlinedIcon />} tone="#6b7a90" />
+        <KpiCard active={card === 'inApproval'} onClick={() => toggle('inApproval')} label={t('timesheets.cards.inApproval')} value={String(data?.totals.inApproval ?? 0)} foot={t('timesheets.cards.inApprovalFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
+        <KpiCard active={card === 'approved'} onClick={() => toggle('approved')} label={t('timesheets.cards.approved')} value={String(data?.totals.approved ?? 0)} foot={t('timesheets.cards.approvedFoot')} icon={<AssignmentTurnedInOutlinedIcon />} tone="#1f9d55" />
+        <KpiCard active={card === 'invoiced'} onClick={() => toggle('invoiced')} label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot', { count: data?.totals.invoiced ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
       </KpiGrid>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5, alignItems: { sm: 'center' }, mb: 1.5 }}>
+          <TextField
+            size="small"
+            sx={{ minWidth: 300 }}
+            placeholder={t('timesheets.search')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+          />
+          {(card !== 'all' || term) && (
+            <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>
+              {t('timesheets.filtered', { shown: rows.length, total: data?.projects.length ?? 0 })}{' '}
+              <Button size="small" onClick={() => (setCard('all'), setSearch(''))}>
+                {t('timesheets.clearFilter')}
+              </Button>
+            </Typography>
+          )}
+        </Stack>
         {(!data || busy === 'all') && !error && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
@@ -152,7 +191,7 @@ export function TimesheetsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.projects.map((p) => (
+              {rows.map((p) => (
                 <TableRow key={p.projectCrmId} hover sx={{ cursor: p.timesheetId ? 'pointer' : 'default' }} onClick={() => p.timesheetId && navigate(`/billing/timesheets/${p.timesheetId}`)}>
                   <TableCell sx={{ minWidth: 260 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
@@ -211,10 +250,10 @@ export function TimesheetsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {data && data.projects.length === 0 && (
+              {data && rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 5, color: tokens.gray500 }}>
-                    {t('timesheets.empty')}
+                    {data.projects.length === 0 ? t('timesheets.empty') : t('timesheets.noMatch')}
                   </TableCell>
                 </TableRow>
               )}

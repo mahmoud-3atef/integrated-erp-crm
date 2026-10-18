@@ -38,6 +38,8 @@ internal static class TimesheetWorkbook
         (AdjustmentType.CustomerLoan, "سلفة صرفها العميل", "Customer loan"),
         (AdjustmentType.FeeDays, "تعديل أيام الرسوم (±)", "Fee days (±)"),
         (AdjustmentType.OtherCost, "تكاليف أخرى", "Other costs"),
+        (AdjustmentType.InternalAddition, "إضافة داخلية (للعامل فقط)", "Internal addition (pay only)"),
+        (AdjustmentType.InternalDeduction, "خصم داخلي (من العامل فقط)", "Internal deduction (pay only)"),
     ];
 
     private static readonly (string Ar, string En)[] Fixed =

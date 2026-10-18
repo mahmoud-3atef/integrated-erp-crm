@@ -29,6 +29,15 @@ public sealed class TimesheetMathTests
     }
 
     [Fact]
+    public void Internal_additions_and_deductions_change_the_pay_and_never_the_invoice()
+    {
+        var plain = TimesheetMath.Calculate(Line(30, 1000, 1500), TotalCost);
+        var a = TimesheetMath.Calculate(Line(30, 1000, 1500) with { InternalAdditions = 300, InternalDeductions = 120 }, TotalCost);
+        Assert.Equal((plain.InvoiceAmount, plain.Vat, plain.InvoiceTotal), (a.InvoiceAmount, a.Vat, a.InvoiceTotal));
+        Assert.Equal(plain.WorkerNet + 180, a.WorkerNet);
+    }
+
+    [Fact]
     public void Cost_plus_adds_gosi_on_the_salary()
     {
         var a = TimesheetMath.Calculate(Line(30, 1500, 800), TotalCost with { CostPlus = true });

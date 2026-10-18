@@ -170,7 +170,7 @@ internal sealed class TimesheetLineConfiguration : IEntityTypeConfiguration<Time
                      nameof(TimesheetLine.Housing), nameof(TimesheetLine.Transport), nameof(TimesheetLine.PaySalary), nameof(TimesheetLine.BasicSalary),
                      nameof(TimesheetLine.AbsenceDays), nameof(TimesheetLine.OvertimeHours), nameof(TimesheetLine.ClientAdditions),
                      nameof(TimesheetLine.ClientDeductions), nameof(TimesheetLine.CustomerLoans), nameof(TimesheetLine.FeeDaysAdjust),
-                     nameof(TimesheetLine.OtherCosts), nameof(TimesheetLine.FeeDays), nameof(TimesheetLine.DueSalary), nameof(TimesheetLine.AbsenceAmount),
+                     nameof(TimesheetLine.OtherCosts), nameof(TimesheetLine.InternalAdditions), nameof(TimesheetLine.InternalDeductions), nameof(TimesheetLine.FeeDays), nameof(TimesheetLine.DueSalary), nameof(TimesheetLine.AbsenceAmount),
                      nameof(TimesheetLine.DueFees), nameof(TimesheetLine.DueHousing), nameof(TimesheetLine.DueTransport), nameof(TimesheetLine.Overtime),
                      nameof(TimesheetLine.Gosi), nameof(TimesheetLine.InvoiceAmount), nameof(TimesheetLine.Vat), nameof(TimesheetLine.InvoiceTotal),
                      nameof(TimesheetLine.PayDueSalary), nameof(TimesheetLine.PayAbsence), nameof(TimesheetLine.WorkerNet),
