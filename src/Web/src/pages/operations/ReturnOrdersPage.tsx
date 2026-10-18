@@ -35,11 +35,13 @@ import { KpiCard, KpiGrid } from '../../components/KpiCard';
 import { Badge, Initials, PageHeader } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { ReturnStatusBadge } from './returns';
+import { ReturnOrderWizard } from './ReturnOrderWizard';
 
 /** Return orders, as the old "أوامر التسكين" page: search, cards that filter, and the orders. */
-export function ReturnOrdersPage() {
+export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [wizard, setWizard] = useState(creating);
   const { can } = useSession();
   const { date } = useCommercialFormat();
   const [params, setParams] = useSearchParams();
@@ -102,7 +104,7 @@ export function ReturnOrdersPage() {
         subtitle={t('operations.return.intro')}
         actions={
           can('operations.return.create', true) ? (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/operations/return-orders/new')}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setWizard(true)}>
               {t('operations.return.new')}
             </Button>
           ) : undefined
@@ -211,6 +213,12 @@ export function ReturnOrdersPage() {
           labelDisplayedRows={({ from, to, count }) => t('workforce.rows', { from, to, count })}
         />
       </Box>
+      {wizard && (
+        <ReturnOrderWizard
+          onClose={() => (creating ? navigate('/operations/return-orders') : setWizard(false))}
+          onSaved={(saved, failed) => navigate(`/operations/return-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
+        />
+      )}
     </Box>
   );
 }

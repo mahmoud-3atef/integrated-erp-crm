@@ -35,11 +35,13 @@ import { Badge, Initials, PageHeader } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from './delivery';
 import { TransferStatusBadge } from './transfers';
+import { TransferOrderWizard } from './TransferOrderWizard';
 
 /** Transfer orders between projects: search, cards that filter, and the orders. */
-export function TransferOrdersPage() {
+export function TransferOrdersPage({ creating = false }: { creating?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [wizard, setWizard] = useState(creating);
   const { can } = useSession();
   const { date } = useCommercialFormat();
   const [params, setParams] = useSearchParams();
@@ -101,7 +103,7 @@ export function TransferOrdersPage() {
         subtitle={t('operations.transfer.intro')}
         actions={
           can('operations.transfer.create', true) ? (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/operations/transfer-orders/new')}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setWizard(true)}>
               {t('operations.transfer.new')}
             </Button>
           ) : undefined
@@ -200,6 +202,12 @@ export function TransferOrdersPage() {
           labelDisplayedRows={({ from, to, count }) => t('workforce.rows', { from, to, count })}
         />
       </Box>
+      {wizard && (
+        <TransferOrderWizard
+          onClose={() => (creating ? navigate('/operations/transfer-orders') : setWizard(false))}
+          onSaved={(saved, failed) => navigate(`/operations/transfer-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
+        />
+      )}
     </Box>
   );
 }

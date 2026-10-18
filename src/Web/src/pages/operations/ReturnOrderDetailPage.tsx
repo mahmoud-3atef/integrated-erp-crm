@@ -27,6 +27,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useStateName } from './movements/movementMeta';
 import { daysBetween, Journey, JourneyLine, WorkerFact, WorkerHead } from './recordParts';
 import { ReturnStatusBadge } from './returns';
+import { ReturnOrderWizard } from './ReturnOrderWizard';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -38,7 +39,7 @@ const origin = { ReturnedWorker: 'Work', NewArrival: 'New', BackFromVacation: 'V
  * bar, the worker's card with the way back (from the project to the housing, with the days worked), the approval's
  * history, and beside them the reason, the customer's wish and the salary.
  */
-export function ReturnOrderDetailPage() {
+export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -46,7 +47,8 @@ export function ReturnOrderDetailPage() {
   const { ar, date } = useCommercialFormat();
   const stateName = useStateName();
   const [order, setOrder] = useState<ReturnDetail | null>(null);
-  useCrumb(order?.summary.orderNo);
+  useCrumb(order?.summary.orderNo, `/operations/return-orders/${id}`);
+  const [wizard, setWizard] = useState(editing);
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export function ReturnOrderDetailPage() {
         actions={
           <>
             {order.canEdit && (
-              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/return-orders/${o.id}/edit`)}>
+              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => setWizard(true)}>
                 {t('common.edit')}
               </Button>
             )}
@@ -241,6 +243,21 @@ export function ReturnOrderDetailPage() {
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+      {wizard && (
+        <ReturnOrderWizard
+          id={o.id}
+          onClose={() => (editing ? navigate(`/operations/return-orders/${o.id}`) : setWizard(false))}
+          onSaved={(_, failed) => {
+            if (editing) {
+              navigate(`/operations/return-orders/${o.id}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`);
+              return;
+            }
+            setWizard(false);
+            setError(failed ? `errors.${failed.replace('.', '_')}` : null);
+            void reload().then(() => approval.reload());
+          }}
+        />
       )}
     </Box>
   );

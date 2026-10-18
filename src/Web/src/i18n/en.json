@@ -1558,7 +1558,15 @@
       "dates": "Dates",
       "receiving": "Receiving",
       "sarUnit": "SAR",
-      "value": "Value"
+      "value": "Value",
+      "wizard": {
+        "order": "Order details",
+        "workers": "Workers",
+        "prices": "Prices and start",
+        "review": "Review and send",
+        "hint": "Choose the project and dates, then the workers, then check the prices before sending for approval.",
+        "picked": "{{count}} workers chosen. Add more or go on to the prices."
+      }
     },
     "status": {
       "UnderPreparation": "Under preparation",
@@ -1671,7 +1679,14 @@
       "journey": "The way back",
       "workedDays": "{{count}} days on the project",
       "profession": "Profession",
-      "nationality": "Nationality"
+      "nationality": "Nationality",
+      "wizard": {
+        "worker": "Worker",
+        "details": "Return details",
+        "review": "Review and send",
+        "summary": "Return summary",
+        "hint": "Choose the returning worker, then the arrival in housing and the reason, then review before sending for approval."
+      }
     },
     "transfer": {
       "title": "Project transfer orders",
@@ -1734,7 +1749,16 @@
       "startedOn": "Started there",
       "price": "Price",
       "oldPrice": "Current price",
-      "newMonthlyTotal": "New monthly total"
+      "newMonthlyTotal": "New monthly total",
+      "wizard": {
+        "order": "Transfer details",
+        "workers": "Workers",
+        "prices": "New prices",
+        "review": "Review and send",
+        "summary": "Transfer summary",
+        "hint": "Choose the new project and the date, then the workers, then check the new prices before sending for approval.",
+        "picked": "{{count}} workers chosen. Add more or go on to the prices."
+      }
     }
   },
   "housing": {
@@ -2526,5 +2550,9 @@
     "edit": "Edit",
     "print": "Print",
     "details": "Details"
+  },
+  "wizard": {
+    "back": "Back",
+    "next": "Next: {{step}}"
   }
 }

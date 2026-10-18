@@ -43,6 +43,7 @@ import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
 import { useCrumb } from '../../app/breadcrumbs';
+import { DeliveryOrderWizard } from './DeliveryOrderWizard';
 
 /** The two letters of a worker's name, for the avatar in the workers table. */
 function initials(name: string) {
@@ -63,14 +64,15 @@ const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow:
  * One delivery order: the band with its number and actions, the approval bar, then the order's summary on one side
  * and its workers (or the approval log) on the other.
  */
-export function DeliveryOrderDetailPage() {
+export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const [params] = useSearchParams();
   const { ar, date } = useCommercialFormat();
   const [order, setOrder] = useState<DeliveryDetail | null>(null);
-  useCrumb(order?.summary.orderNo);
+  useCrumb(order?.summary.orderNo, `/operations/delivery-orders/${id}`);
+  const [wizard, setWizard] = useState(editing);
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export function DeliveryOrderDetailPage() {
         actions={
           <>
             {order.canEdit && (
-              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/delivery-orders/${o.id}/edit`)}>
+              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => setWizard(true)}>
                 {t('common.edit')}
               </Button>
             )}
@@ -353,6 +355,21 @@ export function DeliveryOrderDetailPage() {
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+      {wizard && (
+        <DeliveryOrderWizard
+          id={o.id}
+          onClose={() => (editing ? navigate(`/operations/delivery-orders/${o.id}`) : setWizard(false))}
+          onSaved={(_, failed) => {
+            if (editing) {
+              navigate(`/operations/delivery-orders/${o.id}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`);
+              return;
+            }
+            setWizard(false);
+            setError(failed ? `errors.${failed.replace('.', '_')}` : null);
+            void reload().then(() => approval.reload());
+          }}
+        />
       )}
     </Box>
   );

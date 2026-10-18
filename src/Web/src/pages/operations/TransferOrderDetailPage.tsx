@@ -29,6 +29,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from './delivery';
 import { daysBetween, Journey, JourneyLine, WorkerFact, WorkerHead } from './recordParts';
 import { TransferStatusBadge } from './transfers';
+import { TransferOrderWizard } from './TransferOrderWizard';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -65,14 +66,15 @@ function PriceChange({ from, to }: { from: number | null; to: number }) {
  * one, with the new price). Several: the way between the projects, then the workers' table with the old and new
  * prices. Beside them the new project, the value, the date and who receives; the approval's history under them.
  */
-export function TransferOrderDetailPage() {
+export function TransferOrderDetailPage({ editing = false }: { editing?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const [params] = useSearchParams();
   const { ar, date } = useCommercialFormat();
   const [order, setOrder] = useState<TransferDetail | null>(null);
-  useCrumb(order?.summary.orderNo);
+  useCrumb(order?.summary.orderNo, `/operations/transfer-orders/${id}`);
+  const [wizard, setWizard] = useState(editing);
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
@@ -130,7 +132,7 @@ export function TransferOrderDetailPage() {
         actions={
           <>
             {order.canEdit && (
-              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/transfer-orders/${o.id}/edit`)}>
+              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => setWizard(true)}>
                 {t('common.edit')}
               </Button>
             )}
@@ -387,6 +389,21 @@ export function TransferOrderDetailPage() {
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+      {wizard && (
+        <TransferOrderWizard
+          id={o.id}
+          onClose={() => (editing ? navigate(`/operations/transfer-orders/${o.id}`) : setWizard(false))}
+          onSaved={(_, failed) => {
+            if (editing) {
+              navigate(`/operations/transfer-orders/${o.id}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`);
+              return;
+            }
+            setWizard(false);
+            setError(failed ? `errors.${failed.replace('.', '_')}` : null);
+            void reload().then(() => approval.reload());
+          }}
+        />
       )}
     </Box>
   );

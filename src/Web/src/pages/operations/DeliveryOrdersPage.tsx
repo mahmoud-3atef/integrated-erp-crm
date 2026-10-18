@@ -35,11 +35,13 @@ import { KpiCard, KpiGrid } from '../../components/KpiCard';
 import { Badge, Initials, PageHeader } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge } from './delivery';
+import { DeliveryOrderWizard } from './DeliveryOrderWizard';
 
 /** Delivery orders, as the old "أوامر تسليم العمالة" page: search, cards that filter, and the orders. */
-export function DeliveryOrdersPage() {
+export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [wizard, setWizard] = useState(creating);
   const { can } = useSession();
   const { date } = useCommercialFormat();
   const [params, setParams] = useSearchParams();
@@ -102,7 +104,7 @@ export function DeliveryOrdersPage() {
         subtitle={t('operations.delivery.intro')}
         actions={
           can('operations.delivery.create', true) ? (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/operations/delivery-orders/new')}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setWizard(true)}>
               {t('operations.delivery.new')}
             </Button>
           ) : undefined
@@ -209,6 +211,12 @@ export function DeliveryOrdersPage() {
           labelDisplayedRows={({ from, to, count }) => t('workforce.rows', { from, to, count })}
         />
       </Box>
+      {wizard && (
+        <DeliveryOrderWizard
+          onClose={() => (creating ? navigate('/operations/delivery-orders') : setWizard(false))}
+          onSaved={(saved, failed) => navigate(`/operations/delivery-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
+        />
+      )}
     </Box>
   );
 }

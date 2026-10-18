@@ -8,7 +8,6 @@ import { directionOf, type Language } from '../i18n';
 import { ChooseCompanyPage } from '../pages/ChooseCompanyPage';
 import { CrmSyncPage } from '../pages/admin/CrmSyncPage';
 import { DeliveryOrderDetailPage } from '../pages/operations/DeliveryOrderDetailPage';
-import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage';
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
@@ -31,10 +30,8 @@ import { BuildingPage } from '../pages/housing/BuildingPage';
 import { HousingPage } from '../pages/housing/HousingPage';
 import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
 import { ReturnOrderDetailPage } from '../pages/operations/ReturnOrderDetailPage';
-import { ReturnOrderFormPage } from '../pages/operations/ReturnOrderFormPage';
 import { ReturnOrdersPage } from '../pages/operations/ReturnOrdersPage';
 import { TransferOrderDetailPage } from '../pages/operations/TransferOrderDetailPage';
-import { TransferOrderFormPage } from '../pages/operations/TransferOrderFormPage';
 import { TransferOrdersPage } from '../pages/operations/TransferOrdersPage';
 import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
 import { CustomersPage } from '../pages/commercial/CustomersPage';
@@ -93,9 +90,9 @@ export function App() {
                 <Route path="/commercial/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/commercial/prices" element={<PricesPage />} />
                 <Route path="/operations/delivery-orders" element={<DeliveryOrdersPage />} />
-                <Route path="/operations/delivery-orders/new" element={<DeliveryOrderFormPage />} />
+                <Route path="/operations/delivery-orders/new" element={<DeliveryOrdersPage key="new" creating />} />
                 <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />
-                <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderFormPage />} />
+                <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderDetailPage key="edit" editing />} />
                 <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />
                 <Route path="/workforce/history-issues" element={<HistoryIssuesPage />} />
                 <Route path="/housing" element={<HousingPage />} />
@@ -113,17 +110,17 @@ export function App() {
                 <Route path="/billing/bank-accounts" element={<BankAccountsPage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
-                <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
+                <Route path="/operations/return-orders/new" element={<ReturnOrdersPage key="new" creating />} />
                 <Route path="/operations/return-orders/:id" element={<ReturnOrderDetailPage />} />
-                <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderFormPage />} />
+                <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderDetailPage key="edit" editing />} />
                 <Route path="/operations/transfer-orders" element={<TransferOrdersPage />} />
                 <Route path="/operations/movements" element={<MovementsPage />} />
                 <Route path="/operations/movements/new" element={<MovementFormPage key="new" />} />
                 <Route path="/operations/movements/:id" element={<MovementPage />} />
                 <Route path="/operations/movements/:id/edit" element={<MovementFormPage key="edit" />} />
-                <Route path="/operations/transfer-orders/new" element={<TransferOrderFormPage />} />
+                <Route path="/operations/transfer-orders/new" element={<TransferOrdersPage key="new" creating />} />
                 <Route path="/operations/transfer-orders/:id" element={<TransferOrderDetailPage />} />
-                <Route path="/operations/transfer-orders/:id/edit" element={<TransferOrderFormPage />} />
+                <Route path="/operations/transfer-orders/:id/edit" element={<TransferOrderDetailPage key="edit" editing />} />
                 <Route path="/setup/legal-entities" element={<LegalEntitiesPage />} />
                 <Route path="/setup/branches" element={<BranchesPage />} />
                 <Route path="/setup/reference-lists/:list?" element={<ReferenceListsPage />} />
