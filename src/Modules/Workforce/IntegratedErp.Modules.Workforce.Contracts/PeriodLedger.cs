@@ -34,6 +34,21 @@ public sealed record HousingStartRequest(
     Guid SourceId,
     string SourceNo);
 
+/// <summary>
+/// A worker's movement out of the current period (docs/02-target-architecture/05 §2): <paramref name="Kind"/> is Housing,
+/// Vacation, ClientVacation (billed: it keeps the work period's project and price), Absconded, Suspended or Out. The
+/// worker's open period closes on <paramref name="StartsOn"/>, as allowed by the period they are in.
+/// </summary>
+public sealed record PeriodStartRequest(
+    Guid WorkerId,
+    string Kind,
+    DateOnly StartsOn,
+    bool PaySalary,
+    string? Place,
+    string SourceType,
+    Guid SourceId,
+    string SourceNo);
+
 /// <summary>A period of a worker's timeline as other modules and screens show it.</summary>
 public sealed record PeriodInfo(
     Guid Id,
@@ -54,7 +69,8 @@ public sealed record PeriodInfo(
     decimal? TotalPrice,
     bool IsSpecialPrice,
     bool PaySalary = false,
-    bool FromOldSystem = false);
+    bool FromOldSystem = false,
+    Guid? ProjectCrmId = null);
 
 /// <summary>
 /// The period ledger (docs/02-target-architecture/04): each worker's timeline of periods (housing, work on a project,
@@ -73,6 +89,13 @@ public interface IPeriodLedger
     /// whose timeline starts here (on the job in the old system) gets the housing period only. Idempotent per document.
     /// </summary>
     Task<Result> StartHousingAsync(HousingStartRequest start, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Opens a period of the given kind (a worker movement): only from a period that allows it (vacation from work or
+    /// housing, client vacation from work, back to housing from vacation, absconding or suspension…). A worker whose
+    /// timeline starts here (in the old system) gets the new period only. Idempotent per document.
+    /// </summary>
+    Task<Result> StartPeriodAsync(PeriodStartRequest start, CancellationToken cancellationToken);
 
     /// <summary>
     /// A worker's timeline, latest first: the history from the old system up to the first period recorded here, then

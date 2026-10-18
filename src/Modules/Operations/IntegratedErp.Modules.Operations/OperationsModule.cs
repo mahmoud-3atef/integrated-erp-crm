@@ -40,11 +40,22 @@ public sealed class OperationsModule : IModule
         services.AddScoped<OperationsDashboard>();
         services.AddScoped<TransferOrderQueries>();
         services.AddScoped<IApprovalRecordAdapter, TransferOrderAdapter>();
+        services.AddScoped<MovementService>();
+        services.AddScoped<MovementQueries>();
+        services.AddScoped<IApprovalRecordAdapter, MovementAdapter>();
         services.AddPermissions(OperationsPermissions.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("delivery_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر التسليم", "Delivery orders", "DO-{YYYY}-{N:5}", NumberReset.Yearly),
             new NumberSequenceDefinition("return_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر الرجيع", "Return orders", "RT-{YYYY}-{N:5}", NumberReset.Yearly),
-            new NumberSequenceDefinition("transfer_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر النقل", "Transfer orders", "TR-{YYYY}-{N:5}", NumberReset.Yearly));
+            new NumberSequenceDefinition("transfer_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر النقل", "Transfer orders", "TR-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_arrival", OperationsDbContext.SchemaName, "العمليات", "Operations", "تأكيد الوصول", "Arrivals", "AR-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_vacation_departure", OperationsDbContext.SchemaName, "العمليات", "Operations", "مغادرة الإجازة", "Vacation departures", "VD-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_vacation_return", OperationsDbContext.SchemaName, "العمليات", "Operations", "العودة من الإجازة", "Returns from vacation", "VR-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_absconding", OperationsDbContext.SchemaName, "العمليات", "Operations", "بلاغات الانقطاع", "Absconding reports", "AB-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_absconding_return", OperationsDbContext.SchemaName, "العمليات", "Operations", "العودة بعد الانقطاع", "Returns after absconding", "ABR-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_suspension", OperationsDbContext.SchemaName, "العمليات", "Operations", "الإيقاف", "Suspensions", "SU-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_suspension_lift", OperationsDbContext.SchemaName, "العمليات", "Operations", "رفع الإيقاف", "Suspensions lifted", "SL-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("movement_exit", OperationsDbContext.SchemaName, "العمليات", "Operations", "الخروج النهائي", "Final exits", "EX-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -52,6 +63,7 @@ public sealed class OperationsModule : IModule
         endpoints.MapOperationsEndpoints();
         endpoints.MapReturnOrderEndpoints();
         endpoints.MapTransferOrderEndpoints();
+        endpoints.MapMovementEndpoints();
     }
 }
 
@@ -67,6 +79,9 @@ internal static class OperationsPermissions
     public const string TransferView = "operations.transfer.view";
     public const string TransferCreate = "operations.transfer.create";
     public const string TransferApprove = "operations.transfer.approve";
+    public const string MovementsView = "operations.movements.view";
+    public const string MovementsManage = "operations.movements.manage";
+    public const string MovementsApprove = "operations.movements.approve";
 
     private const string GroupAr = "العمليات";
     private const string GroupEn = "Operations";
@@ -83,5 +98,8 @@ internal static class OperationsPermissions
         new(TransferView, GroupAr, GroupEn, "عرض أوامر النقل بين المشاريع", "View project transfer orders"),
         new(TransferCreate, GroupAr, GroupEn, "إنشاء أوامر النقل وتعديلها", "Create and edit project transfer orders"),
         new(TransferApprove, GroupAr, GroupEn, "اعتماد أوامر النقل (مدير العمليات)", "Approve project transfer orders (operations manager)"),
+        new(MovementsView, GroupAr, GroupEn, "عرض حركات العمال (الوصول والإجازات والانقطاع والإيقاف والخروج)", "View worker movements (arrival, vacation, absconding, suspension, exit)"),
+        new(MovementsManage, GroupAr, GroupEn, "إنشاء حركات العمال وتعديلها وإلغاؤها", "Create, edit and cancel worker movements"),
+        new(MovementsApprove, GroupAr, GroupEn, "اعتماد حركات العمال (مدير العمليات)", "Approve worker movements (operations manager)"),
     ];
 }

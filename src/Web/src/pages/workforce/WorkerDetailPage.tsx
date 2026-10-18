@@ -1,4 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
@@ -28,6 +29,7 @@ import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import { Alert, Box, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSession } from '../../app/session';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { workforceApi, type WorkerDetail, type WorkerKind } from '../../api/workforce';
@@ -46,6 +48,7 @@ import { placementLook } from '../../components/workforce/placement';
 export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { can } = useSession();
   const { id } = useParams();
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
   const [tab, setTab] = useState<'info' | 'ids' | 'periods'>(() => (new URLSearchParams(window.location.search).get('tab') === 'periods' ? 'periods' : 'info'));
@@ -85,7 +88,12 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
 
   return (
     <Box>
-      <Stack direction="row" sx={{ justifyContent: 'flex-end', mb: 1 }}>
+      <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 1, mb: 1 }}>
+        {!staff && can('operations.movements.manage', true) && (
+          <Button variant="outlined" startIcon={<MultipleStopOutlinedIcon />} onClick={() => navigate(`/operations/movements/new?worker=${w.id}`)}>
+            {t('movements.new')}
+          </Button>
+        )}
         <Button startIcon={<ArrowBackIcon sx={flip} />} onClick={() => navigate(-1)}>
           {t('common.back')}
         </Button>

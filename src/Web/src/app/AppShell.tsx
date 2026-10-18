@@ -19,6 +19,7 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
@@ -79,6 +80,7 @@ const menu: MenuSection[] = [
       { path: '/operations/delivery-orders', labelKey: 'menu.deliveryOrders', icon: <LocalShippingOutlinedIcon />, permission: 'operations.delivery.view', companyWide: true },
       { path: '/operations/return-orders', labelKey: 'menu.returnOrders', icon: <KeyboardReturnOutlinedIcon />, permission: 'operations.return.view', companyWide: true },
       { path: '/operations/transfer-orders', labelKey: 'menu.transferOrders', icon: <SwapHorizIcon />, permission: 'operations.transfer.view', companyWide: true },
+      { path: '/operations/movements', labelKey: 'menu.movements', icon: <MultipleStopOutlinedIcon />, permission: 'operations.movements.view', companyWide: true },
     ],
   },
   {

@@ -98,6 +98,83 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
         return Result.Success();
     }
 
+    /// <summary>The periods a movement may leave for each kind it opens.</summary>
+    private static readonly Dictionary<PeriodKind, PeriodKind[]> From = new()
+    {
+        [PeriodKind.Housing] = [PeriodKind.Vacation, PeriodKind.ClientVacation, PeriodKind.Absconded, PeriodKind.Suspended],
+        [PeriodKind.Vacation] = [PeriodKind.Work, PeriodKind.Housing],
+        [PeriodKind.ClientVacation] = [PeriodKind.Work],
+        [PeriodKind.Absconded] = [PeriodKind.Work, PeriodKind.Housing, PeriodKind.Vacation, PeriodKind.ClientVacation],
+        [PeriodKind.Suspended] = [PeriodKind.Work, PeriodKind.Housing],
+        [PeriodKind.Out] = [PeriodKind.Work, PeriodKind.Housing, PeriodKind.Vacation, PeriodKind.ClientVacation, PeriodKind.Absconded, PeriodKind.Suspended],
+    };
+
+    public async Task<Result> StartPeriodAsync(PeriodStartRequest start, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(start);
+        if (!Enum.TryParse<PeriodKind>(start.Kind, out var kind) || kind == PeriodKind.Work || !From.TryGetValue(kind, out var allowed))
+        {
+            return Result.Failure(Error.Validation("period_kind", "This kind of period is not opened by a movement."));
+        }
+
+        if (await db.Periods.AnyAsync(p => p.SourceId == start.SourceId && p.WorkerId == start.WorkerId && p.Kind == kind, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Success(); // already applied
+        }
+
+        if (!await db.Workers.AnyAsync(w => w.Id == start.WorkerId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(Error.NotFound("worker", "Worker not found."));
+        }
+
+        var mine = await db.Periods.Where(p => p.WorkerId == start.WorkerId).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (mine.Any(p => p.StartsOn >= start.StartsOn || (p.EndsOn is { } end && end > start.StartsOn)))
+        {
+            return Result.Failure(Error.Conflict("period_overlap", "The worker already has a period on or after this date."));
+        }
+
+        var open = mine.FirstOrDefault(p => p.IsOpen);
+        if (open is not null && !allowed.Contains(open.Kind))
+        {
+            return Result.Failure(Error.Conflict("period_transition", "The worker's current period does not allow this movement."));
+        }
+
+        // A vacation on the customer is billed: it keeps the project and the price of the work it interrupts.
+        PeriodProject? project = null;
+        PeriodRate? rate = null;
+        if (kind == PeriodKind.ClientVacation)
+        {
+            if (open is not null)
+            {
+                (project, rate) = (new PeriodProject(open.ProjectId, open.ProjectCrmId, open.ProjectName), open.Rate);
+            }
+            else if (await db.HistoryPeriods.AsNoTracking().Where(h => h.WorkerId == start.WorkerId && h.Kind == PeriodKind.Work && h.EndsOn == null && h.StartsOn < start.StartsOn)
+                         .OrderByDescending(h => h.StartsOn).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) is { } history)
+            {
+                (project, rate) = (new PeriodProject(null, history.ProjectCrmId, history.Place), history.Rate);
+            }
+            else
+            {
+                return Result.Failure(Error.Conflict("period_not_work", "The worker is not on the job."));
+            }
+        }
+
+        if (open is not null)
+        {
+            var closed = open.Close(start.StartsOn, start.SourceNo);
+            if (closed.IsFailure)
+            {
+                return closed;
+            }
+        }
+
+        db.Periods.Add(WorkerPeriod.Open(
+            start.WorkerId, kind, start.StartsOn, project ?? new PeriodProject(null, null, start.Place), rate,
+            new PeriodSource(start.SourceType, start.SourceId, null, start.SourceNo), clock.UtcNow, start.PaySalary));
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     public async Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken)
     {
         var recorded = (await db.Periods.AsNoTracking().Where(p => p.WorkerId == workerId).ToListAsync(cancellationToken).ConfigureAwait(false))
@@ -113,7 +190,7 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
                 p.Kind == PeriodKind.Work ? p.Rate.Housing : null,
                 p.Kind == PeriodKind.Work ? p.Rate.Transport : null,
                 p.Kind == PeriodKind.Work && p.Rate.TotalPrice > 0 ? p.Rate.TotalPrice : null,
-                false, false, FromOldSystem: true));
+                false, false, FromOldSystem: true, ProjectCrmId: p.ProjectCrmId));
         return recorded.Concat(history).OrderByDescending(p => p.StartsOn).ToList();
     }
 
@@ -123,7 +200,7 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
         var firstRecorded = await db.Periods.AsNoTracking().GroupBy(p => p.WorkerId).Select(g => new { g.Key, First = g.Min(p => p.StartsOn) })
             .ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken).ConfigureAwait(false);
         var recorded = (await db.Periods.AsNoTracking()
-                .Where(p => p.Kind == PeriodKind.Work && p.ProjectCrmId != null && (projectCrmId == null || p.ProjectCrmId == projectCrmId)
+                .Where(p => (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.ClientVacation) && p.ProjectCrmId != null && (projectCrmId == null || p.ProjectCrmId == projectCrmId)
                     && p.StartsOn < after && (p.EndsOn == null || p.EndsOn > from))
                 .ToListAsync(cancellationToken).ConfigureAwait(false))
             .Select(p => new WorkSpan(
@@ -148,14 +225,19 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
         return recorded.Concat(history).Where(p => !settings.IsInactiveProject(p.ProjectName)).OrderBy(p => p.WorkerId).ThenBy(p => p.StartsOn).ToList();
     }
 
-    internal static PeriodInfo Info(WorkerPeriod p) => new(
-        p.Id, p.Kind.ToString(), p.ProjectId, p.ProjectName, p.StartsOn, p.EndsOn, p.SourceType, p.SourceId, p.SourceNo, p.ClosedByNo,
-        p.Rate.PackageNo,
-        p.Kind == PeriodKind.Work ? p.Rate.Salary : null,
-        p.Kind == PeriodKind.Work ? p.Rate.ServiceFee : null,
-        p.Kind == PeriodKind.Work ? p.Rate.Housing : null,
-        p.Kind == PeriodKind.Work ? p.Rate.Transport : null,
-        p.Kind == PeriodKind.Work ? p.Rate.TotalPrice : null,
-        p.Rate.IsSpecialPrice,
-        p.PaySalary);
+    internal static PeriodInfo Info(WorkerPeriod p)
+    {
+        var priced = p.Kind is PeriodKind.Work or PeriodKind.ClientVacation;
+        return new(
+            p.Id, p.Kind.ToString(), p.ProjectId, p.ProjectName, p.StartsOn, p.EndsOn, p.SourceType, p.SourceId, p.SourceNo, p.ClosedByNo,
+            p.Rate.PackageNo,
+            priced ? p.Rate.Salary : null,
+            priced ? p.Rate.ServiceFee : null,
+            priced ? p.Rate.Housing : null,
+            priced ? p.Rate.Transport : null,
+            priced ? p.Rate.TotalPrice : null,
+            p.Rate.IsSpecialPrice,
+            p.PaySalary,
+            ProjectCrmId: p.ProjectCrmId);
+    }
 }

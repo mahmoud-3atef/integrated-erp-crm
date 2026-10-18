@@ -13,6 +13,9 @@ import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
 import { AgingPage } from '../pages/billing/AgingPage';
+import { MovementFormPage } from '../pages/operations/movements/MovementFormPage';
+import { MovementPage } from '../pages/operations/movements/MovementPage';
+import { MovementsPage } from '../pages/operations/movements/MovementsPage';
 import { BankAccountsPage } from '../pages/billing/BankAccountsPage';
 import { InvoicePage } from '../pages/billing/InvoicePage';
 import { ReceiptFormPage } from '../pages/billing/ReceiptFormPage';
@@ -112,6 +115,10 @@ export function App() {
                 <Route path="/operations/return-orders/:id" element={<ReturnOrderDetailPage />} />
                 <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderFormPage />} />
                 <Route path="/operations/transfer-orders" element={<TransferOrdersPage />} />
+                <Route path="/operations/movements" element={<MovementsPage />} />
+                <Route path="/operations/movements/new" element={<MovementFormPage key="new" />} />
+                <Route path="/operations/movements/:id" element={<MovementPage />} />
+                <Route path="/operations/movements/:id/edit" element={<MovementFormPage key="edit" />} />
                 <Route path="/operations/transfer-orders/new" element={<TransferOrderFormPage />} />
                 <Route path="/operations/transfer-orders/:id" element={<TransferOrderDetailPage />} />
                 <Route path="/operations/transfer-orders/:id/edit" element={<TransferOrderFormPage />} />

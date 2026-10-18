@@ -144,12 +144,14 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
                 if (open.TryGetValue(w.Id, out var period))
                 {
                     var work = period.Kind == PeriodKind.Work;
+                    var (placement, ar, en) = Here(period.Kind);
+                    var stillActive = active && period.Kind != PeriodKind.Out;
+                    var onProject = period.Kind is PeriodKind.Work or PeriodKind.ClientVacation;
                     return new WorkerCard(
-                        w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, work ? nameof(Placement.Working) : nameof(Placement.Housing), active && !work,
-                        work ? "على رأس العمل (من هذا النظام)" : "في السكن (من هذا النظام)", work ? "On the job (this system)" : "In housing (this system)",
+                        w.Id, w.CrmId, w.WorkerNo, r.Person.NameEn, placement.ToString(), stillActive && period.Kind == PeriodKind.Housing, ar, en,
                         w.ProfessionCode, profession?.NameAr, profession?.NameEn, r.Person.NationalityCode, nationality?.NameAr, nationality?.NameEn,
                         iqama?.Number, iqama?.ExpiresOn, w.Salary.Total,
-                        work ? period.ProjectCrmId : null, work ? period.ProjectName : null, work ? period.StartsOn : null, active && work,
+                        onProject ? period.ProjectCrmId : null, onProject ? period.ProjectName : null, work ? period.StartsOn : null, stillActive && work,
                         w.Sponsor, w.Salary.Basic);
                 }
 
@@ -164,4 +166,16 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
             .OrderByDescending(c => c.Available).ThenBy(c => c.WorkerNo, StringComparer.Ordinal)
             .ToList();
     }
+
+    /// <summary>Where a period opened here puts the worker, and how the screens say it.</summary>
+    private static (Placement Placement, string Ar, string En) Here(PeriodKind kind) => kind switch
+    {
+        PeriodKind.Work => (Placement.Working, "على رأس العمل (من هذا النظام)", "On the job (this system)"),
+        PeriodKind.Vacation => (Placement.Vacation, "في إجازة (من هذا النظام)", "On vacation (this system)"),
+        PeriodKind.ClientVacation => (Placement.Vacation, "في إجازة على العميل (من هذا النظام)", "On vacation on the customer (this system)"),
+        PeriodKind.Absconded => (Placement.Absconded, "منقطع (من هذا النظام)", "Absconded (this system)"),
+        PeriodKind.Suspended => (Placement.Suspended, "موقوف (من هذا النظام)", "Suspended (this system)"),
+        PeriodKind.Out => (Placement.Exited, "خارج الخدمة (من هذا النظام)", "Exited (this system)"),
+        _ => (Placement.Housing, "في السكن (من هذا النظام)", "In housing (this system)"),
+    };
 }

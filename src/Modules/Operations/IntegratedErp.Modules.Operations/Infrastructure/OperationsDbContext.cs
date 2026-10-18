@@ -27,6 +27,48 @@ internal sealed class OperationsDbContext(DbContextOptions<OperationsDbContext> 
     public DbSet<TransferOrder> TransferOrders => Set<TransferOrder>();
 
     public DbSet<TransferLine> TransferLines => Set<TransferLine>();
+
+    public DbSet<WorkerMovement> Movements => Set<WorkerMovement>();
+}
+
+internal sealed class WorkerMovementConfiguration : IEntityTypeConfiguration<WorkerMovement>
+{
+    public void Configure(EntityTypeBuilder<WorkerMovement> builder)
+    {
+        builder.ToTable("worker_movement");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id).ValueGeneratedNever();
+        builder.Property(m => m.MovementNo).HasMaxLength(30).IsRequired();
+        builder.Property(m => m.Type).HasConversion<string>().HasMaxLength(30);
+        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.WorkerNo).HasMaxLength(50).IsRequired();
+        builder.Property(m => m.WorkerName).HasMaxLength(300).IsRequired();
+        builder.Property(m => m.IqamaNo).HasMaxLength(50);
+        builder.Property(m => m.FromPlacement).HasMaxLength(30).IsRequired();
+        builder.Property(m => m.FromProjectName).HasMaxLength(300);
+        builder.Property(m => m.VacationKind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.ReturnTo).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.ProjectName).HasMaxLength(300);
+        builder.Property(m => m.PackageNo).HasMaxLength(30);
+        builder.Property(m => m.Salary).HasPrecision(18, 2);
+        builder.Property(m => m.ServiceFee).HasPrecision(18, 2);
+        builder.Property(m => m.Housing).HasPrecision(18, 2);
+        builder.Property(m => m.Transport).HasPrecision(18, 2);
+        builder.Property(m => m.SpecialReason).HasMaxLength(500);
+        builder.Property(m => m.SuspensionReason).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.ExitKind).HasConversion<string>().HasMaxLength(30);
+        builder.Property(m => m.Place).HasMaxLength(200);
+        builder.Property(m => m.DelayReason).HasMaxLength(500);
+        builder.Property(m => m.Notes).HasMaxLength(1000);
+        builder.Property(m => m.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(m => m.ExecutedByName).HasMaxLength(200);
+        builder.Property(m => m.LastComment).HasMaxLength(2000);
+        builder.Ignore(m => m.TotalPrice);
+        builder.Ignore(m => m.OpensPeriod);
+        builder.HasIndex(m => new { m.TenantId, m.MovementNo }).IsUnique();
+        builder.HasIndex(m => new { m.TenantId, m.WorkerId });
+        builder.HasIndex(m => new { m.TenantId, m.Type, m.Status });
+    }
 }
 
 /// <summary>How far the copy of the old system's delivery orders has read.</summary>

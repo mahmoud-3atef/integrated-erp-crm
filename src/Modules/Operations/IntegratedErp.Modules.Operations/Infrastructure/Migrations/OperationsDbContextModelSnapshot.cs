@@ -923,6 +923,227 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                     b.ToTable("transfer_order", "operations");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Operations.Domain.WorkerMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<string>("DelayReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("delay_reason");
+
+                    b.Property<DateOnly>("EffectiveOn")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_on");
+
+                    b.Property<DateTimeOffset?>("ExecutedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("executed_at");
+
+                    b.Property<string>("ExecutedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("executed_by_name");
+
+                    b.Property<string>("ExitKind")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("exit_kind");
+
+                    b.Property<DateOnly?>("ExpectedReturnOn")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_return_on");
+
+                    b.Property<string>("FromPlacement")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("from_placement");
+
+                    b.Property<Guid?>("FromProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("from_project_crm_id");
+
+                    b.Property<string>("FromProjectName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("from_project_name");
+
+                    b.Property<decimal>("Housing")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("housing");
+
+                    b.Property<bool>("HousingBillable")
+                        .HasColumnType("bit")
+                        .HasColumnName("housing_billable");
+
+                    b.Property<string>("IqamaNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("iqama_no");
+
+                    b.Property<bool>("IsSpecialPrice")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_special_price");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<string>("MovementNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("movement_no");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("package_id");
+
+                    b.Property<string>("PackageNo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("package_no");
+
+                    b.Property<bool>("PaySalary")
+                        .HasColumnType("bit")
+                        .HasColumnName("pay_salary");
+
+                    b.Property<string>("Place")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("place");
+
+                    b.Property<Guid?>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("ReturnTo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("return_to");
+
+                    b.Property<decimal>("Salary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("salary");
+
+                    b.Property<decimal>("ServiceFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("service_fee");
+
+                    b.Property<string>("SpecialReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("special_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("suspension_reason");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("Transport")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("transport");
+
+                    b.Property<bool>("TransportBillable")
+                        .HasColumnType("bit")
+                        .HasColumnName("transport_billable");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("type");
+
+                    b.Property<string>("VacationKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("vacation_kind");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("WorkerName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("worker_name");
+
+                    b.Property<string>("WorkerNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("worker_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_worker_movement");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_worker_movement_tenant_id");
+
+                    b.HasIndex("TenantId", "MovementNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_worker_movement_tenant_id_movement_no");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .HasDatabaseName("ix_worker_movement_tenant_id_worker_id");
+
+                    b.HasIndex("TenantId", "Type", "Status")
+                        .HasDatabaseName("ix_worker_movement_tenant_id_type_status");
+
+                    b.ToTable("worker_movement", "operations");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Operations.Infrastructure.OperationsImport", b =>
                 {
                     b.Property<Guid>("Id")
