@@ -2220,6 +2220,32 @@
       "outstanding": "Left to collect",
       "paid": "{{amount}} collected",
       "notPaid": "Nothing collected yet"
+    },
+    "more": "More",
+    "payment": {
+      "paid": "Paid",
+      "partial": "Part paid",
+      "overdue": "Overdue",
+      "unpaid": "Unpaid"
+    },
+    "board": {
+      "left": "Left to collect",
+      "of": "of {{total}}",
+      "paid": "{{amount}} paid",
+      "due": "Due",
+      "lateDays": "{{count}} days late",
+      "dueToday": "Due today",
+      "inDays": "In {{count}} days",
+      "dueOn": "Due on {{date}}",
+      "withVat": "{{amount}} + {{rate}}% VAT {{vat}}",
+      "journey": "The invoice's journey",
+      "made": "Created",
+      "issued": "Issued",
+      "paidSoFar": "{{amount}} paid",
+      "receipts": "by receipts",
+      "dueStop": "Due date",
+      "settled": "Paid in full",
+      "components": "What it is made of"
     }
   },
   "receipts": {

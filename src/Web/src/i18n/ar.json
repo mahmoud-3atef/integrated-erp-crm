@@ -2220,6 +2220,32 @@
       "outstanding": "المتبقي للتحصيل",
       "paid": "حُصّل {{amount}}",
       "notPaid": "لم يُحصّل منها شيء"
+    },
+    "more": "المزيد",
+    "payment": {
+      "paid": "مسددة",
+      "partial": "مدفوعة جزئيًا",
+      "overdue": "متأخرة السداد",
+      "unpaid": "غير مدفوعة"
+    },
+    "board": {
+      "left": "المتبقي للتحصيل",
+      "of": "من {{total}}",
+      "paid": "مدفوع {{amount}}",
+      "due": "الاستحقاق",
+      "lateDays": "متأخرة {{count}} يوم",
+      "dueToday": "تستحق اليوم",
+      "inDays": "بعد {{count}} يوم",
+      "dueOn": "تستحق في {{date}}",
+      "withVat": "{{amount}} + ضريبة {{rate}}% {{vat}}",
+      "journey": "رحلة الفاتورة",
+      "made": "أُنشئت",
+      "issued": "أُصدرت",
+      "paidSoFar": "دفعات {{amount}}",
+      "receipts": "بسندات القبض",
+      "dueStop": "الاستحقاق",
+      "settled": "السداد الكامل",
+      "components": "مكوّنات الفاتورة"
     }
   },
   "receipts": {

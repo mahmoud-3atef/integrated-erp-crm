@@ -19,8 +19,8 @@ export const recordTones: Record<RecordTone, { band: string; dark: string; main:
   movement: { band: 'linear-gradient(120deg, #0f2f5c 0%, #1f5fbf 55%, #3b8be6 100%)', dark: 'linear-gradient(135deg, #163f7a, #2a6fd0)', main: '#2a6fd0', soft: '#e8f0fc' },
   // Green: the month's attendance.
   timesheet: { band: 'linear-gradient(120deg, #0f3d2a 0%, #17734b 55%, #23a66a 100%)', dark: 'linear-gradient(135deg, #145a3b, #1d8a58)', main: '#1d8a58', soft: '#e5f6ed' },
-  // Ink: the bill.
-  invoice: { band: 'linear-gradient(120deg, #1b2440 0%, #33416e 55%, #56689e 100%)', dark: 'linear-gradient(135deg, #252f55, #3f4f86)', main: '#3f4f86', soft: '#eceff7' },
+  // Orange: the bill (the ribbon of the paper invoice).
+  invoice: { band: 'linear-gradient(120deg, #8a3c00 0%, #c96a00 55%, #eba12a 100%)', dark: 'linear-gradient(135deg, #a85000, #d98a06)', main: '#c46a00', soft: '#fdf1e0' },
   // Emerald-cyan: money in.
   receipt: { band: 'linear-gradient(120deg, #053f3f 0%, #0b7a72 55%, #14a89a 100%)', dark: 'linear-gradient(135deg, #0a5752, #0f8f84)', main: '#0f8f84', soft: '#e2f5f3' },
 };

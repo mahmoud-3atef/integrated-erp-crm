@@ -1,23 +1,35 @@
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckIcon from '@mui/icons-material/Check';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
+import DonutSmallOutlinedIcon from '@mui/icons-material/DonutSmallOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
+import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutlined';
+import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
+  ListItemIcon,
+  Menu,
   MenuItem,
   Stack,
   Table,
@@ -37,38 +49,69 @@ import { errorKey } from '../../api/auth';
 import { invoiceApi, noteComponents, type InvoiceComponent, type InvoiceDetail, type NoteDraft } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { PillTabs } from '../../components/ui';
-import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
+import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
 import { InvoiceKindBadge, InvoiceStatusBadge, signed } from './invoices';
 import { useCrumb } from '../../app/breadcrumbs';
 
-type Tab = 'items' | 'workers' | 'notes' | 'approval';
+const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
-function Tile({ label, value, tone = tokens.navy800, foot }: { label: string; value: ReactNode; tone?: string; foot?: string }) {
+type Payment = 'paid' | 'partial' | 'overdue' | 'unpaid';
+const paymentLook: Record<Payment, { fg: string; bg: string }> = {
+  paid: { fg: '#1f9d55', bg: '#e7f6ee' },
+  partial: { fg: '#b8770a', bg: '#fff6e5' },
+  overdue: { fg: '#c0392b', bg: '#fdeeee' },
+  unpaid: { fg: '#5d6f7b', bg: '#eef1f5' },
+};
+
+/** A figure in a card with a colored top edge. */
+function Figure({ color, label, value, foot }: { color: string; label: string; value: ReactNode; foot?: ReactNode }) {
   return (
-    <Box sx={{ p: 1.5, borderRadius: `${tokens.radius}px`, bgcolor: tokens.navy50 }}>
+    <Box sx={{ ...card, p: 2.25, borderTop: `4px solid ${color}` }}>
       <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 19, fontWeight: 800, color: tone, lineHeight: 1.3 }}>{value}</Typography>
-      {foot && <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{foot}</Typography>}
+      <Typography component="div" sx={{ fontSize: 27, fontWeight: 800, color, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </Typography>
+      {foot && (
+        <Typography component="div" sx={{ fontSize: 12.5, color: tokens.gray600 }}>
+          {foot}
+        </Typography>
+      )}
     </Box>
   );
 }
 
-/** A customer invoice or note: its totals, the workers attached, its notes, the review and the issue. */
+/** One stop of the invoice's journey: a mark, what happened, and when. */
+function Stop({ first, color, mark, label, when }: { first: boolean; color: string; mark: ReactNode; label: string; when: string }) {
+  return (
+    <Box sx={{ flex: 1, textAlign: 'center', position: 'relative', minWidth: 0 }}>
+      {!first && <Box aria-hidden sx={{ position: 'absolute', top: 15, insetInlineStart: '-50%', width: '100%', height: 3, bgcolor: color, opacity: 0.85 }} />}
+      <Box sx={{ position: 'relative', mx: 'auto', width: 32, height: 32, borderRadius: '50%', bgcolor: color, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, '& svg': { fontSize: 18 } }}>{mark}</Box>
+      <Typography sx={{ fontSize: 13, fontWeight: 800, color: tokens.navy800, mt: 0.75 }}>{label}</Typography>
+      <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{when}</Typography>
+    </Box>
+  );
+}
+
+/**
+ * A customer invoice or note, as a collection board: the band with its number and state, the approval bar, the money
+ * left to collect, the days to its due date and its total; its journey from creation to payment; then its components,
+ * the workers it bills, its notes and its approval's history.
+ */
 export function InvoicePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
   const [inv, setInv] = useState<InvoiceDetail | null>(null);
-  useCrumb(inv?.invoiceNo);
-  const [tab, setTab] = useState<Tab>('items');
+  useCrumb(inv?.invoiceNo, `/billing/invoices/${id}`);
   const [editing, setEditing] = useState(false);
   const [noting, setNoting] = useState<NoteDraft['kind'] | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const approval = useRecordApproval(inv?.approval?.instanceId);
@@ -82,7 +125,6 @@ export function InvoicePage() {
   }, [id]);
 
   useEffect(() => {
-    setTab('items');
     void reload();
   }, [reload]);
 
@@ -104,113 +146,130 @@ export function InvoicePage() {
     }
   };
 
+  const look = recordTones.invoice;
   const isInvoice = inv.kind === 'Invoice';
+  const issued = inv.status === 'Issued';
+  const collectible = issued && inv.kind !== 'CreditNote';
   const workers = new Set(inv.workers.map((w) => w.workerId)).size;
   const canRun = (!inv.awaitingApproval && inv.canEdit) || approval.detail?.summary.status === 'Failed';
   const monthName = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(inv.month));
   const title = `${t(`invoices.kind.${inv.kind}`)} ${inv.invoiceNo ?? ''}`.trim();
+  const daysToDue = Math.round((Date.parse(inv.dueDate) - Date.parse(isoToday())) / 86_400_000);
+  const payment: Payment | null = !collectible ? null : inv.outstanding <= 0.005 ? 'paid' : daysToDue < 0 ? 'overdue' : inv.paid > 0 ? 'partial' : 'unpaid';
+  const paidShare = inv.total > 0 ? Math.min(100, Math.round((inv.paid / inv.total) * 100)) : 0;
+  const lines = inv.items.filter((i) => i.component !== 'Discount');
+  const discount = inv.items.find((i) => i.component === 'Discount');
+  const barColors = [look.main, '#5b7bd6', '#0f8f84', '#7c4dcc', '#d98a06', '#5d6f7b'];
+
+  // The journey: made, issued, due, paid.
+  const due = !issued
+    ? { color: tokens.gray300, mark: <span>?</span> }
+    : payment === 'paid'
+      ? { color: '#1f9d55', mark: <CheckIcon /> }
+      : daysToDue < 0
+        ? { color: '#c0392b', mark: <PriorityHighIcon /> }
+        : { color: '#d98a06', mark: <HourglassEmptyIcon /> };
 
   return (
     <Box>
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, mb: `${tokens.gap}px` }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' } }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <InvoiceKindBadge kind={inv.kind} />
-              <Typography dir="ltr" sx={{ fontSize: 13, fontWeight: 800, color: inv.invoiceNo ? tokens.navy800 : tokens.gray500 }}>
-                {inv.invoiceNo ?? t('invoices.noNumber')}
-              </Typography>
-            </Stack>
-            <Typography component="h1" sx={{ fontSize: 21, fontWeight: 800, color: tokens.navy800 }}>
-              {inv.projectName}
-            </Typography>
-            <Typography sx={{ fontSize: 13, color: tokens.gray600 }}>
-              {t('commercial.col.customer')}: {inv.customer.name} · {t('invoices.monthOf', { month: monthName })} · {t('timesheets.cycle', { from: date(inv.periodFrom), to: date(inv.periodTo) })}
-            </Typography>
-          </Box>
-          <Stack sx={{ alignItems: { md: 'flex-end' }, gap: 0.75 }}>
-            <InvoiceStatusBadge status={inv.status} />
-            <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
-              {inv.issuedAt
-                ? t('invoices.issuedBy', { name: inv.issuedByName ?? '—', at: new Date(inv.issuedAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) })
-                : t('invoices.createdBy', { name: inv.createdByName, at: new Date(inv.createdAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) })}
-            </Typography>
-          </Stack>
-          <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(`/billing/invoices?month=${inv.month}`)}>
-            {t('common.back')}
-          </Button>
-        </Stack>
-
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', xl: 'repeat(6, 1fr)' }, gap: 1.25, mt: 2 }}>
-          <Tile label={t('invoices.tiles.amount')} value={sar(signed(inv.kind, inv.amount))} />
-          <Tile label={t('invoices.tiles.vat', { rate: Math.round(inv.vatRate * 100) })} value={sar(signed(inv.kind, inv.vat))} />
-          <Tile label={t('invoices.tiles.total')} value={sar(signed(inv.kind, inv.total))} tone={inv.kind === 'CreditNote' ? tokens.danger : tokens.teal} />
-          <Tile label={t('invoices.tiles.date')} value={date(inv.invoiceDate)} />
-          <Tile label={t('invoices.tiles.due')} value={date(inv.dueDate)} foot={inv.paymentTermDays ? t('invoices.termDays', { days: inv.paymentTermDays }) : t('invoices.dueOnDate')} />
-          {inv.status === 'Issued' && inv.kind !== 'CreditNote' ? (
-            <Tile
-              label={t('invoices.tiles.outstanding')}
-              value={sar(inv.outstanding)}
-              tone={inv.outstanding > 0 ? tokens.danger : '#1f9d55'}
-              foot={inv.paid > 0 ? t('invoices.tiles.paid', { amount: sar(inv.paid) }) : t('invoices.tiles.notPaid')}
-            />
-          ) : isInvoice ? (
-            <Tile label={t('invoices.tiles.net')} value={sar(inv.netAmount)} foot={t('invoices.tiles.workers', { count: workers })} />
-          ) : (
-            <Tile label={t('invoices.tiles.original')} value={<span dir="ltr">{inv.originalInvoiceNo}</span>} />
-          )}
-        </Box>
-
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.25, mt: 2 }}>
-          {inv.canSubmit && (
-            <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy} onClick={() => void run(() => invoiceApi.submit(inv.id))}>
-              {t('invoices.submit')}
-            </Button>
-          )}
-          {canRun && <RunProcessButton screen="billing.invoice" recordId={inv.id} title={title} onStarted={() => void reload().then(() => approval.reload())} />}
-          {inv.canEdit && (
-            <Button variant="outlined" startIcon={<EditOutlinedIcon />} disabled={busy} onClick={() => setEditing(true)}>
-              {t('invoices.editTerms')}
-            </Button>
-          )}
-          {inv.canNote && (
-            <>
-              <Button variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} disabled={busy} onClick={() => setNoting('CreditNote')}>
-                {t('invoices.newCredit')}
+      <RecordHero
+        tone="invoice"
+        icon={<ReceiptLongOutlinedIcon />}
+        kind={`${t(`invoices.kind.${inv.kind}`)} · ${monthName}`}
+        number={inv.invoiceNo ?? t('invoices.noNumber')}
+        status={
+          <>
+            <Box sx={{ bgcolor: '#fff', borderRadius: 99, px: 0.25 }}>
+              <InvoiceStatusBadge status={inv.status} />
+            </Box>
+            {payment && (
+              <Box sx={{ px: 1.25, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 800, color: paymentLook[payment].fg, bgcolor: paymentLook[payment].bg }}>{t(`invoices.payment.${payment}`)}</Box>
+            )}
+          </>
+        }
+        title={inv.projectName}
+        subtitle={`${inv.customer.name} · ${t('timesheets.cycle', { from: date(inv.periodFrom), to: date(inv.periodTo) })}`}
+        actions={
+          <>
+            {inv.canSubmit && (
+              <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy} onClick={() => void run(() => invoiceApi.submit(inv.id))}>
+                {t('invoices.submit')}
               </Button>
-              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} disabled={busy} onClick={() => setNoting('DebitNote')}>
-                {t('invoices.newDebit')}
+            )}
+            {canRun && <RunProcessButton screen="billing.invoice" recordId={inv.id} title={title} onStarted={() => void reload().then(() => approval.reload())} />}
+            {inv.canEdit && (
+              <Button variant="outlined" startIcon={<EditOutlinedIcon />} disabled={busy} onClick={() => setEditing(true)}>
+                {t('invoices.editTerms')}
               </Button>
-            </>
-          )}
-          <Button startIcon={<PrintOutlinedIcon />} component="a" href={`/billing/invoices/${inv.id}/print`} target="_blank" rel="noopener">
-            {t('invoices.printDoc')}
-          </Button>
-          {isInvoice && (
-            <Button startIcon={<FileDownloadOutlinedIcon />} component="a" href={invoiceApi.attachmentUrl(inv.id)} download>
-              {t('invoices.attachment')}
+            )}
+            <Button variant="outlined" startIcon={<PrintOutlinedIcon />} component="a" href={`/billing/invoices/${inv.id}/print`} target="_blank" rel="noopener">
+              {t('invoices.printDoc')}
             </Button>
-          )}
-          <Button startIcon={<ReceiptLongOutlinedIcon />} onClick={() => navigate(`/billing/statements/${inv.projectId}`)}>
-            {t('receipts.statement')}
-          </Button>
-          {inv.timesheetId && (
-            <Button startIcon={<FactCheckOutlinedIcon />} onClick={() => navigate(`/billing/timesheets/${inv.timesheetId}`)}>
-              {t('invoices.openTimesheet', { number: inv.timesheetNo })}
+            <Button variant="outlined" startIcon={<MoreHorizIcon />} onClick={(e) => setMenu(e.currentTarget)}>
+              {t('invoices.more')}
             </Button>
-          )}
-          {inv.originalInvoiceId && (
-            <Button startIcon={<ReceiptLongOutlinedIcon />} onClick={() => navigate(`/billing/invoices/${inv.originalInvoiceId}`)}>
-              {t('invoices.openOriginal', { number: inv.originalInvoiceNo })}
+            <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(`/billing/invoices?month=${inv.month}`)}>
+              {t('common.back')}
             </Button>
-          )}
-          {inv.canDelete && (
-            <Button color="error" startIcon={<DeleteOutlineIcon />} disabled={busy} onClick={() => setDeleting(true)}>
-              {t('invoices.delete')}
-            </Button>
-          )}
-        </Stack>
-      </Box>
+          </>
+        }
+      />
+      <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
+        {inv.canNote && (
+          <MenuItem onClick={() => (setMenu(null), setNoting('CreditNote'))} sx={{ color: tokens.danger }}>
+            <ListItemIcon sx={{ color: 'inherit' }}>
+              <RemoveCircleOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            {t('invoices.newCredit')}
+          </MenuItem>
+        )}
+        {inv.canNote && (
+          <MenuItem onClick={() => (setMenu(null), setNoting('DebitNote'))}>
+            <ListItemIcon>
+              <AddCircleOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            {t('invoices.newDebit')}
+          </MenuItem>
+        )}
+        {isInvoice && (
+          <MenuItem component="a" href={invoiceApi.attachmentUrl(inv.id)} download onClick={() => setMenu(null)}>
+            <ListItemIcon>
+              <FileDownloadOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            {t('invoices.attachment')}
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => navigate(`/billing/statements/${inv.projectId}`)}>
+          <ListItemIcon>
+            <AccountBalanceWalletOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          {t('receipts.statement')}
+        </MenuItem>
+        {inv.timesheetId && (
+          <MenuItem onClick={() => navigate(`/billing/timesheets/${inv.timesheetId}`)}>
+            <ListItemIcon>
+              <FactCheckOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            {t('invoices.openTimesheet', { number: inv.timesheetNo })}
+          </MenuItem>
+        )}
+        {inv.originalInvoiceId && (
+          <MenuItem onClick={() => navigate(`/billing/invoices/${inv.originalInvoiceId}`)}>
+            <ListItemIcon>
+              <ReceiptLongOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            {t('invoices.openOriginal', { number: inv.originalInvoiceNo })}
+          </MenuItem>
+        )}
+        {inv.canDelete && (
+          <MenuItem onClick={() => (setMenu(null), setDeleting(true))} sx={{ color: tokens.danger }}>
+            <ListItemIcon sx={{ color: 'inherit' }}>
+              <DeleteOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            {t('invoices.delete')}
+          </MenuItem>
+        )}
+      </Menu>
 
       <ErrorMessage messageKey={error} />
       {inv.warnings.map((w) => (
@@ -218,11 +277,6 @@ export function InvoicePage() {
           {t(`invoices.warnings.${w}`)}
         </Alert>
       ))}
-      {inv.status === 'Issued' && (
-        <Alert severity="success" sx={{ mb: `${tokens.gap}px` }}>
-          {t('invoices.issuedHint')}
-        </Alert>
-      )}
       {inv.reason && (
         <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: `${tokens.gap}px` }}>
           {t('invoices.reason')}: {inv.reason}
@@ -244,21 +298,122 @@ export function InvoicePage() {
         />
       )}
 
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
-        <PillTabs
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: 'items', label: t('invoices.tabs.items') },
-            ...(isInvoice ? [{ value: 'workers' as const, label: t('invoices.tabs.workers', { count: inv.workers.length }) }] : []),
-            ...(isInvoice ? [{ value: 'notes' as const, label: t('invoices.tabs.notes', { count: inv.notes.length }) }] : []),
-            ...(inv.approval ? [{ value: 'approval' as const, label: t('operations.delivery.tabs.approval') }] : []),
-          ]}
+      {/* The money: what is left to collect, when it is due, and the total. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.25fr 1fr 1fr' }, gap: `${tokens.gap}px`, mb: `${tokens.gap}px` }}>
+        {collectible ? (
+          <Box sx={{ ...card, p: 2.25, display: 'flex', alignItems: 'center', gap: 2.25 }}>
+            <Box sx={{ position: 'relative', width: 104, height: 104, flex: '0 0 auto' }}>
+              <CircularProgress variant="determinate" value={100} size={104} thickness={5} sx={{ color: tokens.gray100, position: 'absolute' }} />
+              <CircularProgress variant="determinate" value={paidShare} size={104} thickness={5} sx={{ color: '#1f9d55', position: 'absolute', '& circle': { strokeLinecap: 'round' } }} />
+              <Typography sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: '#1f9d55' }}>{paidShare}%</Typography>
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{t('invoices.board.left')}</Typography>
+              <Typography sx={{ fontSize: 28, fontWeight: 800, color: inv.outstanding > 0 ? look.main : '#1f9d55', lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>{sar(inv.outstanding)}</Typography>
+              <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>
+                {t('invoices.board.of', { total: sar(inv.total) })} ·{' '}
+                <Box component="b" sx={{ color: '#1f9d55' }}>
+                  {t('invoices.board.paid', { amount: sar(inv.paid) })}
+                </Box>
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Figure
+            color={look.main}
+            label={isInvoice ? t('invoices.tiles.net') : t('invoices.tiles.original')}
+            value={isInvoice ? sar(inv.netAmount) : <span dir="ltr">{inv.originalInvoiceNo}</span>}
+            foot={isInvoice ? t('invoices.tiles.workers', { count: workers }) : undefined}
+          />
+        )}
+        <Figure
+          color={collectible && payment !== 'paid' ? (daysToDue < 0 ? '#c0392b' : '#d98a06') : tokens.gray600}
+          label={t('invoices.board.due')}
+          value={collectible && payment !== 'paid' ? (daysToDue < 0 ? t('invoices.board.lateDays', { count: -daysToDue }) : daysToDue === 0 ? t('invoices.board.dueToday') : t('invoices.board.inDays', { count: daysToDue })) : date(inv.dueDate)}
+          foot={`${t('invoices.board.dueOn', { date: date(inv.dueDate) })}${inv.paymentTermDays ? ` · ${t('invoices.termDays', { days: inv.paymentTermDays })}` : ''}`}
         />
-        {tab === 'items' && <ItemsTab inv={inv} />}
-        {tab === 'workers' && <WorkersTab inv={inv} />}
-        {tab === 'notes' && <NotesTab inv={inv} />}
-        {tab === 'approval' && inv.approval && <ApprovalLog status={inv.approval} detail={approval.detail} />}
+        <Figure
+          color={inv.kind === 'CreditNote' ? tokens.danger : tokens.navy800}
+          label={t(`invoices.totalOf.${inv.kind}`)}
+          value={sar(signed(inv.kind, inv.total))}
+          foot={t('invoices.board.withVat', { amount: sar(inv.amount), vat: sar(inv.vat), rate: Math.round(inv.vatRate * 100) })}
+        />
+      </Box>
+
+      {/* The journey: made, issued, due, paid. */}
+      <Box sx={{ ...card, px: 3, py: 2.25, mb: `${tokens.gap}px` }}>
+        <SectionTitle icon={<RouteOutlinedIcon />} title={t('invoices.board.journey')} />
+        <Stack direction="row" sx={{ alignItems: 'flex-start' }}>
+          <Stop first color="#1f9d55" mark={<CheckIcon />} label={t('invoices.board.made')} when={date(inv.createdAt)} />
+          <Stop first={false} color={issued ? '#1f9d55' : '#d98a06'} mark={issued ? <CheckIcon /> : <HourglassEmptyIcon />} label={issued ? t('invoices.board.issued') : t(`invoices.status.${inv.status}`)} when={inv.issuedAt ? date(inv.issuedAt) : '—'} />
+          {collectible && inv.paid > 0 && <Stop first={false} color="#1f9d55" mark={<CheckIcon />} label={t('invoices.board.paidSoFar', { amount: sar(inv.paid) })} when={t('invoices.board.receipts')} />}
+          <Stop first={false} color={due.color} mark={due.mark} label={t('invoices.board.dueStop')} when={date(inv.dueDate)} />
+          {inv.kind !== 'CreditNote' && (
+            <Stop first={false} color={payment === 'paid' ? '#1f9d55' : tokens.gray300} mark={payment === 'paid' ? <CheckIcon /> : <span>?</span>} label={t('invoices.board.settled')} when={payment === 'paid' ? t('invoices.payment.paid') : '—'} />
+          )}
+        </Stack>
+      </Box>
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '320px minmax(0, 1fr)' }, gap: `${tokens.gap}px`, alignItems: 'start' }}>
+        {/* What the invoice is made of. */}
+        <Box sx={{ ...card, p: 2.25 }}>
+          <SectionTitle icon={<DonutSmallOutlinedIcon />} title={t('invoices.board.components')} />
+          {lines.map((i, n) => (
+            <Box key={i.lineNo} sx={{ mb: 1.25 }}>
+              <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 1 }}>
+                <Typography sx={{ fontSize: 13, color: tokens.gray700 }}>{t(`invoices.components.${i.component}`)}</Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{sar(i.amount)}</Typography>
+              </Stack>
+              {i.description && <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{i.description}</Typography>}
+              <Box sx={{ height: 7, borderRadius: 99, bgcolor: tokens.gray100, mt: 0.5, overflow: 'hidden' }}>
+                <Box sx={{ height: '100%', width: `${inv.amount > 0 ? Math.min(100, (i.amount / inv.amount) * 100) : 0}%`, borderRadius: 99, bgcolor: barColors[n % barColors.length] }} />
+              </Box>
+            </Box>
+          ))}
+          {discount && (
+            <Stack direction="row" sx={{ justifyContent: 'space-between', py: 0.5 }}>
+              <Typography sx={{ fontSize: 13, color: tokens.gray700 }}>{t('invoices.components.Discount')}</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 800, color: tokens.danger }}>{sar(discount.amount)}</Typography>
+            </Stack>
+          )}
+          <Box sx={{ mt: 1, pt: 1, borderTop: `1px solid ${tokens.gray100}` }}>
+            {[
+              [t('timesheets.invoice.amount'), sar(inv.amount)],
+              [t('timesheets.invoice.vat', { rate: Math.round(inv.vatRate * 100) }), sar(inv.vat)],
+              [t(`invoices.totalOf.${inv.kind}`), sar(inv.total)],
+              [t('commercial.col.customer'), inv.customer.name],
+              [t('commercial.col.project'), inv.projectName],
+              [t('invoices.tiles.date'), date(inv.invoiceDate)],
+            ].map(([label, value], n) => (
+              <Stack key={label} direction="row" sx={{ justifyContent: 'space-between', gap: 2, py: 0.75, fontSize: 13, borderBottom: n < 5 ? `1px solid ${tokens.gray100}` : 0 }}>
+                <Typography sx={{ fontSize: 13, color: tokens.gray500, flex: '0 0 auto' }}>{label}</Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: n === 2 ? 800 : 700, color: n === 2 ? look.main : tokens.navy800, textAlign: 'end' }}>{value}</Typography>
+              </Stack>
+            ))}
+          </Box>
+          {inv.remarks && <Typography sx={{ mt: 1.5, fontSize: 12.5, color: tokens.gray600 }}>{t('invoices.remarks')}: {inv.remarks}</Typography>}
+        </Box>
+
+        <Stack spacing={`${tokens.gap}px`} sx={{ minWidth: 0 }}>
+          {isInvoice && inv.workers.length > 0 && (
+            <Box sx={{ ...card, p: 2.25, minWidth: 0 }}>
+              <SectionTitle icon={<GroupsOutlinedIcon />} title={t('invoices.tabs.workers', { count: inv.workers.length })} />
+              <WorkersTab inv={inv} />
+            </Box>
+          )}
+          {isInvoice && inv.notes.length > 0 && (
+            <Box sx={{ ...card, p: 2.25 }}>
+              <SectionTitle icon={<ReceiptLongOutlinedIcon />} title={t('invoices.tabs.notes', { count: inv.notes.length })} />
+              <NotesTab inv={inv} />
+            </Box>
+          )}
+          {inv.approval && (
+            <Box sx={{ ...card, p: 2.25 }}>
+              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
+              <ApprovalFeedLog status={inv.approval} detail={approval.detail} />
+            </Box>
+          )}
+        </Stack>
       </Box>
 
       {editing && (
@@ -318,50 +473,6 @@ export function InvoicePage() {
   );
 }
 
-function ItemsTab({ inv }: { inv: InvoiceDetail }) {
-  const { t } = useTranslation();
-  const lines = inv.items.filter((i) => i.component !== 'Discount');
-  const discount = inv.items.find((i) => i.component === 'Discount');
-  return (
-    <>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1.5, fontSize: 12.5, color: tokens.gray500 }}>
-        <InfoOutlinedIcon sx={{ fontSize: 16 }} />
-        {t(inv.kind === 'Invoice' ? 'invoices.itemsHint' : 'invoices.noteItemsHint')}
-      </Stack>
-      <Box sx={{ maxWidth: 620 }}>
-        {lines.map((i) => (
-          <Stack key={i.lineNo} direction="row" sx={{ justifyContent: 'space-between', gap: 2, py: 0.75, borderBottom: `1px dashed ${tokens.gray200}` }}>
-            <Box>
-              <Typography sx={{ fontSize: 13.5, color: tokens.gray700 }}>{t(`invoices.components.${i.component}`)}</Typography>
-              {i.description && <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{i.description}</Typography>}
-            </Box>
-            <Typography sx={{ fontSize: 13.5, fontWeight: 700 }}>{sar(i.amount)}</Typography>
-          </Stack>
-        ))}
-        {discount && (
-          <Stack direction="row" sx={{ justifyContent: 'space-between', py: 0.75, borderBottom: `1px dashed ${tokens.gray200}` }}>
-            <Typography sx={{ fontSize: 13.5, color: tokens.gray700 }}>{t('invoices.components.Discount')}</Typography>
-            <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: tokens.danger }}>{sar(discount.amount)}</Typography>
-          </Stack>
-        )}
-        <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1, mt: 0.5 }}>
-          <Typography sx={{ fontWeight: 800 }}>{t('timesheets.invoice.amount')}</Typography>
-          <Typography sx={{ fontWeight: 800 }}>{sar(inv.amount)}</Typography>
-        </Stack>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', py: 0.5 }}>
-          <Typography>{t('timesheets.invoice.vat', { rate: Math.round(inv.vatRate * 100) })}</Typography>
-          <Typography sx={{ fontWeight: 700 }}>{sar(inv.vat)}</Typography>
-        </Stack>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1.25, px: 1.5, mt: 1, borderRadius: `${tokens.radius}px`, bgcolor: inv.kind === 'CreditNote' ? tokens.danger : tokens.navy700, color: '#fff' }}>
-          <Typography sx={{ fontWeight: 800 }}>{t(`invoices.totalOf.${inv.kind}`)}</Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: 18 }}>{sar(inv.total)}</Typography>
-        </Stack>
-        {inv.remarks && <Typography sx={{ mt: 2, fontSize: 13, color: tokens.gray600 }}>{t('invoices.remarks')}: {inv.remarks}</Typography>}
-      </Box>
-    </>
-  );
-}
-
 function WorkersTab({ inv }: { inv: InvoiceDetail }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -370,7 +481,7 @@ function WorkersTab({ inv }: { inv: InvoiceDetail }) {
   return (
     <TableContainer>
       <Table size="small">
-        <TableHead>
+        <TableHead sx={{ '& .MuiTableRow-root': { background: recordTones.invoice.dark }, '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: 'transparent', color: '#fff', borderBottom: 0, borderRadius: 0 } }}>
           <TableRow>
             <TableCell>{t('workforce.col.name')}</TableCell>
             <TableCell>{t('timesheets.col.period')}</TableCell>
@@ -447,7 +558,7 @@ function NotesTab({ inv }: { inv: InvoiceDetail }) {
       <Typography sx={{ fontSize: 13, color: tokens.gray600, mb: 1.5 }}>{t('invoices.netHint', { amount: sar(inv.amount), net: sar(inv.netAmount) })}</Typography>
       <TableContainer>
         <Table size="small">
-          <TableHead>
+          <TableHead sx={{ '& .MuiTableRow-root': { background: recordTones.invoice.dark }, '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: 'transparent', color: '#fff', borderBottom: 0, borderRadius: 0 } }}>
             <TableRow>
               <TableCell>{t('invoices.col.number')}</TableCell>
               <TableCell>{t('invoices.col.date')}</TableCell>
