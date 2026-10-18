@@ -3,7 +3,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import ReplyIcon from '@mui/icons-material/Reply';
-import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { Box, Button, Collapse, IconButton, ListItemIcon, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@mui/material/styles';
@@ -72,9 +72,10 @@ export interface TrackerActions {
 }
 
 /**
- * Where an approval stands, in one slim bar above the record: a stepper of the submission and every stage, the current
- * stage with who it waits for and its actions, and the details (who decided, when, how long, the comment) folded under
- * it. The full log is the record's approval tab.
+ * Where an approval stands, in one slim bar above the record: a stepper of the submission and every stage — each
+ * circle between the day it opened and the day it was decided, with how long it took — then who the current stage waits
+ * for and its actions, or the approval's end state. The details (who, when, the comment) fold under it; the full log is
+ * the record's approval tab.
  */
 export function StageTracker({ status, actions }: { status: ApprovalStatus; actions?: TrackerActions }) {
   const { t, i18n } = useTranslation();
@@ -98,6 +99,7 @@ export function StageTracker({ status, actions }: { status: ApprovalStatus; acti
 
   const date = (value: string) =>
     new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh' }).format(new Date(value));
+  const day = (value: string) => new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Riyadh' }).format(new Date(value));
 
   const nodes: Node[] = [
     { key: 'submitted', state: 'Submitted', name: t('tracker.submitted'), owner: status.submittedBy, others: [], started: status.submittedAt, ended: status.submittedAt },
@@ -120,7 +122,6 @@ export function StageTracker({ status, actions }: { status: ApprovalStatus; acti
 
   const current = nodes.find((n) => n.state === 'Current');
   const finished = status.stages.filter((s) => s.state === 'Done').length;
-  const last = status.stages.at(-1);
   const pill =
     status.status === 'Approved'
       ? colors.Done
@@ -151,7 +152,7 @@ export function StageTracker({ status, actions }: { status: ApprovalStatus; acti
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(170px, auto) minmax(0, 1fr) auto' },
+          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' },
           alignItems: 'center',
           columnGap: 2.5,
           rowGap: 1.5,
@@ -159,50 +160,48 @@ export function StageTracker({ status, actions }: { status: ApprovalStatus; acti
           py: 1.5,
         }}
       >
-        {/* What this is, and where it stands. */}
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-          <Box sx={{ flex: '0 0 auto', width: 38, height: 38, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: pill.soft, color: pill.main }}>
-            <RouteOutlinedIcon fontSize="small" />
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: 14, fontWeight: 800, color: tokens.navy800, whiteSpace: 'nowrap' }}>{t('tracker.title')}</Typography>
-              <Box sx={{ px: 1, py: 0.1, borderRadius: 999, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', color: pill.main, bgcolor: pill.soft }}>
-                {t(`approval.instance.${status.status}`)}
-              </Box>
-            </Stack>
-            <Typography sx={{ fontSize: 12, color: tokens.gray500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {t('tracker.count', { done: finished, total: status.stages.length })} · {ar ? status.processNameAr : status.processNameEn}
-            </Typography>
-          </Box>
-        </Stack>
-
         {/* The path. */}
         <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', overflowX: 'auto', pb: 0.25 }}>
           {nodes.map((node, index) => (
-            <Step key={node.key} node={node} index={index} reached={node.state !== 'Future'} date={date} />
+            <Step key={node.key} node={node} first={index === 0} next={nodes[index + 1]?.state} date={date} day={day} />
           ))}
         </Box>
 
         {/* The current stage: who it waits for, since when, and what the user can do. */}
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1, justifyContent: { xs: 'space-between', md: 'flex-end' }, flexWrap: 'wrap' }}>
-          {current ? (
-            <Box sx={{ minWidth: 0, maxWidth: 230 }}>
-              <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{t('tracker.waitingFor')}</Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {(status.waitingFor.length ? status.waitingFor : [current.owner]).slice(0, 2).join('، ')}
-                {status.waitingFor.length > 2 ? ` +${status.waitingFor.length - 2}` : ''}
-              </Typography>
-              <Typography sx={{ fontSize: 11.5, color: flow.current, fontWeight: 600 }}>{t('tracker.openSince', { time: duration(t, current.started, null) })}</Typography>
-            </Box>
-          ) : (
-            last?.decidedAt && (
-              <Box>
-                <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{t('tracker.endedOn')}</Typography>
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800 }}>{date(last.decidedAt)}</Typography>
+          <Tooltip title={`${ar ? status.processNameAr : status.processNameEn} — ${t('tracker.count', { done: finished, total: status.stages.length })}`}>
+            <Box sx={{ minWidth: 0, maxWidth: 200 }}>
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1.25,
+                  py: 0.35,
+                  borderRadius: 999,
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  whiteSpace: 'nowrap',
+                  color: pill.main,
+                  bgcolor: pill.soft,
+                  border: `1px solid ${pill.main}40`,
+                  '& svg': { fontSize: 16 },
+                }}
+              >
+                {status.status === 'Approved' ? <CheckIcon /> : status.status === 'Rejected' || status.status === 'Failed' ? <CloseIcon /> : status.status === 'Returned' ? <ReplyIcon /> : null}
+                {t(`approval.instance.${status.status}`)}
               </Box>
-            )
-          )}
+              {current && (
+                <Typography sx={{ mt: 0.4, fontSize: 12.5, color: tokens.gray600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t('tracker.waitingFor')}{' '}
+                  <Box component="b" sx={{ color: tokens.navy800 }}>
+                    {(status.waitingFor.length ? status.waitingFor : [current.owner]).slice(0, 2).join('، ')}
+                    {status.waitingFor.length > 2 ? ` +${status.waitingFor.length - 2}` : ''}
+                  </Box>
+                </Typography>
+              )}
+            </Box>
+          </Tooltip>
           <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
             {canDecide && actions?.onApprove && (
               <Button size="small" variant="contained" color="success" startIcon={<CheckIcon />} onClick={actions.onApprove} sx={{ px: 2 }}>
@@ -288,17 +287,49 @@ export function StageTracker({ status, actions }: { status: ApprovalStatus; acti
   );
 }
 
-/** One stage on the path: a small dot with its mark, the line from the previous stage, the name and who. */
-function Step({ node, index, reached, date }: { node: Node; index: number; reached: boolean; date: (v: string) => string }) {
+const lineColor = (state: NodeState) => (state === 'Submitted' ? flow.done : colors[state].main);
+
+/** Half of the line between two stages; dashed toward a stage not reached yet. */
+function Half({ state }: { state: NodeState | null }) {
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        flex: '1 1 0',
+        minWidth: 10,
+        height: 2,
+        borderRadius: 2,
+        visibility: state ? 'visible' : 'hidden',
+        ...(state === 'Future' ? { background: `repeating-linear-gradient(90deg, ${flow.future} 0 5px, transparent 5px 9px)` } : { bgcolor: state ? lineColor(state) : 'transparent' }),
+      }}
+    />
+  );
+}
+
+/** A day beside a circle: before it the day the stage opened, after it the day it was decided. */
+function Day({ children }: { children?: ReactNode }) {
+  return (
+    <Typography component="span" sx={{ flex: '0 0 auto', mx: 0.5, fontSize: 11, fontWeight: 600, color: tokens.gray500, whiteSpace: 'nowrap', minWidth: children ? undefined : 0 }}>
+      {children}
+    </Typography>
+  );
+}
+
+/**
+ * One stage on the path: its circle between the day it opened and the day it was decided, the line to its neighbours,
+ * then its name, who, and how long it took (or has been open).
+ */
+function Step({ node, first, next, date, day }: { node: Node; first: boolean; next?: NodeState; date: (v: string) => string; day: (v: string) => string }) {
   const { t, i18n } = useTranslation();
   const rtl = i18n.dir() === 'rtl';
   const color = colors[node.state];
   const current = node.state === 'Current';
   const future = node.state === 'Future';
+  const submitted = node.state === 'Submitted';
   const mark =
     node.state === 'Done' ? (
       <CheckIcon />
-    ) : node.state === 'Submitted' ? (
+    ) : submitted ? (
       <SendOutlinedIcon sx={{ transform: rtl ? 'scaleX(-1)' : 'none' }} />
     ) : node.state === 'Rejected' ? (
       <CloseIcon />
@@ -307,69 +338,87 @@ function Step({ node, index, reached, date }: { node: Node; index: number; reach
     ) : future ? (
       '?'
     ) : (
-      index
+      '•'
     );
 
   return (
-    <Box component="li" sx={{ position: 'relative', flex: '1 1 0', minWidth: 104, textAlign: 'center', px: 0.5 }}>
-      {index > 0 && (
-        <Box
-          aria-hidden
-          sx={{
-            position: 'absolute',
-            top: 13,
-            insetInlineStart: 'calc(-50% + 20px)',
-            insetInlineEnd: 'calc(50% + 20px)',
-            height: 2,
-            borderRadius: 2,
-            ...(reached && !current ? { bgcolor: color.main } : current ? { bgcolor: flow.current } : { background: `repeating-linear-gradient(90deg, ${flow.future} 0 5px, transparent 5px 9px)` }),
-          }}
-        />
-      )}
-      <Tooltip
-        title={
-          future ? (
-            node.owner
-          ) : (
-            <Box sx={{ fontSize: 12, lineHeight: 1.7 }}>
-              <div>{[node.owner, ...node.others].join('، ')}</div>
-              {node.onBehalfOf && <div>{t('tracker.onBehalf', { name: node.onBehalfOf })}</div>}
-              <div>{date(node.ended ?? node.started)}</div>
-              {node.comment && <div>«{node.comment}»</div>}
-            </Box>
-          )
-        }
-      >
-        <Box
-          sx={{
-            mx: 'auto',
-            width: 28,
-            height: 28,
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: 12.5,
-            fontWeight: 800,
-            position: 'relative',
-            '& svg': { fontSize: 16 },
-            ...(future
-              ? { border: `2px dashed ${flow.future}`, color: flow.future, bgcolor: '#fff' }
-              : current
-                ? { bgcolor: '#fff', color: flow.current, border: `2px solid ${flow.current}`, animation: `${pulse} 1.8s infinite` }
-                : { bgcolor: color.main, color: '#fff' }),
-          }}
+    <Box component="li" sx={{ flex: '1 1 0', minWidth: future ? 96 : 135, textAlign: 'center' }}>
+      <Stack direction="row" sx={{ alignItems: 'center', height: 30 }}>
+        <Half state={first ? null : node.state} />
+        {!future && <Day>{submitted ? '' : day(node.started)}</Day>}
+        <Tooltip
+          title={
+            future ? (
+              node.owner
+            ) : (
+              <Box sx={{ fontSize: 12, lineHeight: 1.7 }}>
+                <div>{[node.owner, ...node.others].join('، ')}</div>
+                {node.onBehalfOf && <div>{t('tracker.onBehalf', { name: node.onBehalfOf })}</div>}
+                <div>{date(node.ended ?? node.started)}</div>
+                {node.comment && <div>«{node.comment}»</div>}
+              </Box>
+            )
+          }
         >
-          {mark}
-        </Box>
-      </Tooltip>
+          <Box
+            sx={{
+              flex: '0 0 auto',
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: current ? 22 : 12.5,
+              lineHeight: 1,
+              fontWeight: 800,
+              '& svg': { fontSize: 16 },
+              ...(future
+                ? { border: `2px dashed ${flow.future}`, color: flow.future, bgcolor: '#fff' }
+                : current
+                  ? { bgcolor: '#fff', color: flow.current, border: `2px solid ${flow.current}`, animation: `${pulse} 1.8s infinite` }
+                  : { bgcolor: color.main, color: '#fff' }),
+            }}
+          >
+            {mark}
+          </Box>
+        </Tooltip>
+        {!future && <Day>{node.ended ? day(node.ended) : current ? '…' : ''}</Day>}
+        <Half state={next ?? null} />
+      </Stack>
       <Typography
-        sx={{ mt: 0.6, fontSize: 12.5, fontWeight: current ? 800 : 700, color: future ? flow.future : current ? flow.current : tokens.navy800, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+        sx={{ mt: 0.5, px: 1, fontSize: 12.5, fontWeight: current ? 800 : 700, color: future ? flow.future : current ? flow.current : tokens.navy800, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
       >
         {node.name}
       </Typography>
-      <Typography sx={{ fontSize: 11, color: tokens.gray500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {future ? '' : current ? t('tracker.state.Current') : node.state === 'Submitted' ? node.owner : `${node.owner} · ${duration(t, node.started, node.ended)}`}
-      </Typography>
+      <Stack direction="row" sx={{ justifyContent: 'center', alignItems: 'center', gap: 0.75, mt: 0.25, px: 1, minWidth: 0 }}>
+        {!future && (
+          <Typography component="span" sx={{ fontSize: 11, color: tokens.gray500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            {node.owner}
+          </Typography>
+        )}
+        {!future && !submitted && (
+          <Box
+            component="span"
+            sx={{
+              flex: '0 0 auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.35,
+              px: 0.8,
+              py: 0.1,
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 800,
+              whiteSpace: 'nowrap',
+              ...(current ? { color: '#b45309', bgcolor: '#fff4e0' } : { color: '#6b3fc4', bgcolor: '#f1ebfc' }),
+              '& svg': { fontSize: 13 },
+            }}
+          >
+            <TimerOutlinedIcon />
+            {duration(t, node.started, node.ended)}
+          </Box>
+        )}
+      </Stack>
     </Box>
   );
 }

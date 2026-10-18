@@ -1530,7 +1530,8 @@
         "iqama": "Iqama number",
         "housingTransport": "Housing / transport",
         "specialPrice": "Special price",
-        "workerStart": "Worker's start"
+        "workerStart": "Worker's start",
+        "price": "Monthly service price"
       },
       "breakdown": "salary {{salary}} + fee {{fee}}",
       "available": {
@@ -1545,7 +1546,15 @@
       },
       "flowHint": "On saving, the order is \"under preparation\" and you get a task to confirm it. Once you confirm, it goes to the operations manager; when they approve, it is \"delivered\" and each worker gets a work period in the period ledger.",
       "creatorHint": "The order is under preparation: review it, then confirm it with \"Approve\" in the approval stages bar below to send it to the operations manager. You can still change it before confirming.",
-      "deliveredHint": "Delivered: each worker has a work period on the project in the period ledger from their start of work, at their line's price."
+      "deliveredHint": "Delivered: each worker has a work period on the project in the period ledger from their start of work, at their line's price.",
+      "summaryTitle": "Order summary",
+      "approvalPath": "Approval path",
+      "iqamaShort": "Iqama",
+      "pricePart": {
+        "salary": "Salary {{value}}",
+        "housing": "Housing {{value}}",
+        "transport": "Transport {{value}}"
+      }
     },
     "status": {
       "UnderPreparation": "Under preparation",
