@@ -920,8 +920,6 @@
     "futureHint": "تتحدد بعد اعتماد المرحلة الحالية",
     "onBehalf": "نيابةً عن {{name}}",
     "openSince": "مفتوحة منذ {{time}}",
-    "horizontal": "عرض أفقي",
-    "vertical": "عرض رأسي",
     "lessThanMinute": "أقل من دقيقة",
     "minutes": "{{count}} د",
     "hours": "{{count}} س",
@@ -934,7 +932,12 @@
       "Canceled": "ملغاة",
       "Future": "قادمة"
     },
-    "days": "{{count}} يوم"
+    "days": "{{count}} يوم",
+    "waitingFor": "بانتظار",
+    "endedOn": "انتهى الاعتماد في",
+    "moreActions": "إجراءات أخرى",
+    "showDetails": "تفاصيل المراحل",
+    "hideDetails": "إخفاء التفاصيل"
   },
   "crmSync": {
     "title": "المزامنة من النظام القديم",

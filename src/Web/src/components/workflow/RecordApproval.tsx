@@ -40,7 +40,7 @@ export function useRecordApproval(instanceId: string | null | undefined) {
   return { detail, reload };
 }
 
-/** The stage bar above a record, with approve / reject on the current stage and the other actions under it. */
+/** The stage bar above a record, with approve / reject on the current stage and the other actions in its menu. */
 export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalStatus; detail: InstanceDetail | null; onChanged: () => void }) {
   const { t } = useTranslation();
   const [action, setAction] = useState<Action | null>(null);
@@ -64,7 +64,6 @@ export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalSta
     }
   };
 
-  const more = actions && (actions.canReturn || actions.canDelegate || actions.canCancel);
   return (
     <>
       <ErrorMessage messageKey={error} />
@@ -88,28 +87,12 @@ export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalSta
         actions={{
           onApprove: actions?.canApprove ? () => setAction('Approve') : undefined,
           onReject: actions?.canReject ? () => setAction('Reject') : undefined,
+          more: [
+            ...(actions?.canReturn ? [{ key: 'return', label: t('approval.return'), icon: <ReplyIcon />, color: tokens.warning, onClick: () => setAction('Return') }] : []),
+            ...(actions?.canDelegate ? [{ key: 'delegate', label: t('approval.delegate'), icon: <ForwardIcon />, onClick: () => setAction('Delegate') }] : []),
+            ...(actions?.canCancel ? [{ key: 'cancel', label: t('approval.cancel'), icon: <BlockIcon />, color: tokens.gray600, onClick: () => setAction('Cancel') }] : []),
+          ],
         }}
-        footer={
-          more && (
-            <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', pt: 1, mt: 0.5, borderTop: `1px dashed ${tokens.border}` }}>
-              {actions.canReturn && (
-                <Button size="small" variant="outlined" color="warning" startIcon={<ReplyIcon />} onClick={() => setAction('Return')}>
-                  {t('approval.return')}
-                </Button>
-              )}
-              {actions.canDelegate && (
-                <Button size="small" variant="outlined" startIcon={<ForwardIcon />} onClick={() => setAction('Delegate')}>
-                  {t('approval.delegate')}
-                </Button>
-              )}
-              {actions.canCancel && (
-                <Button size="small" color="inherit" startIcon={<BlockIcon />} onClick={() => setAction('Cancel')}>
-                  {t('approval.cancel')}
-                </Button>
-              )}
-            </Stack>
-          )
-        }
       />
       {action && detail && (
         <ActionDialog

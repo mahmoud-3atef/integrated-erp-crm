@@ -920,8 +920,6 @@
     "futureHint": "Decided once the current stage is approved",
     "onBehalf": "on behalf of {{name}}",
     "openSince": "Open for {{time}}",
-    "horizontal": "Horizontal view",
-    "vertical": "Vertical view",
     "lessThanMinute": "less than a minute",
     "minutes": "{{count}} min",
     "hours": "{{count}} h",
@@ -934,7 +932,12 @@
       "Canceled": "Canceled",
       "Future": "Upcoming"
     },
-    "days": "{{count}} d"
+    "days": "{{count}} d",
+    "waitingFor": "Waiting for",
+    "endedOn": "Ended on",
+    "moreActions": "More actions",
+    "showDetails": "Stage details",
+    "hideDetails": "Hide details"
   },
   "crmSync": {
     "title": "Sync from the old system",
