@@ -35,13 +35,15 @@ import { PageHeader } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
 import { monthEnd, monthStart, ReceiptStatusBadge } from './receipts';
+import { ReceiptDialog } from './ReceiptDialog';
 
 type Filter = '' | 'Open' | 'InReview' | 'Approved' | 'Unallocated';
 
 /** The month's receipt vouchers: drafts, in review, approved, and the credit not yet allocated to invoices. */
-export function ReceiptsPage() {
+export function ReceiptsPage({ creating = false }: { creating?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [dialog, setDialog] = useState(creating);
   const { can } = useSession();
   const { ar, date } = useCommercialFormat();
   const [params, setParams] = useSearchParams();
@@ -86,7 +88,7 @@ export function ReceiptsPage() {
         subtitle={t('receipts.intro')}
         actions={
           can('billing.receipts.manage', true) ? (
-            <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/billing/receipts/new')}>
+            <Button variant="contained" startIcon={<Add />} onClick={() => setDialog(true)}>
               {t('receipts.new')}
             </Button>
           ) : undefined
@@ -173,6 +175,7 @@ export function ReceiptsPage() {
           </Table>
         </TableContainer>
       </Box>
+      {dialog && <ReceiptDialog onClose={() => (creating ? navigate('/billing/receipts') : setDialog(false))} onSaved={(saved) => navigate(`/billing/receipts/${saved}`)} />}
     </Box>
   );
 }

@@ -17,7 +17,6 @@ import { MovementPage } from '../pages/operations/movements/MovementPage';
 import { MovementsPage } from '../pages/operations/movements/MovementsPage';
 import { BankAccountsPage } from '../pages/billing/BankAccountsPage';
 import { InvoicePage } from '../pages/billing/InvoicePage';
-import { ReceiptFormPage } from '../pages/billing/ReceiptFormPage';
 import { ReceiptPage } from '../pages/billing/ReceiptPage';
 import { ReceiptsPage } from '../pages/billing/ReceiptsPage';
 import { StatementPage } from '../pages/billing/StatementPage';
@@ -101,9 +100,9 @@ export function App() {
                 <Route path="/billing/invoices" element={<InvoicesPage />} />
                 <Route path="/billing/invoices/:id" element={<InvoicePage />} />
                 <Route path="/billing/receipts" element={<ReceiptsPage />} />
-                <Route path="/billing/receipts/new" element={<ReceiptFormPage />} />
+                <Route path="/billing/receipts/new" element={<ReceiptsPage key="new" creating />} />
                 <Route path="/billing/receipts/:id" element={<ReceiptPage />} />
-                <Route path="/billing/receipts/:id/edit" element={<ReceiptFormPage />} />
+                <Route path="/billing/receipts/:id/edit" element={<ReceiptPage key="edit" editing />} />
                 <Route path="/billing/aging" element={<AgingPage />} />
                 <Route path="/billing/statements/:id" element={<StatementPage />} />
                 <Route path="/billing/bank-accounts" element={<BankAccountsPage />} />

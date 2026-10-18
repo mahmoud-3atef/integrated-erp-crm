@@ -47,6 +47,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
 import { ReceiptStatusBadge } from './receipts';
 import { useCrumb } from '../../app/breadcrumbs';
+import { ReceiptDialog } from './ReceiptDialog';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -88,7 +89,7 @@ function Stamp({ name, at }: { name: string; at: string }) {
 }
 
 /** A receipt voucher: the money received as a bank card (stamped once approved), where it went, and its review. */
-export function ReceiptPage() {
+export function ReceiptPage({ editing = false }: { editing?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -96,6 +97,7 @@ export function ReceiptPage() {
   const [r, setR] = useState<ReceiptDetail | null>(null);
   useCrumb(r?.receiptNo, `/billing/receipts/${id}`);
   const [files, setFiles] = useState(false);
+  const [dialog, setDialog] = useState(editing);
   const [allocating, setAllocating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -166,7 +168,7 @@ export function ReceiptPage() {
           )}
           {canRun && <RunProcessButton screen="billing.receipt" recordId={r.id} title={`${t('receipts.voucher')} — ${r.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />}
           {r.canEdit && (
-            <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/billing/receipts/${r.id}/edit`)}>
+            <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => setDialog(true)}>
               {t('receipts.edit')}
             </Button>
           )}
@@ -425,6 +427,20 @@ export function ReceiptPage() {
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+      {dialog && (
+        <ReceiptDialog
+          id={r.id}
+          onClose={() => (editing ? navigate(`/billing/receipts/${r.id}`) : setDialog(false))}
+          onSaved={() => {
+            if (editing) {
+              navigate(`/billing/receipts/${r.id}`);
+              return;
+            }
+            setDialog(false);
+            void reload();
+          }}
+        />
       )}
     </Box>
   );

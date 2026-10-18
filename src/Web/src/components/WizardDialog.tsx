@@ -126,7 +126,8 @@ export function WizardDialog({
         <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2, md: 3 } }}>{done}</Box>
       ) : (
         <>
-      {/* The steps: done ones checked (and reopenable), the current one in the record's color. */}
+      {/* The steps: done ones checked (and reopenable), the current one in the record's color; none for a one-screen form. */}
+      {steps.length > 1 && (
       <Box sx={{ flexShrink: 0, bgcolor: '#fff', borderBottom: `1px solid ${tokens.gray100}`, px: { xs: 1.5, md: 3.5 }, py: 1.75 }}>
         <Stack component="ol" direction="row" sx={{ listStyle: 'none', m: 0, p: 0, alignItems: 'flex-start' }}>
           {steps.map((s, index) => {
@@ -196,6 +197,7 @@ export function WizardDialog({
           })}
         </Stack>
       </Box>
+      )}
 
       {/* The step's form, and the summary beside it. */}
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2, md: 3 } }}>

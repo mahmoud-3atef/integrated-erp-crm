@@ -2318,7 +2318,8 @@
     "paidFull": "Paid in full",
     "paidPart": "Part paid",
     "creditLeft": "Credit left on the receipt",
-    "creditLeftHint": "It stays with the project, to be allocated to its invoices later."
+    "creditLeftHint": "It stays with the project, to be allocated to its invoices later.",
+    "dialogHint": "Choose the project and enter the amount, then allocate it to its invoices. It is saved as a draft; send it for approval from its page."
   },
   "aging": {
     "title": "Debt aging",

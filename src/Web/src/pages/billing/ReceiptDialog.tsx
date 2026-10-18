@@ -1,6 +1,7 @@
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
-import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import SwapVertOutlinedIcon from '@mui/icons-material/SwapVertOutlined';
 import {
   Alert,
   Autocomplete,
@@ -20,22 +21,88 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { paymentMethods, receivablesApi, type BankAccount, type PaymentMethod, type ProjectOpen, type ReceiptProject } from '../../api/billing';
 import { tokens } from '../../app/theme';
-import { ErrorMessage } from '../../auth/AuthLayout';
+import { recordTones } from '../../components/RecordLayout';
+import { WizardCard, WizardDialog } from '../../components/WizardDialog';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
 
 const key = (kind: string, id: string) => `${kind}:${id}`;
 
-/** A new or returned receipt: the project, the payment, and how it pays the project's open invoices. */
-export function ReceiptFormPage() {
+/** The receipt as it fills in: a small emerald card with the payment, and how much of it goes to invoices. */
+function ReceiptPreview({ amount, method, account, payer, receiptDate, allocated }: { amount: number; method: PaymentMethod; account: string | null; payer: string | null; receiptDate: string; allocated: number }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const { ar, date } = useCommercialFormat();
+  const { date } = useCommercialFormat();
+  const share = amount > 0 ? Math.min(100, Math.round((allocated / amount) * 100)) : 0;
+  return (
+    <Stack spacing={1.5}>
+      <Box
+        sx={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '20px',
+          p: 2.25,
+          color: '#fff',
+          minHeight: 180,
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'linear-gradient(135deg, #043b38 0%, #0b6e66 50%, #17a596 100%)',
+          boxShadow: '0 14px 30px rgba(6,90,82,.28)',
+          '&::before': { content: '""', position: 'absolute', width: 200, height: 200, borderRadius: '50%', bgcolor: 'rgba(255,255,255,.07)', top: -100, insetInlineEnd: -70 },
+        }}
+      >
+        <Stack direction="row" sx={{ position: 'relative', alignItems: 'center', gap: 0.75, fontSize: 12.5, opacity: 0.92, '& svg': { fontSize: 17 } }}>
+          {method === 'Cash' ? <PaymentsOutlinedIcon /> : <AccountBalanceOutlinedIcon />}
+          {t(`receipts.method.${method}`)}
+        </Stack>
+        {account && <Typography sx={{ position: 'relative', fontSize: 12.5, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account}</Typography>}
+        <Box sx={{ position: 'relative', mt: 2 }}>
+          <Typography sx={{ fontSize: 11.5, opacity: 0.8 }}>{t('receipts.received')}</Typography>
+          <Typography sx={{ fontSize: 27, fontWeight: 800, lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }}>
+            {amount > 0 ? sar(amount) : '—'}
+            <Box component="span" sx={{ fontSize: 13, opacity: 0.85, marginInlineStart: 0.75 }}>
+              {t('operations.delivery.sarUnit')}
+            </Box>
+          </Typography>
+        </Box>
+        <Box sx={{ flex: 1 }} />
+        <Stack direction="row" sx={{ position: 'relative', justifyContent: 'space-between', gap: 1.5, mt: 1.5 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 11, opacity: 0.75 }}>{t('receipts.from')}</Typography>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{payer ?? '—'}</Typography>
+          </Box>
+          <Box sx={{ flex: '0 0 auto', textAlign: 'end' }}>
+            <Typography sx={{ fontSize: 11, opacity: 0.75 }}>{t('receipts.col.date')}</Typography>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 800 }}>{receiptDate ? date(receiptDate) : '—'}</Typography>
+          </Box>
+        </Stack>
+      </Box>
+      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, border: `1px solid ${tokens.gray100}`, p: 1.75 }}>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', fontSize: 12.5, mb: 0.75 }}>
+          <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('receipts.allocatedShare')}</Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 800, color: recordTones.receipt.main }}>{share}%</Typography>
+        </Stack>
+        <Box sx={{ height: 8, borderRadius: 99, bgcolor: tokens.gray100, overflow: 'hidden' }}>
+          <Box sx={{ height: '100%', width: `${share}%`, borderRadius: 99, bgcolor: recordTones.receipt.main, transition: 'width .3s ease' }} />
+        </Box>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 1, fontSize: 12 }}>
+          <Typography sx={{ fontSize: 12, color: tokens.gray600 }}>{t('receipts.allocatedOf', { amount: sar(allocated) })}</Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: amount - allocated > 0 ? '#b8770a' : tokens.gray500 }}>{t('receipts.leftCredit', { amount: sar(Math.max(0, amount - allocated)) })}</Typography>
+        </Stack>
+      </Box>
+    </Stack>
+  );
+}
+
+/**
+ * A new or returned receipt in one screen (it needs no steps): the payment, then how it pays the project's open
+ * invoices, beside a live card of the receipt. Saved as a draft; sending it for approval is on the receipt's page.
+ */
+export function ReceiptDialog({ id, onClose, onSaved }: { id?: string; onClose: () => void; onSaved: (id: string) => void }) {
+  const { t } = useTranslation();
+  const { date } = useCommercialFormat();
   const [projects, setProjects] = useState<ReceiptProject[]>([]);
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -45,6 +112,7 @@ export function ReceiptFormPage() {
   const [accountId, setAccountId] = useState<string>('');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [receiptNo, setReceiptNo] = useState<string | null>(null);
   const [open, setOpen] = useState<ProjectOpen | null>(null);
   const [allocations, setAllocations] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -58,6 +126,7 @@ export function ReceiptFormPage() {
       receivablesApi
         .receipt(id)
         .then((r) => {
+          setReceiptNo(r.receiptNo);
           setProjectId(r.projectId);
           setReceiptDate(r.receiptDate);
           setAmount(String(r.amount));
@@ -86,6 +155,7 @@ export function ReceiptFormPage() {
   }, [projectId, id]);
 
   const project = projects.find((p) => p.id === projectId) ?? null;
+  const account = accounts.find((a) => a.id === accountId) ?? null;
   const total = Number(amount) || 0;
   const allocated = useMemo(() => Object.values(allocations).reduce((s, v) => s + (Number(v) || 0), 0), [allocations]);
   const items = open?.items ?? [];
@@ -126,32 +196,34 @@ export function ReceiptFormPage() {
     try {
       if (id) {
         await receivablesApi.update(id, input);
-        navigate(`/billing/receipts/${id}`);
+        onSaved(id);
       } else {
-        const made = await receivablesApi.create(input);
-        navigate(`/billing/receipts/${made.id}`);
+        onSaved((await receivablesApi.create(input)).id);
       }
     } catch (failure) {
       setError(errorKey(failure));
-    } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Box>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 2, mb: 2 }}>
-        <Typography component="h1" sx={{ flex: 1, fontSize: 21, fontWeight: 800, color: tokens.navy800 }}>
-          {id ? t('receipts.editTitle') : t('receipts.new')}
-        </Typography>
-        <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(id ? `/billing/receipts/${id}` : '/billing/receipts')}>
-          {t('common.back')}
-        </Button>
-      </Stack>
-      <ErrorMessage messageKey={error} />
-
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, mb: `${tokens.gap}px` }}>
-        <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800, mb: 2 }}>{t('receipts.sections.payment')}</Typography>
+    <WizardDialog
+      tone="receipt"
+      icon={<PaymentsOutlinedIcon />}
+      title={id ? `${t('receipts.editTitle')}${receiptNo ? ` ${receiptNo}` : ''}` : t('receipts.new')}
+      subtitle={project ? `${project.name}${project.customerName ? ` · ${project.customerName}` : ''}` : t('receipts.dialogHint')}
+      steps={[{ key: 'receipt', label: t('receipts.voucher') }]}
+      step={0}
+      onStep={() => undefined}
+      canNext={valid}
+      onClose={onClose}
+      onFinish={() => void save()}
+      finishLabel={t('receipts.save')}
+      busy={busy}
+      error={error}
+      aside={<ReceiptPreview amount={total} method={method} account={method === 'Cash' ? null : (account?.display ?? null)} payer={project?.customerName ?? project?.name ?? null} receiptDate={receiptDate} allocated={allocated} />}
+    >
+      <WizardCard title={t('receipts.sections.payment')} icon={<PaymentsOutlinedIcon />}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' }, gap: 2 }}>
           <Autocomplete
             options={projects}
@@ -172,7 +244,7 @@ export function ReceiptFormPage() {
               </li>
             )}
             isOptionEqualToValue={(a, b) => a.id === b.id}
-            renderInput={(params) => <TextField {...params} label={t('commercial.col.project')} required />}
+            renderInput={(params) => <TextField {...params} label={t('commercial.col.project')} required autoFocus={!id} />}
           />
           <TextField type="date" label={t('receipts.col.date')} value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
           <TextField
@@ -180,7 +252,7 @@ export function ReceiptFormPage() {
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
             required
-            slotProps={{ htmlInput: { dir: 'ltr', inputMode: 'decimal' } }}
+            slotProps={{ htmlInput: { dir: 'ltr', inputMode: 'decimal', style: { fontWeight: 800, fontSize: 17 } } }}
           />
           <TextField select label={t('receipts.col.method')} value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
             {paymentMethods.map((m) => (
@@ -205,27 +277,32 @@ export function ReceiptFormPage() {
             ))}
           </TextField>
           <TextField label={t('receipts.reference')} value={reference} onChange={(e) => setReference(e.target.value)} slotProps={{ htmlInput: { maxLength: 100, dir: 'ltr' } }} />
+          <TextField sx={{ gridColumn: '1 / -1' }} label={t('receipts.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} slotProps={{ htmlInput: { maxLength: 1000 } }} />
         </Box>
-        <TextField sx={{ mt: 2 }} fullWidth label={t('receipts.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} multiline minRows={2} slotProps={{ htmlInput: { maxLength: 1000 } }} />
-      </Box>
+      </WizardCard>
 
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, mb: `${tokens.gap}px` }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800 }}>{t('receipts.sections.allocation')}</Typography>
-            <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('receipts.allocationHint')}</Typography>
-          </Box>
-          <Button variant="outlined" startIcon={<AutoFixHighOutlinedIcon />} disabled={!open || total <= 0 || items.length === 0} onClick={autoAllocate}>
+      <WizardCard
+        title={t('receipts.sections.allocation')}
+        icon={<SwapVertOutlinedIcon />}
+        action={
+          <Button size="small" variant="outlined" startIcon={<AutoFixHighOutlinedIcon />} disabled={!open || total <= 0 || items.length === 0} onClick={autoAllocate} sx={{ color: recordTones.receipt.main, borderColor: recordTones.receipt.main }}>
             {t('receipts.autoAllocate')}
           </Button>
-        </Stack>
+        }
+      >
+        <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mt: -1, mb: 1.5 }}>{t('receipts.allocationHint')}</Typography>
         {loading && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         {!projectId && <Typography sx={{ py: 3, textAlign: 'center', color: tokens.gray500 }}>{t('receipts.chooseProject')}</Typography>}
         {open && items.length === 0 && <Typography sx={{ py: 3, textAlign: 'center', color: tokens.gray500 }}>{t('receipts.nothingOpen')}</Typography>}
         {open && items.length > 0 && (
-          <TableContainer>
+          <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px` }}>
             <Table size="small">
-              <TableHead>
+              <TableHead
+                sx={{
+                  '& .MuiTableRow-root': { background: recordTones.receipt.dark },
+                  '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: 'transparent', color: '#fff', borderBottom: 0, borderRadius: 0 },
+                }}
+              >
                 <TableRow>
                   <TableCell>{t('receipts.col.item')}</TableCell>
                   <TableCell>{t('receipts.col.due')}</TableCell>
@@ -273,19 +350,6 @@ export function ReceiptFormPage() {
             </Table>
           </TableContainer>
         )}
-        {open && (
-          <Stack direction="row" sx={{ justifyContent: 'flex-end', flexWrap: 'wrap', gap: 3, mt: 2, fontSize: 13.5 }}>
-            <span>
-              {t('receipts.col.amount')}: <b>{sar(total)}</b>
-            </span>
-            <span>
-              {t('receipts.allocated')}: <b>{sar(allocated)}</b>
-            </span>
-            <span style={{ color: total - allocated > 0 ? '#2b7bd9' : undefined }}>
-              {t('receipts.toCredit')}: <b>{sar(Math.max(0, total - allocated))}</b>
-            </span>
-          </Stack>
-        )}
         {allocated > total + 0.001 && (
           <Alert severity="error" sx={{ mt: 1.5 }}>
             {t('errors.validation_receipt_over_amount')}
@@ -296,13 +360,7 @@ export function ReceiptFormPage() {
             {t('errors.validation_receipt_over_item')}
           </Alert>
         )}
-      </Box>
-
-      <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-        <Button variant="contained" size="large" startIcon={<SaveOutlinedIcon />} disabled={busy || !valid} onClick={() => void save()}>
-          {t('receipts.save')}
-        </Button>
-      </Stack>
-    </Box>
+      </WizardCard>
+    </WizardDialog>
   );
 }
