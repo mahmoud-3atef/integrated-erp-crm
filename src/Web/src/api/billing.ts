@@ -407,7 +407,8 @@ export interface ReceiptDetail {
   approvedAt: string | null;
   approvedByName: string | null;
   lastComment: string | null;
-  allocations: { kind: ReceivableKind; targetId: string; number: string; dueDate: string | null; amount: number }[];
+  /** itemTotal: the item after its credit notes; itemOutstanding: left to collect on it now (after approved receipts). */
+  allocations: { kind: ReceivableKind; targetId: string; number: string; dueDate: string | null; amount: number; itemTotal: number | null; itemOutstanding: number | null }[];
   approval: ApprovalStatus | null;
   canEdit: boolean;
   canAllocate: boolean;

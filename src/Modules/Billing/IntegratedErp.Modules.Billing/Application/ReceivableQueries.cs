@@ -21,7 +21,11 @@ public sealed record OpenItemDto(
 
 public sealed record ProjectOpenDto(Guid ProjectId, string ProjectName, decimal Outstanding, decimal Credit, IReadOnlyList<OpenItemDto> Items);
 
-public sealed record ReceiptAllocationDto(string Kind, Guid TargetId, string Number, DateOnly? DueDate, decimal Amount);
+/// <summary>
+/// One line of a receipt: what it paid of an item, and the item's total and what is left to collect on it now (after
+/// every approved receipt).
+/// </summary>
+public sealed record ReceiptAllocationDto(string Kind, Guid TargetId, string Number, DateOnly? DueDate, decimal Amount, decimal? ItemTotal = null, decimal? ItemOutstanding = null);
 
 public sealed record ReceiptDetailDto(
     Guid Id,
@@ -145,7 +149,7 @@ internal sealed class ReceivableQueries(
         var allocations = r.Allocations.Select(a =>
             {
                 var item = items.GetValueOrDefault((a.Kind, a.TargetId));
-                return new ReceiptAllocationDto(a.Kind.ToString(), a.TargetId, item?.Number ?? "—", item?.DueDate, a.Amount);
+                return new ReceiptAllocationDto(a.Kind.ToString(), a.TargetId, item?.Number ?? "—", item?.DueDate, a.Amount, item?.Total - item?.Credited, item?.Outstanding);
             })
             .OrderBy(a => a.DueDate)
             .ToList();

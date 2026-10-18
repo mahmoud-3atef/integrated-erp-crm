@@ -2304,7 +2304,21 @@
     "allocateTitle": "Allocate the receipt's credit ({{amount}}) to invoices",
     "allocateHint": "Enter the amount for each invoice, or press \"Allocate automatically\" for the oldest due first. What is not allocated stays the project's credit.",
     "allocateSave": "Save the allocation",
-    "nothingToAllocate": "The project has no open invoice now, so the amount stays its credit. If it has invoices in the old system, run \"Sync changes\" so their balances show here, then try again. This system's invoices show once issued."
+    "nothingToAllocate": "The project has no open invoice now, so the amount stays its credit. If it has invoices in the old system, run \"Sync changes\" so their balances show here, then try again. This system's invoices show once issued.",
+    "stamp": "Approved",
+    "received": "Amount received",
+    "from": "From",
+    "recordedBy": "Recorded by",
+    "allocatedShare": "Allocated to invoices",
+    "allocatedOf": "{{amount}} allocated",
+    "leftCredit": "{{amount}} credit left",
+    "movements": "Where it went",
+    "dueOn": "due {{date}}",
+    "leftOnItem": "{{amount}} left on it after this",
+    "paidFull": "Paid in full",
+    "paidPart": "Part paid",
+    "creditLeft": "Credit left on the receipt",
+    "creditLeftHint": "It stays with the project, to be allocated to its invoices later."
   },
   "aging": {
     "title": "Debt aging",
