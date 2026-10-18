@@ -2053,7 +2053,27 @@
     "search": "بحث باسم المشروع أو العميل أو المدير أو رقم التحضير",
     "filtered": "يظهر {{shown}} من {{total}} مشروعًا.",
     "clearFilter": "إلغاء التصفية",
-    "noMatch": "لا مشاريع تطابق التصفية."
+    "noMatch": "لا مشاريع تطابق التصفية.",
+    "register": {
+      "title": "سجل الحضور ({{count}})",
+      "present": "حضور",
+      "absent": "غياب",
+      "outside": "خارج فترته",
+      "month": "أيام الشهر",
+      "ofDays": "من {{days}}",
+      "hours": "{{hours}} س",
+      "total": "الإجمالي ({{count}} سطر)"
+    },
+    "effect": {
+      "title": "أثر التحضير",
+      "attendance": "نسبة الحضور",
+      "days": "{{days}} يوم عمل · {{workers}} عامل",
+      "absence": "{{days}} غياب"
+    },
+    "trail": {
+      "title": "مسار التعديلات ({{count}})",
+      "none": "لا تعديلات على التحضير."
+    }
   },
   "invoices": {
     "title": "فواتير العملاء",

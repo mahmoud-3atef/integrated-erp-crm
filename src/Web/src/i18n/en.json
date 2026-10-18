@@ -2053,7 +2053,27 @@
     "search": "Search by project, customer, manager or timesheet number",
     "filtered": "Showing {{shown}} of {{total}} projects.",
     "clearFilter": "Clear the filter",
-    "noMatch": "No projects match the filter."
+    "noMatch": "No projects match the filter.",
+    "register": {
+      "title": "Attendance register ({{count}})",
+      "present": "Present",
+      "absent": "Absent",
+      "outside": "Outside their period",
+      "month": "Days of the month",
+      "ofDays": "of {{days}}",
+      "hours": "{{hours}} h",
+      "total": "Total ({{count}} lines)"
+    },
+    "effect": {
+      "title": "What the timesheet makes",
+      "attendance": "Attendance",
+      "days": "{{days}} work days · {{workers}} workers",
+      "absence": "{{days}} absent"
+    },
+    "trail": {
+      "title": "Adjustments trail ({{count}})",
+      "none": "No adjustments on the timesheet."
+    }
   },
   "invoices": {
     "title": "Customer invoices",

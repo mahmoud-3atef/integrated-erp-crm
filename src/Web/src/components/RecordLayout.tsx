@@ -63,8 +63,8 @@ export function RecordHero({
         '&::after': { content: '""', position: 'absolute', width: 220, height: 220, borderRadius: '50%', top: -140, insetInlineEnd: -40, background: 'rgba(255,255,255,.07)' },
       }}
     >
-      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ position: 'relative', zIndex: 1, alignItems: { md: 'center' }, gap: { xs: 1.5, md: 2.5 } }}>
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.75, flex: 1, minWidth: 0 }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ position: 'relative', zIndex: 1, alignItems: { md: 'center' }, flexWrap: { md: 'wrap' }, gap: { xs: 1.5, md: 2.5 } }}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.75, flex: '1 1 auto', minWidth: { md: 440 } }}>
           <Box sx={{ flex: '0 0 auto', width: 50, height: 50, borderRadius: '15px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,.16)', '& svg': { fontSize: 27 } }}>{icon}</Box>
           {/* The number, set apart: what people quote. */}
           <Box sx={{ flex: '0 0 auto', ...(title ? { paddingInlineEnd: 2.5, borderInlineEnd: '1px solid rgba(255,255,255,.22)' } : {}) }}>

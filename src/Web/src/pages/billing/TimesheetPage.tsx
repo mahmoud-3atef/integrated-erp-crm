@@ -2,7 +2,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AutoModeOutlinedIcon from '@mui/icons-material/AutoModeOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
@@ -13,11 +16,14 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
+  ListItemIcon,
+  Menu,
   MenuItem,
   Stack,
   Table,
@@ -31,15 +37,16 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type BillingSettings, type TimesheetDetail, type TimesheetLine, type WorkerPay } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
-import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
@@ -48,30 +55,76 @@ import { InvoiceStatusBadge } from './invoices';
 import { SourceBadge, TimesheetStatusBadge } from './timesheets';
 import { useCrumb } from '../../app/breadcrumbs';
 
-type Tab = 'workers' | 'invoice' | 'payroll' | 'suppliers' | 'unknown' | 'approval';
+type Tab = 'invoice' | 'payroll' | 'suppliers' | 'unknown';
 
-function Tile({ label, value, tone = tokens.navy800, foot }: { label: string; value: ReactNode; tone?: string; foot?: string }) {
+const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
+const dayMs = 86_400_000;
+const daysBetween = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / dayMs);
+
+// Each adjustment's color in the trail.
+const adjustmentColor: Record<AdjustmentType, string> = {
+  Absence: '#e03434',
+  Overtime: '#1f6fd1',
+  ClientAddition: '#1f9d55',
+  ClientDeduction: '#b8770a',
+  CustomerLoan: '#7c4dcc',
+  FeeDays: '#0f8f84',
+  OtherCost: '#5d6f7b',
+  InternalAddition: '#17734b',
+  InternalDeduction: '#a32a5c',
+};
+
+/** The month as a desk calendar's page: the month's name on red, the cycle's days under it. */
+function CalendarPage({ month, days }: { month: string; days: number }) {
   return (
-    <Box sx={{ p: 1.5, borderRadius: `${tokens.radius}px`, bgcolor: tokens.navy50 }}>
-      <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 19, fontWeight: 800, color: tone, lineHeight: 1.3 }}>{value}</Typography>
-      {foot && <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{foot}</Typography>}
+    <Box sx={{ width: 50, borderRadius: '10px', overflow: 'hidden', bgcolor: '#fff', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,.18)' }}>
+      <Box sx={{ bgcolor: '#e03434', color: '#fff', fontSize: 10, fontWeight: 800, py: '1px', whiteSpace: 'nowrap', overflow: 'hidden' }}>{month}</Box>
+      <Typography sx={{ fontSize: 20, fontWeight: 800, color: recordTones.timesheet.main, lineHeight: 1.35 }}>{days}</Typography>
     </Box>
   );
 }
 
-/** One project's timesheet for a cycle: its workers, the adjustments, and the invoice, payroll and supplier statements it makes. */
+/**
+ * The worker's month in one bar: the cycle's days, the part the worker was on the project in green, and a red square
+ * for each day of absence at the end of it.
+ */
+function MonthBar({ from, to, lineFrom, lineTo, absence }: { from: string; to: string; lineFrom: string; lineTo: string; absence: number }) {
+  const total = Math.max(1, daysBetween(from, to) + 1);
+  const start = Math.max(0, daysBetween(from, lineFrom));
+  const length = Math.max(0, Math.min(total - start, daysBetween(lineFrom, lineTo) + 1));
+  const absent = Math.min(length, Math.ceil(absence));
+  const day = 100 / total;
+  return (
+    <Box sx={{ position: 'relative', height: 14, borderRadius: '4px', bgcolor: tokens.gray100, overflow: 'hidden', minWidth: 140 }}>
+      <Box sx={{ position: 'absolute', insetBlock: 0, insetInlineStart: `${start * day}%`, width: `${length * day}%`, bgcolor: '#2fae73', borderRadius: '3px' }} />
+      {Array.from({ length: absent }, (_, n) => (
+        <Box
+          key={n}
+          sx={{ position: 'absolute', top: 2, bottom: 2, insetInlineStart: `calc(${(start + length - absent + n) * day}% + 1px)`, width: `calc(${day}% - 2px)`, bgcolor: '#e03434', borderRadius: '2px' }}
+        />
+      ))}
+    </Box>
+  );
+}
+
+/**
+ * One project's timesheet for a cycle, as an attendance register: the band with the month, the approval bar, the
+ * workers with their month drawn as a bar (absences in red) and the figures the timesheet makes for each; beside them
+ * what the timesheet makes (invoice, payroll, suppliers, attendance) and the trail of adjustments; then the invoice,
+ * payroll and supplier details and the approval's history.
+ */
 export function TimesheetPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
   const [sheet, setSheet] = useState<TimesheetDetail | null>(null);
-  useCrumb(sheet?.timesheetNo);
-  const [tab, setTab] = useState<Tab>('workers');
+  useCrumb(sheet?.timesheetNo, `/billing/timesheets/${id}`);
+  const [tab, setTab] = useState<Tab>('invoice');
   const [adjusting, setAdjusting] = useState<TimesheetLine | null>(null);
   const [settings, setSettings] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const approval = useRecordApproval(sheet?.approval?.instanceId);
@@ -106,116 +159,99 @@ export function TimesheetPage() {
     }
   };
 
+  const look = recordTones.timesheet;
   const workers = new Set(sheet.lines.map((l) => l.workerId)).size;
   const days = sheet.lines.reduce((s, l) => s + l.workDays, 0);
+  const absence = sheet.lines.reduce((s, l) => s + l.absenceDays, 0);
+  const attendance = days > 0 ? Math.round(((days - absence) / days) * 1000) / 10 : 0;
   const payroll = sheet.payroll.reduce((s, p) => s + p.net, 0);
   const suppliers = sheet.suppliers.reduce((s, p) => s + p.net, 0);
   const noPrice = sheet.lines.filter((l) => l.totalPrice <= 0);
   const canRun = (!sheet.awaitingApproval && sheet.canEdit) || approval.detail?.summary.status === 'Failed';
   const monthName = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(sheet.month));
+  const monthShort = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(sheet.month));
+  const nameOf = (workerId: string) => sheet.lines.find((l) => l.workerId === workerId)?.name ?? '—';
+  const makeInvoice = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { id: invoiceId } = await invoiceApi.fromTimesheet(sheet.id);
+      navigate(`/billing/invoices/${invoiceId}`);
+    } catch (failure) {
+      setError(errorKey(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <Box>
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, mb: `${tokens.gap}px` }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' } }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>
-              {t('timesheets.timesheetOf', { month: monthName })} · <b dir="ltr">{sheet.timesheetNo}</b>
-            </Typography>
-            <Typography component="h1" sx={{ fontSize: 21, fontWeight: 800, color: tokens.navy800 }}>
-              {sheet.projectName}
-            </Typography>
-            <Typography sx={{ fontSize: 13, color: tokens.gray600 }}>
-              {t('commercial.col.customer')}: {sheet.customerName ?? '—'} · {t('commercial.col.contractType')}: {sheet.contractType ? t(`commercial.contractType.${sheet.contractType}`) : '—'} ·{' '}
-              {t('timesheets.cycle', { from: date(sheet.from), to: date(sheet.to) })} · {t(`timesheets.dayBasis.${sheet.dayBasis}`)}
-            </Typography>
-          </Box>
-          <Stack sx={{ alignItems: { md: 'flex-end' }, gap: 0.75 }}>
+      <RecordHero
+        tone="timesheet"
+        icon={<CalendarPage month={monthShort} days={daysBetween(sheet.from, sheet.to) + 1} />}
+        kind={t('timesheets.timesheetOf', { month: monthName })}
+        number={sheet.timesheetNo}
+        status={
+          <Box sx={{ bgcolor: '#fff', borderRadius: 99, px: 0.25 }}>
             <TimesheetStatusBadge status={sheet.status} />
-            <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{t('timesheets.generatedBy', { name: sheet.generatedByName, at: new Date(sheet.generatedAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) })}</Typography>
-          </Stack>
-          <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(`/billing/timesheets?month=${sheet.month}`)}>
-            {t('common.back')}
-          </Button>
-        </Stack>
+          </Box>
+        }
+        title={sheet.projectName}
+        subtitle={`${sheet.customerName ?? '—'} · ${t('timesheets.cycle', { from: date(sheet.from), to: date(sheet.to) })} · ${t(`timesheets.dayBasis.${sheet.dayBasis}`)}`}
+        actions={
+          <>
+            {sheet.canSubmit && (
+              <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || noPrice.length > 0} onClick={() => void run(() => billingApi.submit(sheet.id))}>
+                {t('timesheets.submit')}
+              </Button>
+            )}
+            {sheet.canInvoice && (
+              <Button variant="contained" startIcon={<ReceiptLongOutlinedIcon />} disabled={busy} onClick={() => void makeInvoice()}>
+                {t('invoices.makeFromTimesheet')}
+              </Button>
+            )}
+            {canRun && <RunProcessButton screen="billing.timesheet" recordId={sheet.id} title={`${sheet.timesheetNo} — ${sheet.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />}
+            <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
+              {t('timesheets.excel.download')}
+            </Button>
+            <Button variant="outlined" startIcon={<MoreHorizIcon />} onClick={(e) => setMenu(e.currentTarget)}>
+              {t('invoices.more')}
+            </Button>
+            <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(`/billing/timesheets?month=${sheet.month}`)}>
+              {t('common.back')}
+            </Button>
+          </>
+        }
+      />
+      <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
+        {sheet.canEdit && (
+          <MenuItem onClick={() => (setMenu(null), void run(() => billingApi.generate(sheet.projectId, sheet.month)))}>
+            <ListItemIcon>
+              <AutoModeOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            {t('timesheets.regenerate')}
+          </MenuItem>
+        )}
+        {sheet.canEdit && (
+          <MenuItem onClick={() => (setMenu(null), setUploading(true))}>
+            <ListItemIcon>
+              <UploadFileOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            {t('timesheets.excel.upload')}
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => (setMenu(null), setSettings(true))}>
+          <ListItemIcon>
+            <SettingsOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          {t('timesheets.settings.title')}
+        </MenuItem>
+      </Menu>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)', xl: 'repeat(7, 1fr)' }, gap: 1.25, mt: 2 }}>
-          <Tile label={t('timesheets.tiles.workers')} value={workers} foot={t('timesheets.tiles.days', { days: sar(days) })} />
-          <Tile label={t('timesheets.tiles.amount')} value={sar(sheet.invoice.amount)} />
-          <Tile label={t('timesheets.tiles.vat')} value={sar(sheet.invoice.vat)} />
-          <Tile label={t('timesheets.tiles.total')} value={sar(sheet.invoice.total)} tone={tokens.teal} />
-          <Tile label={t('timesheets.tiles.payroll')} value={sar(payroll)} foot={t('timesheets.tiles.workersCount', { count: sheet.payroll.length })} />
-          <Tile label={t('timesheets.tiles.suppliers')} value={sar(suppliers)} foot={t('timesheets.tiles.suppliersCount', { count: sheet.suppliers.length })} />
-          <Tile label={t('timesheets.tiles.unknown')} value={sheet.unknownSource.length} tone={sheet.unknownSource.length > 0 ? tokens.warning : tokens.gray500} />
-        </Box>
-
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.25, mt: 2 }}>
-          {sheet.canEdit && (
-            <Button variant="outlined" startIcon={<AutoModeOutlinedIcon />} disabled={busy} onClick={() => void run(() => billingApi.generate(sheet.projectId, sheet.month))}>
-              {t('timesheets.regenerate')}
-            </Button>
-          )}
-          {sheet.canSubmit && (
-            <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || noPrice.length > 0} onClick={() => void run(() => billingApi.submit(sheet.id))}>
-              {t('timesheets.submit')}
-            </Button>
-          )}
-          {sheet.canInvoice && (
-            <Button
-              variant="contained"
-              startIcon={<ReceiptLongOutlinedIcon />}
-              disabled={busy}
-              onClick={() =>
-                void (async () => {
-                  setBusy(true);
-                  setError(null);
-                  try {
-                    const { id: invoiceId } = await invoiceApi.fromTimesheet(sheet.id);
-                    navigate(`/billing/invoices/${invoiceId}`);
-                  } catch (failure) {
-                    setError(errorKey(failure));
-                  } finally {
-                    setBusy(false);
-                  }
-                })()
-              }
-            >
-              {t('invoices.makeFromTimesheet')}
-            </Button>
-          )}
-          {sheet.invoiceDoc && (
-            <Button variant="outlined" startIcon={<ReceiptLongOutlinedIcon />} onClick={() => navigate(`/billing/invoices/${sheet.invoiceDoc!.id}`)}>
-              {t('invoices.openInvoice', { number: sheet.invoiceDoc.invoiceNo ?? t('invoices.noNumber') })}
-              <Box component="span" sx={{ marginInlineStart: 1 }}>
-                <InvoiceStatusBadge status={sheet.invoiceDoc.status} />
-              </Box>
-            </Button>
-          )}
-          {canRun && (
-            <RunProcessButton screen="billing.timesheet" recordId={sheet.id} title={`${sheet.timesheetNo} — ${sheet.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />
-          )}
-          <Button startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
-            {t('timesheets.excel.download')}
-          </Button>
-          {sheet.canEdit && (
-            <Button startIcon={<UploadFileOutlinedIcon />} onClick={() => setUploading(true)}>
-              {t('timesheets.excel.upload')}
-            </Button>
-          )}
-          <Button startIcon={<SettingsOutlinedIcon />} onClick={() => setSettings(true)}>
-            {t('timesheets.settings.title')}
-          </Button>
-        </Stack>
-      </Box>
       <ErrorMessage messageKey={error} />
       {noPrice.length > 0 && (
         <Alert severity="error" sx={{ mb: `${tokens.gap}px` }}>
           {t('timesheets.noPrice', { workers: noPrice.map((l) => l.workerNo).join('، ') })}
-        </Alert>
-      )}
-      {sheet.status === 'Approved' && (
-        <Alert severity="success" sx={{ mb: `${tokens.gap}px` }}>
-          {t('timesheets.approvedHint', { name: sheet.approvedByName ?? '—' })}
         </Alert>
       )}
       {sheet.lastComment && sheet.status === 'Returned' && (
@@ -234,56 +270,157 @@ export function TimesheetPage() {
         />
       )}
 
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
-        <PillTabs
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: 'workers', label: t('timesheets.tabs.workers', { count: sheet.lines.length }) },
-            { value: 'invoice', label: t('timesheets.tabs.invoice') },
-            { value: 'payroll', label: t('timesheets.tabs.payroll', { count: sheet.payroll.length }) },
-            { value: 'suppliers', label: t('timesheets.tabs.suppliers', { count: sheet.suppliers.length }) },
-            ...(sheet.unknownSource.length > 0 ? [{ value: 'unknown' as const, label: t('timesheets.tabs.unknown', { count: sheet.unknownSource.length }) }] : []),
-            ...(sheet.approval ? [{ value: 'approval' as const, label: t('operations.delivery.tabs.approval') }] : []),
-          ]}
-        />
-        {tab === 'workers' && <WorkersTab sheet={sheet} onAdjust={setAdjusting} />}
-        {tab === 'invoice' && <InvoiceTab sheet={sheet} />}
-        {tab === 'payroll' && (
-          <>
-            <Hint text={t('timesheets.payrollHint')} />
-            <PayTable rows={sheet.payroll} />
-          </>
-        )}
-        {tab === 'suppliers' && (
-          <>
-            <Hint text={t('timesheets.suppliersHint')} />
-            {sheet.suppliers.length === 0 ? (
-              <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('timesheets.noSuppliers')}</Typography>
-            ) : (
-              <Stack spacing={2}>
-                {sheet.suppliers.map((s) => (
-                  <Box key={s.supplierName} sx={{ border: `1px solid ${tokens.navy50}`, borderRadius: `${tokens.radius}px`, p: 1.5 }}>
-                    <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mb: 1 }}>
-                      <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800, flex: 1 }}>{s.supplierName}</Typography>
-                      <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{t('timesheets.supplierSummary', { workers: s.workers, days: sar(s.workDays), net: sar(s.net) })}</Typography>
-                    </Stack>
-                    <PayTable rows={s.items} />
-                  </Box>
-                ))}
-              </Stack>
+      {/* What the timesheet makes, and the trail of its adjustments. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.6fr) minmax(0, 1fr)' }, gap: `${tokens.gap}px`, mb: `${tokens.gap}px`, alignItems: 'stretch' }}>
+          {/* What the timesheet makes. */}
+          <Box sx={{ ...card, overflow: 'hidden' }}>
+            <Box sx={{ px: 2.25, py: 1.25, color: '#fff', background: look.dark, fontSize: 14, fontWeight: 800 }}>{t('timesheets.effect.title')}</Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '230px minmax(0, 1fr)' }, alignItems: 'center', columnGap: 1 }}>
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.75, px: 2.25, py: 1.5 }}>
+              <Box sx={{ position: 'relative', width: 78, height: 78, flex: '0 0 auto' }}>
+                <CircularProgress variant="determinate" value={100} size={78} thickness={5} sx={{ color: tokens.gray100, position: 'absolute' }} />
+                <CircularProgress variant="determinate" value={attendance} size={78} thickness={5} sx={{ color: look.main, position: 'absolute', '& circle': { strokeLinecap: 'round' } }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{t('timesheets.effect.attendance')}</Typography>
+                <Typography sx={{ fontSize: 24, fontWeight: 800, color: look.main, lineHeight: 1.2 }}>{attendance}%</Typography>
+                <Typography sx={{ fontSize: 12, color: tokens.gray600 }}>
+                  {t('timesheets.effect.days', { days: sar(days), workers })}
+                  {absence > 0 && (
+                    <Box component="b" sx={{ color: '#e03434' }}>
+                      {' · '}
+                      {t('timesheets.effect.absence', { days: sar(absence) })}
+                    </Box>
+                  )}
+                </Typography>
+              </Box>
+            </Stack>
+            <Box sx={{ px: 2.25, py: 1.25, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, columnGap: 3 }}>
+              {[
+                [t('timesheets.tiles.amount'), sar(sheet.invoice.amount), tokens.navy800],
+                [t('timesheets.tiles.vat'), sar(sheet.invoice.vat), tokens.navy800],
+                [t('timesheets.tiles.total'), sar(sheet.invoice.total), recordTones.invoice.main],
+                [t('timesheets.tiles.payroll'), sar(payroll), look.main],
+                [t('timesheets.tiles.suppliers'), sar(suppliers), tokens.navy800],
+                ...(sheet.unknownSource.length > 0 ? [[t('timesheets.tiles.unknown'), String(sheet.unknownSource.length), tokens.warning]] : []),
+              ].map(([label, value, color], n) => (
+                <Stack key={label} direction="row" sx={{ justifyContent: 'space-between', gap: 2, py: 0.85, borderBottom: `1px solid ${tokens.gray100}` }}>
+                  <Typography sx={{ fontSize: 13, color: tokens.gray500 }}>{label}</Typography>
+                  <Typography sx={{ fontSize: n === 2 || n === 3 ? 15 : 13.5, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>{value}</Typography>
+                </Stack>
+              ))}
+            </Box>
+            </Box>
+            {sheet.invoiceDoc && (
+              <Box sx={{ px: 2.25, pb: 2 }}>
+                <Button fullWidth variant="outlined" startIcon={<ReceiptLongOutlinedIcon />} onClick={() => navigate(`/billing/invoices/${sheet.invoiceDoc!.id}`)} sx={{ justifyContent: 'space-between' }}>
+                  {t('invoices.openInvoice', { number: sheet.invoiceDoc.invoiceNo ?? t('invoices.noNumber') })}
+                  <InvoiceStatusBadge status={sheet.invoiceDoc.status} />
+                </Button>
+              </Box>
             )}
-          </>
-        )}
-        {tab === 'unknown' && (
-          <>
-            <Alert severity="warning" icon={<WarningAmberOutlinedIcon />} sx={{ mb: 1.5 }}>
-              {t('timesheets.unknownHint')}
-            </Alert>
-            <PayTable rows={sheet.unknownSource} />
-          </>
-        )}
-        {tab === 'approval' && sheet.approval && <ApprovalLog status={sheet.approval} detail={approval.detail} />}
+          </Box>
+
+          {/* The trail of adjustments. */}
+          <Box sx={{ ...card, p: 2.25, maxHeight: 330, overflowY: 'auto' }}>
+            <SectionTitle icon={<EditNoteOutlinedIcon />} title={t('timesheets.trail.title', { count: sheet.adjustments.length })} />
+            {sheet.adjustments.length === 0 && <Typography sx={{ py: 2, textAlign: 'center', fontSize: 13, color: tokens.gray500 }}>{t('timesheets.trail.none')}</Typography>}
+            {[...sheet.adjustments]
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .map((a) => (
+                <Stack key={a.id} direction="row" sx={{ gap: 1.25, py: 1, '&:not(:last-of-type)': { borderBottom: `1px solid ${tokens.gray100}` } }}>
+                  <Box sx={{ flex: '0 0 4px', borderRadius: 4, bgcolor: adjustmentColor[a.type] }} />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 800, color: adjustmentColor[a.type] }}>
+                      {t(`timesheets.adjustments.${a.type}`)}: {sar(a.value)} {t(`timesheets.units.${a.type}`)}
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: tokens.gray600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <bdi>{nameOf(a.workerId)}</bdi> · {a.reason}
+                    </Typography>
+                    <Typography sx={{ fontSize: 11, color: tokens.gray500 }}>
+                      <bdi>{date(a.createdAt)}</bdi> · {a.createdByName}
+                    </Typography>
+                  </Box>
+                </Stack>
+              ))}
+          </Box>
+      </Box>
+
+      <Box>
+        <Stack spacing={`${tokens.gap}px`} sx={{ minWidth: 0 }}>
+          {/* The attendance register. */}
+          <Box sx={{ ...card, p: 2.25, minWidth: 0 }}>
+            <SectionTitle
+              icon={<EventAvailableOutlinedIcon />}
+              title={t('timesheets.register.title', { count: sheet.lines.length })}
+              extra={
+                <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap', fontSize: 11.5 }}>
+                  <Legend color="#2fae73" label={t('timesheets.register.present')} />
+                  <Legend color="#e03434" label={t('timesheets.register.absent')} />
+                  <Legend color={tokens.gray200} label={t('timesheets.register.outside')} />
+                </Stack>
+              }
+            />
+            <WorkersTab sheet={sheet} onAdjust={setAdjusting} />
+          </Box>
+
+          {/* What the timesheet makes, in detail. */}
+          <Box sx={{ ...card, p: 2.25 }}>
+            <PillTabs
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'invoice', label: t('timesheets.tabs.invoice') },
+                { value: 'payroll', label: t('timesheets.tabs.payroll', { count: sheet.payroll.length }) },
+                { value: 'suppliers', label: t('timesheets.tabs.suppliers', { count: sheet.suppliers.length }) },
+                ...(sheet.unknownSource.length > 0 ? [{ value: 'unknown' as const, label: t('timesheets.tabs.unknown', { count: sheet.unknownSource.length }) }] : []),
+              ]}
+            />
+            {tab === 'invoice' && <InvoiceTab sheet={sheet} />}
+            {tab === 'payroll' && (
+              <>
+                <Hint text={t('timesheets.payrollHint')} />
+                <PayTable rows={sheet.payroll} />
+              </>
+            )}
+            {tab === 'suppliers' && (
+              <>
+                <Hint text={t('timesheets.suppliersHint')} />
+                {sheet.suppliers.length === 0 ? (
+                  <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('timesheets.noSuppliers')}</Typography>
+                ) : (
+                  <Stack spacing={2}>
+                    {sheet.suppliers.map((s) => (
+                      <Box key={s.supplierName} sx={{ border: `1px solid ${tokens.navy50}`, borderRadius: `${tokens.radius}px`, p: 1.5 }}>
+                        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mb: 1 }}>
+                          <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800, flex: 1 }}>{s.supplierName}</Typography>
+                          <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{t('timesheets.supplierSummary', { workers: s.workers, days: sar(s.workDays), net: sar(s.net) })}</Typography>
+                        </Stack>
+                        <PayTable rows={s.items} />
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+              </>
+            )}
+            {tab === 'unknown' && (
+              <>
+                <Alert severity="warning" icon={<WarningAmberOutlinedIcon />} sx={{ mb: 1.5 }}>
+                  {t('timesheets.unknownHint')}
+                </Alert>
+                <PayTable rows={sheet.unknownSource} />
+              </>
+            )}
+          </Box>
+
+          {sheet.approval && (
+            <Box sx={{ ...card, p: 2.25 }}>
+              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
+              <ApprovalFeedLog status={sheet.approval} detail={approval.detail} />
+            </Box>
+          )}
+        </Stack>
+
       </Box>
 
       {uploading && (
@@ -311,6 +448,15 @@ export function TimesheetPage() {
   );
 }
 
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5, color: tokens.gray600 }}>
+      <Box sx={{ width: 12, height: 10, borderRadius: '2px', bgcolor: color }} />
+      {label}
+    </Stack>
+  );
+}
+
 function Hint({ text }: { text: string }) {
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1.5, fontSize: 12.5, color: tokens.gray500 }}>
@@ -324,19 +470,31 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { ar, date } = useCommercialFormat();
+  const look = recordTones.timesheet;
   const adjustments = (workerId: string) => sheet.adjustments.filter((a) => a.workerId === workerId).length;
+  const sum = (pick: (l: TimesheetLine) => number) => sheet.lines.reduce((s, l) => s + pick(l), 0);
   return (
-    <TableContainer>
-      <Table size="small">
-        <TableHead>
+    <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px` }}>
+      <Table
+        size="small"
+        sx={{
+          '& .MuiTableCell-root': { px: 1.25 },
+          '& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) .MuiTableCell-body': { bgcolor: '#fafcfb' },
+        }}
+      >
+        <TableHead
+          sx={{
+            '& .MuiTableRow-root': { background: look.dark },
+            '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: 'transparent', color: '#fff', borderBottom: 0, borderRadius: 0 },
+          }}
+        >
           <TableRow>
             <TableCell>{t('workforce.col.name')}</TableCell>
-            <TableCell>{t('timesheets.col.source')}</TableCell>
-            <TableCell>{t('timesheets.col.period')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.days')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.price')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.absence')}</TableCell>
+            <TableCell>{t('timesheets.register.month')}</TableCell>
+            <TableCell align="center">{t('timesheets.register.present')}</TableCell>
+            <TableCell align="center">{t('timesheets.register.absent')}</TableCell>
             <TableCell align="center">{t('timesheets.col.overtime')}</TableCell>
+            <TableCell align="center">{t('timesheets.col.price')}</TableCell>
             <TableCell align="center">{t('timesheets.col.invoice')}</TableCell>
             <TableCell align="center">{t('timesheets.col.net')}</TableCell>
             {sheet.canEdit && <TableCell />}
@@ -345,33 +503,50 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
         <TableBody>
           {sheet.lines.map((l) => (
             <TableRow key={l.id} hover>
-              <TableCell sx={{ minWidth: 180, cursor: 'pointer' }} onClick={() => navigate(`/workforce/workers/${l.workerId}?tab=periods`)}>
-                <Typography dir="ltr" sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800, textAlign: 'start' }}>
-                  {l.name}
-                </Typography>
-                <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
-                  <span dir="ltr">{l.workerNo}</span> · {(ar ? l.professionAr : l.professionEn) ?? '—'}
-                </Typography>
+              <TableCell sx={{ minWidth: 190, cursor: 'pointer' }} onClick={() => navigate(`/workforce/workers/${l.workerId}?tab=periods`)}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800 }}>{l.name}</Typography>
+                <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                  <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+                    <span dir="ltr">{l.workerNo}</span> · {(ar ? l.professionAr : l.professionEn) ?? '—'}
+                  </Typography>
+                  <SourceBadge source={l.source} supplier={l.supplierName} />
+                </Stack>
               </TableCell>
-              <TableCell>
-                <SourceBadge source={l.source} supplier={l.supplierName} />
-              </TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontSize: 12.5 }}>
-                {date(l.lineFrom)} – {date(l.lineTo)}
-                <Typography dir="ltr" sx={{ fontSize: 11, color: tokens.gray500, textAlign: 'start' }}>
-                  {l.sourceNo}
+              <TableCell sx={{ minWidth: 170 }}>
+                <MonthBar from={sheet.from} to={sheet.to} lineFrom={l.lineFrom} lineTo={l.lineTo} absence={l.absenceDays} />
+                <Typography sx={{ fontSize: 11, color: tokens.gray500, mt: 0.4, whiteSpace: 'nowrap' }}>
+                  {date(l.lineFrom)} – {date(l.lineTo)} · <span dir="ltr">{l.sourceNo}</span>
                   {l.fromOldSystem && ` · ${t('workforce.periods.oldSystem')}`}
                 </Typography>
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 700 }}>
-                {sar(l.workDays)}
+              <TableCell align="center">
+                <Typography sx={{ fontSize: 15, fontWeight: 800, color: look.main }}>{sar(l.workDays - l.absenceDays)}</Typography>
+                <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('timesheets.register.ofDays', { days: sar(l.workDays) })}</Typography>
+              </TableCell>
+              <TableCell align="center">
+                {l.absenceDays > 0 ? (
+                  <>
+                    <Typography sx={{ fontSize: 15, fontWeight: 800, color: '#e03434' }}>{sar(l.absenceDays)}</Typography>
+                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>−{sar(l.absenceAmount)}</Typography>
+                  </>
+                ) : (
+                  <Typography sx={{ color: tokens.gray300 }}>—</Typography>
+                )}
+              </TableCell>
+              <TableCell align="center">
+                {l.overtimeHours > 0 ? (
+                  <>
+                    <Typography sx={{ fontSize: 13.5, fontWeight: 800, color: '#1f6fd1' }}>{t('timesheets.register.hours', { hours: sar(l.overtimeHours) })}</Typography>
+                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>+{sar(l.overtime)}</Typography>
+                  </>
+                ) : (
+                  <Typography sx={{ color: tokens.gray300 }}>—</Typography>
+                )}
               </TableCell>
               <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                 {l.totalPrice > 0 ? sar(l.totalPrice) : <Typography sx={{ color: tokens.danger, fontSize: 12.5, fontWeight: 700 }}>{t('timesheets.noPriceShort')}</Typography>}
-                <Typography sx={{ fontSize: 11, color: tokens.gray500 }}>{t('operations.delivery.breakdown', { salary: sar(l.billSalary), fee: sar(Math.max(0, l.totalPrice - l.billSalary)) })}</Typography>
+                <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('operations.delivery.breakdown', { salary: sar(l.billSalary), fee: sar(Math.max(0, l.totalPrice - l.billSalary)) })}</Typography>
               </TableCell>
-              <TableCell align="center">{l.absenceDays > 0 ? `${sar(l.absenceDays)} (−${sar(l.absenceAmount)})` : '—'}</TableCell>
-              <TableCell align="center">{l.overtimeHours > 0 ? `${sar(l.overtimeHours)} (${sar(l.overtime)})` : '—'}</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800, color: tokens.navy800 }}>
                 {sar(l.invoiceAmount)}
               </TableCell>
@@ -379,10 +554,10 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
               {sheet.canEdit && (
                 <TableCell>
                   <Tooltip title={t('timesheets.adjust')}>
-                    <IconButton size="small" onClick={() => onAdjust(l)}>
+                    <IconButton size="small" onClick={() => onAdjust(l)} sx={{ color: look.main }}>
                       <EditNoteOutlinedIcon fontSize="small" />
                       {adjustments(l.workerId) > 0 && (
-                        <Box component="span" sx={{ fontSize: 10.5, fontWeight: 800, color: tokens.navy700, marginInlineStart: '2px' }}>
+                        <Box component="span" sx={{ fontSize: 10.5, fontWeight: 800, marginInlineStart: '2px' }}>
                           {adjustments(l.workerId)}
                         </Box>
                       )}
@@ -394,12 +569,26 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
           ))}
           {sheet.lines.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10} align="center" sx={{ py: 5, color: tokens.gray500 }}>
+              <TableCell colSpan={9} align="center" sx={{ py: 5, color: tokens.gray500 }}>
                 {t('timesheets.noLines')}
               </TableCell>
             </TableRow>
           )}
         </TableBody>
+        {sheet.lines.length > 0 && (
+          <TableFooter sx={{ '& .MuiTableCell-footer': { fontSize: 13, fontWeight: 800, color: tokens.navy800, borderTop: `2px solid ${look.main}`, bgcolor: '#f6faf8' } }}>
+            <TableRow>
+              <TableCell colSpan={2}>{t('timesheets.register.total', { count: sheet.lines.length })}</TableCell>
+              <TableCell align="center" sx={{ color: `${look.main} !important` }}>{sar(sum((l) => l.workDays - l.absenceDays))}</TableCell>
+              <TableCell align="center" sx={{ color: '#e03434 !important' }}>{sar(sum((l) => l.absenceDays))}</TableCell>
+              <TableCell align="center" sx={{ color: '#1f6fd1 !important' }}>{sar(sum((l) => l.overtimeHours))}</TableCell>
+              <TableCell />
+              <TableCell align="center">{sar(sum((l) => l.invoiceAmount))}</TableCell>
+              <TableCell align="center">{sar(sum((l) => l.workerNet))}</TableCell>
+              {sheet.canEdit && <TableCell />}
+            </TableRow>
+          </TableFooter>
+        )}
       </Table>
     </TableContainer>
   );
