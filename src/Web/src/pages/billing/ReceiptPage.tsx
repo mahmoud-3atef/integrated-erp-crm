@@ -13,6 +13,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -20,13 +21,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { receivablesApi, type ReceiptDetail } from '../../api/billing';
+import { receivablesApi, type ProjectOpen, type ReceiptDetail } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { AttachmentsDialog } from '../../components/AttachmentsDialog';
@@ -56,6 +58,7 @@ export function ReceiptPage() {
   const [r, setR] = useState<ReceiptDetail | null>(null);
   const [tab, setTab] = useState<'allocations' | 'approval'>('allocations');
   const [files, setFiles] = useState(false);
+  const [allocating, setAllocating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +151,7 @@ export function ReceiptPage() {
             </Button>
           )}
           {r.canAllocate && (
-            <Button variant="outlined" startIcon={<AutoFixHighOutlinedIcon />} disabled={busy} onClick={() => void run(() => receivablesApi.allocate(r.id))}>
+            <Button variant="contained" startIcon={<AutoFixHighOutlinedIcon />} disabled={busy} onClick={() => setAllocating(true)}>
               {t('receipts.allocateRemainder')}
             </Button>
           )}
@@ -237,6 +240,16 @@ export function ReceiptPage() {
         {tab === 'approval' && r.approval && <ApprovalLog status={r.approval} detail={approval.detail} />}
       </Box>
 
+      {allocating && (
+        <AllocateDialog
+          receipt={r}
+          onClose={() => setAllocating(false)}
+          onDone={() => {
+            setAllocating(false);
+            void reload();
+          }}
+        />
+      )}
       {files && (
         <AttachmentsDialog title={`${t('receipts.voucher')} ${r.receiptNo ?? ''}`.trim()} ownerType="billing.receipt" ownerId={r.id} canManage={r.canEdit || r.status === 'Approved'} onClose={() => setFiles(false)} />
       )}
@@ -273,5 +286,133 @@ export function ReceiptPage() {
         </Dialog>
       )}
     </Box>
+  );
+}
+
+/** An approved receipt's credit put against the project's open invoices: by hand, or filled oldest due first. */
+function AllocateDialog({ receipt, onClose, onDone }: { receipt: ReceiptDetail; onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation();
+  const { date } = useCommercialFormat();
+  const [open, setOpen] = useState<ProjectOpen | null>(null);
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const key = (kind: string, id: string) => `${kind}:${id}`;
+
+  useEffect(() => {
+    receivablesApi
+      .open(receipt.projectId)
+      .then(setOpen)
+      .catch((failure: unknown) => setError(errorKey(failure)));
+  }, [receipt.projectId]);
+
+  const items = (open?.items ?? []).filter((i) => i.available > 0);
+  const total = Object.values(amounts).reduce((s, v) => s + (Number(v) || 0), 0);
+  const over = total > receipt.unallocated + 0.001 || items.some((i) => (Number(amounts[key(i.kind, i.id)]) || 0) > i.available + 0.001);
+
+  const fill = () => {
+    let left = receipt.unallocated;
+    const next: Record<string, string> = {};
+    for (const i of [...items].sort((a, b) => a.dueDate.localeCompare(b.dueDate))) {
+      if (left <= 0) break;
+      const take = Math.min(left, i.available);
+      next[key(i.kind, i.id)] = String(Math.round(take * 100) / 100);
+      left = Math.round((left - take) * 100) / 100;
+    }
+
+    setAmounts(next);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await receivablesApi.allocate(
+        receipt.id,
+        items.map((i) => ({ kind: i.kind, targetId: i.id, amount: Number(amounts[key(i.kind, i.id)]) || 0 })).filter((a) => a.amount > 0),
+      );
+      onDone();
+    } catch (failure) {
+      setError(errorKey(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>{t('receipts.allocateTitle', { amount: sar(receipt.unallocated) })}</DialogTitle>
+      <DialogContent dividers>
+        <ErrorMessage messageKey={error} />
+        {!open && !error && <LinearProgress sx={{ borderRadius: 2 }} />}
+        {open && items.length === 0 && <Alert severity="info">{t('receipts.nothingToAllocate')}</Alert>}
+        {items.length > 0 && (
+          <>
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              <Typography sx={{ flex: 1, fontSize: 12.5, color: tokens.gray500 }}>{t('receipts.allocateHint')}</Typography>
+              <Button size="small" variant="outlined" startIcon={<AutoFixHighOutlinedIcon />} onClick={fill}>
+                {t('receipts.autoAllocate')}
+              </Button>
+            </Stack>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('receipts.col.item')}</TableCell>
+                    <TableCell>{t('receipts.col.due')}</TableCell>
+                    <TableCell align="center">{t('receipts.col.outstanding')}</TableCell>
+                    <TableCell align="center" sx={{ width: 170 }}>
+                      {t('receipts.col.allocate')}
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {items.map((i) => {
+                    const k = key(i.kind, i.id);
+                    return (
+                      <TableRow key={k}>
+                        <TableCell>
+                          <Typography dir="ltr" sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800, textAlign: 'start' }}>
+                            {i.number}
+                          </Typography>
+                          <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{t(`receipts.kind.${i.kind}`)}</Typography>
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{date(i.dueDate)}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700 }}>
+                          {sar(i.available)}
+                        </TableCell>
+                        <TableCell align="center">
+                          <TextField
+                            size="small"
+                            value={amounts[k] ?? ''}
+                            error={(Number(amounts[k]) || 0) > i.available + 0.001}
+                            onChange={(e) => setAmounts({ ...amounts, [k]: e.target.value.replace(/[^\d.]/g, '') })}
+                            slotProps={{ htmlInput: { dir: 'ltr', inputMode: 'decimal', style: { textAlign: 'center' } } }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Typography sx={{ mt: 1.5, fontSize: 13.5, textAlign: 'end' }}>
+              {t('receipts.allocated')}: <b>{sar(total)}</b> · {t('receipts.toCredit')}: <b>{sar(Math.max(0, receipt.unallocated - total))}</b>
+            </Typography>
+            {over && (
+              <Alert severity="error" sx={{ mt: 1 }}>
+                {t('errors.validation_receipt_over_item')}
+              </Alert>
+            )}
+          </>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        <Button variant="contained" disabled={busy || total <= 0 || over} onClick={() => void save()}>
+          {t('receipts.allocateSave')}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

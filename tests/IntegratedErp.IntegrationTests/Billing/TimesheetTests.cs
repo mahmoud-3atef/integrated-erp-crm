@@ -308,7 +308,17 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal((500m, invoiceTotal - 115 - 500), (invoice.Paid, invoice.Outstanding));
             Assert.Equal(500m, (await queries.OpenAsync(projectId, null, default))!.Credit);
 
-            // The credit allocated later, oldest due first.
+            // A draft edited: its allocation replaced, then deleted.
+            var draft = await receipts.CreateAsync(new ReceiptInput(projectId, new DateOnly(2026, 10, 17), 100, "Cash", null, null, null, [new AllocationDto("Invoice", invoiceId, 50)]), default);
+            Assert.True(draft.IsSuccess, draft.IsFailure ? draft.Error.Code : null);
+            Assert.True((await receipts.UpdateAsync(draft.Value, new ReceiptInput(projectId, new DateOnly(2026, 10, 17), 100, "Cash", null, null, null, [new AllocationDto("Invoice", invoiceId, 80)]), default)).IsSuccess);
+            Assert.Equal([80m], (await queries.ReceiptAsync(draft.Value, default))!.Allocations.Select(x => x.Amount));
+            Assert.True((await receipts.DeleteAsync(draft.Value, default)).IsSuccess);
+
+            // The credit allocated later: by hand (part of it), then the rest oldest due first.
+            Assert.Equal("validation.receipt_over_amount", (await receipts.AllocateAsync(receiptId, [new AllocationDto("Invoice", invoiceId, 501)], default)).Error.Code);
+            Assert.True((await receipts.AllocateAsync(receiptId, [new AllocationDto("Invoice", invoiceId, 200)], default)).IsSuccess);
+            Assert.Equal(300m, (await queries.ReceiptAsync(receiptId, default))!.Unallocated);
             Assert.True((await receipts.AllocateAsync(receiptId, null, default)).IsSuccess);
             Assert.Equal(0m, (await queries.ReceiptAsync(receiptId, default))!.Unallocated);
 

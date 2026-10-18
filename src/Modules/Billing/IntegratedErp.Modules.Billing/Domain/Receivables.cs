@@ -416,6 +416,7 @@ public static class ReceiptErrors
     public static readonly Error Allocation = Error.Validation("receipt_allocation", "Check the allocations: each item once, amounts of zero or more.");
     public static readonly Error OverAmount = Error.Validation("receipt_over_amount", "The allocations exceed the receipt's amount.");
     public static readonly Error OverItem = Error.Validation("receipt_over_item", "An allocation exceeds what is left on its invoice.");
+    public static readonly Error NothingOpen = Error.Validation("receipt_nothing_open", "The project has no open invoice to allocate the credit to.");
     public static readonly Error StatusNotSettable = Error.Validation("receipt_status_not_settable", "A process can only move the receipt between its reviews.");
     public static readonly Error BankAccount = Error.Validation("bank_account", "Enter the bank and the account number.");
     public static readonly Error BankAccountNotFound = Error.NotFound("bank_account", "Bank account not found.");

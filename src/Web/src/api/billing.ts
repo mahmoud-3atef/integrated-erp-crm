@@ -505,7 +505,8 @@ export const receivablesApi = {
   update: (id: string, input: ReceiptInput) => request<void>('PUT', `${base}/receipts/${id}`, input),
   remove: (id: string) => request<void>('DELETE', `${base}/receipts/${id}`),
   submit: (id: string) => request<void>('POST', `${base}/receipts/${id}/submit`),
-  allocate: (id: string) => request<void>('POST', `${base}/receipts/${id}/allocate`, { allocations: null }),
+  allocate: (id: string, allocations: { kind: ReceivableKind; targetId: string; amount: number }[] | null) =>
+    request<void>('POST', `${base}/receipts/${id}/allocate`, { allocations }),
   projects: () => request<ReceiptProject[]>('GET', `${base}/receipt-projects`),
   open: (projectId: string, exceptReceipt?: string) => request<ProjectOpen>('GET', `${base}/projects/${projectId}/open-items?${qs({ exceptReceipt })}`),
   aging: (asOf?: string) => request<Aging>('GET', `${base}/aging?${qs({ asOf })}`),

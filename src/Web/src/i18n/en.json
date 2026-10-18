@@ -388,7 +388,8 @@
     "validation_receipt_over_item": "An allocation exceeds what is left on its invoice.",
     "validation_receipt_status_not_settable": "A process can only move the receipt between its reviews.",
     "validation_bank_account": "Enter the bank and the account number.",
-    "not_found_bank_account": "Bank account not found."
+    "not_found_bank_account": "Bank account not found.",
+    "validation_receipt_nothing_open": "The project has no open invoice now, so the amount stays its credit. If it has invoices in the old system, run \"Sync changes\" so their balances show here, then try again. This system's invoices show once issued."
   },
   "menu": {
     "label": "Main menu",
@@ -2229,7 +2230,11 @@
       "total": "Its amount",
       "outstanding": "Left on it",
       "allocate": "Allocated"
-    }
+    },
+    "allocateTitle": "Allocate the receipt's credit ({{amount}}) to invoices",
+    "allocateHint": "Enter the amount for each invoice, or press \"Allocate automatically\" for the oldest due first. What is not allocated stays the project's credit.",
+    "allocateSave": "Save the allocation",
+    "nothingToAllocate": "The project has no open invoice now, so the amount stays its credit. If it has invoices in the old system, run \"Sync changes\" so their balances show here, then try again. This system's invoices show once issued."
   },
   "aging": {
     "title": "Debt aging",

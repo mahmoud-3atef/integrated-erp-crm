@@ -147,6 +147,12 @@ internal sealed class ReceiptService(
             return Result.Failure(ReceiptErrors.Allocation);
         }
 
+        // Nothing to put the credit against: say so instead of doing nothing.
+        if (!parsed.Any(a => a.Amount > 0))
+        {
+            return Result.Failure(open.Values.Any(v => v > 0) ? ReceiptErrors.Allocation : ReceiptErrors.NothingOpen);
+        }
+
         var added = receipt.AllocateRemainder(parsed, open);
         if (added.IsFailure)
         {
