@@ -1728,7 +1728,13 @@
         "Transferred": "Transferred",
         "Canceled": "Canceled"
       },
-      "orderStatus": "Transfer order status"
+      "orderStatus": "Transfer order status",
+      "kind": "Transfer order",
+      "journey": "The move",
+      "startedOn": "Started there",
+      "price": "Price",
+      "oldPrice": "Current price",
+      "newMonthlyTotal": "New monthly total"
     }
   },
   "housing": {

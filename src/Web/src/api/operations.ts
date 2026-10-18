@@ -336,6 +336,8 @@ export interface TransferLine {
   totalPrice: number;
   isSpecialPrice: boolean;
   specialReason: string | null;
+  /** What the worker cost on the project they leave (null when that work came from the old system). */
+  fromTotalPrice: number | null;
 }
 
 export interface TransferDetail {

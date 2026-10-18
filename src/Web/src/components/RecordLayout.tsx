@@ -13,8 +13,8 @@ export const recordTones: Record<RecordTone, { band: string; dark: string; main:
   delivery: { band: 'linear-gradient(120deg, #0b3954 0%, #0d6e8c 60%, #1aa39a 100%)', dark: 'linear-gradient(135deg, #0f4c6e, #13708f)', main: '#0d6e8c', soft: '#e3f3f9' },
   // Amber: a worker coming back to the housing.
   return: { band: 'linear-gradient(120deg, #5c2a06 0%, #9a4a0c 55%, #d08a1e 100%)', dark: 'linear-gradient(135deg, #7a3a0a, #b0640f)', main: '#b0640f', soft: '#fdf1e1' },
-  // Violet: a worker moving between projects.
-  transfer: { band: 'linear-gradient(120deg, #2a1f63 0%, #4b37a8 55%, #7b61dd 100%)', dark: 'linear-gradient(135deg, #362a80, #5a45c0)', main: '#5a45c0', soft: '#efebfc' },
+  // Wine: a worker moving between projects.
+  transfer: { band: 'linear-gradient(120deg, #4a0f2a 0%, #8a1d48 55%, #c4466f 100%)', dark: 'linear-gradient(135deg, #6b1538, #a32a5c)', main: '#a32a5c', soft: '#fbeaf1' },
   // Blue: a change in a worker's state.
   movement: { band: 'linear-gradient(120deg, #0f2f5c 0%, #1f5fbf 55%, #3b8be6 100%)', dark: 'linear-gradient(135deg, #163f7a, #2a6fd0)', main: '#2a6fd0', soft: '#e8f0fc' },
   // Green: the month's attendance.

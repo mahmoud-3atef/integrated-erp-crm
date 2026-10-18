@@ -3,6 +3,7 @@ using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.Modules.Operations.Infrastructure;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workflow.Contracts;
+using IntegratedErp.Modules.Workforce.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Operations.Application;
@@ -53,7 +54,8 @@ public sealed record TransferLineDto(
     bool TransportBillable,
     decimal TotalPrice,
     bool IsSpecialPrice,
-    string? SpecialReason);
+    string? SpecialReason,
+    decimal? FromTotalPrice = null);
 
 public sealed record TransferDetailDto(
     TransferRowDto Summary,
@@ -75,7 +77,7 @@ public sealed record TransferDetailDto(
     bool CanSubmit,
     bool CanCancel);
 
-internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceData reference, IApprovalService approvals, IPermissionService permissions)
+internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceData reference, IApprovalService approvals, IPermissionService permissions, IPeriodLedger ledger)
 {
     public async Task<TransferListDto> ListAsync(DeliveryListFilter filter, CancellationToken cancellationToken)
     {
@@ -129,6 +131,18 @@ internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceDat
         var row = (await RowsAsync(id, cancellationToken).ConfigureAwait(false)).Single();
         var professions = (await reference.ListAllAsync(ReferenceListCodes.Professions, cancellationToken).ConfigureAwait(false)).ToDictionary(i => i.Code, StringComparer.Ordinal);
         var nationalities = (await reference.ListAllAsync(ReferenceListCodes.Nationalities, cancellationToken).ConfigureAwait(false)).ToDictionary(i => i.Code, StringComparer.Ordinal);
+        // What each worker cost on the project they leave: the work period there that the transfer closes (or will).
+        var fromPrices = new Dictionary<Guid, decimal?>();
+        foreach (var l in order.Lines)
+        {
+            var periods = await ledger.PeriodsAsync(l.WorkerId, cancellationToken).ConfigureAwait(false);
+            fromPrices[l.Id] = periods
+                .Where(p => p.Kind == "Work" && p.ProjectId == l.FromProjectId && p.StartsOn < order.TransferOn)
+                .OrderByDescending(p => p.StartsOn)
+                .Select(p => p.TotalPrice)
+                .FirstOrDefault();
+        }
+
         var lines = order.Lines.OrderBy(l => l.LineNo).Select(l =>
             {
                 var profession = l.ProfessionCode is { } pc ? professions.GetValueOrDefault(pc) : null;
@@ -137,7 +151,7 @@ internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceDat
                     l.Id, l.LineNo, l.WorkerId, l.WorkerNo, l.Name, l.ProfessionCode, profession?.NameAr, profession?.NameEn,
                     l.NationalityCode, nationality?.NameAr, nationality?.NameEn, l.IqamaNo, l.FromProjectId, l.FromProjectName, l.FromStartedOn,
                     l.PackageId, l.PackageNo, l.Salary, l.ServiceFee, l.Housing, l.HousingBillable, l.Transport, l.TransportBillable, l.TotalPrice,
-                    l.IsSpecialPrice, l.SpecialReason);
+                    l.IsSpecialPrice, l.SpecialReason, fromPrices.GetValueOrDefault(l.Id));
             })
             .ToList();
         var approval = await approvals.StatusAsync(TransferOrderAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);

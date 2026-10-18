@@ -1728,7 +1728,13 @@
         "Transferred": "تم النقل",
         "Canceled": "ملغى"
       },
-      "orderStatus": "حالة أمر النقل"
+      "orderStatus": "حالة أمر النقل",
+      "kind": "أمر نقل",
+      "journey": "مسار النقل",
+      "startedOn": "مباشرته عليه",
+      "price": "السعر",
+      "oldPrice": "السعر الحالي",
+      "newMonthlyTotal": "إجمالي السعر الشهري الجديد"
     }
   },
   "housing": {

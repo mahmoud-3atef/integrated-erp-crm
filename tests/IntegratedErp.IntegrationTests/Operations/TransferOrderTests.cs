@@ -78,6 +78,7 @@ public sealed class TransferOrderTests(TestDatabase database)
             var detail = (await scope.ServiceProvider.GetRequiredService<TransferOrderQueries>().GetAsync(orderId, default))!;
             var line = detail.Lines.Single();
             Assert.Equal(("مشروع الرياض", new DateOnly(2026, 1, 1), "PKG-00001", 3000m, false), (line.FromProjectName, line.FromStartedOn, line.PackageNo, line.TotalPrice, line.IsSpecialPrice));
+            Assert.Null(line.FromTotalPrice); // The work on the old project came from the old system: no price recorded here.
             Assert.Equal(("UnderPreparation", "تأكيد منشئ أمر النقل"), (detail.Summary.Status, detail.Approval!.CurrentStepAr));
 
             // 1. The creator confirms.
