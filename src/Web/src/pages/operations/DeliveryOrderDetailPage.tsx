@@ -1,5 +1,4 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
@@ -7,7 +6,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import {
@@ -35,7 +34,7 @@ import { errorKey } from '../../api/auth';
 import { operationsApi, type DeliveryDetail } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { RecordHero, SummaryCard, SummaryCreator, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryTotal } from '../../components/RecordLayout';
+import { RecordHero, SummaryCard, SummaryCreator, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
 import { Badge, PillTabs } from '../../components/ui';
 import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
@@ -122,8 +121,6 @@ export function DeliveryOrderDetailPage() {
             {o.source === 'Crm' && <Badge tone="neutral">{t('operations.delivery.fromCrm')}</Badge>}
           </>
         }
-        title={o.projectName}
-        subtitle={[o.customerName, o.projectManager && `${t('commercial.col.manager')}: ${o.projectManager}`].filter(Boolean).join(' · ')}
         actions={
           <>
             {order.canEdit && (
@@ -183,18 +180,20 @@ export function DeliveryOrderDetailPage() {
         {/* The order's summary, read top to bottom: who made it, the amount, then each group in its color. */}
         <SummaryCard>
           <SummaryCreator label={t('operations.delivery.createdBy')} name={o.createdByName} at={date(o.createdAt)} />
-          <SummaryTotal
-            label={t('operations.delivery.monthlyTotal')}
-            amount={sar(o.totalPrice)}
-            unit={t('operations.delivery.sarUnit')}
-            chips={[
-              { label: t('operations.delivery.workersCount', { count: o.workers }) },
-              ...(o.specialPrices > 0 ? [{ label: t('operations.delivery.specialCount', { count: o.specialPrices }), tone: 'gold' as const }] : []),
-            ]}
+          <SummaryBand
+            label={t('commercial.col.project')}
+            value={o.projectName}
+            size={21}
+            chips={[...(o.customerName ? [{ label: o.customerName }] : []), ...(o.projectManager ? [{ label: `${t('commercial.col.manager')}: ${o.projectManager}` }] : [])]}
           />
-          <SummaryGroup title={t('commercial.col.project')} color={tokens.teal}>
-            <SummaryFact icon={<ApartmentOutlinedIcon />} color={tokens.teal} label={t('commercial.col.project')} value={o.projectName} sub={o.customerName} />
-            <SummaryFact icon={<ManageAccountsOutlinedIcon />} color={tokens.teal} label={t('commercial.col.manager')} value={o.projectManager ?? '—'} />
+          <SummaryGroup title={t('operations.delivery.value')} color={tokens.success}>
+            <SummaryFact
+              icon={<PaymentsOutlinedIcon />}
+              color={tokens.success}
+              label={t('operations.delivery.monthlyTotal')}
+              value={`${sar(o.totalPrice)} ${t('operations.delivery.sarUnit')}`}
+              sub={[t('operations.delivery.workersCount', { count: o.workers }), ...(o.specialPrices > 0 ? [t('operations.delivery.specialCount', { count: o.specialPrices })] : [])].join(' · ')}
+            />
           </SummaryGroup>
           <SummaryGroup title={t('operations.delivery.dates')} color={tokens.info}>
             <SummaryDates

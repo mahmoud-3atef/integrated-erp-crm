@@ -5,7 +5,7 @@ import { tokens } from '../app/theme';
 // The record page's frame: a slim colored band with the record's number and whom it is for, and a side summary read
 // top to bottom — who made it, the amount, then groups each with its own color.
 
-/** The band above a record: its icon, kind and number (large), its state, whom it is for, and its actions. */
+/** The band above a record: its icon, kind and number (large), its state, whom it is for (optional), and its actions. */
 export function RecordHero({
   icon,
   kind,
@@ -19,7 +19,7 @@ export function RecordHero({
   kind: string;
   number: string;
   status?: ReactNode;
-  title: ReactNode;
+  title?: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
@@ -42,21 +42,27 @@ export function RecordHero({
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1.75, flex: 1, minWidth: 0 }}>
           <Box sx={{ flex: '0 0 auto', width: 50, height: 50, borderRadius: '15px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,.16)', '& svg': { fontSize: 27 } }}>{icon}</Box>
           {/* The number, set apart: what people quote. */}
-          <Box sx={{ flex: '0 0 auto', paddingInlineEnd: 2.5, borderInlineEnd: '1px solid rgba(255,255,255,.22)' }}>
+          <Box sx={{ flex: '0 0 auto', ...(title ? { paddingInlineEnd: 2.5, borderInlineEnd: '1px solid rgba(255,255,255,.22)' } : {}) }}>
             <Typography sx={{ fontSize: 12, opacity: 0.8 }}>{kind}</Typography>
             <Typography dir="ltr" sx={{ fontSize: 23, fontWeight: 800, letterSpacing: '.5px', lineHeight: 1.2, fontVariantNumeric: 'tabular-nums', textAlign: 'start' }}>
               {number}
             </Typography>
           </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              <Typography component="h1" sx={{ fontSize: 17, fontWeight: 800, lineHeight: 1.35 }}>
-                {title}
-              </Typography>
+          {title ? (
+            <Box sx={{ minWidth: 0 }}>
+              <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography component="h1" sx={{ fontSize: 17, fontWeight: 800, lineHeight: 1.35 }}>
+                  {title}
+                </Typography>
+                {status}
+              </Stack>
+              {subtitle && <Typography sx={{ fontSize: 12.5, opacity: 0.85 }}>{subtitle}</Typography>}
+            </Box>
+          ) : (
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap', alignSelf: 'flex-end', pb: 0.5 }}>
               {status}
             </Stack>
-            {subtitle && <Typography sx={{ fontSize: 12.5, opacity: 0.85 }}>{subtitle}</Typography>}
-          </Box>
+          )}
         </Stack>
         {actions && (
           <Stack
@@ -124,13 +130,13 @@ export function SummaryCreator({ label, name, at }: { label: string; name: strin
   );
 }
 
-/** The amount, large on a dark band, with short chips under it. */
-export function SummaryTotal({ label, amount, unit, chips }: { label: string; amount: string; unit?: string; chips?: { label: string; tone?: 'light' | 'gold' }[] }) {
+/** The record's main fact (whom it is for, or its amount), large on a dark band, with short chips under it. */
+export function SummaryBand({ label, value, unit, size = 30, chips }: { label: string; value: ReactNode; unit?: string; size?: number; chips?: { label: string; tone?: 'light' | 'gold' }[] }) {
   return (
     <Box sx={{ px: 2.5, py: 2, color: '#fff', background: 'linear-gradient(135deg, #0f4c6e, #13708f)' }}>
       <Typography sx={{ fontSize: 12, opacity: 0.85 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 30, fontWeight: 800, lineHeight: 1.2 }}>
-        {amount}
+      <Typography sx={{ fontSize: size, fontWeight: 800, lineHeight: 1.3, overflowWrap: 'anywhere' }}>
+        {value}
         {unit && <Box component="span" sx={{ fontSize: 14, fontWeight: 600, opacity: 0.8, marginInlineStart: 0.75 }}>{unit}</Box>}
       </Typography>
       {chips && chips.length > 0 && (

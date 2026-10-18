@@ -1557,7 +1557,8 @@
       "kind": "أمر تسليم",
       "dates": "التواريخ",
       "receiving": "الاستلام",
-      "sarUnit": "ريال"
+      "sarUnit": "ريال",
+      "value": "القيمة"
     },
     "status": {
       "UnderPreparation": "قيد الإعداد",

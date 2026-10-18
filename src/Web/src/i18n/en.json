@@ -1557,7 +1557,8 @@
       "kind": "Delivery order",
       "dates": "Dates",
       "receiving": "Receiving",
-      "sarUnit": "SAR"
+      "sarUnit": "SAR",
+      "value": "Value"
     },
     "status": {
       "UnderPreparation": "Under preparation",
