@@ -1666,7 +1666,12 @@
         "100000005": "The worker didn't arrive in housing"
       },
       "room": "Room in housing",
-      "roomHint": "The worker is put in it from the arrival date when the order completes (optional)."
+      "roomHint": "The worker is put in it from the arrival date when the order completes (optional).",
+      "kind": "Return order",
+      "journey": "The way back",
+      "workedDays": "{{count}} days on the project",
+      "profession": "Profession",
+      "nationality": "Nationality"
     },
     "transfer": {
       "title": "Project transfer orders",
