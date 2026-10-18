@@ -34,7 +34,7 @@ import { errorKey } from '../../api/auth';
 import { operationsApi, type DeliveryDetail } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { RecordHero, SummaryCard, SummaryCreator, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
+import { RecordHero, SummaryCard, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
 import { Badge, PillTabs } from '../../components/ui';
 import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
@@ -177,9 +177,8 @@ export function DeliveryOrderDetailPage() {
       )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '300px minmax(0, 1fr)' }, gap: `${tokens.gap}px`, alignItems: 'start' }}>
-        {/* The order's summary, read top to bottom: who made it, the amount, then each group in its color. */}
+        {/* The order's summary, read top to bottom: the project, then each group in its color. */}
         <SummaryCard>
-          <SummaryCreator label={t('operations.delivery.createdBy')} name={o.createdByName} at={date(o.createdAt)} />
           <SummaryBand
             label={t('commercial.col.project')}
             value={o.projectName}
@@ -238,12 +237,13 @@ export function DeliveryOrderDetailPage() {
               >
                 <TableHead
                   sx={{
+                    '& .MuiTableRow-root': { background: 'linear-gradient(135deg, #0f4c6e, #13708f)' },
                     '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': {
-                      bgcolor: tokens.gray50,
-                      color: tokens.gray600,
+                      bgcolor: 'transparent',
+                      color: '#fff',
                       fontWeight: 700,
-                      fontSize: 12,
-                      borderBottom: `1px solid ${tokens.gray100}`,
+                      fontSize: 12.5,
+                      borderBottom: 0,
                       borderRadius: 0,
                     },
                   }}
