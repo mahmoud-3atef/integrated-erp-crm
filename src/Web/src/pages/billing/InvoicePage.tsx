@@ -145,7 +145,14 @@ export function InvoicePage() {
           <Tile label={t('invoices.tiles.total')} value={sar(signed(inv.kind, inv.total))} tone={inv.kind === 'CreditNote' ? tokens.danger : tokens.teal} />
           <Tile label={t('invoices.tiles.date')} value={date(inv.invoiceDate)} />
           <Tile label={t('invoices.tiles.due')} value={date(inv.dueDate)} foot={inv.paymentTermDays ? t('invoices.termDays', { days: inv.paymentTermDays }) : t('invoices.dueOnDate')} />
-          {isInvoice ? (
+          {inv.status === 'Issued' && inv.kind !== 'CreditNote' ? (
+            <Tile
+              label={t('invoices.tiles.outstanding')}
+              value={sar(inv.outstanding)}
+              tone={inv.outstanding > 0 ? tokens.danger : '#1f9d55'}
+              foot={inv.paid > 0 ? t('invoices.tiles.paid', { amount: sar(inv.paid) }) : t('invoices.tiles.notPaid')}
+            />
+          ) : isInvoice ? (
             <Tile label={t('invoices.tiles.net')} value={sar(inv.netAmount)} foot={t('invoices.tiles.workers', { count: workers })} />
           ) : (
             <Tile label={t('invoices.tiles.original')} value={<span dir="ltr">{inv.originalInvoiceNo}</span>} />
@@ -182,6 +189,9 @@ export function InvoicePage() {
               {t('invoices.attachment')}
             </Button>
           )}
+          <Button startIcon={<ReceiptLongOutlinedIcon />} onClick={() => navigate(`/billing/statements/${inv.projectId}`)}>
+            {t('receipts.statement')}
+          </Button>
           {inv.timesheetId && (
             <Button startIcon={<FactCheckOutlinedIcon />} onClick={() => navigate(`/billing/timesheets/${inv.timesheetId}`)}>
               {t('invoices.openTimesheet', { number: inv.timesheetNo })}

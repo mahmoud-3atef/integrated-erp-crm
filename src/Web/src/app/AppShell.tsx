@@ -27,6 +27,9 @@ import PinOutlinedIcon from '@mui/icons-material/PinOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import TimelapseOutlinedIcon from '@mui/icons-material/TimelapseOutlined';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -83,6 +86,9 @@ const menu: MenuSection[] = [
     items: [
       { path: '/billing/timesheets', labelKey: 'menu.timesheets', icon: <FactCheckOutlinedIcon />, permission: 'billing.timesheets.view', companyWide: true },
       { path: '/billing/invoices', labelKey: 'menu.invoices', icon: <ReceiptLongOutlinedIcon />, permission: 'billing.invoices.view', companyWide: true },
+      { path: '/billing/receipts', labelKey: 'menu.receipts', icon: <PaymentsOutlinedIcon />, permission: 'billing.receipts.view', companyWide: true },
+      { path: '/billing/aging', labelKey: 'menu.aging', icon: <TimelapseOutlinedIcon />, permission: 'billing.receipts.view', companyWide: true },
+      { path: '/billing/bank-accounts', labelKey: 'menu.bankAccounts', icon: <AccountBalanceIcon />, permission: 'billing.receipts.view', companyWide: true },
     ],
   },
   {

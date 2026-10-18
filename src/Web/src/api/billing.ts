@@ -303,6 +303,8 @@ export interface InvoiceDetail {
   notes: InvoiceRow[];
   netAmount: number;
   creditable: number;
+  paid: number;
+  outstanding: number;
   warnings: string[];
   approval: ApprovalStatus | null;
   canEdit: boolean;
@@ -332,4 +334,183 @@ export const invoiceApi = {
   remove: (id: string) => request<void>('DELETE', `${invoices}/${id}`),
   note: (id: string, input: NoteDraft) => request<{ id: string }>('POST', `${invoices}/${id}/notes`, input),
   submit: (id: string) => request<void>('POST', `${invoices}/${id}/submit`),
+};
+
+// Collection: receipt vouchers, project accounts, debt ages, bank accounts (src/Modules/Billing/.../Api/ReceivableEndpoints.cs).
+export type ReceiptStatus = 'Draft' | 'AccountantReview' | 'FinanceReview' | 'Returned' | 'Approved';
+export const paymentMethods = ['BankTransfer', 'Cash', 'Card'] as const;
+export type PaymentMethod = (typeof paymentMethods)[number];
+export type ReceivableKind = 'Invoice' | 'DebitNote' | 'OpeningBalance';
+
+export interface ReceiptRow {
+  id: string;
+  receiptNo: string | null;
+  status: ReceiptStatus;
+  projectId: string;
+  projectName: string;
+  customerName: string | null;
+  receiptDate: string;
+  amount: number;
+  method: PaymentMethod;
+  bankAccountName: string | null;
+  allocated: number;
+  createdByName: string;
+}
+
+export interface ReceiptList {
+  totals: { drafts: number; inReview: number; approved: number; approvedAmount: number; unallocated: number };
+  rows: ReceiptRow[];
+}
+
+export interface OpenItem {
+  kind: ReceivableKind;
+  id: string;
+  number: string;
+  date: string;
+  dueDate: string;
+  total: number;
+  credited: number;
+  paid: number;
+  outstanding: number;
+  available: number;
+  daysOverdue: number;
+}
+
+export interface ProjectOpen {
+  projectId: string;
+  projectName: string;
+  outstanding: number;
+  credit: number;
+  items: OpenItem[];
+}
+
+export interface ReceiptDetail {
+  id: string;
+  receiptNo: string | null;
+  status: ReceiptStatus;
+  awaitingApproval: boolean;
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  customerName: string | null;
+  receiptDate: string;
+  amount: number;
+  method: PaymentMethod;
+  bankAccountId: string | null;
+  bankAccountName: string | null;
+  reference: string | null;
+  notes: string | null;
+  allocated: number;
+  unallocated: number;
+  createdAt: string;
+  createdByName: string;
+  approvedAt: string | null;
+  approvedByName: string | null;
+  lastComment: string | null;
+  allocations: { kind: ReceivableKind; targetId: string; number: string; dueDate: string | null; amount: number }[];
+  approval: ApprovalStatus | null;
+  canEdit: boolean;
+  canAllocate: boolean;
+}
+
+export interface ReceiptInput {
+  projectId: string;
+  receiptDate: string;
+  amount: number;
+  method: PaymentMethod;
+  bankAccountId: string | null;
+  reference: string | null;
+  notes: string | null;
+  allocations: { kind: ReceivableKind; targetId: string; amount: number }[];
+}
+
+export interface ReceiptProject {
+  id: string;
+  crmId: string;
+  code: string;
+  name: string;
+  customerName: string | null;
+  manager: string | null;
+  isActive: boolean;
+  outstanding: number;
+}
+
+export interface AgingRow {
+  projectCrmId: string;
+  projectId: string | null;
+  projectName: string;
+  customerName: string | null;
+  manager: string | null;
+  current: number;
+  days30: number;
+  days60: number;
+  days90: number;
+  days180: number;
+  over180: number;
+  total: number;
+  credit: number;
+  net: number;
+  items: number;
+}
+
+export interface Aging {
+  asOf: string;
+  totals: AgingRow;
+  rows: AgingRow[];
+}
+
+export interface StatementEntry {
+  date: string;
+  kind: 'OpeningBalance' | 'Invoice' | 'DebitNote' | 'CreditNote' | 'Receipt';
+  documentId: string | null;
+  number: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface Statement {
+  projectCrmId: string;
+  projectId: string | null;
+  projectName: string;
+  customerName: string | null;
+  from: string;
+  to: string;
+  opening: number;
+  debits: number;
+  credits: number;
+  closing: number;
+  entries: StatementEntry[];
+}
+
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  accountNo: string;
+  iban: string | null;
+  label: string | null;
+  display: string;
+  isActive: boolean;
+}
+
+export type BankAccountInput = Omit<BankAccount, 'id' | 'display'>;
+
+const qs = (filter: Record<string, string | undefined | null>) => new URLSearchParams(Object.entries(filter).filter(([, v]) => v) as [string, string][]).toString();
+
+export const receivablesApi = {
+  receipts: (filter: { from?: string; to?: string; status?: string; search?: string }) => request<ReceiptList>('GET', `${base}/receipts?${qs(filter)}`),
+  receipt: (id: string) => request<ReceiptDetail>('GET', `${base}/receipts/${id}`),
+  create: (input: ReceiptInput) => request<{ id: string }>('POST', `${base}/receipts`, input),
+  update: (id: string, input: ReceiptInput) => request<void>('PUT', `${base}/receipts/${id}`, input),
+  remove: (id: string) => request<void>('DELETE', `${base}/receipts/${id}`),
+  submit: (id: string) => request<void>('POST', `${base}/receipts/${id}/submit`),
+  allocate: (id: string) => request<void>('POST', `${base}/receipts/${id}/allocate`, { allocations: null }),
+  projects: () => request<ReceiptProject[]>('GET', `${base}/receipt-projects`),
+  open: (projectId: string, exceptReceipt?: string) => request<ProjectOpen>('GET', `${base}/projects/${projectId}/open-items?${qs({ exceptReceipt })}`),
+  aging: (asOf?: string) => request<Aging>('GET', `${base}/aging?${qs({ asOf })}`),
+  statement: (projectCrmId: string, from?: string, to?: string) => request<Statement>('GET', `${base}/statements/${projectCrmId}?${qs({ from, to })}`),
+  bankAccounts: () => request<BankAccount[]>('GET', `${base}/bank-accounts`),
+  addBankAccount: (input: BankAccountInput) => request<{ id: string }>('POST', `${base}/bank-accounts`, input),
+  saveBankAccount: (id: string, input: BankAccountInput) => request<void>('PUT', `${base}/bank-accounts/${id}`, input),
 };

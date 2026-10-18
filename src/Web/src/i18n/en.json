@@ -375,7 +375,20 @@
     "validation_invoice_note_items": "Enter the note's lines, each with an amount above zero.",
     "validation_invoice_note_over": "The credit exceeds what is left of the invoice.",
     "validation_invoice_note_date": "A note cannot be dated before its invoice.",
-    "not_found_invoice": "Invoice not found."
+    "not_found_invoice": "Invoice not found.",
+    "not_found_receipt": "Receipt not found.",
+    "validation_receipt_project": "Choose the project.",
+    "conflict_receipt_not_editable": "Only a draft or returned receipt can be changed or deleted.",
+    "conflict_receipt_not_approved": "Only an approved receipt's credit can be allocated.",
+    "validation_receipt_amount": "Enter the amount received (more than zero).",
+    "validation_receipt_account": "Choose the bank account that received the payment.",
+    "validation_receipt_text": "The reference or the notes are too long.",
+    "validation_receipt_allocation": "Check the allocation: each invoice once, amounts of zero or more.",
+    "validation_receipt_over_amount": "The allocations exceed the receipt's amount.",
+    "validation_receipt_over_item": "An allocation exceeds what is left on its invoice.",
+    "validation_receipt_status_not_settable": "A process can only move the receipt between its reviews.",
+    "validation_bank_account": "Enter the bank and the account number.",
+    "not_found_bank_account": "Bank account not found."
   },
   "menu": {
     "label": "Main menu",
@@ -416,7 +429,10 @@
     "numbering": "Document numbering",
     "billingSection": "Billing",
     "timesheets": "Monthly timesheets",
-    "invoices": "Customer invoices"
+    "invoices": "Customer invoices",
+    "receipts": "Receipt vouchers",
+    "aging": "Debt aging",
+    "bankAccounts": "Bank accounts"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -2129,7 +2145,151 @@
       "due": "Due",
       "net": "Net after notes",
       "workers": "{{count}} workers",
-      "original": "Original invoice"
+      "original": "Original invoice",
+      "outstanding": "Left to collect",
+      "paid": "{{amount}} collected",
+      "notPaid": "Nothing collected yet"
     }
+  },
+  "receipts": {
+    "title": "Receipt vouchers",
+    "intro": "What each project's customer pays: the amount, how and into which account, and how it is allocated to the project's open invoices. The accountant reviews it and finance approves it; it then takes its number and lowers what the project owes. What is not allocated stays the project's credit, to allocate later.",
+    "new": "New receipt",
+    "editTitle": "Edit the receipt",
+    "voucher": "Receipt voucher",
+    "noNumber": "Draft, no number",
+    "search": "Search by receipt number, project, customer or reference",
+    "empty": "No receipts this month.",
+    "bankAccount": "Receiving bank account",
+    "noAccounts": "No bank accounts yet: add them under \"Bank accounts\".",
+    "reference": "Reference (transfer no.)",
+    "notes": "Notes",
+    "allocated": "Allocated to invoices",
+    "toCredit": "Project's credit (not allocated)",
+    "allocationHint": "Allocate the amount to the project's open invoices, or press \"Allocate automatically\" for the oldest due first. What is left becomes the project's credit.",
+    "autoAllocate": "Allocate automatically",
+    "chooseProject": "Choose the project to see its open invoices.",
+    "nothingOpen": "No open invoices on this project: the whole amount is its credit.",
+    "overdue": "{{days}} days late",
+    "reserved": "{{amount}} of it in a receipt in approval",
+    "save": "Save the receipt",
+    "submit": "Send for review",
+    "edit": "Edit",
+    "allocateRemainder": "Allocate the credit to invoices",
+    "proof": "Proof of payment (attachments)",
+    "statement": "Project's statement",
+    "delete": "Delete the draft",
+    "deleteTitle": "Delete the receipt?",
+    "deleteHint": "A draft has no number yet, so deleting it leaves no gap in the numbering.",
+    "noAllocations": "Not allocated to invoices: the whole amount is the project's credit.",
+    "approvedBy": "Approved by {{name}} on {{at}}",
+    "sections": {
+      "payment": "Payment",
+      "allocation": "Allocation to invoices"
+    },
+    "tabs": {
+      "allocations": "Allocation ({{count}})"
+    },
+    "method": {
+      "BankTransfer": "Bank transfer",
+      "Cash": "Cash",
+      "Card": "Card"
+    },
+    "kind": {
+      "Invoice": "Invoice",
+      "DebitNote": "Debit note",
+      "OpeningBalance": "Invoice from the old system"
+    },
+    "status": {
+      "Draft": "Draft",
+      "AccountantReview": "Accountant review",
+      "FinanceReview": "Finance review",
+      "Returned": "Returned",
+      "Approved": "Approved"
+    },
+    "cards": {
+      "drafts": "Drafts",
+      "draftsFoot": "Not sent yet or returned",
+      "inReview": "In review",
+      "inReviewFoot": "With the accountant or finance",
+      "approved": "Approved collections",
+      "approvedFoot": "{{count}} receipts",
+      "unallocated": "Unallocated credit",
+      "unallocatedFoot": "Waiting to be allocated to invoices"
+    },
+    "col": {
+      "number": "Number",
+      "date": "Receipt date",
+      "method": "Method",
+      "amount": "Amount",
+      "unallocated": "Unallocated",
+      "status": "Status",
+      "item": "Invoice",
+      "due": "Due",
+      "total": "Its amount",
+      "outstanding": "Left on it",
+      "allocate": "Allocated"
+    }
+  },
+  "aging": {
+    "title": "Debt aging",
+    "intro": "What each project owes in uncollected invoices, by days past the due date, with its credit and the net owed. Click a project for its statement.",
+    "totalOwed": "Net owed by the projects",
+    "search": "Search by project, customer or manager",
+    "asOf": "As of",
+    "byProject": "By project",
+    "byManager": "By project manager",
+    "noManager": "No manager",
+    "projects": "{{count}} projects",
+    "total": "Total",
+    "credit": "Credit",
+    "net": "Net owed",
+    "empty": "Nothing owed.",
+    "buckets": {
+      "current": "Not due yet",
+      "days30": "1–30 days",
+      "days60": "31–60 days",
+      "days90": "61–90 days",
+      "days180": "91–180 days",
+      "over180": "Over 180 days"
+    }
+  },
+  "statement": {
+    "title": "Project's statement",
+    "period": "From {{from}} to {{to}}",
+    "from": "From",
+    "to": "To",
+    "opening": "Opening balance",
+    "debits": "Debit (invoices)",
+    "credits": "Credit (collections and notes)",
+    "closing": "Closing balance",
+    "date": "Date",
+    "document": "Document",
+    "description": "Description",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balance": "Balance",
+    "kinds": {
+      "OpeningBalance": "Invoice from the old system",
+      "Invoice": "Invoice",
+      "DebitNote": "Debit note",
+      "CreditNote": "Credit note",
+      "Receipt": "Receipt voucher"
+    }
+  },
+  "bankAccounts": {
+    "title": "Bank accounts",
+    "intro": "The company's accounts that receive the customers' payments; each receipt names one.",
+    "add": "Add an account",
+    "edit": "Edit the account",
+    "label": "Account",
+    "labelHint": "A short name for the account (e.g. Al Rajhi — main)",
+    "bank": "Bank",
+    "accountNo": "Account no.",
+    "iban": "IBAN",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Stopped",
+    "empty": "No bank accounts yet."
   }
 }

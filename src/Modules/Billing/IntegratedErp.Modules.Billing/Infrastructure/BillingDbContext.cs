@@ -28,6 +28,88 @@ internal sealed class BillingDbContext(DbContextOptions<BillingDbContext> option
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
 
     public DbSet<InvoiceWorkerLine> InvoiceWorkers => Set<InvoiceWorkerLine>();
+
+    public DbSet<Receipt> Receipts => Set<Receipt>();
+
+    public DbSet<ReceiptAllocation> ReceiptAllocations => Set<ReceiptAllocation>();
+
+    public DbSet<OpeningBalance> OpeningBalances => Set<OpeningBalance>();
+
+    public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
+}
+
+internal sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
+{
+    public void Configure(EntityTypeBuilder<Receipt> builder)
+    {
+        builder.ToTable("receipt");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.ReceiptNo).HasMaxLength(40);
+        builder.Property(r => r.ProjectCode).HasMaxLength(100).IsRequired();
+        builder.Property(r => r.ProjectName).HasMaxLength(300).IsRequired();
+        builder.Property(r => r.CustomerName).HasMaxLength(300);
+        builder.Property(r => r.Amount).HasPrecision(18, 2);
+        builder.Property(r => r.Method).HasConversion<string>().HasMaxLength(20);
+        builder.Property(r => r.BankAccountName).HasMaxLength(200);
+        builder.Property(r => r.Reference).HasMaxLength(100);
+        builder.Property(r => r.Notes).HasMaxLength(1000);
+        builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(r => r.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(r => r.ApprovedByName).HasMaxLength(200);
+        builder.Property(r => r.LastComment).HasMaxLength(2000);
+        builder.Ignore(r => r.Allocated);
+        builder.Ignore(r => r.Unallocated);
+        builder.HasMany(r => r.Allocations).WithOne().HasForeignKey(a => a.ReceiptId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(r => r.Allocations).HasField("_allocations").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasIndex(r => new { r.TenantId, r.ReceiptNo }).IsUnique().HasFilter("[receipt_no] IS NOT NULL");
+        builder.HasIndex(r => new { r.TenantId, r.ProjectCrmId });
+        builder.HasIndex(r => new { r.TenantId, r.ReceiptDate });
+    }
+}
+
+internal sealed class ReceiptAllocationConfiguration : IEntityTypeConfiguration<ReceiptAllocation>
+{
+    public void Configure(EntityTypeBuilder<ReceiptAllocation> builder)
+    {
+        builder.ToTable("receipt_allocation");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(a => a.Amount).HasPrecision(18, 2);
+        builder.HasIndex(a => new { a.TenantId, a.Kind, a.TargetId });
+    }
+}
+
+internal sealed class OpeningBalanceConfiguration : IEntityTypeConfiguration<OpeningBalance>
+{
+    public void Configure(EntityTypeBuilder<OpeningBalance> builder)
+    {
+        builder.ToTable("opening_balance");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Id).ValueGeneratedNever();
+        builder.Property(o => o.InvoiceNo).HasMaxLength(40).IsRequired();
+        builder.Property(o => o.ProjectName).HasMaxLength(300).IsRequired();
+        builder.Property(o => o.Total).HasPrecision(18, 2);
+        builder.Property(o => o.Amount).HasPrecision(18, 2);
+        builder.HasIndex(o => new { o.TenantId, o.CrmId }).IsUnique();
+        builder.HasIndex(o => new { o.TenantId, o.ProjectCrmId });
+    }
+}
+
+internal sealed class BankAccountConfiguration : IEntityTypeConfiguration<BankAccount>
+{
+    public void Configure(EntityTypeBuilder<BankAccount> builder)
+    {
+        builder.ToTable("bank_account");
+        builder.HasKey(b => b.Id);
+        builder.Property(b => b.Id).ValueGeneratedNever();
+        builder.Property(b => b.BankName).HasMaxLength(100).IsRequired();
+        builder.Property(b => b.AccountNo).HasMaxLength(50).IsRequired();
+        builder.Property(b => b.Iban).HasMaxLength(34);
+        builder.Property(b => b.Label).HasMaxLength(100);
+        builder.Ignore(b => b.Display);
+    }
 }
 
 internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>

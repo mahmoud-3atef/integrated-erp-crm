@@ -45,6 +45,12 @@ public sealed class TimesheetTests(TestDatabase database)
         WorkStart(crm, company, project, "2026-08-01", 3000m);
         WorkStart(crm, supplier, project, "2026-09-11", 2800m);
         WorkStart(crm, unknown, project, "2026-09-21", 2500m);
+        crm.Add("new_invoice", new()
+        {
+            ["new_invoicenumber"] = "INV00650", ["new_projectid"] = project.ToString(), ["new_projectidname"] = "مشروع الرياض", ["new_invoicetype"] = 100000000,
+            ["statecode"] = 0, ["statuscode"] = 279640003, ["new_totalamount"] = 1000m, ["new_totalvatamount"] = 150m, ["new_totalpaidamount"] = 150m,
+            ["new_invoicedate"] = "2026-07-31T21:00:00Z", ["new_fromdate"] = "2026-06-30T21:00:00Z", ["new_todate"] = "2026-07-30T21:00:00Z",
+        }, created: Created2025);
         await SyncAsync(tenantId, crm);
         var (manager, approver) = await PeopleAsync(tenantId);
 
@@ -257,6 +263,64 @@ public sealed class TimesheetTests(TestDatabase database)
             var list = await queries.ListAsync(september, null, null, null, default);
             Assert.Equal((2, 1, 115m), (list.Rows.Count, list.Totals.Issued, list.Totals.Credits));
         }
+
+        // Collection: the project owes the new invoice (less its credit note) and the old system's open invoice.
+        Guid receiptId;
+        decimal invoiceTotal;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var receipts = scope.ServiceProvider.GetRequiredService<ReceiptService>();
+            var queries = scope.ServiceProvider.GetRequiredService<ReceivableQueries>();
+            invoiceTotal = (await scope.ServiceProvider.GetRequiredService<InvoiceQueries>().GetAsync(invoiceId, default))!.Total;
+            var bank = await receipts.SaveBankAccountAsync(null, new BankAccountInput("مصرف الراجحي", "123456789", "SA03 8000 0000 6080 1016 7519", "الراجحي — الرئيسي", true), default);
+            Assert.True(bank.IsSuccess);
+
+            var open = (await queries.OpenAsync(projectId, null, default))!;
+            Assert.Equal((2, invoiceTotal - 115 + 1000m), (open.Items.Count, open.Outstanding));
+            var opening = open.Items.Single(i => i.Kind == "OpeningBalance");
+            Assert.Equal(("INV00650", 1000m, new DateOnly(2026, 8, 1)), (opening.Number, opening.Outstanding, opening.DueDate));
+            var invoiceItem = open.Items.Single(i => i.Kind == "Invoice");
+
+            // An allocation above what is left, allocations above the amount, a transfer without its account: refused.
+            ReceiptInput Input(decimal amount, string method, Guid? account, params AllocationDto[] allocations) =>
+                new(projectId, new DateOnly(2026, 10, 16), amount, method, account, "TRX-7781", null, allocations);
+            Assert.Equal("validation.receipt_over_item", (await receipts.CreateAsync(Input(9_000_000, "BankTransfer", bank.Value, new AllocationDto("Invoice", invoiceId, invoiceItem.Outstanding + 1)), default)).Error.Code);
+            Assert.Equal("validation.receipt_over_amount", (await receipts.CreateAsync(Input(100, "BankTransfer", bank.Value, new AllocationDto("OpeningBalance", opening.Id, 200)), default)).Error.Code);
+            Assert.Equal("validation.receipt_account", (await receipts.CreateAsync(Input(100, "BankTransfer", null), default)).Error.Code);
+
+            // 2,000 received: 1,000 to the old invoice, 500 to the new one, 500 left as the project's credit.
+            var made = await receipts.CreateAsync(Input(2000, "BankTransfer", bank.Value, new AllocationDto("OpeningBalance", opening.Id, 1000), new AllocationDto("Invoice", invoiceId, 500)), default);
+            Assert.True(made.IsSuccess, made.IsFailure ? made.Error.Code : null);
+            receiptId = made.Value;
+            Assert.True((await receipts.SubmitAsync(receiptId, default)).IsSuccess);
+            Assert.Equal("conflict.receipt_not_editable", (await receipts.DeleteAsync(receiptId, default)).Error.Code);
+        }
+
+        await ApproveNextAsync(tenantId, approver);
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var receipts = scope.ServiceProvider.GetRequiredService<ReceiptService>();
+            var queries = scope.ServiceProvider.GetRequiredService<ReceivableQueries>();
+            var receipt = (await queries.ReceiptAsync(receiptId, default))!;
+            Assert.Equal(("Approved", "RV-2026-00001", 1500m, 500m, true), (receipt.Status, receipt.ReceiptNo, receipt.Allocated, receipt.Unallocated, receipt.CanAllocate));
+            var invoice = (await scope.ServiceProvider.GetRequiredService<InvoiceQueries>().GetAsync(invoiceId, default))!;
+            Assert.Equal((500m, invoiceTotal - 115 - 500), (invoice.Paid, invoice.Outstanding));
+            Assert.Equal(500m, (await queries.OpenAsync(projectId, null, default))!.Credit);
+
+            // The credit allocated later, oldest due first.
+            Assert.True((await receipts.AllocateAsync(receiptId, null, default)).IsSuccess);
+            Assert.Equal(0m, (await queries.ReceiptAsync(receiptId, default))!.Unallocated);
+
+            // The debts' ages and the project's statement agree.
+            var aging = await queries.AgingAsync(new DateOnly(2026, 10, 18), default);
+            var row = aging.Rows.Single();
+            Assert.Equal((invoiceTotal - 1115, 0m, invoiceTotal - 1115), (row.Total, row.Credit, row.Net));
+            Assert.Equal((row.Total, 0m), (row.Current, row.Days30)); // due 2026-10-30 (30 days to pay): not late yet
+            var statement = (await queries.StatementAsync(row.ProjectCrmId, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31), default))!;
+            Assert.Equal(["OpeningBalance", "Invoice", "CreditNote", "Receipt"], statement.Entries.Select(e => e.Kind));
+            Assert.Equal((0m, row.Net), (statement.Opening, statement.Closing));
+        }
     }
 
     /// <summary>The approver takes their one open task and approves it.</summary>
@@ -291,7 +355,7 @@ public sealed class TimesheetTests(TestDatabase database)
             identity.Users.Add(user);
             var membership = new Membership(user.Id, tenantId);
             identity.Memberships.Add(membership);
-            var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], name, name, ["billing.timesheets.view", "billing.invoices.view", .. permissions], catalog).Value;
+            var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], name, name, ["billing.timesheets.view", "billing.invoices.view", "billing.receipts.view", .. permissions], catalog).Value;
             identity.Roles.Add(role);
             identity.RoleAssignments.Add(new RoleAssignment(membership.Id, role.Id, null, tenantId));
             await identity.SaveChangesAsync();
@@ -299,8 +363,8 @@ public sealed class TimesheetTests(TestDatabase database)
         }
 
         return (
-            await PersonAsync("مشرف المشروع", "billing.timesheets.manage", "billing.invoices.manage"),
-            await PersonAsync("مدير العمليات", "billing.timesheets.approve", "billing.invoices.review", "billing.invoices.approve"));
+            await PersonAsync("مشرف المشروع", "billing.timesheets.manage", "billing.invoices.manage", "billing.receipts.manage", "billing.bank_accounts.manage"),
+            await PersonAsync("مدير العمليات", "billing.timesheets.approve", "billing.invoices.review", "billing.invoices.approve", "billing.receipts.review", "billing.receipts.approve"));
     }
 
     private static Guid Worker(FakeCrm crm, string number, int? sponsor) =>

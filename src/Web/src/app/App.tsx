@@ -12,7 +12,13 @@ import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
+import { AgingPage } from '../pages/billing/AgingPage';
+import { BankAccountsPage } from '../pages/billing/BankAccountsPage';
 import { InvoicePage } from '../pages/billing/InvoicePage';
+import { ReceiptFormPage } from '../pages/billing/ReceiptFormPage';
+import { ReceiptPage } from '../pages/billing/ReceiptPage';
+import { ReceiptsPage } from '../pages/billing/ReceiptsPage';
+import { StatementPage } from '../pages/billing/StatementPage';
 import { InvoicePrintPage } from '../pages/billing/InvoicePrintPage';
 import { InvoicesPage } from '../pages/billing/InvoicesPage';
 import { TimesheetPage } from '../pages/billing/TimesheetPage';
@@ -93,6 +99,13 @@ export function App() {
                 <Route path="/billing/timesheets/:id" element={<TimesheetPage />} />
                 <Route path="/billing/invoices" element={<InvoicesPage />} />
                 <Route path="/billing/invoices/:id" element={<InvoicePage />} />
+                <Route path="/billing/receipts" element={<ReceiptsPage />} />
+                <Route path="/billing/receipts/new" element={<ReceiptFormPage />} />
+                <Route path="/billing/receipts/:id" element={<ReceiptPage />} />
+                <Route path="/billing/receipts/:id/edit" element={<ReceiptFormPage />} />
+                <Route path="/billing/aging" element={<AgingPage />} />
+                <Route path="/billing/statements/:id" element={<StatementPage />} />
+                <Route path="/billing/bank-accounts" element={<BankAccountsPage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
@@ -116,6 +129,7 @@ export function App() {
                 <Route path="/workflow/requests/:id" element={<RequestDetailPage />} />
               </Route>
               <Route path="/billing/invoices/:id/print" element={<InvoicePrintPage />} />
+              <Route path="/billing/statements/:id/print" element={<StatementPage print />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />
               <Route path="/login/recovery-codes" element={<RecoveryCodesPage />} />

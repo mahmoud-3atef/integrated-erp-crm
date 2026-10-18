@@ -168,6 +168,51 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                     b.ToTable("outbox_message", "billing");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.BankAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("account_no");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<string>("Iban")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)")
+                        .HasColumnName("iban");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("label");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bank_account");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_bank_account_tenant_id");
+
+                    b.ToTable("bank_account", "billing");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Invoice", b =>
                 {
                     b.Property<Guid>("Id")
@@ -612,6 +657,78 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                     b.ToTable("invoice_worker", "billing");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.OpeningBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("crm_id");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<DateOnly>("InvoiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("invoice_date");
+
+                    b.Property<string>("InvoiceNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("invoice_no");
+
+                    b.Property<Guid>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opening_balance");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_opening_balance_tenant_id");
+
+                    b.HasIndex("TenantId", "CrmId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_opening_balance_tenant_id_crm_id");
+
+                    b.HasIndex("TenantId", "ProjectCrmId")
+                        .HasDatabaseName("ix_opening_balance_tenant_id_project_crm_id");
+
+                    b.ToTable("opening_balance", "billing");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.ProjectBillingSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -677,6 +794,178 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                         .HasDatabaseName("ix_project_setting_tenant_id_project_id");
 
                     b.ToTable("project_setting", "billing");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Receipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("approved_at");
+
+                    b.Property<string>("ApprovedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("approved_by_name");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<Guid?>("BankAccountId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("bank_account_id");
+
+                    b.Property<string>("BankAccountName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("bank_account_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("method");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("ProjectCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("project_code");
+
+                    b.Property<Guid>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<DateOnly>("ReceiptDate")
+                        .HasColumnType("date")
+                        .HasColumnName("receipt_date");
+
+                    b.Property<string>("ReceiptNo")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("receipt_no");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_receipt_tenant_id");
+
+                    b.HasIndex("TenantId", "ProjectCrmId")
+                        .HasDatabaseName("ix_receipt_tenant_id_project_crm_id");
+
+                    b.HasIndex("TenantId", "ReceiptDate")
+                        .HasDatabaseName("ix_receipt_tenant_id_receipt_date");
+
+                    b.HasIndex("TenantId", "ReceiptNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipt_tenant_id_receipt_no")
+                        .HasFilter("[receipt_no] IS NOT NULL");
+
+                    b.ToTable("receipt", "billing");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.ReceiptAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("target_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt_allocation");
+
+                    b.HasIndex("ReceiptId")
+                        .HasDatabaseName("ix_receipt_allocation_receipt_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_receipt_allocation_tenant_id");
+
+                    b.HasIndex("TenantId", "Kind", "TargetId")
+                        .HasDatabaseName("ix_receipt_allocation_tenant_id_kind_target_id");
+
+                    b.ToTable("receipt_allocation", "billing");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Timesheet", b =>
@@ -1150,6 +1439,16 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                         .HasConstraintName("fk_invoice_worker_invoice_invoice_id");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.ReceiptAllocation", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Billing.Domain.Receipt", null)
+                        .WithMany("Allocations")
+                        .HasForeignKey("ReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_allocation_receipts_receipt_id");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.TimesheetAdjustment", b =>
                 {
                     b.HasOne("IntegratedErp.Modules.Billing.Domain.Timesheet", null)
@@ -1175,6 +1474,11 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("Workers");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Receipt", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Timesheet", b =>

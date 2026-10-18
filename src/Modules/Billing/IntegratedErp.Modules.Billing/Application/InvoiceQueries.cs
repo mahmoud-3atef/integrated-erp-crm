@@ -77,6 +77,8 @@ public sealed record InvoiceDetailDto(
     IReadOnlyList<InvoiceRowDto> Notes,
     decimal NetAmount,
     decimal Creditable,
+    decimal Paid,
+    decimal Outstanding,
     IReadOnlyList<string> Warnings,
     ApprovalStatusInfo? Approval,
     bool CanEdit,
@@ -90,6 +92,7 @@ public sealed record InvoiceRefDto(Guid Id, string? InvoiceNo, string Status);
 internal sealed class InvoiceQueries(
     BillingDbContext db,
     InvoiceService service,
+    ReceivablesLedger ledger,
     IReferenceData reference,
     ILegalEntityDirectory legalEntities,
     IApprovalService approvals,
@@ -177,6 +180,10 @@ internal sealed class InvoiceQueries(
             seller = entity is null ? null : new PartyDto(entity.NameAr, entity.NameEn, entity.VatNumber, entity.CommercialRegistrationNo, null);
         }
 
+        var item = i.Status == InvoiceStatus.Issued && i.Kind != InvoiceKind.CreditNote
+            ? (await ledger.ItemsAsync(i.ProjectCrmId, null, cancellationToken).ConfigureAwait(false)).FirstOrDefault(x => x.Id == i.Id)
+            : null;
+
         var warnings = new List<string>();
         if (string.IsNullOrWhiteSpace(i.CustomerVatNumber))
         {
@@ -197,7 +204,7 @@ internal sealed class InvoiceQueries(
             i.Month, i.PeriodFrom, i.PeriodTo, i.InvoiceDate, i.PaymentTermDays, i.DueDate, i.VatRate, i.Amount, i.Vat, i.Total, i.Reason, i.Remarks,
             i.CreatedAt, i.CreatedByName, i.IssuedAt, i.IssuedByName, i.LastComment,
             i.Items.OrderBy(x => x.LineNo).Select(x => new InvoiceItemDto(x.LineNo, x.Component.ToString(), x.Description, x.Amount)).ToList(),
-            workers, notes, net, creditable, warnings, approval,
+            workers, notes, net, creditable, item?.Paid ?? 0, item?.Outstanding ?? 0, warnings, approval,
             CanEdit: canManage && i.IsEditable,
             CanSubmit: canManage && i.IsEditable,
             CanDelete: canManage && i.IsEditable,
