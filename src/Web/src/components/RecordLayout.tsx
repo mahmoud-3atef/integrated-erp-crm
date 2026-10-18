@@ -5,6 +5,26 @@ import { tokens } from '../app/theme';
 // The record page's frame: a slim colored band with the record's number and whom it is for, and a side summary read
 // top to bottom — who made it, the amount, then groups each with its own color.
 
+/** Each kind of record has its own color, so a page says at a glance what it is. */
+export type RecordTone = 'delivery' | 'return' | 'transfer' | 'movement' | 'timesheet' | 'invoice' | 'receipt';
+
+export const recordTones: Record<RecordTone, { band: string; dark: string; main: string; soft: string }> = {
+  // Teal: workers going out to a project.
+  delivery: { band: 'linear-gradient(120deg, #0b3954 0%, #0d6e8c 60%, #1aa39a 100%)', dark: 'linear-gradient(135deg, #0f4c6e, #13708f)', main: '#0d6e8c', soft: '#e3f3f9' },
+  // Amber: a worker coming back to the housing.
+  return: { band: 'linear-gradient(120deg, #5c2a06 0%, #9a4a0c 55%, #d08a1e 100%)', dark: 'linear-gradient(135deg, #7a3a0a, #b0640f)', main: '#b0640f', soft: '#fdf1e1' },
+  // Violet: a worker moving between projects.
+  transfer: { band: 'linear-gradient(120deg, #2a1f63 0%, #4b37a8 55%, #7b61dd 100%)', dark: 'linear-gradient(135deg, #362a80, #5a45c0)', main: '#5a45c0', soft: '#efebfc' },
+  // Blue: a change in a worker's state.
+  movement: { band: 'linear-gradient(120deg, #0f2f5c 0%, #1f5fbf 55%, #3b8be6 100%)', dark: 'linear-gradient(135deg, #163f7a, #2a6fd0)', main: '#2a6fd0', soft: '#e8f0fc' },
+  // Green: the month's attendance.
+  timesheet: { band: 'linear-gradient(120deg, #0f3d2a 0%, #17734b 55%, #23a66a 100%)', dark: 'linear-gradient(135deg, #145a3b, #1d8a58)', main: '#1d8a58', soft: '#e5f6ed' },
+  // Ink: the bill.
+  invoice: { band: 'linear-gradient(120deg, #1b2440 0%, #33416e 55%, #56689e 100%)', dark: 'linear-gradient(135deg, #252f55, #3f4f86)', main: '#3f4f86', soft: '#eceff7' },
+  // Emerald-cyan: money in.
+  receipt: { band: 'linear-gradient(120deg, #053f3f 0%, #0b7a72 55%, #14a89a 100%)', dark: 'linear-gradient(135deg, #0a5752, #0f8f84)', main: '#0f8f84', soft: '#e2f5f3' },
+};
+
 /** The band above a record: its icon, kind and number (large), its state, whom it is for (optional), and its actions. */
 export function RecordHero({
   icon,
@@ -14,7 +34,9 @@ export function RecordHero({
   title,
   subtitle,
   actions,
+  tone = 'delivery',
 }: {
+  tone?: RecordTone;
   icon: ReactNode;
   kind: string;
   number: string;
@@ -33,7 +55,7 @@ export function RecordHero({
         py: 1.75,
         borderRadius: `${tokens.radiusLg}px`,
         color: '#fff',
-        background: 'linear-gradient(120deg, #0b3954 0%, #0d6e8c 60%, #1aa39a 100%)',
+        background: recordTones[tone].band,
         boxShadow: tokens.shadowSm,
         '&::after': { content: '""', position: 'absolute', width: 220, height: 220, borderRadius: '50%', top: -140, insetInlineEnd: -40, background: 'rgba(255,255,255,.07)' },
       }}
@@ -131,9 +153,23 @@ export function SummaryCreator({ label, name, at }: { label: string; name: strin
 }
 
 /** The record's main fact (whom it is for, or its amount), large on a dark band, with short chips under it. */
-export function SummaryBand({ label, value, unit, size = 30, chips }: { label: string; value: ReactNode; unit?: string; size?: number; chips?: { label: string; tone?: 'light' | 'gold' }[] }) {
+export function SummaryBand({
+  label,
+  value,
+  unit,
+  size = 30,
+  chips,
+  tone = 'delivery',
+}: {
+  label: string;
+  value: ReactNode;
+  unit?: string;
+  size?: number;
+  chips?: { label: string; tone?: 'light' | 'gold' }[];
+  tone?: RecordTone;
+}) {
   return (
-    <Box sx={{ px: 2.5, py: 2, color: '#fff', background: 'linear-gradient(135deg, #0f4c6e, #13708f)' }}>
+    <Box sx={{ px: 2.5, py: 2, color: '#fff', background: recordTones[tone].dark }}>
       <Typography sx={{ fontSize: 12, opacity: 0.85 }}>{label}</Typography>
       <Typography sx={{ fontSize: size, fontWeight: 800, lineHeight: 1.3, overflowWrap: 'anywhere' }}>
         {value}

@@ -20,7 +20,7 @@ import { returnsApi, type ReturnDetail } from '../../api/operations';
 import { useCrumb } from '../../app/breadcrumbs';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../components/RecordLayout';
+import { recordTones, RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
 import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
@@ -116,6 +116,7 @@ export function ReturnOrderDetailPage() {
   return (
     <Box>
       <RecordHero
+        tone="return"
         icon={<KeyboardReturnOutlinedIcon />}
         kind={t('operations.return.kind')}
         number={o.orderNo}
@@ -179,6 +180,7 @@ export function ReturnOrderDetailPage() {
         {/* Why the worker is back, read top to bottom. */}
         <SummaryCard>
           <SummaryBand
+            tone="return"
             label={t('operations.return.col.reason')}
             value={t(`operations.return.reasons.${o.reason}`)}
             size={21}
@@ -209,7 +211,7 @@ export function ReturnOrderDetailPage() {
         <Stack spacing={`${tokens.gap}px`} sx={{ minWidth: 0 }}>
           {/* The worker, and the way back. */}
           <Box sx={{ ...card, overflow: 'hidden' }}>
-            <Stack direction="row" sx={{ alignItems: 'center', gap: 2, px: 2.5, py: 2, background: `linear-gradient(180deg, ${tokens.navy50} 0%, #fff 100%)` }}>
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 2, px: 2.5, py: 2, background: `linear-gradient(180deg, ${recordTones.return.soft} 0%, #fff 100%)` }}>
               <Box
                 sx={{
                   flex: '0 0 auto',
@@ -221,8 +223,8 @@ export function ReturnOrderDetailPage() {
                   fontSize: 21,
                   fontWeight: 800,
                   color: '#fff',
-                  background: 'linear-gradient(135deg, #0f4c6e, #13708f)',
-                  boxShadow: '0 0 0 4px #fff, 0 4px 12px rgba(15,76,110,.25)',
+                  background: recordTones.return.dark,
+                  boxShadow: '0 0 0 4px #fff, 0 4px 12px rgba(122,58,10,.25)',
                 }}
               >
                 {initials(o.name)}

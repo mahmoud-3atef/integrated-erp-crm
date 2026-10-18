@@ -36,7 +36,7 @@ import { errorKey } from '../../api/auth';
 import { operationsApi, type DeliveryDetail } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { RecordHero, SectionTitle, SummaryCard, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
+import { recordTones, RecordHero, SectionTitle, SummaryCard, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
 import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
@@ -113,6 +113,7 @@ export function DeliveryOrderDetailPage() {
     <Box>
       {/* The band: the order's number, its state, the project, and what can be done with it. */}
       <RecordHero
+        tone="delivery"
         icon={<LocalShippingOutlinedIcon />}
         kind={t('operations.delivery.kind')}
         number={o.orderNo}
@@ -181,6 +182,7 @@ export function DeliveryOrderDetailPage() {
         {/* The order's summary, read top to bottom: the project, then each group in its color. */}
         <SummaryCard>
           <SummaryBand
+            tone="delivery"
             label={t('commercial.col.project')}
             value={o.projectName}
             size={21}
@@ -227,7 +229,7 @@ export function DeliveryOrderDetailPage() {
               >
                 <TableHead
                   sx={{
-                    '& .MuiTableRow-root': { background: 'linear-gradient(135deg, #0f4c6e, #13708f)' },
+                    '& .MuiTableRow-root': { background: recordTones.delivery.dark },
                     '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': {
                       bgcolor: 'transparent',
                       color: '#fff',
