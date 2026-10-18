@@ -18,7 +18,7 @@ import { gradient, MovementStatusBadge, rise, Transition, TypeIcon, typeLook, us
 type StatusFilter = '' | 'Open' | 'Executed' | 'Closed';
 
 /** Every worker movement: the eight kinds as cards (each a filter), then the movements as "from → to" rows. */
-export function MovementsPage() {
+export function MovementsPage({ creating = false }: { creating?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { can } = useSession();
@@ -31,7 +31,7 @@ export function MovementsPage() {
   const [query, setQuery] = useState('');
   const [data, setData] = useState<MovementList | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [acting, setActing] = useState(false);
+  const [acting, setActing] = useState(creating);
   const canManage = can('operations.movements.manage', true);
 
   const reload = useCallback(async () => {
@@ -232,7 +232,13 @@ export function MovementsPage() {
           )}
         </Stack>
       </Box>
-      {acting && <ActionDialog onClose={() => setActing(false)} onSent={() => void reload()} />}
+      {acting && (
+        <ActionDialog
+          workerId={creating ? (params.get('worker') ?? undefined) : undefined}
+          onClose={() => (creating ? navigate('/operations/movements') : setActing(false))}
+          onSent={() => void reload()}
+        />
+      )}
     </Box>
   );
 }

@@ -53,8 +53,17 @@ export function WizardDialog({
   error,
   aside,
   children,
+  look: lookOverride,
+  canReach,
+  done,
 }: {
   tone: RecordTone;
+  /** Colors other than the record's (e.g. those of the action type chosen). */
+  look?: { band: string; dark: string; main: string; soft: string };
+  /** Whether a finished step may be reopened (default: all may). */
+  canReach?: (step: number) => boolean;
+  /** Shown instead of the steps once the record is sent (what happens next). */
+  done?: ReactNode;
   icon: ReactNode;
   title: string;
   subtitle?: ReactNode;
@@ -75,7 +84,7 @@ export function WizardDialog({
   const rtl = i18n.dir() === 'rtl';
   const theme = useTheme();
   const phone = useMediaQuery(theme.breakpoints.down('md'));
-  const look = recordTones[tone];
+  const look = lookOverride ?? recordTones[tone];
   const last = step === steps.length - 1;
   const next = steps[step + 1];
 
@@ -113,11 +122,15 @@ export function WizardDialog({
         </Stack>
       </Box>
 
+      {done ? (
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2, md: 3 } }}>{done}</Box>
+      ) : (
+        <>
       {/* The steps: done ones checked (and reopenable), the current one in the record's color. */}
       <Box sx={{ flexShrink: 0, bgcolor: '#fff', borderBottom: `1px solid ${tokens.gray100}`, px: { xs: 1.5, md: 3.5 }, py: 1.75 }}>
         <Stack component="ol" direction="row" sx={{ listStyle: 'none', m: 0, p: 0, alignItems: 'flex-start' }}>
           {steps.map((s, index) => {
-            const done = index < step;
+            const finished = index < step;
             const current = index === step;
             return (
               <Box component="li" key={s.key} sx={{ flex: 1, position: 'relative', textAlign: 'center', minWidth: 0 }}>
@@ -138,10 +151,10 @@ export function WizardDialog({
                   />
                 )}
                 <ButtonBase
-                  disabled={!done || busy}
+                  disabled={!finished || busy || (canReach ? !canReach(index) : false)}
                   onClick={() => onStep(index)}
                   aria-current={current ? 'step' : undefined}
-                  sx={{ flexDirection: 'column', gap: 0.6, borderRadius: '12px', px: 1, py: 0.25, maxWidth: '100%', '&:hover .wiz-dot': done ? { boxShadow: `0 0 0 5px ${look.soft}` } : {} }}
+                  sx={{ flexDirection: 'column', gap: 0.6, borderRadius: '12px', px: 1, py: 0.25, maxWidth: '100%', '&:hover .wiz-dot': finished ? { boxShadow: `0 0 0 5px ${look.soft}` } : {} }}
                 >
                   <Box
                     className="wiz-dot"
@@ -154,20 +167,20 @@ export function WizardDialog({
                       fontSize: 14,
                       fontWeight: 800,
                       transition: 'all .3s ease',
-                      ...(done
+                      ...(finished
                         ? { bgcolor: look.main, color: '#fff', '& svg': { fontSize: 19, animation: `${tick} .35s ease both` } }
                         : current
                           ? { bgcolor: look.main, color: '#fff', boxShadow: `0 0 0 5px ${look.soft}` }
                           : { bgcolor: '#fff', color: tokens.gray500, border: `2px solid ${tokens.gray200}` }),
                     }}
                   >
-                    {done ? <CheckIcon /> : index + 1}
+                    {finished ? <CheckIcon /> : index + 1}
                   </Box>
                   <Typography
                     sx={{
                       fontSize: 12.5,
                       fontWeight: current ? 800 : 600,
-                      color: current ? look.main : done ? tokens.navy800 : tokens.gray500,
+                      color: current ? look.main : finished ? tokens.navy800 : tokens.gray500,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -216,6 +229,8 @@ export function WizardDialog({
           </Button>
         )}
       </Stack>
+        </>
+      )}
     </Dialog>
   );
 }

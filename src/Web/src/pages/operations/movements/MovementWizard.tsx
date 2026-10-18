@@ -1,10 +1,9 @@
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ReplayOutlinedIcon from '@mui/icons-material/ReplayOutlined';
 import SearchIcon from '@mui/icons-material/Search';
-import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import {
   Alert,
@@ -24,7 +23,6 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
 import {
   exitKinds,
@@ -39,11 +37,12 @@ import {
 } from '../../../api/movements';
 import type { ProjectOption, WorkerCard } from '../../../api/operations';
 import { tokens } from '../../../app/theme';
-import { ErrorMessage } from '../../../auth/AuthLayout';
+import { recordTones } from '../../../components/RecordLayout';
 import { Initials } from '../../../components/ui';
+import { WizardAside, WizardCard, WizardDialog } from '../../../components/WizardDialog';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { isoToday, sar } from '../../operations/delivery';
-import { gradient, rise, slideFrom, StateBubble, TypeIcon, typeLook, useStateName } from './movementMeta';
+import { gradient, rise, StateBubble, TypeIcon, typeLook, useStateName } from './movementMeta';
 
 type Step = 0 | 1 | 2;
 
@@ -93,42 +92,28 @@ function ChoiceCard({ selected, onClick, icon, title, sub, tone }: { selected: b
   );
 }
 
-/** The page form of a new or returned action (for deep links, e.g. from an alert); the popup is the usual way in. */
-export function MovementFormPage() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const [params] = useSearchParams();
-  const { ar } = useCommercialFormat();
-  return (
-    <Box>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 2, mb: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <Typography component="h1" sx={{ fontSize: 22, fontWeight: 800, color: tokens.navy800 }}>
-            {id ? t('movements.editTitle') : t('movements.new')}
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: tokens.gray500 }}>{t('movements.wizardHint')}</Typography>
-        </Box>
-        <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(id ? `/operations/movements/${id}` : '/operations/movements')}>
-          {t('common.back')}
-        </Button>
-      </Stack>
-      <MovementWizard id={id} workerId={params.get('worker') ?? undefined} onSaved={(saved) => navigate(`/operations/movements/${saved}`)} />
-    </Box>
-  );
-}
-
 /**
- * A new action in three steps — the worker, the action (only those their state allows), then its details — with the
- * change drawn live beside the form. A returned action opens on its details (the worker and the type stay). Given a
- * worker (the worker's page), it starts on the action; inside the popup it fits the dialog.
+ * A new action as a guided popup, in three steps — the worker, the action (only those their state allows), then its
+ * details — with the change drawn live beside the form, in the chosen action's colors. A returned action opens on its
+ * details (the worker and the type stay); given a worker (the worker's page), it starts on the action.
  */
-export function MovementWizard({ id, workerId, inDialog = false, onSaved }: { id?: string; workerId?: string; inDialog?: boolean; onSaved: (id: string) => void }) {
+export function MovementWizard({
+  id,
+  workerId,
+  onClose,
+  onSaved,
+  done,
+}: {
+  id?: string;
+  workerId?: string;
+  onClose: () => void;
+  onSaved: (id: string) => void;
+  done?: ReactNode;
+}) {
   const { t } = useTranslation();
   const { ar, date } = useCommercialFormat();
   const stateName = useStateName();
   const [step, setStep] = useState<Step>(0);
-  const [direction, setDirection] = useState<1 | -1>(1);
   const [search, setSearch] = useState('');
   const [found, setFound] = useState<WorkerCard[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -156,10 +141,7 @@ export function MovementWizard({ id, workerId, inDialog = false, onSaved }: { id
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
 
-  const go = (next: Step) => {
-    setDirection(next > step ? (ar ? -1 : 1) : ar ? 1 : -1);
-    setStep(next);
-  };
+  const go = (next: Step) => setStep(next);
 
   // A worker chosen from the search, the worker page, or the returned movement.
   const chooseWorker = async (workerId: string, except?: string) => {
@@ -283,221 +265,14 @@ export function MovementWizard({ id, workerId, inDialog = false, onSaved }: { id
     }
   };
 
-  const steps = [t('movements.steps.worker'), t('movements.steps.type'), t('movements.steps.details')];
-  const tone = type ? typeLook[type].from : '#0d6e8c';
 
-  const fixedWorker = !!workerId || !!id;
-  return (
-    <Box>
-      {/* The steps, with a bar filling as the user goes. */}
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', px: { xs: 2, md: 4 }, py: 2.25, mb: 2.5 }}>
-        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
-          <Box sx={{ position: 'absolute', top: 17, insetInlineStart: 18, insetInlineEnd: 18, height: 3, borderRadius: 3, bgcolor: tokens.gray100 }} />
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 17,
-              insetInlineStart: 18,
-              width: `calc((100% - 36px) * ${step / 2})`,
-              height: 3,
-              borderRadius: 3,
-              background: type ? gradient(type) : 'linear-gradient(90deg,#0d6e8c,#1aa39a)',
-              transition: 'width .45s cubic-bezier(.4,0,.2,1)',
-            }}
-          />
-          {steps.map((label, n) => {
-            const done = n < step;
-            const current = n === step;
-            const reachable = n < step && !(fixedWorker && n === 0) && !(id && n < 2);
-            return (
-              <ButtonBase
-                key={label}
-                disabled={!reachable}
-                onClick={() => go(n as Step)}
-                sx={{ position: 'relative', zIndex: 1, flexDirection: 'column', gap: 0.75, borderRadius: 2, px: 1 }}
-              >
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    color: done || current ? '#fff' : tokens.gray500,
-                    background: done || current ? (type ? gradient(type) : 'linear-gradient(135deg,#0d6e8c,#1aa39a)') : '#fff',
-                    border: done || current ? 'none' : `2px solid ${tokens.gray200}`,
-                    boxShadow: current ? `0 0 0 5px ${tone}22` : 'none',
-                    transition: 'all .3s ease',
-                  }}
-                >
-                  {done ? <CheckIcon sx={{ fontSize: 19 }} /> : n + 1}
-                </Box>
-                <Typography sx={{ fontSize: 12.5, fontWeight: current ? 800 : 600, color: current ? tokens.navy800 : tokens.gray500 }}>{label}</Typography>
-              </ButtonBase>
-            );
-          })}
-        </Box>
-      </Box>
-
-      <ErrorMessage messageKey={error} />
-
-      <Box sx={{ display: 'grid', gridTemplateColumns: inDialog ? { xs: '1fr', md: step === 2 ? '1fr 320px' : '1fr' } : { xs: '1fr', lg: step === 2 ? '1fr 360px' : '1fr' }, gap: 2.5, alignItems: 'start' }}>
-        {/* The step's content, sliding in from the side it comes from. */}
-        <Box key={step} sx={{ animation: `${slideFrom(direction)} .38s cubic-bezier(.2,.8,.2,1) both`, minWidth: 0 }}>
-          {step === 0 && (
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', p: { xs: 2, md: 3 } }}>
-              <Typography sx={{ fontSize: 17, fontWeight: 800, color: tokens.navy800, mb: 0.5 }}>{t('movements.chooseWorker')}</Typography>
-              <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2 }}>{t('movements.chooseWorkerHint')}</Typography>
-              <TextField
-                autoFocus
-                fullWidth
-                placeholder={t('movements.workerSearch')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searching ? <CircularProgress size={18} /> : undefined,
-                    sx: { fontSize: 16, borderRadius: 3, py: 0.5 },
-                  },
-                }}
-              />
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 1.25, mt: 2 }}>
-                {found?.map((w, n) => (
-                  <ButtonBase
-                    key={w.id}
-                    onClick={() => void chooseWorker(w.id)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      p: 1.5,
-                      textAlign: 'start',
-                      justifyContent: 'flex-start',
-                      borderRadius: `${tokens.radius}px`,
-                      border: `1px solid ${tokens.gray100}`,
-                      transition: 'all .18s ease',
-                      animation: `${rise} .3s ease both`,
-                      animationDelay: `${n * 35}ms`,
-                      '&:hover': { borderColor: '#0d6e8c', boxShadow: tokens.shadowSm, transform: 'translateY(-2px)' },
-                    }}
-                  >
-                    <Initials name={w.name} size={42} />
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontSize: 13.5, fontWeight: 800, color: tokens.navy800, textAlign: 'start', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {w.name}
-                      </Typography>
-                      <Typography sx={{ fontSize: 11.5, color: tokens.gray500, mb: 0.5 }}>
-                        <span dir="ltr">{w.workerNo}</span> · {(ar ? w.professionAr : w.professionEn) ?? '—'}
-                      </Typography>
-                      <StateBubble state={w.placement} label={stateName(w.placement)} sub={w.projectName} />
-                    </Box>
-                  </ButtonBase>
-                ))}
-              </Box>
-              {found && found.length === 0 && <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('movements.noWorkers')}</Typography>}
-            </Box>
-          )}
-
-          {step === 1 && worker && options && (
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', p: { xs: 2, md: 3 } }}>
-              <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' }, mb: 2.5, p: 1.75, borderRadius: `${tokens.radius}px`, bgcolor: tokens.gray50 }}>
-                <Initials name={worker.name} size={46} />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800, textAlign: 'start' }}>
-                    {worker.name}
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>
-                    <span dir="ltr">{worker.workerNo}</span> · {(ar ? worker.professionAr : worker.professionEn) ?? '—'} · {(ar ? worker.nationalityAr : worker.nationalityEn) ?? '—'}
-                  </Typography>
-                </Box>
-                <StateBubble state={worker.placement} label={stateName(worker.placement)} sub={worker.projectName} big />
-                {!fixedWorker && (
-                  <Button size="small" startIcon={<ReplayOutlinedIcon />} onClick={() => go(0)}>
-                    {t('movements.changeWorker')}
-                  </Button>
-                )}
-              </Stack>
-              {options.busyWith && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  {t('movements.busyWith', { number: options.busyWith })}
-                </Alert>
-              )}
-              <Typography sx={{ fontSize: 17, fontWeight: 800, color: tokens.navy800, mb: 0.5 }}>{t('movements.chooseType')}</Typography>
-              <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2 }}>{t('movements.chooseTypeHint', { state: stateName(worker.placement) })}</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-                {[...movementTypes].sort((x, y) => Number(options.allowed.includes(y)) - Number(options.allowed.includes(x))).map((m, n) => {
-                  const allowed = options.allowed.includes(m) && !options.busyWith;
-                  const card = (
-                    <ButtonBase
-                      key={m}
-                      disabled={!allowed}
-                      onClick={() => {
-                        setType(m);
-                        go(2);
-                      }}
-                      sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        gap: 1.25,
-                        p: 2,
-                        textAlign: 'start',
-                        borderRadius: `${tokens.radius + 4}px`,
-                        border: `1px solid ${tokens.gray100}`,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        opacity: allowed ? 1 : 0.42,
-                        filter: allowed ? 'none' : 'grayscale(1)',
-                        transition: 'all .2s ease',
-                        animation: `${rise} .35s ease both`,
-                        animationDelay: `${n * 35}ms`,
-                        '&:hover': allowed ? { transform: 'translateY(-3px)', boxShadow: `0 14px 28px ${typeLook[m].from}2e`, borderColor: typeLook[m].from } : undefined,
-                      }}
-                    >
-                      <TypeIcon type={m} size={46} />
-                      <Box>
-                        <Typography sx={{ fontSize: 14.5, fontWeight: 800, color: tokens.navy800 }}>{t(`movements.types.${m}`)}</Typography>
-                        <Typography sx={{ fontSize: 12, color: tokens.gray500, lineHeight: 1.5 }}>{t(`movements.typeHints.${m}`)}</Typography>
-                      </Box>
-                      {!allowed && <LockOutlinedIcon sx={{ position: 'absolute', top: 12, insetInlineEnd: 12, fontSize: 18, color: tokens.gray500 }} />}
-                    </ButtonBase>
-                  );
-                  return allowed ? (
-                    card
-                  ) : (
-                    <Tooltip key={m} title={t('movements.notAllowed', { state: stateName(worker.placement) })}>
-                      <span>{card}</span>
-                    </Tooltip>
-                  );
-                })}
-              </Box>
-            </Box>
-          )}
-
-          {step === 2 && worker && type && (
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', overflow: 'hidden' }}>
-              <Box sx={{ p: 2.25, color: '#fff', background: gradient(type), display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: 44, height: 44, borderRadius: '30%', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,.2)', '& svg': { fontSize: 24 } }}>{typeLook[type].icon}</Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontSize: 17, fontWeight: 800 }}>{t(`movements.types.${type}`)}</Typography>
-                  <Typography sx={{ fontSize: 12.5, opacity: 0.9 }}>{t(`movements.typeHints.${type}`)}</Typography>
-                </Box>
-                {!id && (
-                  <Button size="small" onClick={() => go(1)} sx={{ color: '#fff', bgcolor: 'rgba(255,255,255,.18)', fontWeight: 700, px: 1.5, '&:hover': { bgcolor: 'rgba(255,255,255,.28)' } }}>
-                    {t('movements.changeType')}
-                  </Button>
-                )}
-              </Box>
-              <Stack spacing={2.25} sx={{ p: { xs: 2, md: 3 } }}>
+  // The details of the chosen action.
+  const details = () =>
+    worker &&
+    type && (
+      <WizardCard title={t(`movements.types.${type}`)} icon={typeLook[type].icon} action={!id ? <Button size="small" onClick={() => go(1)}>{t('movements.changeType')}</Button> : undefined}>
+        <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2, mt: -1 }}>{t(`movements.typeHints.${type}`)}</Typography>
+              <Stack spacing={2.25}>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                   <TextField
                     type="date"
@@ -633,50 +408,207 @@ export function MovementWizard({ id, workerId, inDialog = false, onSaved }: { id
                 )}
                 <TextField label={t('movements.notes')} value={form.notes} onChange={(e) => set({ notes: e.target.value })} multiline minRows={2} />
               </Stack>
-            </Box>
-          )}
-        </Box>
+      </WizardCard>
+    );
 
-        {/* The summary: who, from where to where, and when. */}
-        {step === 2 && worker && type && target && (
-          <Box sx={{ position: inDialog ? 'static' : { lg: 'sticky' }, top: { lg: 84 }, animation: `${rise} .45s ease both` }}>
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', p: 2.5 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 700, color: tokens.gray500, mb: 1.5 }}>{t('movements.summary')}</Typography>
-              <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, mb: 2.5 }}>
-                <Initials name={worker.name} size={40} />
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 14, fontWeight: 800, color: tokens.navy800, textAlign: 'start', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {worker.name}
-                  </Typography>
-                  <Typography dir="ltr" sx={{ fontSize: 11.5, color: tokens.gray500, textAlign: 'start' }}>
-                    {worker.workerNo}
-                  </Typography>
-                </Box>
-              </Stack>
+  // Beside the form: who, from where to where, and when.
+  const summary = () =>
+    worker && (
+      <WizardAside tone="movement" title={t('movements.summary')}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, py: 1.25 }}>
+          <Initials name={worker.name} size={40} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 800, color: tokens.navy800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{worker.name}</Typography>
+            <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+              <span dir="ltr">{worker.workerNo}</span>
+            </Typography>
+          </Box>
+        </Stack>
+        <Box sx={{ pb: 1.5 }}>
               <Stack spacing={1.5} sx={{ p: 1.75, borderRadius: `${tokens.radius}px`, bgcolor: tokens.gray50 }}>
                 <StateBubble state={worker.placement} label={stateName(worker.placement)} sub={worker.projectName} big />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 2, height: 28, mx: 3, borderRadius: 2, background: gradient(type) }} />
-                  <TypeIcon type={type} size={30} glow />
-                  <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: typeLook[type].from }}>
-                    {t(`movements.types.${type}`)} · {date(form.effectiveOn)}
-                  </Typography>
-                </Box>
-                <StateBubble
-                  state={target}
-                  label={stateName(target)}
-                  sub={target === 'Work' ? (quote?.projectName ?? null) : target === 'ClientVacation' ? worker.projectName : form.place || null}
-                  big
-                />
+                {type && target ? (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 2, height: 28, mx: 3, borderRadius: 2, background: gradient(type) }} />
+                      <TypeIcon type={type} size={30} glow />
+                      <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: typeLook[type].from }}>
+                        {t(`movements.types.${type}`)} · {date(form.effectiveOn)}
+                      </Typography>
+                    </Box>
+                    <StateBubble
+                      state={target}
+                      label={stateName(target)}
+                      sub={target === 'Work' ? (quote?.projectName ?? null) : target === 'ClientVacation' ? worker.projectName : form.place || null}
+                      big
+                    />
+                  </>
+                ) : (
+                  <Typography sx={{ fontSize: 12.5, color: tokens.gray500, px: 1 }}>{t('movements.chooseType')}</Typography>
+                )}
               </Stack>
-              <Button fullWidth variant="contained" size="large" startIcon={<SendOutlinedIcon />} disabled={busy || !valid} onClick={() => void save()} sx={{ mt: 2.5, py: 1.25, fontWeight: 800, background: gradient(type) }}>
-                {t('movements.send')}
-              </Button>
-              <Typography sx={{ fontSize: 11.5, color: tokens.gray500, mt: 1, textAlign: 'center' }}>{t('movements.sendHint')}</Typography>
-            </Box>
+        </Box>
+      </WizardAside>
+    );
+
+  const steps = [
+    { key: 'worker', label: t('movements.steps.worker') },
+    { key: 'type', label: t('movements.steps.type') },
+    { key: 'details', label: t('movements.steps.details') },
+  ];
+  const fixedWorker = !!workerId || !!id;
+  const look = type ? { band: gradient(type), dark: gradient(type), main: typeLook[type].from, soft: `${typeLook[type].from}1f` } : undefined;
+  const ready = [!!options, !!type && !!options?.allowed.includes(type) && !options.busyWith, valid];
+
+  return (
+    <WizardDialog
+      tone="movement"
+      look={look}
+      icon={type ? typeLook[type].icon : <MultipleStopOutlinedIcon />}
+      title={id ? t('movements.editTitle') : type ? t(`movements.types.${type}`) : t('movements.new')}
+      subtitle={worker ? `${worker.name} · ${worker.workerNo}` : t('movements.wizardHint')}
+      steps={steps}
+      step={step}
+      onStep={(n) => go(n as Step)}
+      canReach={(n) => !(fixedWorker && n === 0) && !(id && n < 2)}
+      canNext={ready[step] ?? false}
+      onClose={onClose}
+      onFinish={() => void save()}
+      finishLabel={t('movements.send')}
+      busy={busy}
+      error={error}
+      done={done}
+      aside={worker ? summary() : undefined}
+    >
+      {step === 0 && (
+        <WizardCard title={t('movements.chooseWorker')} icon={<SearchIcon />}>
+          <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2, mt: -1 }}>{t('movements.chooseWorkerHint')}</Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            placeholder={t('movements.workerSearch')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searching ? <CircularProgress size={18} /> : undefined,
+                sx: { fontSize: 16, borderRadius: 3, py: 0.5 },
+              },
+            }}
+          />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.25, mt: 2 }}>
+            {found?.map((w, n) => (
+              <ButtonBase
+                key={w.id}
+                onClick={() => void chooseWorker(w.id)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  p: 1.5,
+                  textAlign: 'start',
+                  justifyContent: 'flex-start',
+                  borderRadius: `${tokens.radius}px`,
+                  border: `1px solid ${worker?.id === w.id ? recordTones.movement.main : tokens.gray100}`,
+                  transition: 'all .18s ease',
+                  animation: `${rise} .3s ease both`,
+                  animationDelay: `${n * 35}ms`,
+                  '&:hover': { borderColor: recordTones.movement.main, boxShadow: tokens.shadowSm, transform: 'translateY(-2px)' },
+                }}
+              >
+                <Initials name={w.name} size={42} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 800, color: tokens.navy800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</Typography>
+                  <Typography sx={{ fontSize: 11.5, color: tokens.gray500, mb: 0.5 }}>
+                    <span dir="ltr">{w.workerNo}</span> · {(ar ? w.professionAr : w.professionEn) ?? '—'}
+                  </Typography>
+                  <StateBubble state={w.placement} label={stateName(w.placement)} sub={w.projectName} />
+                </Box>
+              </ButtonBase>
+            ))}
           </Box>
-        )}
-      </Box>
-    </Box>
+          {found && found.length === 0 && <Typography sx={{ py: 4, textAlign: 'center', color: tokens.gray500 }}>{t('movements.noWorkers')}</Typography>}
+        </WizardCard>
+      )}
+
+      {step === 1 && worker && options && (
+        <WizardCard
+          title={t('movements.chooseType')}
+          icon={<MultipleStopOutlinedIcon />}
+          action={
+            !fixedWorker ? (
+              <Button size="small" startIcon={<ReplayOutlinedIcon />} onClick={() => go(0)}>
+                {t('movements.changeWorker')}
+              </Button>
+            ) : undefined
+          }
+        >
+          <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2, mt: -1 }}>{t('movements.chooseTypeHint', { state: stateName(worker.placement) })}</Typography>
+          {options.busyWith && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t('movements.busyWith', { number: options.busyWith })}
+            </Alert>
+          )}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+            {[...movementTypes].sort((x, y) => Number(options.allowed.includes(y)) - Number(options.allowed.includes(x))).map((m, n) => {
+              const allowed = options.allowed.includes(m) && !options.busyWith;
+              const chosen = type === m;
+              const card = (
+                <ButtonBase
+                  key={m}
+                  disabled={!allowed}
+                  onClick={() => {
+                    setType(m);
+                    go(2);
+                  }}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: 1.25,
+                    p: 2,
+                    textAlign: 'start',
+                    borderRadius: `${tokens.radius + 4}px`,
+                    border: `${chosen ? 2 : 1}px solid ${chosen ? typeLook[m].from : tokens.gray100}`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    opacity: allowed ? 1 : 0.42,
+                    filter: allowed ? 'none' : 'grayscale(1)',
+                    transition: 'all .2s ease',
+                    animation: `${rise} .35s ease both`,
+                    animationDelay: `${n * 35}ms`,
+                    '&:hover': allowed ? { transform: 'translateY(-3px)', boxShadow: `0 14px 28px ${typeLook[m].from}2e`, borderColor: typeLook[m].from } : undefined,
+                  }}
+                >
+                  <TypeIcon type={m} size={46} />
+                  <Box>
+                    <Typography sx={{ fontSize: 14.5, fontWeight: 800, color: tokens.navy800 }}>{t(`movements.types.${m}`)}</Typography>
+                    <Typography sx={{ fontSize: 12, color: tokens.gray500, lineHeight: 1.5 }}>{t(`movements.typeHints.${m}`)}</Typography>
+                  </Box>
+                  {!allowed && <LockOutlinedIcon sx={{ position: 'absolute', top: 12, insetInlineEnd: 12, fontSize: 18, color: tokens.gray500 }} />}
+                  {chosen && <CheckIcon sx={{ position: 'absolute', top: 12, insetInlineEnd: 12, fontSize: 20, color: typeLook[m].from }} />}
+                </ButtonBase>
+              );
+              return allowed ? (
+                card
+              ) : (
+                <Tooltip key={m} title={t('movements.notAllowed', { state: stateName(worker.placement) })}>
+                  <span>{card}</span>
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </WizardCard>
+      )}
+
+      {step === 2 && worker && type && details()}
+    </WizardDialog>
   );
 }

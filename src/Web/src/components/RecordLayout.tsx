@@ -35,8 +35,11 @@ export function RecordHero({
   subtitle,
   actions,
   tone = 'delivery',
+  background,
 }: {
   tone?: RecordTone;
+  /** A band other than the record's (e.g. the action type's gradient). */
+  background?: string;
   icon: ReactNode;
   kind: string;
   number: string;
@@ -55,7 +58,7 @@ export function RecordHero({
         py: 1.75,
         borderRadius: `${tokens.radiusLg}px`,
         color: '#fff',
-        background: recordTones[tone].band,
+        background: background ?? recordTones[tone].band,
         boxShadow: tokens.shadowSm,
         '&::after': { content: '""', position: 'absolute', width: 220, height: 220, borderRadius: '50%', top: -140, insetInlineEnd: -40, background: 'rgba(255,255,255,.07)' },
       }}
@@ -160,7 +163,9 @@ export function SummaryBand({
   size = 30,
   chips,
   tone = 'delivery',
+  background,
 }: {
+  background?: string;
   label: string;
   value: ReactNode;
   unit?: string;
@@ -169,7 +174,7 @@ export function SummaryBand({
   tone?: RecordTone;
 }) {
   return (
-    <Box sx={{ px: 2.5, py: 2, color: '#fff', background: recordTones[tone].dark }}>
+    <Box sx={{ px: 2.5, py: 2, color: '#fff', background: background ?? recordTones[tone].dark }}>
       <Typography sx={{ fontSize: 12, opacity: 0.85 }}>{label}</Typography>
       <Typography sx={{ fontSize: size, fontWeight: 800, lineHeight: 1.3, overflowWrap: 'anywhere' }}>
         {value}

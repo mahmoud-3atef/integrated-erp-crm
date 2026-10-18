@@ -13,7 +13,6 @@ import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
 import { AlertsPage } from '../pages/alerts/AlertsPage';
 import { AgingPage } from '../pages/billing/AgingPage';
-import { MovementFormPage } from '../pages/operations/movements/MovementFormPage';
 import { MovementPage } from '../pages/operations/movements/MovementPage';
 import { MovementsPage } from '../pages/operations/movements/MovementsPage';
 import { BankAccountsPage } from '../pages/billing/BankAccountsPage';
@@ -115,9 +114,9 @@ export function App() {
                 <Route path="/operations/return-orders/:id/edit" element={<ReturnOrderDetailPage key="edit" editing />} />
                 <Route path="/operations/transfer-orders" element={<TransferOrdersPage />} />
                 <Route path="/operations/movements" element={<MovementsPage />} />
-                <Route path="/operations/movements/new" element={<MovementFormPage key="new" />} />
+                <Route path="/operations/movements/new" element={<MovementsPage key="new" creating />} />
                 <Route path="/operations/movements/:id" element={<MovementPage />} />
-                <Route path="/operations/movements/:id/edit" element={<MovementFormPage key="edit" />} />
+                <Route path="/operations/movements/:id/edit" element={<MovementPage key="edit" editing />} />
                 <Route path="/operations/transfer-orders/new" element={<TransferOrdersPage key="new" creating />} />
                 <Route path="/operations/transfer-orders/:id" element={<TransferOrderDetailPage />} />
                 <Route path="/operations/transfer-orders/:id/edit" element={<TransferOrderDetailPage key="edit" editing />} />

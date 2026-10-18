@@ -104,7 +104,7 @@ export interface JourneyEnd {
 }
 
 /** The way a worker goes: from one place to another, a dashed arrow between, and a pill on it (e.g. the days spent). */
-export function Journey({ from, to, pill }: { from: JourneyEnd; to: JourneyEnd; pill?: ReactNode }) {
+export function Journey({ from, to, pill, pillIcon }: { from: JourneyEnd; to: JourneyEnd; pill?: ReactNode; pillIcon?: ReactNode }) {
   const end = (e: JourneyEnd) => (
     <Box sx={{ flex: '0 1 auto', minWidth: 0 }}>
       <StateBubble state={e.state} label={e.label} sub={e.sub} big />
@@ -141,7 +141,7 @@ export function Journey({ from, to, pill }: { from: JourneyEnd; to: JourneyEnd; 
               '& svg': { fontSize: 14 },
             }}
           >
-            <TimerOutlinedIcon />
+            {pillIcon ?? <TimerOutlinedIcon />}
             {pill}
           </Box>
         )}

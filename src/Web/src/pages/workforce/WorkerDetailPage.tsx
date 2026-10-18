@@ -341,7 +341,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           {t('workforce.readOnly')}
         </Stack>
       </Box>
-      {acting && <ActionDialog workerId={w.id} workerName={w.name} workerNo={w.workerNo} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
+      {acting && <ActionDialog workerId={w.id} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
     </Box>
   );
 }

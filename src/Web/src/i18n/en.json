@@ -2515,7 +2515,11 @@
     "keptPriceHint": "Back at the price they had; a special price can change it.",
     "sentTitle": "The action was sent for approval",
     "sentHint": "It is applied to the worker's periods when approved.",
-    "openSent": "Open the action"
+    "openSent": "Open the action",
+    "action": "Action",
+    "journey": "The change in the worker's state",
+    "executed": "Executed by",
+    "created": "Created by"
   },
   "alerts": {
     "title": "Alerts",
