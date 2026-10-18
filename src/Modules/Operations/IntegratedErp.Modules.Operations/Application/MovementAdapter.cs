@@ -55,21 +55,21 @@ internal sealed class MovementAdapter(OperationsDbContext db, IPeriodLedger ledg
 
     public ApprovalScreen Screen { get; } = new(
         ScreenCode,
-        "حركات العمال",
-        "Worker movements",
+        "إجراءات العمالة",
+        "Worker actions",
         "/operations/movements/{id}",
         [
-            new("type", "نوع الحركة", "Movement", RecordFieldType.Choice, Updatable: false, Types.Select(t => new RecordFieldOption(t.Type.ToString(), t.Ar, t.En, Settable: false)).ToList()),
+            new("type", "نوع الإجراء", "Action", RecordFieldType.Choice, Updatable: false, Types.Select(t => new RecordFieldOption(t.Type.ToString(), t.Ar, t.En, Settable: false)).ToList()),
             new("worker_no", "الرقم الوظيفي", "Worker no.", RecordFieldType.Text, Updatable: false),
             new("from_project", "المشروع الحالي", "Current project", RecordFieldType.Text, Updatable: false),
             new("to_project", "المشروع الجديد", "New project", RecordFieldType.Text, Updatable: false),
-            new("effective_on", "تاريخ الحركة", "Movement date", RecordFieldType.Date, Updatable: false),
+            new("effective_on", "تاريخ الإجراء", "Action date", RecordFieldType.Date, Updatable: false),
             new("client_vacation", "إجازة على العميل", "Vacation on the customer", RecordFieldType.Boolean, Updatable: false),
             new("special_price", "سعر خاص", "Special price", RecordFieldType.Boolean, Updatable: false),
             new("late", "مسجلة متأخرة", "Registered late", RecordFieldType.Boolean, Updatable: false),
-            new("requested_by", "منشئ الحركة", "Created by", RecordFieldType.User, Updatable: false),
+            new("requested_by", "منشئ الإجراء", "Created by", RecordFieldType.User, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد حركات العمال", "Worker movement approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد إجراءات العمالة", "Worker action approval", DefaultDefinition));
 
     public static string Title(WorkerMovement m) =>
         $"{m.MovementNo} — {Types.First(t => t.Type == m.Type).Ar} — {m.WorkerNo} {m.WorkerName}";
