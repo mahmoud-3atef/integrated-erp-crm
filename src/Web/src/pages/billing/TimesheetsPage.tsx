@@ -1,3 +1,4 @@
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import AutoModeOutlinedIcon from '@mui/icons-material/AutoModeOutlined';
 import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
@@ -32,11 +33,12 @@ import { billingApi, type MonthProject, type TimesheetMonth } from '../../api/bi
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { KpiCard, KpiGrid } from '../../components/KpiCard';
-import { Badge, Initials, PageHeader } from '../../components/ui';
+import { Badge, Initials } from '../../components/ui';
 import { sar } from '../operations/delivery';
 import { InvoiceStatusBadge } from './invoices';
-import { TimesheetStatusBadge } from './timesheets';
+import { TimesheetStatusBadge, timesheetTone } from './timesheets';
+import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
+import { toneColors } from '../../app/theme';
 
 type CardFilter = 'all' | 'generated' | 'inApproval' | 'approved' | 'invoiced';
 
@@ -122,9 +124,11 @@ export function TimesheetsPage() {
   );
   const toggle = (value: CardFilter) => setCard(card === value ? 'all' : value);
 
+  const stages = useCurrentStages('billing.timesheet', rows.flatMap((x) => (x.timesheetId ? [x.timesheetId] : [])));
+
   return (
     <Box>
-      <PageHeader
+      <ListHero tone="timesheet" icon={<CalendarMonthOutlinedIcon />}
         title={t('timesheets.title')}
         subtitle={t('timesheets.intro')}
         actions={
@@ -149,13 +153,13 @@ export function TimesheetsPage() {
       </Stack>
       <ErrorMessage messageKey={error} />
 
-      <KpiGrid count={5}>
-        <KpiCard active={card === 'all'} onClick={() => toggle('all')} label={t('timesheets.cards.projects')} value={String(data?.totals.projects ?? 0)} foot={t('timesheets.cards.projectsFoot')} icon={<BusinessCenterOutlinedIcon />} tone={tokens.navy700} />
-        <KpiCard active={card === 'generated'} onClick={() => toggle('generated')} label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedFoot', { count: missing })} icon={<PostAddOutlinedIcon />} tone="#6b7a90" />
-        <KpiCard active={card === 'inApproval'} onClick={() => toggle('inApproval')} label={t('timesheets.cards.inApproval')} value={String(data?.totals.inApproval ?? 0)} foot={t('timesheets.cards.inApprovalFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
-        <KpiCard active={card === 'approved'} onClick={() => toggle('approved')} label={t('timesheets.cards.approved')} value={String(data?.totals.approved ?? 0)} foot={t('timesheets.cards.approvedFoot')} icon={<AssignmentTurnedInOutlinedIcon />} tone="#1f9d55" />
-        <KpiCard active={card === 'invoiced'} onClick={() => toggle('invoiced')} label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot', { count: data?.totals.invoiced ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
-      </KpiGrid>
+      <StatusStrip count={5}>
+        <StripItem active={card === 'all'} onClick={() => toggle('all')} label={t('timesheets.cards.projects')} value={String(data?.totals.projects ?? 0)} foot={t('timesheets.cards.projectsFoot')} icon={<BusinessCenterOutlinedIcon />} tone={tokens.navy700} />
+        <StripItem active={card === 'generated'} onClick={() => toggle('generated')} label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedFoot', { count: missing })} icon={<PostAddOutlinedIcon />} tone="#6b7a90" />
+        <StripItem active={card === 'inApproval'} onClick={() => toggle('inApproval')} label={t('timesheets.cards.inApproval')} value={String(data?.totals.inApproval ?? 0)} foot={t('timesheets.cards.inApprovalFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
+        <StripItem active={card === 'approved'} onClick={() => toggle('approved')} label={t('timesheets.cards.approved')} value={String(data?.totals.approved ?? 0)} foot={t('timesheets.cards.approvedFoot')} icon={<AssignmentTurnedInOutlinedIcon />} tone="#1f9d55" />
+        <StripItem active={card === 'invoiced'} onClick={() => toggle('invoiced')} label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot', { count: data?.totals.invoiced ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
+      </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5, alignItems: { sm: 'center' }, mb: 1.5 }}>
@@ -179,7 +183,7 @@ export function TimesheetsPage() {
         {(!data || busy === 'all') && !error && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={toneHead('timesheet')}>
               <TableRow>
                 <TableCell>{t('commercial.col.project')}</TableCell>
                 <TableCell align="center">{t('timesheets.col.ledgerWorkers')}</TableCell>
@@ -192,7 +196,7 @@ export function TimesheetsPage() {
             </TableHead>
             <TableBody>
               {rows.map((p) => (
-                <TableRow key={p.projectCrmId} hover sx={{ cursor: p.timesheetId ? 'pointer' : 'default' }} onClick={() => p.timesheetId && navigate(`/billing/timesheets/${p.timesheetId}`)}>
+                <TableRow key={p.projectCrmId} hover sx={[{ cursor: p.timesheetId ? 'pointer' : 'default' }, rowEdge(p.status ? toneColors[timesheetTone[p.status]].fg : tokens.gray300)]} onClick={() => p.timesheetId && navigate(`/billing/timesheets/${p.timesheetId}`)}>
                   <TableCell sx={{ minWidth: 260 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
                       <Initials name={p.projectName} size={30} />
@@ -214,6 +218,7 @@ export function TimesheetsPage() {
                           {p.timesheetNo}
                         </Typography>
                         <TimesheetStatusBadge status={p.status!} />
+                        <StageLine stage={stages[p.timesheetId]} />
                       </Stack>
                     ) : p.projectId ? (
                       <Badge tone="neutral">{t('timesheets.notGenerated')}</Badge>

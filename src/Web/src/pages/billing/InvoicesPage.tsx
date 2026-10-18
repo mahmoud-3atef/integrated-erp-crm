@@ -29,11 +29,12 @@ import { errorKey } from '../../api/auth';
 import { invoiceApi, type InvoiceList } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { KpiCard, KpiGrid } from '../../components/KpiCard';
-import { PageHeader, PillTabs } from '../../components/ui';
+import { PillTabs } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
-import { InvoiceKindBadge, InvoiceStatusBadge, signed } from './invoices';
+import { InvoiceKindBadge, InvoiceStatusBadge, invoiceTone, signed } from './invoices';
+import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
+import { toneColors } from '../../app/theme';
 
 const monthIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
 type StatusFilter = '' | 'Open' | 'InReview' | 'Issued';
@@ -85,9 +86,11 @@ export function InvoicesPage() {
   const monthName = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' }).format(new Date(`${month}T00:00:00`));
   const totals = data?.totals;
 
+  const stages = useCurrentStages('billing.invoice', (data?.rows ?? []).map((x) => x.id));
+
   return (
     <Box>
-      <PageHeader title={t('invoices.title')} subtitle={t('invoices.intro')} />
+      <ListHero tone="invoice" icon={<ReceiptLongOutlinedIcon />} title={t('invoices.title')} subtitle={t('invoices.intro')} />
 
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center', gap: 1, mb: 2 }}>
         <IconButton onClick={() => shift(ar ? 1 : -1)} sx={{ bgcolor: '#fff', boxShadow: tokens.shadowXs }}>
@@ -102,13 +105,13 @@ export function InvoicesPage() {
       </Stack>
       <ErrorMessage messageKey={error} />
 
-      <KpiGrid count={5}>
-        <KpiCard label={t('invoices.cards.drafts')} value={String(totals?.drafts ?? 0)} foot={t('invoices.cards.draftsFoot')} icon={<EditNoteOutlinedIcon />} tone="#6b7a90" />
-        <KpiCard label={t('invoices.cards.inReview')} value={String(totals?.inReview ?? 0)} foot={t('invoices.cards.inReviewFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
-        <KpiCard label={t('invoices.cards.issued')} value={sar(totals?.issuedTotal ?? 0)} foot={t('invoices.cards.issuedFoot', { count: totals?.issued ?? 0 })} icon={<ReceiptLongOutlinedIcon />} tone="#1f9d55" />
-        <KpiCard label={t('invoices.cards.credits')} value={sar(totals?.credits ?? 0)} foot={t('invoices.cards.creditsFoot')} icon={<RemoveCircleOutlineIcon />} tone={tokens.danger} />
-        <KpiCard label={t('invoices.cards.debits')} value={sar(totals?.debits ?? 0)} foot={t('invoices.cards.debitsFoot')} icon={<AddCircleOutlineIcon />} tone="#2b7bd9" />
-      </KpiGrid>
+      <StatusStrip count={5}>
+        <StripItem label={t('invoices.cards.drafts')} value={String(totals?.drafts ?? 0)} foot={t('invoices.cards.draftsFoot')} icon={<EditNoteOutlinedIcon />} tone="#6b7a90" />
+        <StripItem label={t('invoices.cards.inReview')} value={String(totals?.inReview ?? 0)} foot={t('invoices.cards.inReviewFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
+        <StripItem label={t('invoices.cards.issued')} value={sar(totals?.issuedTotal ?? 0)} foot={t('invoices.cards.issuedFoot', { count: totals?.issued ?? 0 })} icon={<ReceiptLongOutlinedIcon />} tone="#1f9d55" />
+        <StripItem label={t('invoices.cards.credits')} value={sar(totals?.credits ?? 0)} foot={t('invoices.cards.creditsFoot')} icon={<RemoveCircleOutlineIcon />} tone={tokens.danger} />
+        <StripItem label={t('invoices.cards.debits')} value={sar(totals?.debits ?? 0)} foot={t('invoices.cards.debitsFoot')} icon={<AddCircleOutlineIcon />} tone="#2b7bd9" />
+      </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
@@ -144,7 +147,7 @@ export function InvoicesPage() {
         {!data && !error && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={toneHead('invoice')}>
               <TableRow>
                 <TableCell>{t('invoices.col.number')}</TableCell>
                 <TableCell>{t('commercial.col.project')}</TableCell>
@@ -157,7 +160,7 @@ export function InvoicesPage() {
             </TableHead>
             <TableBody>
               {data?.rows.map((r) => (
-                <TableRow key={r.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/billing/invoices/${r.id}`)}>
+                <TableRow key={r.id} hover sx={[{ cursor: 'pointer' }, rowEdge(toneColors[invoiceTone[r.status]].fg)]} onClick={() => navigate(`/billing/invoices/${r.id}`)}>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     <Stack spacing={0.4} sx={{ alignItems: 'flex-start' }}>
                       <Typography dir="ltr" sx={{ fontSize: 13, fontWeight: 800, color: r.invoiceNo ? tokens.navy800 : tokens.gray500 }}>
@@ -182,6 +185,7 @@ export function InvoicesPage() {
                   </TableCell>
                   <TableCell>
                     <InvoiceStatusBadge status={r.status} />
+                    <StageLine stage={stages[r.id]} />
                   </TableCell>
                 </TableRow>
               ))}

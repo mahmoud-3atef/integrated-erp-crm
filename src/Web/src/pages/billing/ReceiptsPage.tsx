@@ -30,12 +30,12 @@ import { receivablesApi, type ReceiptList } from '../../api/billing';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { KpiCard, KpiGrid } from '../../components/KpiCard';
-import { PageHeader } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
-import { monthEnd, monthStart, ReceiptStatusBadge } from './receipts';
+import { monthEnd, monthStart, receiptTone, ReceiptStatusBadge } from './receipts';
 import { ReceiptDialog } from './ReceiptDialog';
+import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
+import { toneColors } from '../../app/theme';
 
 type Filter = '' | 'Open' | 'InReview' | 'Approved' | 'Unallocated';
 
@@ -81,9 +81,11 @@ export function ReceiptsPage({ creating = false }: { creating?: boolean } = {}) 
   const toggle = (value: Filter) => setFilter(filter === value ? '' : value);
   const totals = data?.totals;
 
+  const stages = useCurrentStages('billing.receipt', (data?.rows ?? []).map((x) => x.id));
+
   return (
     <Box>
-      <PageHeader
+      <ListHero tone="receipt" icon={<PaymentsOutlinedIcon />}
         title={t('receipts.title')}
         subtitle={t('receipts.intro')}
         actions={
@@ -108,12 +110,12 @@ export function ReceiptsPage({ creating = false }: { creating?: boolean } = {}) 
       </Stack>
       <ErrorMessage messageKey={error} />
 
-      <KpiGrid count={4}>
-        <KpiCard active={filter === 'Open'} onClick={() => toggle('Open')} label={t('receipts.cards.drafts')} value={String(totals?.drafts ?? 0)} foot={t('receipts.cards.draftsFoot')} icon={<EditNoteOutlinedIcon />} tone="#6b7a90" />
-        <KpiCard active={filter === 'InReview'} onClick={() => toggle('InReview')} label={t('receipts.cards.inReview')} value={String(totals?.inReview ?? 0)} foot={t('receipts.cards.inReviewFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
-        <KpiCard active={filter === 'Approved'} onClick={() => toggle('Approved')} label={t('receipts.cards.approved')} value={sar(totals?.approvedAmount ?? 0)} foot={t('receipts.cards.approvedFoot', { count: totals?.approved ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#1f9d55" />
-        <KpiCard active={filter === 'Unallocated'} onClick={() => toggle('Unallocated')} label={t('receipts.cards.unallocated')} value={sar(totals?.unallocated ?? 0)} foot={t('receipts.cards.unallocatedFoot')} icon={<AccountBalanceWalletOutlinedIcon />} tone="#2b7bd9" />
-      </KpiGrid>
+      <StatusStrip count={4}>
+        <StripItem active={filter === 'Open'} onClick={() => toggle('Open')} label={t('receipts.cards.drafts')} value={String(totals?.drafts ?? 0)} foot={t('receipts.cards.draftsFoot')} icon={<EditNoteOutlinedIcon />} tone="#6b7a90" />
+        <StripItem active={filter === 'InReview'} onClick={() => toggle('InReview')} label={t('receipts.cards.inReview')} value={String(totals?.inReview ?? 0)} foot={t('receipts.cards.inReviewFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
+        <StripItem active={filter === 'Approved'} onClick={() => toggle('Approved')} label={t('receipts.cards.approved')} value={sar(totals?.approvedAmount ?? 0)} foot={t('receipts.cards.approvedFoot', { count: totals?.approved ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#1f9d55" />
+        <StripItem active={filter === 'Unallocated'} onClick={() => toggle('Unallocated')} label={t('receipts.cards.unallocated')} value={sar(totals?.unallocated ?? 0)} foot={t('receipts.cards.unallocatedFoot')} icon={<AccountBalanceWalletOutlinedIcon />} tone="#2b7bd9" />
+      </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <TextField
@@ -127,7 +129,7 @@ export function ReceiptsPage({ creating = false }: { creating?: boolean } = {}) 
         {!data && !error && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={toneHead('receipt')}>
               <TableRow>
                 <TableCell>{t('receipts.col.number')}</TableCell>
                 <TableCell>{t('commercial.col.project')}</TableCell>
@@ -140,7 +142,7 @@ export function ReceiptsPage({ creating = false }: { creating?: boolean } = {}) 
             </TableHead>
             <TableBody>
               {data?.rows.map((r) => (
-                <TableRow key={r.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/billing/receipts/${r.id}`)}>
+                <TableRow key={r.id} hover sx={[{ cursor: 'pointer' }, rowEdge(toneColors[receiptTone[r.status]].fg)]} onClick={() => navigate(`/billing/receipts/${r.id}`)}>
                   <TableCell dir="ltr" sx={{ fontWeight: 800, color: r.receiptNo ? tokens.navy800 : tokens.gray500, textAlign: 'start', whiteSpace: 'nowrap' }}>
                     {r.receiptNo ?? t('receipts.noNumber')}
                   </TableCell>
@@ -161,6 +163,7 @@ export function ReceiptsPage({ creating = false }: { creating?: boolean } = {}) 
                   </TableCell>
                   <TableCell>
                     <ReceiptStatusBadge status={r.status} />
+                    <StageLine stage={stages[r.id]} />
                   </TableCell>
                 </TableRow>
               ))}

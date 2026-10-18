@@ -1,3 +1,4 @@
+import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
 import Add from '@mui/icons-material/Add';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
@@ -14,6 +15,7 @@ import { PillTabs } from '../../../components/ui';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { ActionDialog } from './ActionDialog';
 import { gradient, MovementStatusBadge, rise, Transition, TypeIcon, typeLook, useStateName } from './movementMeta';
+import { ListHero, StageLine, useCurrentStages } from '../../../components/ListLayout';
 
 type StatusFilter = '' | 'Open' | 'Executed' | 'Closed';
 
@@ -54,53 +56,36 @@ export function MovementsPage({ creating = false }: { creating?: boolean } = {})
 
   const pick = (value: MovementType) => setParams(type === value ? {} : { type: value }, { replace: true });
 
+  const stages = useCurrentStages('operations.movement', (data?.rows ?? []).map((x) => x.id));
+
   return (
     <Box>
       {/* The page's banner. */}
-      <Box
-        sx={{
-          position: 'relative',
-          overflow: 'hidden',
-          borderRadius: `${tokens.radiusLg}px`,
-          p: { xs: 2.5, md: 3.5 },
-          mb: 2.5,
-          color: '#fff',
-          background: 'linear-gradient(120deg, #0b3954 0%, #0d6e8c 55%, #1aa39a 100%)',
-          boxShadow: '0 14px 34px rgba(11,57,84,.25)',
-          animation: `${rise} .45s ease both`,
-          '&::before': { content: '""', position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -170, insetInlineEnd: -90, background: 'rgba(255,255,255,.08)' },
-          '&::after': { content: '""', position: 'absolute', width: 220, height: 220, borderRadius: '50%', bottom: -120, insetInlineEnd: 160, background: 'rgba(255,255,255,.06)' },
-        }}
-      >
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ position: 'relative', zIndex: 1, gap: 2, alignItems: { md: 'center' } }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography component="h1" sx={{ fontSize: 24, fontWeight: 800 }}>
-              {t('movements.title')}
-            </Typography>
-            <Typography sx={{ fontSize: 13.5, opacity: 0.85, maxWidth: 720, mt: 0.5 }}>{t('movements.intro')}</Typography>
-          </Box>
-          <Stack direction="row" sx={{ gap: 3, alignItems: 'center' }}>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography sx={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{data?.open ?? '–'}</Typography>
-              <Typography sx={{ fontSize: 12, opacity: 0.8 }}>{t('movements.openCount')}</Typography>
-            </Box>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography sx={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{data?.executed ?? '–'}</Typography>
-              <Typography sx={{ fontSize: 12, opacity: 0.8 }}>{t('movements.executedCount')}</Typography>
-            </Box>
+      <ListHero
+        tone="movement"
+        icon={<MultipleStopOutlinedIcon />}
+        title={t('movements.title')}
+        subtitle={t('movements.intro')}
+        actions={
+          <>
+            <Stack direction="row" sx={{ gap: 2.5, alignItems: 'center', marginInlineEnd: 1 }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{data?.open ?? '–'}</Typography>
+                <Typography sx={{ fontSize: 11.5, opacity: 0.85 }}>{t('movements.openCount')}</Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{data?.executed ?? '–'}</Typography>
+                <Typography sx={{ fontSize: 11.5, opacity: 0.85 }}>{t('movements.executedCount')}</Typography>
+              </Box>
+            </Stack>
             {canManage && (
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setActing(true)}
-                sx={{ bgcolor: '#fff', color: '#0b3954', fontWeight: 800, px: 2.5, '&:hover': { bgcolor: '#eef6f9' } }}
-              >
+              <Button variant="contained" startIcon={<Add />} onClick={() => setActing(true)}>
                 {t('movements.new')}
               </Button>
             )}
-          </Stack>
-        </Stack>
-      </Box>
+          </>
+        }
+      />
 
       <ErrorMessage messageKey={error} />
 
@@ -221,6 +206,7 @@ export function MovementsPage({ creating = false }: { creating?: boolean } = {})
               </Box>
               <Box>
                 <MovementStatusBadge status={r.status} />
+                <StageLine stage={stages[r.id]} />
               </Box>
               <ChevronLeftIcon sx={{ color: tokens.gray300, transform: ar ? 'none' : 'scaleX(-1)', display: { xs: 'none', md: 'block' } }} />
             </ButtonBase>

@@ -31,11 +31,12 @@ import { returnsApi, type ReturnList } from '../../api/operations';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { KpiCard, KpiGrid } from '../../components/KpiCard';
-import { Badge, Initials, PageHeader } from '../../components/ui';
+import { Badge, Initials } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
-import { ReturnStatusBadge } from './returns';
+import { ReturnStatusBadge, returnTone } from './returns';
 import { ReturnOrderWizard } from './ReturnOrderWizard';
+import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
+import { toneColors } from '../../app/theme';
 
 /** Return orders, as the old "أوامر التسكين" page: search, cards that filter, and the orders. */
 export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = {}) {
@@ -86,7 +87,7 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
     </TableSortLabel>
   );
   const card = (key: string, label: string, value: number | undefined, foot: string, icon: React.ReactNode, tone: string) => (
-    <KpiCard
+    <StripItem
       label={label}
       value={(value ?? 0).toLocaleString('en-US')}
       foot={status === key ? `✓ ${t('workforce.currentFilter')}` : foot}
@@ -97,9 +98,11 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
     />
   );
 
+  const stages = useCurrentStages('operations.return_order', (data?.items ?? []).map((x) => x.id));
+
   return (
     <Box>
-      <PageHeader
+      <ListHero tone="return" icon={<KeyboardReturnOutlinedIcon />}
         title={t('operations.return.title')}
         subtitle={t('operations.return.intro')}
         actions={
@@ -112,13 +115,13 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
       />
       <ErrorMessage messageKey={error} />
 
-      <KpiGrid count={5}>
+      <StatusStrip count={5}>
         {card('', t('operations.return.cards.all'), data?.totals.all, t('operations.return.cards.allFoot'), <KeyboardReturnOutlinedIcon />, tokens.navy700)}
         {card('preparing', t('operations.return.cards.preparing'), data?.totals.underPreparation, t('operations.return.cards.preparingFoot'), <EditNoteOutlinedIcon />, '#6b7a90')}
         {card('approval', t('operations.return.cards.approval'), data?.totals.inApproval, t('operations.return.cards.approvalFoot'), <HourglassBottomOutlinedIcon />, '#d9822b')}
         {card('completed', t('operations.return.cards.completed'), data?.totals.completed, t('operations.return.cards.completedFoot'), <HotelOutlinedIcon />, '#1f9d55')}
         {card('closed', t('operations.return.cards.closed'), data?.totals.closed, t('operations.return.cards.closedFoot'), <BlockOutlinedIcon />, '#c0392b')}
-      </KpiGrid>
+      </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
@@ -149,7 +152,7 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
         {busy && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={toneHead('return')}>
               <TableRow>
                 <TableCell>{head('name', t('operations.return.col.worker'))}</TableCell>
                 <TableCell>{t('operations.return.col.project')}</TableCell>
@@ -163,7 +166,7 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
             </TableHead>
             <TableBody>
               {data?.items.map((o) => (
-                <TableRow key={o.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/operations/return-orders/${o.id}`)}>
+                <TableRow key={o.id} hover sx={[{ cursor: 'pointer' }, rowEdge(toneColors[returnTone[o.status]].fg)]} onClick={() => navigate(`/operations/return-orders/${o.id}`)}>
                   <TableCell sx={{ minWidth: 230 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
                       <Initials name={o.name} size={30} />
@@ -187,6 +190,7 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{date(o.arrivedOn)}</TableCell>
                   <TableCell>
                     <ReturnStatusBadge row={o} />
+                    <StageLine stage={stages[o.id]} />
                   </TableCell>
                   <TableCell>{o.createdByName}</TableCell>
                 </TableRow>

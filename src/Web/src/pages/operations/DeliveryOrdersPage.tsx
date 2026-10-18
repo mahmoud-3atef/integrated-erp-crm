@@ -1,3 +1,4 @@
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
@@ -31,11 +32,12 @@ import { operationsApi, type DeliveryList } from '../../api/operations';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { KpiCard, KpiGrid } from '../../components/KpiCard';
-import { Badge, Initials, PageHeader } from '../../components/ui';
+import { Badge, Initials } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
-import { DeliveryStatusBadge } from './delivery';
+import { DeliveryStatusBadge, deliveryTone } from './delivery';
 import { DeliveryOrderWizard } from './DeliveryOrderWizard';
+import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
+import { toneColors } from '../../app/theme';
 
 /** Delivery orders, as the old "أوامر تسليم العمالة" page: search, cards that filter, and the orders. */
 export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } = {}) {
@@ -86,7 +88,7 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
     </TableSortLabel>
   );
   const card = (key: string, label: string, value: number | undefined, foot: string, icon: React.ReactNode, tone: string) => (
-    <KpiCard
+    <StripItem
       label={label}
       value={(value ?? 0).toLocaleString('en-US')}
       foot={status === key ? `✓ ${t('workforce.currentFilter')}` : foot}
@@ -97,9 +99,11 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
     />
   );
 
+  const stages = useCurrentStages('operations.delivery_order', (data?.items ?? []).map((x) => x.id));
+
   return (
     <Box>
-      <PageHeader
+      <ListHero tone="delivery" icon={<LocalShippingOutlinedIcon />}
         title={t('operations.delivery.title')}
         subtitle={t('operations.delivery.intro')}
         actions={
@@ -112,13 +116,13 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
       />
       <ErrorMessage messageKey={error} />
 
-      <KpiGrid count={5}>
+      <StatusStrip count={5}>
         {card('', t('operations.delivery.cards.all'), data?.totals.all, t('operations.delivery.cards.allFoot'), <DescriptionOutlinedIcon />, tokens.navy700)}
         {card('preparing', t('operations.delivery.cards.preparing'), data?.totals.underPreparation, t('operations.delivery.cards.preparingFoot'), <EditNoteOutlinedIcon />, '#6b7a90')}
         {card('operations', t('operations.delivery.cards.operations'), data?.totals.withOperations, t('operations.delivery.cards.operationsFoot'), <HourglassBottomOutlinedIcon />, '#d9822b')}
         {card('delivered', t('operations.delivery.cards.delivered'), data?.totals.delivered, t('operations.delivery.cards.deliveredFoot'), <TaskAltOutlinedIcon />, '#1f9d55')}
         {card('closed', t('operations.delivery.cards.closed'), data?.totals.closed, t('operations.delivery.cards.closedFoot'), <AssignmentTurnedInOutlinedIcon />, '#c0392b')}
-      </KpiGrid>
+      </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
@@ -149,7 +153,7 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
         {busy && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={toneHead('delivery')}>
               <TableRow>
                 <TableCell>{head('orderNo', t('operations.delivery.col.order'))}</TableCell>
                 <TableCell>{head('deliverOn', t('operations.delivery.col.deliverOn'))}</TableCell>
@@ -162,7 +166,7 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
             </TableHead>
             <TableBody>
               {data?.items.map((o) => (
-                <TableRow key={o.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/operations/delivery-orders/${o.id}`)}>
+                <TableRow key={o.id} hover sx={[{ cursor: 'pointer' }, rowEdge(toneColors[deliveryTone[o.status]].fg)]} onClick={() => navigate(`/operations/delivery-orders/${o.id}`)}>
                   <TableCell sx={{ minWidth: 240 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
                       <Initials name={o.projectName} size={30} />
@@ -185,6 +189,7 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
                   <TableCell>{o.projectManager ?? '—'}</TableCell>
                   <TableCell>
                     <DeliveryStatusBadge row={o} />
+                    <StageLine stage={stages[o.id]} />
                   </TableCell>
                   <TableCell>{o.receiverName}</TableCell>
                 </TableRow>

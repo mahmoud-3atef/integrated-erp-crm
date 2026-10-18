@@ -334,7 +334,17 @@ export interface RequestInput {
 
 const base = '/api/v1/workflow';
 
+/** Where a listed record's approval waits, since when, and for whom. */
+export interface CurrentStage {
+  recordId: string;
+  stepAr: string | null;
+  stepEn: string | null;
+  since: string | null;
+  waitingFor: string[];
+}
+
 export const workflowApi = {
+  currentStages: (screen: string, ids: string[]) => request<CurrentStage[]>('GET', `${base}/current-stages?screen=${encodeURIComponent(screen)}&ids=${ids.join(',')}`),
   screens: () => request<Screen[]>('GET', `${base}/screens`),
   processes: () => request<ProcessSummary[]>('GET', `${base}/processes`),
   startInstance: (screen: string, recordId: string, processId: string, title: string) =>

@@ -1,3 +1,4 @@
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import AddIcon from '@mui/icons-material/Add';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
@@ -30,12 +31,13 @@ import { transfersApi, type TransferList } from '../../api/operations';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { KpiCard, KpiGrid } from '../../components/KpiCard';
-import { Badge, Initials, PageHeader } from '../../components/ui';
+import { Badge, Initials } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from './delivery';
-import { TransferStatusBadge } from './transfers';
+import { TransferStatusBadge, transferTone } from './transfers';
 import { TransferOrderWizard } from './TransferOrderWizard';
+import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
+import { toneColors } from '../../app/theme';
 
 /** Transfer orders between projects: search, cards that filter, and the orders. */
 export function TransferOrdersPage({ creating = false }: { creating?: boolean } = {}) {
@@ -85,7 +87,7 @@ export function TransferOrdersPage({ creating = false }: { creating?: boolean } 
     </TableSortLabel>
   );
   const card = (key: string, label: string, value: number | undefined, foot: string, icon: React.ReactNode, tone: string) => (
-    <KpiCard
+    <StripItem
       label={label}
       value={(value ?? 0).toLocaleString('en-US')}
       foot={status === key ? `✓ ${t('workforce.currentFilter')}` : foot}
@@ -96,9 +98,11 @@ export function TransferOrdersPage({ creating = false }: { creating?: boolean } 
     />
   );
 
+  const stages = useCurrentStages('operations.transfer_order', (data?.items ?? []).map((x) => x.id));
+
   return (
     <Box>
-      <PageHeader
+      <ListHero tone="transfer" icon={<SwapHorizIcon />}
         title={t('operations.transfer.title')}
         subtitle={t('operations.transfer.intro')}
         actions={
@@ -111,13 +115,13 @@ export function TransferOrdersPage({ creating = false }: { creating?: boolean } 
       />
       <ErrorMessage messageKey={error} />
 
-      <KpiGrid count={5}>
+      <StatusStrip count={5}>
         {card('', t('operations.transfer.cards.all'), data?.totals.all, t('operations.transfer.cards.allFoot'), <DescriptionOutlinedIcon />, tokens.navy700)}
         {card('preparing', t('operations.delivery.cards.preparing'), data?.totals.underPreparation, t('operations.delivery.cards.preparingFoot'), <EditNoteOutlinedIcon />, '#6b7a90')}
         {card('operations', t('operations.delivery.cards.operations'), data?.totals.withOperations, t('operations.delivery.cards.operationsFoot'), <HourglassBottomOutlinedIcon />, '#d9822b')}
         {card('transferred', t('operations.transfer.cards.transferred'), data?.totals.transferred, t('operations.transfer.cards.transferredFoot'), <TaskAltOutlinedIcon />, '#1f9d55')}
         {card('closed', t('operations.transfer.cards.closed'), data?.totals.closed, t('operations.transfer.cards.closedFoot'), <AssignmentTurnedInOutlinedIcon />, '#c0392b')}
-      </KpiGrid>
+      </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
@@ -143,7 +147,7 @@ export function TransferOrdersPage({ creating = false }: { creating?: boolean } 
         {busy && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
         <TableContainer>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={toneHead('transfer')}>
               <TableRow>
                 <TableCell>{head('orderNo', t('operations.transfer.col.order'))}</TableCell>
                 <TableCell>{t('operations.transfer.col.from')}</TableCell>
@@ -156,7 +160,7 @@ export function TransferOrdersPage({ creating = false }: { creating?: boolean } 
             </TableHead>
             <TableBody>
               {data?.items.map((o) => (
-                <TableRow key={o.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/operations/transfer-orders/${o.id}`)}>
+                <TableRow key={o.id} hover sx={[{ cursor: 'pointer' }, rowEdge(toneColors[transferTone[o.status]].fg)]} onClick={() => navigate(`/operations/transfer-orders/${o.id}`)}>
                   <TableCell sx={{ minWidth: 240 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
                       <Initials name={o.projectName} size={30} />
@@ -176,6 +180,7 @@ export function TransferOrdersPage({ creating = false }: { creating?: boolean } 
                   <TableCell align="center">{sar(o.totalPrice)}</TableCell>
                   <TableCell>
                     <TransferStatusBadge status={o.status} />
+                    <StageLine stage={stages[o.id]} />
                   </TableCell>
                   <TableCell>{o.createdByName}</TableCell>
                 </TableRow>

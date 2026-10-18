@@ -2619,5 +2619,8 @@
   "wizard": {
     "back": "Back",
     "next": "Next: {{step}}"
+  },
+  "lists": {
+    "since": "for {{time}}"
   }
 }

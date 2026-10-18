@@ -352,6 +352,35 @@ internal sealed partial class ApprovalEngine(
         return instance is null ? null : await StatusOfAsync(instance, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Where the approvals of several records of a screen stand, for a list: the stage each waits at, since when, and
+    /// for whom (records not in approval are left out).
+    /// </summary>
+    public async Task<IReadOnlyList<CurrentStageDto>> CurrentStagesAsync(string screen, IReadOnlyCollection<Guid> recordIds, CancellationToken cancellationToken)
+    {
+        if (recordIds.Count == 0)
+        {
+            return [];
+        }
+
+        var instances = await db.Instances.AsNoTracking()
+            .Where(i => i.Screen == screen && recordIds.Contains(i.RecordId) && i.Status == InstanceStatus.InProgress)
+            .Select(i => new { i.Id, i.RecordId, i.WaitingStepAr, i.WaitingStepEn })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var ids = instances.Select(i => i.Id).ToList();
+        var open = await db.WorkItems.AsNoTracking()
+            .Where(w => ids.Contains(w.InstanceId) && w.Status == WorkItemStatus.Pending)
+            .Select(w => new { w.InstanceId, w.CreatedAt, w.AssigneeName })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return instances.Select(i =>
+            {
+                var items = open.Where(w => w.InstanceId == i.Id).ToList();
+                return new CurrentStageDto(
+                    i.RecordId, i.WaitingStepAr, i.WaitingStepEn, items.Count > 0 ? items.Min(w => w.CreatedAt) : null, items.Select(w => w.AssigneeName).Distinct().ToList());
+            })
+            .ToList();
+    }
+
     public async Task<ApprovalStatusInfo> StatusOfAsync(ApprovalInstance instance, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(instance);
@@ -810,3 +839,6 @@ internal static class DefinitionJson
 
     public static string Write(ProcessDefinition definition) => JsonSerializer.Serialize(definition, Options);
 }
+
+/// <summary>The stage a record's approval waits at, since when, and for whom.</summary>
+public sealed record CurrentStageDto(Guid RecordId, string? StepAr, string? StepEn, DateTimeOffset? Since, IReadOnlyList<string> WaitingFor);

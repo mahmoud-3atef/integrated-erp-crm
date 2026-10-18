@@ -73,6 +73,14 @@ internal static class WorkflowEndpoints
         group.MapGet("/my-requests", async (ApprovalQueries queries, CancellationToken ct) =>
             Results.Ok(await queries.MineAsync(ct).ConfigureAwait(false)));
 
+        // Lists show where each record's approval stands (any user of the company; the step names are not sensitive).
+        group.MapGet("/current-stages", async (string screen, string? ids, ApprovalEngine engine, CancellationToken ct) =>
+        {
+            var list = (ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => Guid.TryParse(x, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).Distinct().Take(200).ToList();
+            return Results.Ok(await engine.CurrentStagesAsync(screen, list, ct));
+        });
+
         group.MapPost("/work-items/{id:guid}/decision", async (Guid id, DecisionRequest r, ApprovalEngine engine, CancellationToken ct) =>
             ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, r.Fields, ct).ConfigureAwait(false)));
 

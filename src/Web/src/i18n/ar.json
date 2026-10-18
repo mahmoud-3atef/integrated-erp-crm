@@ -2619,5 +2619,8 @@
   "wizard": {
     "back": "السابق",
     "next": "التالي: {{step}}"
+  },
+  "lists": {
+    "since": "منذ {{time}}"
   }
 }
