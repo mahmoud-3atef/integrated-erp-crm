@@ -43,6 +43,7 @@ import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
 import { InvoiceKindBadge, InvoiceStatusBadge, signed } from './invoices';
+import { useCrumb } from '../../app/breadcrumbs';
 
 type Tab = 'items' | 'workers' | 'notes' | 'approval';
 
@@ -63,6 +64,7 @@ export function InvoicePage() {
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
   const [inv, setInv] = useState<InvoiceDetail | null>(null);
+  useCrumb(inv?.invoiceNo);
   const [tab, setTab] = useState<Tab>('items');
   const [editing, setEditing] = useState(false);
   const [noting, setNoting] = useState<NoteDraft['kind'] | null>(null);

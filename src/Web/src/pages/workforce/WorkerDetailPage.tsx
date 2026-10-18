@@ -40,6 +40,7 @@ import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { WorkerPeriods } from './WorkerPeriods';
 import { placementLook } from '../../components/workforce/placement';
+import { useCrumb } from '../../app/breadcrumbs';
 
 /**
  * One worker's or staff member's file, laid out as the old employee page: header with the key facts, then the data
@@ -52,6 +53,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const { can } = useSession();
   const { id } = useParams();
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
+  useCrumb(worker?.summary.name);
   const [tab, setTab] = useState<'info' | 'ids' | 'periods'>(() => (new URLSearchParams(window.location.search).get('tab') === 'periods' ? 'periods' : 'info'));
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);

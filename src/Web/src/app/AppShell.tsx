@@ -43,6 +43,7 @@ import { AlertsButton } from '../components/AlertsButton';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { Initials } from '../components/ui';
 import { companyName } from '../pages/ChooseCompanyPage';
+import { Breadcrumbs, CrumbProvider } from './breadcrumbs';
 import { SessionProvider, useSession } from './session';
 import { tokens } from './theme';
 
@@ -149,23 +150,22 @@ const menu: MenuSection[] = [
 export function AppShell() {
   return (
     <SessionProvider>
-      <Shell />
+      <CrumbProvider>
+        <Shell />
+      </CrumbProvider>
     </SessionProvider>
   );
 }
 
 function Shell() {
-  const { t } = useTranslation();
   const { can } = useSession();
   const theme = useTheme();
   const wide = useMediaQuery(theme.breakpoints.up('md'));
   const [open, setOpen] = useState(false);
-  const location = useLocation();
 
   const sections = menu
     .map((section) => ({ ...section, items: section.items.filter((item) => (item.anyOf ? item.anyOf.some((code) => can(code)) : !item.permission || can(item.permission, item.companyWide))) }))
     .filter((section) => section.items.length > 0);
-  const current = sections.flatMap((s) => s.items).find((item) => isActive(item.path, location.pathname));
 
   return (
     <Box sx={{ display: 'flex', gap: `${tokens.gap}px`, minHeight: '100dvh', p: { xs: 1, md: `${tokens.gap}px` }, bgcolor: 'background.default' }}>
@@ -191,7 +191,7 @@ function Shell() {
       )}
 
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: `${tokens.gap}px` }}>
-        <TopBar title={current ? t(current.labelKey) : t('app.name')} onMenu={wide ? undefined : () => setOpen(true)} />
+        <TopBar title={<Breadcrumbs sections={sections} />} onMenu={wide ? undefined : () => setOpen(true)} />
         <Box component="main" sx={{ width: '100%', px: { xs: 0.5, md: 0 } }}>
           <Outlet />
         </Box>
@@ -285,7 +285,7 @@ function Sidebar({ sections, onNavigate }: { sections: MenuSection[]; onNavigate
   );
 }
 
-function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
+function TopBar({ title, onMenu }: { title: ReactNode; onMenu?: () => void }) {
   const { t, i18n } = useTranslation();
   const { me } = useSession();
   const navigate = useNavigate();
@@ -320,9 +320,7 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
           <MenuIcon />
         </IconButton>
       )}
-      <Typography noWrap sx={{ fontSize: 17, fontWeight: 700, color: tokens.navy700, flexShrink: 1, minWidth: 0 }}>
-        {title}
-      </Typography>
+      {title}
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, marginInlineStart: 'auto' }}>
         {me.company && (

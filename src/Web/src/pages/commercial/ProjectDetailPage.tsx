@@ -31,6 +31,7 @@ import { Badge, PillTabs } from '../../components/ui';
 import { placementLook } from '../../components/workforce/placement';
 import { draftFromSuggestion, PackageDialog, PackagesTable, SuggestionsTable, WorkerPricesTable, type PackageDraft } from './pricing';
 import { contractStatusTone, DaysLeft, useCommercialFormat } from './ProjectsPage';
+import { useCrumb } from '../../app/breadcrumbs';
 
 /** One project, as the old project page: title bar, project and contract sections, then its workers, price packages and worker prices. */
 export function ProjectDetailPage() {
@@ -45,6 +46,7 @@ export function ProjectDetailPage() {
   const [reload, setReload] = useState(0);
   const [params] = useSearchParams();
   const [project, setProject] = useState<ProjectDetail | null>(null);
+  useCrumb(project?.summary.name);
   const [prices, setPrices] = useState<ProjectPrices | null>(null);
   const [tab, setTab] = useState<'workers' | 'packages' | 'prices'>(() => (params.get('tab') === 'packages' ? 'packages' : 'workers'));
   const [error, setError] = useState<string | null>(null);

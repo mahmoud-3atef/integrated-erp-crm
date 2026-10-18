@@ -22,6 +22,7 @@ import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { PageHeader, Panel, PillTabs, StatusDot } from '../../components/ui';
 import { requestTone } from './RequestsPage';
+import { useCrumb } from '../../app/breadcrumbs';
 
 const none = 'none';
 export const categories = ['GENERAL', 'PURCHASE', 'ADVANCE', 'LEAVE', 'OTHER'] as const;
@@ -37,6 +38,7 @@ export function RequestDetailPage() {
   const { id } = useParams();
   const isNew = id === 'new';
   const [request, setRequest] = useState<InternalRequest | null>(null);
+  useCrumb(request?.number);
   const [subject, setSubject] = useState('');
   const [details, setDetails] = useState('');
   const [amount, setAmount] = useState('');

@@ -410,7 +410,9 @@ function Step({ node, first, next, date, day }: { node: Node; first: boolean; ne
               fontSize: 11,
               fontWeight: 800,
               whiteSpace: 'nowrap',
-              ...(current ? { color: '#b45309', bgcolor: '#fff4e0' } : { color: '#6b3fc4', bgcolor: '#f1ebfc' }),
+              color: tokens.gold,
+              bgcolor: 'rgba(179, 138, 15, .12)',
+              border: '1px solid rgba(179, 138, 15, .22)',
               '& svg': { fontSize: 13 },
             }}
           >

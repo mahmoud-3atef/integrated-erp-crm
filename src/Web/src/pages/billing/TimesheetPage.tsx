@@ -46,6 +46,7 @@ import { sar } from '../operations/delivery';
 import { ExcelUploadDialog } from './ExcelUploadDialog';
 import { InvoiceStatusBadge } from './invoices';
 import { SourceBadge, TimesheetStatusBadge } from './timesheets';
+import { useCrumb } from '../../app/breadcrumbs';
 
 type Tab = 'workers' | 'invoice' | 'payroll' | 'suppliers' | 'unknown' | 'approval';
 
@@ -66,6 +67,7 @@ export function TimesheetPage() {
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
   const [sheet, setSheet] = useState<TimesheetDetail | null>(null);
+  useCrumb(sheet?.timesheetNo);
   const [tab, setTab] = useState<Tab>('workers');
   const [adjusting, setAdjusting] = useState<TimesheetLine | null>(null);
   const [settings, setSettings] = useState(false);

@@ -23,6 +23,7 @@ import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/wo
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { ReturnStatusBadge } from './returns';
+import { useCrumb } from '../../app/breadcrumbs';
 
 function SummaryItem({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
@@ -46,6 +47,7 @@ export function ReturnOrderDetailPage() {
   const [params] = useSearchParams();
   const { ar, date } = useCommercialFormat();
   const [order, setOrder] = useState<ReturnDetail | null>(null);
+  useCrumb(order?.summary.orderNo);
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);

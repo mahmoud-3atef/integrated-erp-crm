@@ -38,6 +38,7 @@ import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
 import { ReceiptStatusBadge } from './receipts';
+import { useCrumb } from '../../app/breadcrumbs';
 
 function Tile({ label, value, tone = tokens.navy800, foot }: { label: string; value: ReactNode; tone?: string; foot?: string }) {
   return (
@@ -56,6 +57,7 @@ export function ReceiptPage() {
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
   const [r, setR] = useState<ReceiptDetail | null>(null);
+  useCrumb(r?.receiptNo);
   const [tab, setTab] = useState<'allocations' | 'approval'>('allocations');
   const [files, setFiles] = useState(false);
   const [allocating, setAllocating] = useState(false);

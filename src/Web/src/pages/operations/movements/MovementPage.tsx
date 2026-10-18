@@ -14,6 +14,7 @@ import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../../components
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { sar } from '../../operations/delivery';
 import { gradient, lookOf, MovementStatusBadge, rise, Transition, typeLook, useStateName } from './movementMeta';
+import { useCrumb } from '../../../app/breadcrumbs';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -34,6 +35,7 @@ export function MovementPage() {
   const { ar, date } = useCommercialFormat();
   const stateName = useStateName();
   const [m, setM] = useState<MovementDetail | null>(null);
+  useCrumb(m?.movementNo);
   const [canceling, setCanceling] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

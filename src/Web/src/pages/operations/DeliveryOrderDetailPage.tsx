@@ -1,5 +1,4 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -44,6 +43,7 @@ import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/wo
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
+import { useCrumb } from '../../app/breadcrumbs';
 
 function SummaryItem({ icon, label, children, sub }: { icon: React.ReactNode; label: string; children: React.ReactNode; sub?: React.ReactNode }) {
   return (
@@ -86,6 +86,7 @@ export function DeliveryOrderDetailPage() {
   const [params] = useSearchParams();
   const { ar, date } = useCommercialFormat();
   const [order, setOrder] = useState<DeliveryDetail | null>(null);
+  useCrumb(order?.summary.orderNo);
   const [tab, setTab] = useState<'workers' | 'approval'>('workers');
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
@@ -125,7 +126,6 @@ export function DeliveryOrderDetailPage() {
     }
   };
 
-  const path = order.approval?.stages.map((st) => (ar ? st.nameAr : st.nameEn));
   return (
     <Box>
       {/* Header: the order, its state, and what can be done with it. */}
@@ -203,6 +203,9 @@ export function DeliveryOrderDetailPage() {
             <AssignmentOutlinedIcon sx={{ color: tokens.navy700 }} />
             <Typography sx={{ fontSize: 16, fontWeight: 800, color: tokens.navy800 }}>{t('operations.delivery.summaryTitle')}</Typography>
           </Stack>
+          <SummaryItem icon={<PersonOutlineOutlinedIcon />} label={t('operations.delivery.createdBy')} sub={date(o.createdAt)}>
+            {o.createdByName}
+          </SummaryItem>
           <SummaryItem icon={<ApartmentOutlinedIcon />} label={t('commercial.col.project')} sub={o.customerName}>
             {o.projectName}
           </SummaryItem>
@@ -225,16 +228,6 @@ export function DeliveryOrderDetailPage() {
           <SummaryItem icon={<BadgeOutlinedIcon />} label={t('operations.delivery.receiverName')} sub={order.receiverTitle}>
             {o.receiverName}
           </SummaryItem>
-          <SummaryItem icon={<PersonOutlineOutlinedIcon />} label={t('operations.delivery.createdBy')} sub={date(o.createdAt)}>
-            {o.createdByName}
-          </SummaryItem>
-          {path && path.length > 0 && (
-            <SummaryItem icon={<AccountTreeOutlinedIcon />} label={t('operations.delivery.approvalPath')}>
-              <Box component="span" sx={{ fontSize: 13 }}>
-                {path.join(' ← ')}
-              </Box>
-            </SummaryItem>
-          )}
           {(order.delayReason || order.notes || order.lastComment) && (
             <Stack spacing={0.75} sx={{ mt: 1, p: 1.5, borderRadius: `${tokens.radius}px`, bgcolor: tokens.gray50, fontSize: 12.5, color: tokens.gray600 }}>
               {order.delayReason && (

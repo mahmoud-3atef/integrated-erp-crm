@@ -1548,7 +1548,6 @@
       "creatorHint": "The order is under preparation: review it, then confirm it with \"Approve\" in the approval stages bar below to send it to the operations manager. You can still change it before confirming.",
       "deliveredHint": "Delivered: each worker has a work period on the project in the period ledger from their start of work, at their line's price.",
       "summaryTitle": "Order summary",
-      "approvalPath": "Approval path",
       "iqamaShort": "Iqama",
       "pricePart": {
         "salary": "Salary {{value}}",
@@ -2504,5 +2503,12 @@
     "hideDay": "Hide for a day",
     "hideWeek": "Hide for a week",
     "hideMonth": "Hide for a month"
+  },
+  "crumbs": {
+    "label": "Breadcrumb",
+    "new": "New",
+    "edit": "Edit",
+    "print": "Print",
+    "details": "Details"
   }
 }

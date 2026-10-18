@@ -21,6 +21,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, PillTabs } from '../../components/ui';
 import { ContractPeriod, contractStatusTone, useCommercialFormat } from './ProjectsPage';
+import { useCrumb } from '../../app/breadcrumbs';
 
 /** One customer: title bar, the customer's data, and their projects. */
 export function CustomerDetailPage() {
@@ -29,6 +30,7 @@ export function CustomerDetailPage() {
   const { id } = useParams();
   const { ar, date } = useCommercialFormat();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
+  useCrumb(customer?.summary.name);
   const [tab, setTab] = useState<'projects'>('projects');
   const [error, setError] = useState<string | null>(null);
 

@@ -39,6 +39,7 @@ import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from './delivery';
 import { TransferStatusBadge } from './transfers';
+import { useCrumb } from '../../app/breadcrumbs';
 
 function SummaryItem({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
@@ -60,6 +61,7 @@ export function TransferOrderDetailPage() {
   const [params] = useSearchParams();
   const { ar, date } = useCommercialFormat();
   const [order, setOrder] = useState<TransferDetail | null>(null);
+  useCrumb(order?.summary.orderNo);
   const [tab, setTab] = useState<'workers' | 'approval'>('workers');
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
