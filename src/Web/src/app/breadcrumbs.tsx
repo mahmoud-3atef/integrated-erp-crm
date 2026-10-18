@@ -1,7 +1,7 @@
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { Box, ButtonBase, Typography } from '@mui/material';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { tokens } from './theme';
@@ -27,30 +27,34 @@ const parents: Record<string, string> = {
 
 const named: Record<string, string> = { new: 'crumbs.new', edit: 'crumbs.edit', print: 'crumbs.print' };
 
-const CrumbContext = createContext<{ labels: Record<string, string>; set: (path: string, label: string | null) => void } | null>(null);
+// Two contexts: the labels change while pages come and go; the setter never does, so a page naming its crumb does not
+// re-render (and re-name it) whenever a label changes.
+const LabelsContext = createContext<Record<string, string>>({});
+const SetLabelContext = createContext<((path: string, label: string | null) => void) | null>(null);
 
 export function CrumbProvider({ children }: { children: ReactNode }) {
   const [labels, setLabels] = useState<Record<string, string>>({});
-  const value = useMemo(
-    () => ({
-      labels,
-      set: (path: string, label: string | null) =>
-        setLabels((current) => {
-          if ((current[path] ?? null) === label) {
-            return current;
-          }
-          const next = { ...current };
-          if (label) {
-            next[path] = label;
-          } else {
-            delete next[path];
-          }
-          return next;
-        }),
-    }),
-    [labels],
+  const set = useCallback(
+    (path: string, label: string | null) =>
+      setLabels((current) => {
+        if ((current[path] ?? null) === label) {
+          return current;
+        }
+        const next = { ...current };
+        if (label) {
+          next[path] = label;
+        } else {
+          delete next[path];
+        }
+        return next;
+      }),
+    [],
   );
-  return <CrumbContext.Provider value={value}>{children}</CrumbContext.Provider>;
+  return (
+    <SetLabelContext.Provider value={set}>
+      <LabelsContext.Provider value={labels}>{children}</LabelsContext.Provider>
+    </SetLabelContext.Provider>
+  );
 }
 
 /**
@@ -58,10 +62,9 @@ export function CrumbProvider({ children }: { children: ReactNode }) {
  * page; an edit page names its record's path.
  */
 export function useCrumb(label: string | null | undefined, path?: string) {
-  const context = useContext(CrumbContext);
+  const set = useContext(SetLabelContext);
   const location = useLocation();
   const key = path ?? location.pathname;
-  const set = context?.set;
   useEffect(() => {
     if (!set || !label) {
       return undefined;
@@ -77,7 +80,7 @@ export function Breadcrumbs({ sections }: { sections: CrumbSection[] }) {
   const rtl = i18n.dir() === 'rtl';
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const labels = useContext(CrumbContext)?.labels ?? {};
+  const labels = useContext(LabelsContext);
 
   const crumbs: Crumb[] = [];
   const pages = sections.flatMap((section) => section.items.map((item) => ({ section, item })));
