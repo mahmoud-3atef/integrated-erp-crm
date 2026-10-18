@@ -130,6 +130,22 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal(4m, sheet.Lines.Single(l => l.WorkerNo == "BSS0703").OvertimeHours);
             Assert.Equal(2m, sheet.Lines.Single(l => l.WorkerNo == "BSS0701").AbsenceDays);
 
+            // The live results: the worker's net pay and the invoice before VAT, as the system computes them, and they move with the cells.
+            using (var results = new ClosedXML.Excel.XLWorkbook(new MemoryStream((await service.ExportAsync(id, default))!.Value.Content)))
+            {
+                var ws = results.Worksheet("Timesheet");
+                foreach (var (r, l) in sheet.Lines.OrderBy(x => x.WorkerNo, StringComparer.Ordinal).Select((x, n) => (7 + n, x)))
+                {
+                    Assert.Equal((l.WorkerNet, l.InvoiceAmount), (Math.Round((decimal)ws.Cell(r, 19).Value.GetNumber(), 2), Math.Round((decimal)ws.Cell(r, 20).Value.GetNumber(), 2)));
+                }
+
+                Assert.Equal(sheet.Invoice.Amount, Math.Round((decimal)ws.Cell(10, 20).Value.GetNumber(), 2));
+                ws.Unprotect("ERP-TIMESHEET-V1");
+                ws.Cell(8, 9).Value = 0; // BSS0702 without the absence: 3 days of 1,500 / 30 come back
+                ws.RecalculateAllFormulas();
+                Assert.Equal(supplierLine.InvoiceAmount + 150m, Math.Round((decimal)ws.Cell(8, 20).Value.GetNumber(), 2));
+            }
+
             // The old system's checks: a changed locked column, a worker dropped, another timesheet's file.
             Assert.Equal("excel_locked_changed", (await service.PreviewAsync(id, new MemoryStream(Edit(fixedFile, ws => ws.Cell(7, 7).Value = 31)), default)).Value.Problems.Single().Code);
             Assert.Equal("excel_missing_worker", (await service.PreviewAsync(id, new MemoryStream(Edit(fixedFile, ws => ws.Row(9).Clear())), default)).Value.Problems.Single().Code);

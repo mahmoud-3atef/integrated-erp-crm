@@ -154,8 +154,8 @@ internal sealed class TimesheetService(
     /// <summary>The timesheet as the Excel template to fill in (with the adjustments entered so far).</summary>
     public async Task<(byte[] Content, string FileName)?> ExportAsync(Guid id, CancellationToken cancellationToken)
     {
-        var (timesheet, _, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
-        return timesheet is null ? null : (TimesheetWorkbook.Build(timesheet, setting!.MaxOvertimeHours), TimesheetWorkbook.FileName(timesheet));
+        var (timesheet, rules, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        return timesheet is null ? null : (TimesheetWorkbook.Build(timesheet, rules!, setting!.MaxOvertimeHours), TimesheetWorkbook.FileName(timesheet));
     }
 
     /// <summary>What an uploaded file would change, and its problems — nothing is saved.</summary>

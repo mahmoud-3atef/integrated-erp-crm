@@ -50,9 +50,24 @@ internal static class TimesheetWorkbook
 
     private static int ReasonColumn => Fixed.Length + Inputs.Length + 1;
 
-    public static byte[] Build(Timesheet t, decimal maxOvertimeHours)
+    /// <summary>The live results after the reason: the worker's net pay and the invoice before VAT, recalculated as the row is filled.</summary>
+    private static int PayColumn => ReasonColumn + 1;
+
+    private static int InvoiceColumn => ReasonColumn + 2;
+
+    /// <summary>
+    /// Hidden helpers the two formulas use, per worker: the invoice and the pay without any adjustment, the day rates of
+    /// the salary billed and paid, the overtime rate per hour, the fee per day, and the first line's days and fees (the
+    /// adjustments go to the worker's first line, as the system applies them).
+    /// </summary>
+    private static readonly string[] Helpers = ["base_invoice", "base_pay", "bill_day", "pay_day", "overtime_hour", "fee_day", "first_days", "first_fees"];
+
+    private static int HelperColumn(string name) => InvoiceColumn + 1 + Array.IndexOf(Helpers, name);
+
+    public static byte[] Build(Timesheet t, BillingRules rules, decimal maxOvertimeHours)
     {
         ArgumentNullException.ThrowIfNull(t);
+        ArgumentNullException.ThrowIfNull(rules);
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add(DataSheet);
         ws.RightToLeft = true;
@@ -106,6 +121,7 @@ internal static class TimesheetWorkbook
             }
 
             ws.Cell(row, ReasonColumn).Value = worker.Reason ?? string.Empty;
+            WriteResults(ws, row, t.Lines.Where(l => l.WorkerId == worker.WorkerId).OrderBy(l => l.LineFrom).ToList(), rules);
             row++;
         }
 
@@ -150,6 +166,44 @@ internal static class TimesheetWorkbook
         }
 
         ws.Column(ReasonColumn).Width = 40;
+
+        // The results: a band, headers, a totals row, and the helpers hidden.
+        ws.Range(5, PayColumn, 5, InvoiceColumn).Merge().Value = "النتيجة (تُحسب تلقائيًا) — Result (calculated)";
+        ws.Range(5, PayColumn, 5, InvoiceColumn).Style.Font.SetBold().Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center).Fill.SetBackgroundColor(XLColor.FromHtml("#dcefe2"));
+        foreach (var (column, ar, en) in new[] { (PayColumn, "صافي راتب العامل", "Worker's net pay"), (InvoiceColumn, "قيمة الفاتورة قبل الضريبة", "Invoice before VAT") })
+        {
+            var cell = ws.Cell(HeaderRow, column);
+            cell.Value = $"{ar}\n{en}";
+            cell.Style.Font.SetBold().Font.SetFontColor(XLColor.White).Fill.SetBackgroundColor(XLColor.FromHtml("#1f7a4d"))
+                .Alignment.SetWrapText(true).Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center).Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+            ws.Column(column).Width = 18;
+        }
+
+        var results = ws.Range(FirstRow, PayColumn, last, InvoiceColumn);
+        results.Style.NumberFormat.SetFormat("#,##0.00").Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#f0f9f3"));
+        results.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin).Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+            .Border.SetInsideBorderColor(XLColor.FromHtml("#c9d5de")).Border.SetOutsideBorderColor(XLColor.FromHtml("#c9d5de"));
+
+        // The totals (the worker number stays empty, so reading the file stops before this row).
+        if (row > FirstRow)
+        {
+            var totals = row;
+            ws.Cell(totals, 2).Value = "الإجمالي — Total";
+            for (var c = 7; c <= InvoiceColumn; c++)
+            {
+                if (c == 8 || c == ReasonColumn)
+                {
+                    continue;
+                }
+
+                ws.Cell(totals, c).FormulaA1 = $"SUM({ws.Cell(FirstRow, c).Address}:{ws.Cell(last, c).Address})";
+            }
+
+            ws.Range(totals, 1, totals, InvoiceColumn).Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#e3ebf2")).NumberFormat.SetFormat("#,##0.##");
+            ws.Range(totals, PayColumn, totals, InvoiceColumn).Style.NumberFormat.SetFormat("#,##0.00");
+        }
+
+        ws.Columns(HelperColumn(Helpers[0]), HelperColumn(Helpers[^1])).Hide();
         ws.SheetView.FreezeRows(HeaderRow);
         ws.SheetView.FreezeColumns(2);
         ws.Protect(Marker).AllowElement(XLSheetProtectionElements.FormatColumns).AllowElement(XLSheetProtectionElements.AutoFilter);
@@ -279,6 +333,49 @@ internal static class TimesheetWorkbook
             problems.AddRange(workers.Keys.Where(no => !seen.Contains(no) && !problems.Any(p => p.WorkerNo == no)).Select(no => new ExcelProblem(0, no, "excel_missing_worker")));
             return (new ExcelPreview(rows, problems, changes), problems.Count == 0 ? totals : []);
         }
+    }
+
+    /// <summary>
+    /// The row's two results as formulas of its yellow cells, with the system's rounding: the invoice and the pay without
+    /// adjustments, less the absence at the day rate, plus the overtime at the hour rate, the customer's additions,
+    /// deductions and loans, the fee days on the first line's fees, other costs (the invoice only) and the internal
+    /// additions and deductions (the pay only).
+    /// </summary>
+    private static void WriteResults(IXLWorksheet ws, int row, List<TimesheetLine> lines, BillingRules rules)
+    {
+        LineAmounts Bare(TimesheetLine l) => TimesheetMath.Calculate(
+            new LineInputs(l.WorkDays, l.DayDivisor, l.BillSalary, l.TotalPrice, l.Housing, l.Transport, l.PaySalary, l.BasicSalary, 0, 0, 0, 0, 0, 0, 0), rules);
+
+        var first = lines[0];
+        var q = first.DayDivisor <= 0 ? 30 : first.DayDivisor;
+        var bare = lines.Select(Bare).ToList();
+        var hour = rules.OvertimeHourlyRate
+            ?? (first.BasicSalary > 0 ? first.BasicSalary : first.PaySalary) / (rules.MonthlyHours <= 0 ? 240 : rules.MonthlyHours) * rules.OvertimeMultiplier;
+        var helpers = new Dictionary<string, decimal>
+        {
+            ["base_invoice"] = bare.Sum(a => a.InvoiceAmount),
+            ["base_pay"] = bare.Sum(a => a.WorkerNet),
+            ["bill_day"] = first.BillSalary / q,
+            ["pay_day"] = first.PaySalary / q,
+            ["overtime_hour"] = hour,
+            ["fee_day"] = Math.Abs(first.TotalPrice - first.BillSalary) / q,
+            ["first_days"] = first.WorkDays,
+            ["first_fees"] = bare[0].DueFees,
+        };
+        foreach (var (name, value) in helpers)
+        {
+            ws.Cell(row, HelperColumn(name)).Value = value;
+        }
+
+        string Input(AdjustmentType type) => ws.Cell(row, Fixed.Length + 1 + Array.FindIndex(Inputs, i => i.Type == type)).Address.ToStringRelative();
+        string Helper(string name) => ws.Cell(row, HelperColumn(name)).Address.ToStringRelative();
+        var overtime = $"ROUND({Helper("overtime_hour")}*{Input(AdjustmentType.Overtime)},2)";
+        var customer = $"{Input(AdjustmentType.ClientAddition)}-{Input(AdjustmentType.ClientDeduction)}-{Input(AdjustmentType.CustomerLoan)}";
+        var fees = $"ROUND(MAX(0,{Helper("first_days")}+{Input(AdjustmentType.FeeDays)})*{Helper("fee_day")},2)-{Helper("first_fees")}";
+        ws.Cell(row, InvoiceColumn).FormulaA1 =
+            $"{Helper("base_invoice")}-ROUND({Helper("bill_day")}*{Input(AdjustmentType.Absence)},2)+{overtime}+{customer}+{fees}+{Input(AdjustmentType.OtherCost)}";
+        ws.Cell(row, PayColumn).FormulaA1 =
+            $"{Helper("base_pay")}-ROUND({Helper("pay_day")}*{Input(AdjustmentType.Absence)},2)+{overtime}+{customer}+{Input(AdjustmentType.InternalAddition)}-{Input(AdjustmentType.InternalDeduction)}";
     }
 
     /// <summary>A file name for the download.</summary>
