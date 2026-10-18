@@ -16,6 +16,14 @@ internal sealed class TenantDirectory(OrganizationDbContext db) : ITenantDirecto
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<TenantInfo>> ActiveAsync(CancellationToken cancellationToken) =>
+        await db.Tenants.AsNoTracking()
+            .Where(t => t.IsActive)
+            .OrderBy(t => t.Code)
+            .Select(t => new TenantInfo(t.Id, t.Code, t.NameAr, t.NameEn, t.IsActive))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
     public async Task<IReadOnlyList<TenantInfo>> GetAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);

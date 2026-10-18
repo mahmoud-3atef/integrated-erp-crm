@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
@@ -42,6 +43,7 @@ public sealed class WorkforceModule : IModule
             new NumberSequenceDefinition("staff", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للموظفين", "Staff numbers", "HO{N:5}", NumberReset.Never, InUse: false));
         services.AddOptions<WorkforceOptions>().Bind(configuration.GetSection(WorkforceOptions.Section));
         services.AddPermissions(WorkforcePermissions.All);
+        services.AddAlertProvider<WorkforceAlerts>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapWorkforceEndpoints();

@@ -31,10 +31,16 @@ public sealed class WorkflowModule : IModule
         services.AddScoped<ApprovalQueries>();
         services.AddScoped<InternalRequestService>();
         services.AddScoped<IApprovalRecordAdapter, InternalRequestAdapter>();
+        services.AddScoped<AlertCenter>();
+        services.AddHostedService<AlertDigestWorker>();
         services.AddPermissions(WorkflowPermissions.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("internal_request", WorkflowDbContext.SchemaName, "الطلبات والاعتمادات", "Requests and approvals", "الطلبات الداخلية", "Internal requests", "REQ-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapWorkflowEndpoints();
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapWorkflowEndpoints();
+        endpoints.MapAlertEndpoints();
+    }
 }

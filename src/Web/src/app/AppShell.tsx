@@ -16,6 +16,7 @@ import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import StoreOutlinedIcon from '@mui/icons-material/StoreOutlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import NotificationImportantOutlinedIcon from '@mui/icons-material/NotificationImportantOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -38,6 +39,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { workflowApi } from '../api/workflow';
 import { LanguageSwitch } from '../auth/AuthLayout';
+import { AlertsButton } from '../components/AlertsButton';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { Initials } from '../components/ui';
 import { companyName } from '../pages/ChooseCompanyPage';
@@ -65,7 +67,12 @@ interface MenuSection {
 
 /** The menu grows with each module; an item without its permission is not shown at all. */
 const menu: MenuSection[] = [
-  { items: [{ path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> }] },
+  {
+    items: [
+      { path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> },
+      { path: '/alerts', labelKey: 'menu.alerts', icon: <NotificationImportantOutlinedIcon /> },
+    ],
+  },
   {
     titleKey: 'menu.commercial',
     items: [
@@ -345,6 +352,7 @@ function TopBar({ title, onMenu }: { title: string; onMenu?: () => void }) {
             </IconButton>
           </Tooltip>
         )}
+        <AlertsButton />
         <NotificationsBell />
         <LanguageSwitch />
         <Box sx={{ width: '1px', height: 26, mx: 0.75, bgcolor: tokens.border, display: { xs: 'none', sm: 'block' } }} />

@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
@@ -43,6 +44,7 @@ public sealed class OperationsModule : IModule
         services.AddScoped<MovementService>();
         services.AddScoped<MovementQueries>();
         services.AddScoped<IApprovalRecordAdapter, MovementAdapter>();
+        services.AddAlertProvider<MovementAlerts>();
         services.AddPermissions(OperationsPermissions.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("delivery_order", OperationsDbContext.SchemaName, "العمليات", "Operations", "أوامر التسليم", "Delivery orders", "DO-{YYYY}-{N:5}", NumberReset.Yearly),

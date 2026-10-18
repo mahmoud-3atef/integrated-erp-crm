@@ -9,6 +9,7 @@ internal static class WorkflowPermissions
     public const string InstancesView = "workflow.instances.view";
     public const string RequestsCreate = "workflow.requests.create";
     public const string RequestsViewAll = "workflow.requests.view";
+    public const string AlertsManage = "workflow.alerts.manage";
 
     private const string GroupAr = "الاعتمادات";
     private const string GroupEn = "Approvals";
@@ -20,5 +21,6 @@ internal static class WorkflowPermissions
         new(InstancesView, GroupAr, GroupEn, "متابعة جميع الاعتمادات", "Monitor all approvals"),
         new(RequestsCreate, GroupAr, GroupEn, "إنشاء الطلبات الداخلية", "Create internal requests"),
         new(RequestsViewAll, GroupAr, GroupEn, "عرض جميع الطلبات الداخلية", "View all internal requests"),
+        new(AlertsManage, GroupAr, GroupEn, "إعداد التنبيهات (تشغيلها وأيامها)", "Set up alerts (on or off, and their days)"),
     ];
 }

@@ -12,6 +12,7 @@ import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
+import { AlertsPage } from '../pages/alerts/AlertsPage';
 import { AgingPage } from '../pages/billing/AgingPage';
 import { MovementFormPage } from '../pages/operations/movements/MovementFormPage';
 import { MovementPage } from '../pages/operations/movements/MovementPage';
@@ -78,6 +79,7 @@ export function App() {
               {/* Signed-in area: header + menu by permission. */}
               <Route element={<AppShell />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/alerts" element={<AlertsPage />} />
                 <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/roles" element={<RolesPage />} />
                 <Route path="/admin/crm-sync" element={<CrmSyncPage />} />

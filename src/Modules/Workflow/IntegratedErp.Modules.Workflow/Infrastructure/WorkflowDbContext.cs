@@ -26,6 +26,64 @@ internal sealed class WorkflowDbContext(DbContextOptions<WorkflowDbContext> opti
     public DbSet<ApprovalHistoryEntry> History => Set<ApprovalHistoryEntry>();
 
     public DbSet<InternalRequest> InternalRequests => Set<InternalRequest>();
+
+    public DbSet<AlertSetting> AlertSettings => Set<AlertSetting>();
+
+    public DbSet<AlertDismissal> AlertDismissals => Set<AlertDismissal>();
+
+    public DbSet<AlertNotice> AlertNotices => Set<AlertNotice>();
+
+    public DbSet<AlertDigestRun> AlertDigestRuns => Set<AlertDigestRun>();
+}
+
+internal sealed class AlertSettingConfiguration : IEntityTypeConfiguration<AlertSetting>
+{
+    public void Configure(EntityTypeBuilder<AlertSetting> builder)
+    {
+        builder.ToTable("alert_setting");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.Code).HasMaxLength(100).IsRequired();
+        builder.Property(s => s.UpdatedByName).HasMaxLength(200);
+        builder.HasIndex(s => new { s.TenantId, s.Code }).IsUnique();
+    }
+}
+
+internal sealed class AlertDismissalConfiguration : IEntityTypeConfiguration<AlertDismissal>
+{
+    public void Configure(EntityTypeBuilder<AlertDismissal> builder)
+    {
+        builder.ToTable("alert_dismissal");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Code).HasMaxLength(100).IsRequired();
+        builder.Property(d => d.Key).HasMaxLength(200).IsRequired();
+        builder.HasIndex(d => new { d.TenantId, d.UserId, d.Code, d.Key }).IsUnique();
+    }
+}
+
+internal sealed class AlertNoticeConfiguration : IEntityTypeConfiguration<AlertNotice>
+{
+    public void Configure(EntityTypeBuilder<AlertNotice> builder)
+    {
+        builder.ToTable("alert_notice");
+        builder.HasKey(n => n.Id);
+        builder.Property(n => n.Id).ValueGeneratedNever();
+        builder.Property(n => n.Code).HasMaxLength(100).IsRequired();
+        builder.Property(n => n.Key).HasMaxLength(200).IsRequired();
+        builder.HasIndex(n => new { n.TenantId, n.Code, n.Key }).IsUnique();
+    }
+}
+
+internal sealed class AlertDigestRunConfiguration : IEntityTypeConfiguration<AlertDigestRun>
+{
+    public void Configure(EntityTypeBuilder<AlertDigestRun> builder)
+    {
+        builder.ToTable("alert_digest_run");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.HasIndex(r => new { r.TenantId, r.Day }).IsUnique();
+    }
 }
 
 internal sealed class ApprovalProcessConfiguration : IEntityTypeConfiguration<ApprovalProcess>

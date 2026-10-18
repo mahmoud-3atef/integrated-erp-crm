@@ -11,6 +11,9 @@ public interface ITenantDirectory
     Task<TenantInfo?> FindByCodeAsync(string code, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<TenantInfo>> GetAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>Every active company (for background work done for each, e.g. the morning alert digest).</summary>
+    Task<IReadOnlyList<TenantInfo>> ActiveAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>First-run setup of a server: creates the company the first administrators join (if it does not exist).</summary>

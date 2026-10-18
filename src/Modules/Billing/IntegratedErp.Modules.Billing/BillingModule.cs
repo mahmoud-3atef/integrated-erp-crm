@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Attachments;
 using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.BuildingBlocks.Modules;
@@ -40,6 +41,7 @@ public sealed class BillingModule : IModule
         services.AddScoped<OpeningBalanceImport>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<OpeningBalanceImport>());
         services.AddAttachmentOwners<BillingAttachmentOwners>(BillingAttachmentOwners.All);
+        services.AddAlertProvider<BillingAlerts>();
         services.AddPermissions(BillingPermissions.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("timesheet", BillingDbContext.SchemaName, "الفوترة", "Billing", "التحضير الشهري", "Monthly timesheets", "TS-{YYYY}-{N:5}", NumberReset.Yearly),

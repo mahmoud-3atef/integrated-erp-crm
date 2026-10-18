@@ -451,7 +451,8 @@
     "receipts": "Receipt vouchers",
     "aging": "Debt aging",
     "bankAccounts": "Bank accounts",
-    "movements": "Worker movements"
+    "movements": "Worker movements",
+    "alerts": "Alerts"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -2461,5 +2462,32 @@
     },
     "keptPrice": "Price (their previous price on the project)",
     "keptPriceHint": "Back at the price they had; a special price can change it."
+  },
+  "alerts": {
+    "title": "Alerts",
+    "button": "Alerts ({{count}} need attention)",
+    "intro": "What needs your attention now, from every part of the system you have access to, by urgency. Each alert opens where you deal with it, and the people responsible get a summary of the new ones every morning.",
+    "severity": {
+      "Critical": "Urgent",
+      "Warning": "Needs follow-up",
+      "Info": "For information"
+    },
+    "allKinds": "All kinds",
+    "none": "No alerts now",
+    "noneHint": "All is well.",
+    "open": "Deal with it",
+    "hide": "Hide",
+    "showHidden": "Show hidden ({{count}})",
+    "settings": "Alert settings",
+    "settingsHint": "Turn on the alerts you need and set each one's days. The morning summary goes to the people who can act on it in each area.",
+    "digestNow": "Send the summary of new ones now",
+    "digestSent": "A summary of {{count}} new alerts was sent.",
+    "daysOne": "1 day ago",
+    "daysTwo": "2 days ago",
+    "daysFew": "{{count}} days ago",
+    "daysMany": "{{count}} days ago",
+    "hideDay": "Hide for a day",
+    "hideWeek": "Hide for a week",
+    "hideMonth": "Hide for a month"
   }
 }

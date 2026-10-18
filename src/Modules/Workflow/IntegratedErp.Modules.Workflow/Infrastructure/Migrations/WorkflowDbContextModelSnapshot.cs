@@ -168,6 +168,161 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                     b.ToTable("outbox_message", "workflow");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.AlertDigestRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alert_digest_run");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_alert_digest_run_tenant_id");
+
+                    b.HasIndex("TenantId", "Day")
+                        .IsUnique()
+                        .HasDatabaseName("ix_alert_digest_run_tenant_id_day");
+
+                    b.ToTable("alert_digest_run", "workflow");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.AlertDismissal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("Until")
+                        .HasColumnType("date")
+                        .HasColumnName("until");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alert_dismissal");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_alert_dismissal_tenant_id");
+
+                    b.HasIndex("TenantId", "UserId", "Code", "Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_alert_dismissal_tenant_id_user_id_code_key");
+
+                    b.ToTable("alert_dismissal", "workflow");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.AlertNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("NotifiedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("notified_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alert_notice");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_alert_notice_tenant_id");
+
+                    b.HasIndex("TenantId", "Code", "Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_alert_notice_tenant_id_code_key");
+
+                    b.ToTable("alert_notice", "workflow");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.AlertSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("code");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("int")
+                        .HasColumnName("days");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit")
+                        .HasColumnName("enabled");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("updated_by_name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alert_setting");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_alert_setting_tenant_id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_alert_setting_tenant_id_code");
+
+                    b.ToTable("alert_setting", "workflow");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalHistoryEntry", b =>
                 {
                     b.Property<Guid>("Id")
