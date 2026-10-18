@@ -28,12 +28,22 @@ public sealed class BillingModule : IModule
         services.AddScoped<TimesheetService>();
         services.AddScoped<TimesheetQueries>();
         services.AddScoped<IApprovalRecordAdapter, TimesheetAdapter>();
+        services.AddScoped<InvoiceService>();
+        services.AddScoped<InvoiceQueries>();
+        services.AddScoped<IApprovalRecordAdapter, InvoiceAdapter>();
         services.AddPermissions(BillingPermissions.All);
         services.AddNumberSequences(
-            new NumberSequenceDefinition("timesheet", BillingDbContext.SchemaName, "الفوترة", "Billing", "التحضير الشهري", "Monthly timesheets", "TS-{YYYY}-{N:5}", NumberReset.Yearly));
+            new NumberSequenceDefinition("timesheet", BillingDbContext.SchemaName, "الفوترة", "Billing", "التحضير الشهري", "Monthly timesheets", "TS-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("invoice", BillingDbContext.SchemaName, "الفوترة", "Billing", "فواتير العملاء", "Customer invoices", "INV{N:5}", NumberReset.Never),
+            new NumberSequenceDefinition("credit_note", BillingDbContext.SchemaName, "الفوترة", "Billing", "الإشعارات الدائنة", "Credit notes", "CN-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition("debit_note", BillingDbContext.SchemaName, "الفوترة", "Billing", "الإشعارات المدينة", "Debit notes", "DN-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapTimesheetEndpoints();
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapTimesheetEndpoints();
+        endpoints.MapInvoiceEndpoints();
+    }
 }
 
 internal static class BillingPermissions
@@ -41,6 +51,10 @@ internal static class BillingPermissions
     public const string TimesheetsView = "billing.timesheets.view";
     public const string TimesheetsManage = "billing.timesheets.manage";
     public const string TimesheetsApprove = "billing.timesheets.approve";
+    public const string InvoicesView = "billing.invoices.view";
+    public const string InvoicesManage = "billing.invoices.manage";
+    public const string InvoicesReview = "billing.invoices.review";
+    public const string InvoicesApprove = "billing.invoices.approve";
 
     private const string GroupAr = "الفوترة";
     private const string GroupEn = "Billing";
@@ -50,5 +64,9 @@ internal static class BillingPermissions
         new(TimesheetsView, GroupAr, GroupEn, "عرض التحضير الشهري ومخرجاته", "View monthly timesheets and their outputs"),
         new(TimesheetsManage, GroupAr, GroupEn, "توليد التحضير وتعديلاته وإرساله وإعدادات فوترة المشروع", "Generate, adjust and send timesheets; project billing settings"),
         new(TimesheetsApprove, GroupAr, GroupEn, "اعتماد التحضير الشهري", "Approve monthly timesheets"),
+        new(InvoicesView, GroupAr, GroupEn, "عرض فواتير العملاء والإشعارات", "View customer invoices and notes"),
+        new(InvoicesManage, GroupAr, GroupEn, "إنشاء الفواتير والإشعارات وتعديل مسوداتها وإرسالها", "Create invoices and notes, edit their drafts and send them"),
+        new(InvoicesReview, GroupAr, GroupEn, "مراجعة الفواتير (مشرف أو مدير المشروع)", "Review invoices (project supervisor or manager)"),
+        new(InvoicesApprove, GroupAr, GroupEn, "اعتماد الفواتير وإصدارها (المالية)", "Approve and issue invoices (finance)"),
     ];
 }

@@ -21,11 +21,12 @@ export interface MonthProject {
   workDays: number | null;
   invoiceAmount: number | null;
   invoiceTotal: number | null;
+  invoiceDoc: InvoiceRef | null;
 }
 
 export interface TimesheetMonth {
   month: string;
-  totals: { projects: number; generated: number; inApproval: number; approved: number; invoiceAmount: number };
+  totals: { projects: number; generated: number; inApproval: number; approved: number; invoiceAmount: number; invoiced: number };
   projects: MonthProject[];
 }
 
@@ -170,6 +171,8 @@ export interface TimesheetDetail {
   approval: ApprovalStatus | null;
   canEdit: boolean;
   canSubmit: boolean;
+  invoiceDoc: InvoiceRef | null;
+  canInvoice: boolean;
 }
 
 const base = '/api/v1/billing';
@@ -183,4 +186,146 @@ export const billingApi = {
   submit: (id: string) => request<void>('POST', `${base}/timesheets/${id}/submit`),
   settings: (projectId: string) => request<BillingSettings>('GET', `${base}/projects/${projectId}/settings`),
   saveSettings: (projectId: string, input: BillingSettings) => request<void>('PUT', `${base}/projects/${projectId}/settings`, input),
+};
+
+// Customer invoices and notes (src/Modules/Billing/.../Api/InvoiceEndpoints.cs).
+export type InvoiceKind = 'Invoice' | 'CreditNote' | 'DebitNote';
+export type InvoiceStatus = 'Draft' | 'ProjectReview' | 'FinanceReview' | 'Returned' | 'Issued';
+export const noteComponents = ['Salary', 'ServiceFee', 'Housing', 'Transport', 'Overtime', 'ClientAddition', 'OtherCost', 'Gosi'] as const;
+export type InvoiceComponent = (typeof noteComponents)[number] | 'Discount';
+
+export interface InvoiceRef {
+  id: string;
+  invoiceNo: string | null;
+  status: InvoiceStatus;
+}
+
+export interface InvoiceRow {
+  id: string;
+  kind: InvoiceKind;
+  invoiceNo: string | null;
+  status: InvoiceStatus;
+  awaitingApproval: boolean;
+  projectName: string;
+  customerName: string;
+  month: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: number;
+  vat: number;
+  total: number;
+  timesheetNo: string | null;
+  originalInvoiceNo: string | null;
+  createdByName: string;
+}
+
+export interface InvoiceList {
+  totals: { drafts: number; inReview: number; issued: number; issuedTotal: number; credits: number; debits: number };
+  rows: InvoiceRow[];
+}
+
+export interface Party {
+  name: string;
+  nameEn: string | null;
+  vatNumber: string | null;
+  commercialRegistration: string | null;
+  city: string | null;
+}
+
+export interface InvoiceWorker {
+  workerId: string;
+  workerNo: string;
+  name: string;
+  iqamaNo: string | null;
+  professionAr: string | null;
+  professionEn: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  lineFrom: string;
+  lineTo: string;
+  workDays: number;
+  monthlyPrice: number;
+  dueSalary: number;
+  absenceDays: number;
+  absenceAmount: number;
+  dueFees: number;
+  overtimeHours: number;
+  overtime: number;
+  clientAdditions: number;
+  clientDeductions: number;
+  customerLoans: number;
+  otherCosts: number;
+  gosi: number;
+  amount: number;
+  vat: number;
+  total: number;
+}
+
+export interface InvoiceDetail {
+  id: string;
+  kind: InvoiceKind;
+  invoiceNo: string | null;
+  status: InvoiceStatus;
+  awaitingApproval: boolean;
+  timesheetId: string | null;
+  timesheetNo: string | null;
+  originalInvoiceId: string | null;
+  originalInvoiceNo: string | null;
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  contractType: string | null;
+  customer: Party;
+  seller: Party | null;
+  month: string;
+  periodFrom: string;
+  periodTo: string;
+  invoiceDate: string;
+  paymentTermDays: number | null;
+  dueDate: string;
+  vatRate: number;
+  amount: number;
+  vat: number;
+  total: number;
+  reason: string | null;
+  remarks: string | null;
+  createdAt: string;
+  createdByName: string;
+  issuedAt: string | null;
+  issuedByName: string | null;
+  lastComment: string | null;
+  items: { lineNo: number; component: InvoiceComponent; description: string | null; amount: number }[];
+  workers: InvoiceWorker[];
+  notes: InvoiceRow[];
+  netAmount: number;
+  creditable: number;
+  warnings: string[];
+  approval: ApprovalStatus | null;
+  canEdit: boolean;
+  canSubmit: boolean;
+  canDelete: boolean;
+  canNote: boolean;
+}
+
+export interface NoteDraft {
+  kind: Exclude<InvoiceKind, 'Invoice'>;
+  date: string;
+  reason: string;
+  items: { component: InvoiceComponent; description: string | null; amount: number }[];
+}
+
+const invoices = `${base}/invoices`;
+
+export const invoiceApi = {
+  list: (filter: { month?: string; status?: string; kind?: string; search?: string }) => {
+    const q = new URLSearchParams(Object.entries(filter).filter(([, v]) => v) as [string, string][]);
+    return request<InvoiceList>('GET', `${invoices}?${q.toString()}`);
+  },
+  get: (id: string) => request<InvoiceDetail>('GET', `${invoices}/${id}`),
+  attachmentUrl: (id: string) => `${invoices}/${id}/attachment`,
+  fromTimesheet: (timesheetId: string) => request<{ id: string }>('POST', `${base}/timesheets/${timesheetId}/invoice`),
+  edit: (id: string, input: { invoiceDate: string; paymentTermDays: number | null; remarks: string | null }) => request<void>('PUT', `${invoices}/${id}`, input),
+  remove: (id: string) => request<void>('DELETE', `${invoices}/${id}`),
+  note: (id: string, input: NoteDraft) => request<{ id: string }>('POST', `${invoices}/${id}/notes`, input),
+  submit: (id: string) => request<void>('POST', `${invoices}/${id}/submit`),
 };

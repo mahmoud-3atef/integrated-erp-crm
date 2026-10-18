@@ -23,9 +23,10 @@ public sealed record MonthProjectDto(
     int? Workers,
     decimal? WorkDays,
     decimal? InvoiceAmount,
-    decimal? InvoiceTotal);
+    decimal? InvoiceTotal,
+    InvoiceRefDto? InvoiceDoc);
 
-public sealed record MonthTotalsDto(int Projects, int Generated, int InApproval, int Approved, decimal InvoiceAmount);
+public sealed record MonthTotalsDto(int Projects, int Generated, int InApproval, int Approved, decimal InvoiceAmount, int Invoiced);
 
 public sealed record MonthDto(DateOnly Month, MonthTotalsDto Totals, IReadOnlyList<MonthProjectDto> Projects);
 
@@ -119,7 +120,9 @@ public sealed record TimesheetDetailDto(
     IReadOnlyList<WorkerPayDto> UnknownSource,
     ApprovalStatusInfo? Approval,
     bool CanEdit,
-    bool CanSubmit);
+    bool CanSubmit,
+    InvoiceRefDto? InvoiceDoc,
+    bool CanInvoice);
 
 internal sealed class TimesheetQueries(
     BillingDbContext db,
@@ -145,6 +148,10 @@ internal sealed class TimesheetQueries(
                 Total = t.Lines.Sum(l => (decimal?)l.InvoiceTotal) ?? 0,
             })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var sheetIds = sheets.Select(s => (Guid?)s.Id).ToList();
+        var invoices = (await db.Invoices.AsNoTracking().Where(i => sheetIds.Contains(i.TimesheetId))
+                .Select(i => new { i.TimesheetId, i.Id, i.InvoiceNo, i.Status }).ToListAsync(cancellationToken).ConfigureAwait(false))
+            .ToDictionary(i => i.TimesheetId!.Value, i => new InvoiceRefDto(i.Id, i.InvoiceNo, i.Status.ToString()));
         var crmIds = byProject.Keys.Union(sheets.Select(s => s.ProjectCrmId)).ToList();
         var known = (await projects.FindAsync([], crmIds, cancellationToken).ConfigureAwait(false)).ToDictionary(p => p.CrmId);
         var rows = crmIds.Select(crm =>
@@ -154,13 +161,14 @@ internal sealed class TimesheetQueries(
                 return new MonthProjectDto(
                     project?.Id, crm, project?.Name ?? sheet?.ProjectName ?? byProject.GetValueOrDefault(crm).Name ?? "—", project?.CustomerName ?? sheet?.CustomerName,
                     project?.Manager, byProject.GetValueOrDefault(crm).Workers, sheet?.Id, sheet?.TimesheetNo, sheet?.Status.ToString(),
-                    sheet?.Workers, sheet?.Days, sheet?.Amount, sheet?.Total);
+                    sheet?.Workers, sheet?.Days, sheet?.Amount, sheet?.Total, sheet is null ? null : invoices.GetValueOrDefault(sheet.Id));
             })
             .OrderBy(r => r.TimesheetId is null ? 0 : 1).ThenByDescending(r => r.LedgerWorkers)
             .ToList();
         return new MonthDto(
             first,
-            new MonthTotalsDto(rows.Count, sheets.Count, sheets.Count(s => s.Status == TimesheetStatus.InApproval), sheets.Count(s => s.Status == TimesheetStatus.Approved), sheets.Sum(s => s.Amount)),
+            new MonthTotalsDto(rows.Count, sheets.Count, sheets.Count(s => s.Status == TimesheetStatus.InApproval), sheets.Count(s => s.Status == TimesheetStatus.Approved), sheets.Sum(s => s.Amount),
+                invoices.Values.Count(i => i.Status == nameof(InvoiceStatus.Issued))),
             rows);
     }
 
@@ -209,7 +217,10 @@ internal sealed class TimesheetQueries(
             .ToList();
 
         var approval = await approvals.StatusAsync(TimesheetAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        var canManage = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(BillingPermissions.TimesheetsManage);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var canManage = granted.Has(BillingPermissions.TimesheetsManage);
+        var invoiceDoc = await db.Invoices.AsNoTracking().Where(i => i.TimesheetId == id)
+            .Select(i => new InvoiceRefDto(i.Id, i.InvoiceNo, i.Status.ToString())).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         return new TimesheetDetailDto(
             t.Id, t.TimesheetNo, t.ProjectId, t.ProjectCode, t.ProjectName, t.CustomerName, t.ContractType, t.Month, t.From, t.To, t.DayBasis.ToString(),
             t.Status.ToString(), t.AwaitingApproval, t.GeneratedAt, t.GeneratedByName, t.ApprovedAt, t.ApprovedByName, t.LastComment,
@@ -221,6 +232,8 @@ internal sealed class TimesheetQueries(
             pays.Where(p => p.Line.Source == WorkerSource.Unknown).Select(p => p.Pay).ToList(),
             approval,
             CanEdit: canManage && t.IsEditable,
-            CanSubmit: canManage && t.IsEditable && t.Lines.Count > 0);
+            CanSubmit: canManage && t.IsEditable && t.Lines.Count > 0,
+            invoiceDoc,
+            CanInvoice: invoiceDoc is null && t.Status == TimesheetStatus.Approved && granted.Has(BillingPermissions.InvoicesManage));
     }
 }

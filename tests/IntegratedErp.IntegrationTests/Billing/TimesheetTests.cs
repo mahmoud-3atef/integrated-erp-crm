@@ -1,4 +1,4 @@
-using IntegratedErp.BuildingBlocks.Security;
+﻿using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.IntegrationTests.CrmSync;
 using IntegratedErp.Modules.Billing.Application;
 using IntegratedErp.Modules.Commercial.Contracts;
@@ -8,7 +8,9 @@ using IntegratedErp.Modules.CrmSync.Domain;
 using IntegratedErp.Modules.CrmSync.Infrastructure;
 using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
+using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.Modules.Organization.Application.Organization;
+using IntegratedErp.Modules.Organization.Application.Settings;
 using IntegratedErp.Modules.Workflow.Application;
 using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.Modules.Workflow.Domain;
@@ -123,12 +125,7 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.True((await service.SubmitAsync(id, default)).IsSuccess);
         }
 
-        using (var scope = database.Scope(tenantId, user: approver.ToString()))
-        {
-            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
-            var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == approver && w.Status == WorkItemStatus.Pending);
-            Assert.True((await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Approve, "معتمد", null, default)).IsSuccess);
-        }
+        await ApproveNextAsync(tenantId, approver);
 
         using (var scope = database.Scope(tenantId, user: manager.ToString()))
         {
@@ -141,6 +138,105 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal("conflict.timesheet_not_editable", (await service.GenerateAsync(new GenerateInput(projectId, september), default)).Error.Code);
             Assert.Equal(1, (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().MonthAsync(september, default)).Totals.Approved);
         }
+
+        // The invoice: made from the approved timesheet, its totals the timesheet's to the halala.
+        Guid invoiceId;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            // Invoice numbers continue after the old system's last one (INV00700).
+            Assert.True((await scope.ServiceProvider.GetRequiredService<NumberingService>().UpdateAsync("invoice", new NumberingInput("INV{N:5}", NumberReset.Never, 701), default)).IsSuccess);
+            var sheet = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!;
+            Assert.True(sheet.CanInvoice);
+
+            var service = scope.ServiceProvider.GetRequiredService<InvoiceService>();
+            var queries = scope.ServiceProvider.GetRequiredService<InvoiceQueries>();
+            var made = await service.CreateFromTimesheetAsync(id, default);
+            Assert.True(made.IsSuccess, made.IsFailure ? made.Error.Code : null);
+            invoiceId = made.Value;
+            Assert.Equal("conflict.invoice_exists", (await service.CreateFromTimesheetAsync(id, default)).Error.Code);
+
+            var invoice = (await queries.GetAsync(invoiceId, default))!;
+            Assert.Equal(("Draft", (string?)null, new DateOnly(2026, 9, 30)), (invoice.Status, invoice.InvoiceNo, invoice.InvoiceDate));
+            Assert.Equal((sheet.Invoice.Amount, sheet.Invoice.Vat, sheet.Invoice.Total), (invoice.Amount, invoice.Vat, invoice.Total));
+            Assert.Equal(invoice.Amount, invoice.Items.Sum(i => i.Amount));
+            Assert.Equal(sheet.Invoice.DueSalary - sheet.Invoice.AbsenceAmount, invoice.Items.Single(i => i.Component == "Salary").Amount);
+            Assert.Equal(sheet.Lines.Count, invoice.Workers.Count);
+            Assert.Contains("no_customer_vat", invoice.Warnings);
+
+            // The draft's terms: 30 days to pay.
+            Assert.True((await service.EditAsync(invoiceId, new InvoiceEditInput(new DateOnly(2026, 9, 30), 30, "فاتورة شهر سبتمبر"), default)).IsSuccess);
+            Assert.Equal(new DateOnly(2026, 10, 30), (await queries.GetAsync(invoiceId, default))!.DueDate);
+
+            // The detailed attachment: a row per worker line and a totals row.
+            using (var attachment = new ClosedXML.Excel.XLWorkbook(new MemoryStream((await service.AttachmentAsync(invoiceId, default))!.Value.Content)))
+            {
+                Assert.Equal(5 + sheet.Lines.Count + 1, attachment.Worksheet("Workers").LastRowUsed()!.RowNumber());
+            }
+
+            Assert.True((await service.SubmitAsync(invoiceId, default)).IsSuccess);
+            Assert.Equal("conflict.invoice_not_editable", (await service.DeleteAsync(invoiceId, default)).Error.Code);
+        }
+
+        // The project's review moves it to finance; finance's approval issues it.
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            Assert.Equal("FinanceReview", (await scope.ServiceProvider.GetRequiredService<InvoiceQueries>().GetAsync(invoiceId, default))!.Status);
+        }
+
+        await ApproveNextAsync(tenantId, approver);
+        Guid creditId;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<InvoiceService>();
+            var queries = scope.ServiceProvider.GetRequiredService<InvoiceQueries>();
+            var invoice = (await queries.GetAsync(invoiceId, default))!;
+            Assert.Equal(("Issued", "INV00701", false, true), (invoice.Status, invoice.InvoiceNo, invoice.CanEdit, invoice.CanNote));
+            Assert.Equal("INV00701", (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!.InvoiceDoc!.InvoiceNo);
+            Assert.Equal(1, (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().MonthAsync(september, default)).Totals.Invoiced);
+
+            // Issued: never changed or deleted — corrected by notes, each with its reason, a credit never above what is left.
+            Assert.Equal("conflict.invoice_not_editable", (await service.EditAsync(invoiceId, new InvoiceEditInput(new DateOnly(2026, 9, 30), null, null), default)).Error.Code);
+            Assert.Equal("conflict.invoice_not_editable", (await service.DeleteAsync(invoiceId, default)).Error.Code);
+            var date = new DateOnly(2026, 10, 15);
+            Assert.Equal("validation.invoice_note_reason", (await service.CreateNoteAsync(invoiceId, new NoteInput("CreditNote", date, " ", [new("Overtime", null, 50)]), default)).Error.Code);
+            Assert.Equal("validation.invoice_note_over", (await service.CreateNoteAsync(invoiceId, new NoteInput("CreditNote", date, "خصم", [new("Salary", null, invoice.Amount + 1)]), default)).Error.Code);
+            Assert.Equal("validation.invoice_note_items", (await service.CreateNoteAsync(invoiceId, new NoteInput("DebitNote", date, "إضافة", [new("Salary", null, 0)]), default)).Error.Code);
+            var credit = await service.CreateNoteAsync(invoiceId, new NoteInput("CreditNote", date, "غياب بلغ بعد الإصدار", [new("Salary", "غياب يومين للعامل BSS0701", 100)]), default);
+            Assert.True(credit.IsSuccess, credit.IsFailure ? credit.Error.Code : null);
+            creditId = credit.Value;
+            var note = (await queries.GetAsync(creditId, default))!;
+            Assert.Equal(("CreditNote", "INV00701", 100m, 15m, 115m), (note.Kind, note.OriginalInvoiceNo, note.Amount, note.Vat, note.Total));
+
+            // A draft note is simply deleted.
+            var debit = await service.CreateNoteAsync(invoiceId, new NoteInput("DebitNote", date, "أيام لم تُفوتر", [new("ServiceFee", null, 40)]), default);
+            Assert.True((await service.DeleteAsync(debit.Value, default)).IsSuccess);
+
+            Assert.True((await service.SubmitAsync(creditId, default)).IsSuccess);
+        }
+
+        await ApproveNextAsync(tenantId, approver);
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var queries = scope.ServiceProvider.GetRequiredService<InvoiceQueries>();
+            var note = (await queries.GetAsync(creditId, default))!;
+            Assert.Equal(("Issued", "CN-2026-00001"), (note.Status, note.InvoiceNo));
+            var invoice = (await queries.GetAsync(invoiceId, default))!;
+            Assert.Equal((invoice.Amount - 100, invoice.Amount - 100), (invoice.NetAmount, invoice.Creditable));
+            Assert.Equal(["CN-2026-00001"], invoice.Notes.Select(n => n.InvoiceNo));
+            var list = await queries.ListAsync(september, null, null, null, default);
+            Assert.Equal((2, 1, 115m), (list.Rows.Count, list.Totals.Issued, list.Totals.Credits));
+        }
+    }
+
+    /// <summary>The approver takes their one open task and approves it.</summary>
+    private async Task ApproveNextAsync(Guid tenantId, Guid approver)
+    {
+        using var scope = database.Scope(tenantId, user: approver.ToString());
+        var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+        var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == approver && w.Status == WorkItemStatus.Pending);
+        Assert.True((await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Approve, "معتمد", null, default)).IsSuccess);
     }
 
     /// <summary>Changes the timesheet sheet of an Excel file, as a supervisor would.</summary>
@@ -166,14 +262,16 @@ public sealed class TimesheetTests(TestDatabase database)
             identity.Users.Add(user);
             var membership = new Membership(user.Id, tenantId);
             identity.Memberships.Add(membership);
-            var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], name, name, ["billing.timesheets.view", .. permissions], catalog).Value;
+            var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], name, name, ["billing.timesheets.view", "billing.invoices.view", .. permissions], catalog).Value;
             identity.Roles.Add(role);
             identity.RoleAssignments.Add(new RoleAssignment(membership.Id, role.Id, null, tenantId));
             await identity.SaveChangesAsync();
             return user.Id;
         }
 
-        return (await PersonAsync("مشرف المشروع", "billing.timesheets.manage"), await PersonAsync("مدير العمليات", "billing.timesheets.approve"));
+        return (
+            await PersonAsync("مشرف المشروع", "billing.timesheets.manage", "billing.invoices.manage"),
+            await PersonAsync("مدير العمليات", "billing.timesheets.approve", "billing.invoices.review", "billing.invoices.approve"));
     }
 
     private static Guid Worker(FakeCrm crm, string number, int? sponsor) =>

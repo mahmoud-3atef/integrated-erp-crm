@@ -26,6 +26,7 @@ import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import PinOutlinedIcon from '@mui/icons-material/PinOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -79,7 +80,10 @@ const menu: MenuSection[] = [
   },
   {
     titleKey: 'menu.billingSection',
-    items: [{ path: '/billing/timesheets', labelKey: 'menu.timesheets', icon: <FactCheckOutlinedIcon />, permission: 'billing.timesheets.view', companyWide: true }],
+    items: [
+      { path: '/billing/timesheets', labelKey: 'menu.timesheets', icon: <FactCheckOutlinedIcon />, permission: 'billing.timesheets.view', companyWide: true },
+      { path: '/billing/invoices', labelKey: 'menu.invoices', icon: <ReceiptLongOutlinedIcon />, permission: 'billing.invoices.view', companyWide: true },
+    ],
   },
   {
     titleKey: 'menu.housingSection',

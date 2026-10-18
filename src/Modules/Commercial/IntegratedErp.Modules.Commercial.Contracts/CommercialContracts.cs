@@ -53,4 +53,13 @@ public interface IProjectDirectory
 
     /// <summary>These projects (by id or by CRM id); unknown ones are left out.</summary>
     Task<IReadOnlyList<ProjectInfo>> FindAsync(IReadOnlyCollection<Guid> ids, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken);
+
+    /// <summary>Who the project's invoices are addressed to (null when the project is unknown).</summary>
+    Task<ProjectBillTo?> BillToAsync(Guid projectId, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// A project's invoice addressee: its customer, or the project itself when it has none (as the old system billed);
+/// the registration is the customer's, else the one on the project.
+/// </summary>
+public sealed record ProjectBillTo(Guid? CustomerId, string Name, string? NameEn, string? VatNumber, string? CommercialRegistration, string? City);

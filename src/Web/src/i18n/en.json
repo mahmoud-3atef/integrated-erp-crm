@@ -362,7 +362,20 @@
     "validation_timesheet_overtime_limit": "The overtime hours exceed the project's monthly limit.",
     "not_found_timesheet_adjustment": "Adjustment not found.",
     "validation_timesheet_settings": "Check the billing settings' values.",
-    "validation_excel_file": "Choose an .xlsx file (up to 10 MB)."
+    "validation_excel_file": "Choose an .xlsx file (up to 10 MB).",
+    "conflict_invoice_timesheet_not_approved": "Only an approved timesheet makes an invoice.",
+    "conflict_invoice_exists": "The timesheet already has its invoice.",
+    "conflict_invoice_mismatch": "The invoice's totals do not agree with the timesheet's; it was not made.",
+    "conflict_invoice_not_editable": "Only a draft or returned invoice can be changed or deleted.",
+    "validation_invoice_terms": "Check the payment term (0–365 days) and the remarks.",
+    "validation_invoice_date": "The invoice date cannot be before the cycle starts.",
+    "validation_invoice_status_not_settable": "A process can only move the invoice between its reviews.",
+    "conflict_invoice_note_original": "A note is made on an issued invoice only.",
+    "validation_invoice_note_reason": "Enter the note's reason.",
+    "validation_invoice_note_items": "Enter the note's lines, each with an amount above zero.",
+    "validation_invoice_note_over": "The credit exceeds what is left of the invoice.",
+    "validation_invoice_note_date": "A note cannot be dated before its invoice.",
+    "not_found_invoice": "Invoice not found."
   },
   "menu": {
     "label": "Main menu",
@@ -402,7 +415,8 @@
     "housing": "Buildings and rooms",
     "numbering": "Document numbering",
     "billingSection": "Billing",
-    "timesheets": "Monthly timesheets"
+    "timesheets": "Monthly timesheets",
+    "invoices": "Customer invoices"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1817,7 +1831,8 @@
       "absence": "Absence",
       "overtime": "Overtime",
       "invoice": "Invoice",
-      "net": "Worker's net"
+      "net": "Worker's net",
+      "invoiceDoc": "Invoice"
     },
     "pay": {
       "salary": "Salary",
@@ -1894,7 +1909,7 @@
       "approved": "Approved",
       "approvedFoot": "Ready for invoice and payroll",
       "amount": "Invoices before VAT",
-      "amountFoot": "Of the generated timesheets"
+      "amountFoot": "{{count}} with an issued invoice"
     },
     "settings": {
       "title": "Project billing settings",
@@ -1940,6 +1955,170 @@
         "excel_reason_missing": "The row has a change without a reason.",
         "excel_missing_worker": "The worker was removed from the file (do not delete rows)."
       }
+    }
+  },
+  "invoices": {
+    "title": "Customer invoices",
+    "intro": "Each project's invoice is made from its approved timesheet, reviewed by the project and then by finance, and takes its final number when issued. An issued invoice is never changed or cancelled; it is corrected by a credit or debit note.",
+    "search": "Search by invoice number, project or customer",
+    "empty": "No invoices or notes this month.",
+    "noNumber": "Draft, no number",
+    "onInvoice": "on invoice {{number}}",
+    "monthOf": "{{month}}",
+    "createdBy": "Made by {{name}} on {{at}}",
+    "issuedBy": "Issued by {{name}} on {{at}}",
+    "submit": "Send for review",
+    "editTerms": "Invoice date and payment term",
+    "newCredit": "Credit note",
+    "newDebit": "Debit note",
+    "printDoc": "Print",
+    "print": {
+      "button": "Print",
+      "seller": "Seller",
+      "buyer": "Customer",
+      "vatNo": "VAT no.",
+      "crNo": "CR no.",
+      "city": "City",
+      "date": "Invoice date",
+      "due": "Due date",
+      "period": "Period",
+      "project": "Project",
+      "workers": "Workers",
+      "reason": "Reason",
+      "onInvoice": "On invoice",
+      "description": "Description",
+      "amount": "Amount",
+      "rate": "Rate",
+      "vat": "VAT",
+      "total": "Total",
+      "gross": "Total before discount",
+      "taxable": "Taxable amount",
+      "vatTotal": "VAT {{rate}}%",
+      "grand": "Total due",
+      "remarks": "Remarks",
+      "attachment": "Workers' detailed attachment",
+      "zatcaLater": "The QR code is added with the link to ZATCA.",
+      "cols": {
+        "workerNo": "No.",
+        "name": "Name",
+        "period": "Period",
+        "days": "Days",
+        "salary": "Salary",
+        "fees": "Fees",
+        "adjustments": "Adjustments",
+        "amount": "Before VAT",
+        "total": "Total"
+      }
+    },
+    "attachment": "Detailed attachment (Excel)",
+    "openTimesheet": "Timesheet {{number}}",
+    "openOriginal": "Invoice {{number}}",
+    "openInvoice": "Invoice: {{number}}",
+    "makeFromTimesheet": "Make the invoice",
+    "delete": "Delete the draft",
+    "deleteTitle": "Delete the draft?",
+    "deleteHint": "A draft has no number yet, so deleting it leaves no gap in the numbering. It can be made again.",
+    "issuedHint": "The invoice is issued with its final number and is never changed or deleted. Any correction is a credit or debit note.",
+    "reason": "Reason",
+    "remarks": "Remarks",
+    "termDays": "after {{days}} days",
+    "dueOnDate": "on the invoice date",
+    "paymentTerm": "Payment term (days)",
+    "paymentTermHint": "Leave it empty when payment is due on the invoice date.",
+    "itemsHint": "The tax invoice carries the totals; the workers and their days are in the detailed attachment.",
+    "noteItemsHint": "The note's lines and their amounts before VAT.",
+    "noNotes": "No notes on this invoice.",
+    "netHint": "The invoice is {{amount}} before VAT; after the issued notes it is {{net}}.",
+    "absentDays": "{{days}} absent",
+    "component": "Line",
+    "description": "Description",
+    "addLine": "Add a line",
+    "makeNote": "Make the note",
+    "noteTitle": {
+      "CreditNote": "Credit note on invoice {{number}}",
+      "DebitNote": "Debit note on invoice {{number}}"
+    },
+    "noteHint": {
+      "CreditNote": "Lowers what the customer owes, with a required reason. Left to credit on the invoice before VAT: {{creditable}}.",
+      "DebitNote": "Raises what the customer owes, with a required reason (days not billed, a raise with past effect…)."
+    },
+    "totalOf": {
+      "Invoice": "Invoice total",
+      "CreditNote": "Credit note total",
+      "DebitNote": "Debit note total"
+    },
+    "warnings": {
+      "no_customer_vat": "The customer has no VAT number in the system. Issuing works now, but the number is required before the link with ZATCA.",
+      "no_seller_vat": "The issuing commercial registration has no VAT number: add it under \"Commercial registrations\"."
+    },
+    "kind": {
+      "Invoice": "Invoice",
+      "CreditNote": "Credit note",
+      "DebitNote": "Debit note"
+    },
+    "status": {
+      "Draft": "Draft",
+      "ProjectReview": "Project review",
+      "FinanceReview": "Finance review",
+      "Returned": "Returned",
+      "Issued": "Issued"
+    },
+    "components": {
+      "Salary": "Workers' salaries after absence",
+      "ServiceFee": "Service fees",
+      "Housing": "Housing",
+      "Transport": "Transport",
+      "Overtime": "Overtime",
+      "ClientAddition": "Customer additions",
+      "OtherCost": "Other costs",
+      "Gosi": "GOSI",
+      "Discount": "Customer deductions and loans"
+    },
+    "filter": {
+      "all": "All",
+      "open": "Drafts",
+      "inReview": "In review",
+      "issued": "Issued",
+      "allKinds": "All types"
+    },
+    "cards": {
+      "drafts": "Drafts",
+      "draftsFoot": "Not sent yet or returned",
+      "inReview": "In review",
+      "inReviewFoot": "With the project or finance",
+      "issued": "Issued invoices",
+      "issuedFoot": "{{count}} invoices, VAT included",
+      "credits": "Credit notes",
+      "creditsFoot": "Issued, VAT included",
+      "debits": "Debit notes",
+      "debitsFoot": "Issued, VAT included"
+    },
+    "col": {
+      "number": "Number",
+      "kind": "Type",
+      "date": "Date",
+      "due": "Due",
+      "amount": "Before VAT",
+      "total": "With VAT",
+      "status": "Status",
+      "salary": "Salary after absence",
+      "fees": "Fees",
+      "adjustments": "Overtime and adjustments"
+    },
+    "tabs": {
+      "items": "Invoice lines",
+      "workers": "Detailed attachment ({{count}})",
+      "notes": "Notes ({{count}})"
+    },
+    "tiles": {
+      "amount": "Before VAT",
+      "vat": "VAT {{rate}}%",
+      "total": "Total",
+      "date": "Invoice date",
+      "due": "Due",
+      "net": "Net after notes",
+      "workers": "{{count}} workers",
+      "original": "Original invoice"
     }
   }
 }

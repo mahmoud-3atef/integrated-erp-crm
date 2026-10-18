@@ -36,8 +36,7 @@ public sealed class CommercialModule : IModule
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<PricingImportService>());
         services.AddPermissions(CommercialPermissions.All);
         services.AddNumberSequences(
-            new NumberSequenceDefinition("price_package", CommercialDbContext.SchemaName, "المبيعات والعقود", "Sales and contracts", "الباقات السعرية", "Price packages", "PKG-{N:5}", NumberReset.Never),
-            new NumberSequenceDefinition("invoice", CommercialDbContext.SchemaName, "المبيعات والعقود", "Sales and contracts", "فواتير المشاريع", "Project invoices", "INV{N:5}", NumberReset.Never, InUse: false));
+            new NumberSequenceDefinition("price_package", CommercialDbContext.SchemaName, "المبيعات والعقود", "Sales and contracts", "الباقات السعرية", "Price packages", "PKG-{N:5}", NumberReset.Never));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapCommercialEndpoints();

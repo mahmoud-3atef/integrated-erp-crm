@@ -8,6 +8,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import {
   Alert,
   Box,
@@ -34,7 +35,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { adjustmentTypes, billingApi, type AdjustmentType, type BillingSettings, type TimesheetDetail, type TimesheetLine, type WorkerPay } from '../../api/billing';
+import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type BillingSettings, type TimesheetDetail, type TimesheetLine, type WorkerPay } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { PillTabs } from '../../components/ui';
@@ -43,6 +44,7 @@ import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
 import { ExcelUploadDialog } from './ExcelUploadDialog';
+import { InvoiceStatusBadge } from './invoices';
 import { SourceBadge, TimesheetStatusBadge } from './timesheets';
 
 type Tab = 'workers' | 'invoice' | 'payroll' | 'suppliers' | 'unknown' | 'approval';
@@ -154,6 +156,37 @@ export function TimesheetPage() {
           {sheet.canSubmit && (
             <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || noPrice.length > 0} onClick={() => void run(() => billingApi.submit(sheet.id))}>
               {t('timesheets.submit')}
+            </Button>
+          )}
+          {sheet.canInvoice && (
+            <Button
+              variant="contained"
+              startIcon={<ReceiptLongOutlinedIcon />}
+              disabled={busy}
+              onClick={() =>
+                void (async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const { id: invoiceId } = await invoiceApi.fromTimesheet(sheet.id);
+                    navigate(`/billing/invoices/${invoiceId}`);
+                  } catch (failure) {
+                    setError(errorKey(failure));
+                  } finally {
+                    setBusy(false);
+                  }
+                })()
+              }
+            >
+              {t('invoices.makeFromTimesheet')}
+            </Button>
+          )}
+          {sheet.invoiceDoc && (
+            <Button variant="outlined" startIcon={<ReceiptLongOutlinedIcon />} onClick={() => navigate(`/billing/invoices/${sheet.invoiceDoc!.id}`)}>
+              {t('invoices.openInvoice', { number: sheet.invoiceDoc.invoiceNo ?? t('invoices.noNumber') })}
+              <Box component="span" sx={{ marginInlineStart: 1 }}>
+                <InvoiceStatusBadge status={sheet.invoiceDoc.status} />
+              </Box>
             </Button>
           )}
           {canRun && (

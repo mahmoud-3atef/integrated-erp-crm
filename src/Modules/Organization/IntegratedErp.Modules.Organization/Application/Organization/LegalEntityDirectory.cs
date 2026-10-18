@@ -10,7 +10,7 @@ internal sealed class LegalEntityDirectory(OrganizationDbContext db) : ILegalEnt
     public async Task<IReadOnlyList<LegalEntityInfo>> ListAsync(CancellationToken cancellationToken) =>
         await db.LegalEntities.AsNoTracking()
             .OrderBy(e => e.Code)
-            .Select(e => new LegalEntityInfo(e.Id, e.Code, e.NameAr, e.NameEn, e.IsActive))
+            .Select(e => new LegalEntityInfo(e.Id, e.Code, e.NameAr, e.NameEn, e.IsActive, e.CommercialRegistrationNo, e.VatNumber))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 }

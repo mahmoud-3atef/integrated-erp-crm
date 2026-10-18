@@ -12,6 +12,9 @@ import { DeliveryOrderFormPage } from '../pages/operations/DeliveryOrderFormPage
 import { DeliveryOrdersPage } from '../pages/operations/DeliveryOrdersPage';
 import { HistoryIssuesPage } from '../pages/workforce/HistoryIssuesPage';
 import { NumberingPage } from '../pages/admin/NumberingPage';
+import { InvoicePage } from '../pages/billing/InvoicePage';
+import { InvoicePrintPage } from '../pages/billing/InvoicePrintPage';
+import { InvoicesPage } from '../pages/billing/InvoicesPage';
 import { TimesheetPage } from '../pages/billing/TimesheetPage';
 import { TimesheetsPage } from '../pages/billing/TimesheetsPage';
 import { BuildingPage } from '../pages/housing/BuildingPage';
@@ -88,6 +91,8 @@ export function App() {
                 <Route path="/admin/numbering" element={<NumberingPage />} />
                 <Route path="/billing/timesheets" element={<TimesheetsPage />} />
                 <Route path="/billing/timesheets/:id" element={<TimesheetPage />} />
+                <Route path="/billing/invoices" element={<InvoicesPage />} />
+                <Route path="/billing/invoices/:id" element={<InvoicePage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrderFormPage />} />
@@ -110,6 +115,7 @@ export function App() {
                 <Route path="/workflow/requests" element={<RequestsPage />} />
                 <Route path="/workflow/requests/:id" element={<RequestDetailPage />} />
               </Route>
+              <Route path="/billing/invoices/:id/print" element={<InvoicePrintPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />
               <Route path="/login/recovery-codes" element={<RecoveryCodesPage />} />

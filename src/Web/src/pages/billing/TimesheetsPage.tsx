@@ -32,6 +32,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { KpiCard, KpiGrid } from '../../components/KpiCard';
 import { Badge, Initials, PageHeader } from '../../components/ui';
 import { sar } from '../operations/delivery';
+import { InvoiceStatusBadge } from './invoices';
 import { TimesheetStatusBadge } from './timesheets';
 
 const monthIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
@@ -132,7 +133,7 @@ export function TimesheetsPage() {
         <KpiCard label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedFoot', { count: missing })} icon={<PostAddOutlinedIcon />} tone="#6b7a90" />
         <KpiCard label={t('timesheets.cards.inApproval')} value={String(data?.totals.inApproval ?? 0)} foot={t('timesheets.cards.inApprovalFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
         <KpiCard label={t('timesheets.cards.approved')} value={String(data?.totals.approved ?? 0)} foot={t('timesheets.cards.approvedFoot')} icon={<AssignmentTurnedInOutlinedIcon />} tone="#1f9d55" />
-        <KpiCard label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot')} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
+        <KpiCard label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot', { count: data?.totals.invoiced ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
       </KpiGrid>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
@@ -146,6 +147,7 @@ export function TimesheetsPage() {
                 <TableCell>{t('timesheets.col.timesheet')}</TableCell>
                 <TableCell align="center">{t('timesheets.col.workDays')}</TableCell>
                 <TableCell align="center">{t('timesheets.col.amount')}</TableCell>
+                <TableCell>{t('timesheets.col.invoiceDoc')}</TableCell>
                 <TableCell />
               </TableRow>
             </TableHead>
@@ -188,6 +190,18 @@ export function TimesheetsPage() {
                   <TableCell align="center" sx={{ fontWeight: 700, color: tokens.navy800 }}>
                     {p.invoiceAmount === null ? '—' : sar(p.invoiceAmount)}
                   </TableCell>
+                  <TableCell onClick={(e) => (p.invoiceDoc ? (e.stopPropagation(), navigate(`/billing/invoices/${p.invoiceDoc.id}`)) : undefined)}>
+                    {p.invoiceDoc ? (
+                      <Stack spacing={0.4} sx={{ alignItems: 'flex-start' }}>
+                        <Typography dir="ltr" sx={{ fontSize: 12.5, fontWeight: 700, color: tokens.navy800 }}>
+                          {p.invoiceDoc.invoiceNo ?? t('invoices.noNumber')}
+                        </Typography>
+                        <InvoiceStatusBadge status={p.invoiceDoc.status} />
+                      </Stack>
+                    ) : (
+                      '—'
+                    )}
+                  </TableCell>
                   <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                     {!p.timesheetId && p.projectId && canManage && (
                       <Button size="small" variant="outlined" startIcon={<PostAddOutlinedIcon />} disabled={busy !== null} onClick={() => void generate(p.projectId!)}>
@@ -199,7 +213,7 @@ export function TimesheetsPage() {
               ))}
               {data && data.projects.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 5, color: tokens.gray500 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5, color: tokens.gray500 }}>
                     {t('timesheets.empty')}
                   </TableCell>
                 </TableRow>

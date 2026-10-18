@@ -168,6 +168,450 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                     b.ToTable("outbox_message", "billing");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<string>("ContractType")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("contract_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<string>("CustomerCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("customer_city");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<string>("CustomerNameEn")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("customer_name_en");
+
+                    b.Property<string>("CustomerRegistration")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("customer_registration");
+
+                    b.Property<string>("CustomerVatNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("customer_vat_number");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<DateOnly>("InvoiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("invoice_date");
+
+                    b.Property<string>("InvoiceNo")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("invoice_no");
+
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("IssuedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("issued_by_name");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<DateOnly>("Month")
+                        .HasColumnType("date")
+                        .HasColumnName("month");
+
+                    b.Property<Guid?>("OriginalInvoiceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("original_invoice_id");
+
+                    b.Property<string>("OriginalInvoiceNo")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("original_invoice_no");
+
+                    b.Property<int?>("PaymentTermDays")
+                        .HasColumnType("int")
+                        .HasColumnName("payment_term_days");
+
+                    b.Property<DateOnly>("PeriodFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("period_from");
+
+                    b.Property<DateOnly>("PeriodTo")
+                        .HasColumnType("date")
+                        .HasColumnName("period_to");
+
+                    b.Property<string>("ProjectCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("project_code");
+
+                    b.Property<Guid>("ProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_crm_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("remarks");
+
+                    b.Property<string>("SellerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("seller_name");
+
+                    b.Property<string>("SellerNameEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("seller_name_en");
+
+                    b.Property<string>("SellerRegistration")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("seller_registration");
+
+                    b.Property<string>("SellerVatNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("seller_vat_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid?>("TimesheetId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("timesheet_id");
+
+                    b.Property<string>("TimesheetNo")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("timesheet_no");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total");
+
+                    b.Property<decimal>("Vat")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("vat");
+
+                    b.Property<decimal>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)")
+                        .HasColumnName("vat_rate");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_invoice_tenant_id");
+
+                    b.HasIndex("TenantId", "InvoiceNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_tenant_id_invoice_no")
+                        .HasFilter("[invoice_no] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Month")
+                        .HasDatabaseName("ix_invoice_tenant_id_month");
+
+                    b.HasIndex("TenantId", "OriginalInvoiceId")
+                        .HasDatabaseName("ix_invoice_tenant_id_original_invoice_id");
+
+                    b.HasIndex("TenantId", "TimesheetId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_tenant_id_timesheet_id")
+                        .HasFilter("[timesheet_id] IS NOT NULL");
+
+                    b.ToTable("invoice", "billing");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.InvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Component")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("component");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("int")
+                        .HasColumnName("line_no");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_item");
+
+                    b.HasIndex("InvoiceId")
+                        .HasDatabaseName("ix_invoice_item_invoice_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_invoice_item_tenant_id");
+
+                    b.ToTable("invoice_item", "billing");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.InvoiceWorkerLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AbsenceAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("absence_amount");
+
+                    b.Property<decimal>("AbsenceDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("absence_days");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal>("ClientAdditions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("client_additions");
+
+                    b.Property<decimal>("ClientDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("client_deductions");
+
+                    b.Property<decimal>("CustomerLoans")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("customer_loans");
+
+                    b.Property<decimal>("DueFees")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("due_fees");
+
+                    b.Property<decimal>("DueHousing")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("due_housing");
+
+                    b.Property<decimal>("DueSalary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("due_salary");
+
+                    b.Property<decimal>("DueTransport")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("due_transport");
+
+                    b.Property<decimal>("Gosi")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<string>("IqamaNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("iqama_no");
+
+                    b.Property<DateOnly>("LineFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("line_from");
+
+                    b.Property<DateOnly>("LineTo")
+                        .HasColumnType("date")
+                        .HasColumnName("line_to");
+
+                    b.Property<decimal>("MonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("monthly_price");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NationalityCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("nationality_code");
+
+                    b.Property<decimal>("OtherCosts")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("other_costs");
+
+                    b.Property<decimal>("Overtime")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("overtime");
+
+                    b.Property<decimal>("OvertimeHours")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("overtime_hours");
+
+                    b.Property<string>("PeriodKey")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("period_key");
+
+                    b.Property<string>("ProfessionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("profession_code");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TimesheetLineId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("timesheet_line_id");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total");
+
+                    b.Property<decimal>("Vat")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("vat");
+
+                    b.Property<decimal>("WorkDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("work_days");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("WorkerNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("worker_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_worker");
+
+                    b.HasIndex("InvoiceId")
+                        .HasDatabaseName("ix_invoice_worker_invoice_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_invoice_worker_tenant_id");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .HasDatabaseName("ix_invoice_worker_tenant_id_worker_id");
+
+                    b.ToTable("invoice_worker", "billing");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.ProjectBillingSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -676,6 +1120,26 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                     b.ToTable("timesheet_line", "billing");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.InvoiceItem", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Billing.Domain.Invoice", null)
+                        .WithMany("Items")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_item_invoice_invoice_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.InvoiceWorkerLine", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Billing.Domain.Invoice", null)
+                        .WithMany("Workers")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_worker_invoice_invoice_id");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.TimesheetAdjustment", b =>
                 {
                     b.HasOne("IntegratedErp.Modules.Billing.Domain.Timesheet", null)
@@ -694,6 +1158,13 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_timesheet_line_timesheet_timesheet_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Invoice", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Workers");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Billing.Domain.Timesheet", b =>
