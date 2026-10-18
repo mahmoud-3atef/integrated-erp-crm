@@ -93,15 +93,38 @@ function ChoiceCard({ selected, onClick, icon, title, sub, tone }: { selected: b
   );
 }
 
-/**
- * A new movement in three steps — the worker, the movement (only those their state allows), then its details — with
- * the change drawn live beside the form. A returned movement opens on its details (the worker and the type stay).
- */
+/** The page form of a new or returned action (for deep links, e.g. from an alert); the popup is the usual way in. */
 export function MovementFormPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const [params] = useSearchParams();
+  const { ar } = useCommercialFormat();
+  return (
+    <Box>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography component="h1" sx={{ fontSize: 22, fontWeight: 800, color: tokens.navy800 }}>
+            {id ? t('movements.editTitle') : t('movements.new')}
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: tokens.gray500 }}>{t('movements.wizardHint')}</Typography>
+        </Box>
+        <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(id ? `/operations/movements/${id}` : '/operations/movements')}>
+          {t('common.back')}
+        </Button>
+      </Stack>
+      <MovementWizard id={id} workerId={params.get('worker') ?? undefined} onSaved={(saved) => navigate(`/operations/movements/${saved}`)} />
+    </Box>
+  );
+}
+
+/**
+ * A new action in three steps — the worker, the action (only those their state allows), then its details — with the
+ * change drawn live beside the form. A returned action opens on its details (the worker and the type stay). Given a
+ * worker (the worker's page), it starts on the action; inside the popup it fits the dialog.
+ */
+export function MovementWizard({ id, workerId, inDialog = false, onSaved }: { id?: string; workerId?: string; inDialog?: boolean; onSaved: (id: string) => void }) {
+  const { t } = useTranslation();
   const { ar, date } = useCommercialFormat();
   const stateName = useStateName();
   const [step, setStep] = useState<Step>(0);
@@ -176,10 +199,10 @@ export function MovementFormPage() {
           setStep(2);
         })
         .catch((failure: unknown) => setError(errorKey(failure)));
-    } else if (params.get('worker')) {
-      void chooseWorker(params.get('worker')!);
+    } else if (workerId) {
+      void chooseWorker(workerId);
     }
-  }, [id]);
+  }, [id, workerId]);
 
   // Searching as the user types.
   useEffect(() => {
@@ -252,7 +275,7 @@ export function MovementFormPage() {
     };
     try {
       const saved = id ? await movementsApi.update(id, input) : await movementsApi.create(input);
-      navigate(`/operations/movements/${saved.id}`);
+      onSaved(saved.id);
     } catch (failure) {
       setError(errorKey(failure));
     } finally {
@@ -263,22 +286,11 @@ export function MovementFormPage() {
   const steps = [t('movements.steps.worker'), t('movements.steps.type'), t('movements.steps.details')];
   const tone = type ? typeLook[type].from : '#0d6e8c';
 
+  const fixedWorker = !!workerId || !!id;
   return (
     <Box>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 2, mb: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <Typography component="h1" sx={{ fontSize: 22, fontWeight: 800, color: tokens.navy800 }}>
-            {id ? t('movements.editTitle') : t('movements.new')}
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: tokens.gray500 }}>{t('movements.wizardHint')}</Typography>
-        </Box>
-        <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(id ? `/operations/movements/${id}` : '/operations/movements')}>
-          {t('common.back')}
-        </Button>
-      </Stack>
-
       {/* The steps, with a bar filling as the user goes. */}
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, px: { xs: 2, md: 4 }, py: 2.25, mb: 2.5 }}>
+      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', px: { xs: 2, md: 4 }, py: 2.25, mb: 2.5 }}>
         <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
           <Box sx={{ position: 'absolute', top: 17, insetInlineStart: 18, insetInlineEnd: 18, height: 3, borderRadius: 3, bgcolor: tokens.gray100 }} />
           <Box
@@ -296,7 +308,7 @@ export function MovementFormPage() {
           {steps.map((label, n) => {
             const done = n < step;
             const current = n === step;
-            const reachable = n < step && !(id && n < 2);
+            const reachable = n < step && !(fixedWorker && n === 0) && !(id && n < 2);
             return (
               <ButtonBase
                 key={label}
@@ -331,11 +343,11 @@ export function MovementFormPage() {
 
       <ErrorMessage messageKey={error} />
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: step === 2 ? '1fr 360px' : '1fr' }, gap: 2.5, alignItems: 'start' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: inDialog ? { xs: '1fr', md: step === 2 ? '1fr 320px' : '1fr' } : { xs: '1fr', lg: step === 2 ? '1fr 360px' : '1fr' }, gap: 2.5, alignItems: 'start' }}>
         {/* The step's content, sliding in from the side it comes from. */}
         <Box key={step} sx={{ animation: `${slideFrom(direction)} .38s cubic-bezier(.2,.8,.2,1) both`, minWidth: 0 }}>
           {step === 0 && (
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 3 } }}>
+            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', p: { xs: 2, md: 3 } }}>
               <Typography sx={{ fontSize: 17, fontWeight: 800, color: tokens.navy800, mb: 0.5 }}>{t('movements.chooseWorker')}</Typography>
               <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2 }}>{t('movements.chooseWorkerHint')}</Typography>
               <TextField
@@ -394,7 +406,7 @@ export function MovementFormPage() {
           )}
 
           {step === 1 && worker && options && (
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 3 } }}>
+            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', p: { xs: 2, md: 3 } }}>
               <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' }, mb: 2.5, p: 1.75, borderRadius: `${tokens.radius}px`, bgcolor: tokens.gray50 }}>
                 <Initials name={worker.name} size={46} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -406,9 +418,11 @@ export function MovementFormPage() {
                   </Typography>
                 </Box>
                 <StateBubble state={worker.placement} label={stateName(worker.placement)} sub={worker.projectName} big />
-                <Button size="small" startIcon={<ReplayOutlinedIcon />} onClick={() => go(0)}>
-                  {t('movements.changeWorker')}
-                </Button>
+                {!fixedWorker && (
+                  <Button size="small" startIcon={<ReplayOutlinedIcon />} onClick={() => go(0)}>
+                    {t('movements.changeWorker')}
+                  </Button>
+                )}
               </Stack>
               {options.busyWith && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
@@ -418,7 +432,7 @@ export function MovementFormPage() {
               <Typography sx={{ fontSize: 17, fontWeight: 800, color: tokens.navy800, mb: 0.5 }}>{t('movements.chooseType')}</Typography>
               <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2 }}>{t('movements.chooseTypeHint', { state: stateName(worker.placement) })}</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-                {movementTypes.map((m, n) => {
+                {[...movementTypes].sort((x, y) => Number(options.allowed.includes(y)) - Number(options.allowed.includes(x))).map((m, n) => {
                   const allowed = options.allowed.includes(m) && !options.busyWith;
                   const card = (
                     <ButtonBase
@@ -470,7 +484,7 @@ export function MovementFormPage() {
           )}
 
           {step === 2 && worker && type && (
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, overflow: 'hidden' }}>
+            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', overflow: 'hidden' }}>
               <Box sx={{ p: 2.25, color: '#fff', background: gradient(type), display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box sx={{ width: 44, height: 44, borderRadius: '30%', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,.2)', '& svg': { fontSize: 24 } }}>{typeLook[type].icon}</Box>
                 <Box sx={{ flex: 1 }}>
@@ -625,8 +639,8 @@ export function MovementFormPage() {
 
         {/* The summary: who, from where to where, and when. */}
         {step === 2 && worker && type && target && (
-          <Box sx={{ position: { lg: 'sticky' }, top: { lg: 84 }, animation: `${rise} .45s ease both` }}>
-            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
+          <Box sx={{ position: inDialog ? 'static' : { lg: 'sticky' }, top: { lg: 84 }, animation: `${rise} .45s ease both` }}>
+            <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: inDialog ? 'none' : tokens.shadowSm, border: inDialog ? `1px solid ${tokens.gray100}` : 'none', p: 2.5 }}>
               <Typography sx={{ fontSize: 12, fontWeight: 700, color: tokens.gray500, mb: 1.5 }}>{t('movements.summary')}</Typography>
               <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, mb: 2.5 }}>
                 <Initials name={worker.name} size={40} />

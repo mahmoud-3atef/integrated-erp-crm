@@ -2461,7 +2461,10 @@
       "Inactive": "Inactive"
     },
     "keptPrice": "Price (their previous price on the project)",
-    "keptPriceHint": "Back at the price they had; a special price can change it."
+    "keptPriceHint": "Back at the price they had; a special price can change it.",
+    "sentTitle": "The action was sent for approval",
+    "sentHint": "It is applied to the worker's periods when approved.",
+    "openSent": "Open the action"
   },
   "alerts": {
     "title": "Alerts",

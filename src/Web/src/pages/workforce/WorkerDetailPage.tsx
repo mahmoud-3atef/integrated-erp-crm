@@ -30,6 +30,7 @@ import { Alert, Box, Button, Stack, Table, TableBody, TableCell, TableContainer,
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../../app/session';
+import { ActionDialog } from '../operations/movements/ActionDialog';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { workforceApi, type WorkerDetail, type WorkerKind } from '../../api/workforce';
@@ -53,6 +54,8 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
   const [tab, setTab] = useState<'info' | 'ids' | 'periods'>(() => (new URLSearchParams(window.location.search).get('tab') === 'periods' ? 'periods' : 'info'));
   const [error, setError] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
+  const [sent, setSent] = useState(0);
   const ar = i18n.language === 'ar';
 
   useEffect(() => {
@@ -89,8 +92,8 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   return (
     <Box>
       <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 1, mb: 1 }}>
-        {!staff && can('operations.movements.manage', true) && (
-          <Button variant="outlined" startIcon={<MultipleStopOutlinedIcon />} onClick={() => navigate(`/operations/movements/new?worker=${w.id}`)}>
+        {can('operations.movements.manage', true) && (
+          <Button variant="contained" startIcon={<MultipleStopOutlinedIcon />} onClick={() => setActing(true)}>
             {t('movements.new')}
           </Button>
         )}
@@ -212,12 +215,12 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           options={[
             { value: 'info', label: t('workforce.tabs.info') },
             { value: 'ids', label: t('workforce.tabs.ids', { count: worker.identifiers.length }) },
-            ...(staff ? [] : [{ value: 'periods' as const, label: t('workforce.tabs.periods') }]),
+            { value: 'periods' as const, label: t('workforce.tabs.periods') },
           ]}
         />
 
         {tab === 'periods' ? (
-          <WorkerPeriods kind={kind} workerId={id!} />
+          <WorkerPeriods key={sent} kind={kind} workerId={id!} />
         ) : tab === 'info' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5, alignItems: 'start' }}>
             <Stack spacing={2.5}>
@@ -336,6 +339,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           {t('workforce.readOnly')}
         </Stack>
       </Box>
+      {acting && <ActionDialog workerId={w.id} workerName={w.name} workerNo={w.workerNo} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
     </Box>
   );
 }

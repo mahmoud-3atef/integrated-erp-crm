@@ -12,6 +12,7 @@ import { tokens } from '../../../app/theme';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { PillTabs } from '../../../components/ui';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
+import { ActionDialog } from './ActionDialog';
 import { gradient, MovementStatusBadge, rise, Transition, TypeIcon, typeLook, useStateName } from './movementMeta';
 
 type StatusFilter = '' | 'Open' | 'Executed' | 'Closed';
@@ -30,6 +31,7 @@ export function MovementsPage() {
   const [query, setQuery] = useState('');
   const [data, setData] = useState<MovementList | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
   const canManage = can('operations.movements.manage', true);
 
   const reload = useCallback(async () => {
@@ -90,7 +92,7 @@ export function MovementsPage() {
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={() => navigate('/operations/movements/new')}
+                onClick={() => setActing(true)}
                 sx={{ bgcolor: '#fff', color: '#0b3954', fontWeight: 800, px: 2.5, '&:hover': { bgcolor: '#eef6f9' } }}
               >
                 {t('movements.new')}
@@ -230,6 +232,7 @@ export function MovementsPage() {
           )}
         </Stack>
       </Box>
+      {acting && <ActionDialog onClose={() => setActing(false)} onSent={() => void reload()} />}
     </Box>
   );
 }
