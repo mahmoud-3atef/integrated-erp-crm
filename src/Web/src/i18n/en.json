@@ -1553,7 +1553,11 @@
         "salary": "Salary {{value}}",
         "housing": "Housing {{value}}",
         "transport": "Transport {{value}}"
-      }
+      },
+      "kind": "Delivery order",
+      "dates": "Dates",
+      "receiving": "Receiving",
+      "sarUnit": "SAR"
     },
     "status": {
       "UnderPreparation": "Under preparation",

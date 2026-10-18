@@ -1,16 +1,13 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import {
@@ -38,27 +35,13 @@ import { errorKey } from '../../api/auth';
 import { operationsApi, type DeliveryDetail } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { RecordHero, SummaryCard, SummaryCreator, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryTotal } from '../../components/RecordLayout';
 import { Badge, PillTabs } from '../../components/ui';
 import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
 import { useCrumb } from '../../app/breadcrumbs';
-
-function SummaryItem({ icon, label, children, sub }: { icon: React.ReactNode; label: string; children: React.ReactNode; sub?: React.ReactNode }) {
-  return (
-    <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, py: 1.4, '&:not(:last-of-type)': { borderBottom: `1px solid ${tokens.gray100}` } }}>
-      <Box sx={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 38, height: 38, borderRadius: '11px', bgcolor: tokens.navy50, color: tokens.navy700, '& svg': { fontSize: 20 } }}>{icon}</Box>
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{label}</Typography>
-        <Typography component="div" sx={{ fontSize: 14, fontWeight: 800, color: tokens.navy800, overflowWrap: 'anywhere' }}>
-          {children}
-        </Typography>
-        {sub && <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{sub}</Typography>}
-      </Box>
-    </Stack>
-  );
-}
 
 /** The two letters of a worker's name, for the avatar in the workers table. */
 function initials(name: string) {
@@ -76,8 +59,8 @@ function initials(name: string) {
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
 /**
- * One delivery order: a slim header with its actions, the approval bar, then the order's summary on one side and its
- * workers (or the approval log) on the other.
+ * One delivery order: the band with its number and actions, the approval bar, then the order's summary on one side
+ * and its workers (or the approval log) on the other.
  */
 export function DeliveryOrderDetailPage() {
   const { t } = useTranslation();
@@ -128,50 +111,50 @@ export function DeliveryOrderDetailPage() {
 
   return (
     <Box>
-      {/* Header: the order, its state, and what can be done with it. */}
-      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 2 }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, flexWrap: 'wrap' }}>
-            <Typography component="h1" sx={{ fontSize: 22, fontWeight: 800, color: tokens.navy800 }}>
-              {t('operations.delivery.orderNo')} <span dir="ltr">{o.orderNo}</span>
-            </Typography>
+      {/* The band: the order's number, its state, the project, and what can be done with it. */}
+      <RecordHero
+        icon={<LocalShippingOutlinedIcon />}
+        kind={t('operations.delivery.kind')}
+        number={o.orderNo}
+        status={
+          <>
             <DeliveryStatusBadge row={o} />
             {o.source === 'Crm' && <Badge tone="neutral">{t('operations.delivery.fromCrm')}</Badge>}
-          </Stack>
-          <Typography sx={{ fontSize: 13, color: tokens.gray500, mt: 0.25 }}>
-            {o.projectName}
-            {o.customerName ? ` · ${o.customerName}` : ''}
-          </Typography>
-        </Box>
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-          {order.canEdit && (
-            <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/delivery-orders/${o.id}/edit`)}>
-              {t('common.edit')}
+          </>
+        }
+        title={o.projectName}
+        subtitle={[o.customerName, o.projectManager && `${t('commercial.col.manager')}: ${o.projectManager}`].filter(Boolean).join(' · ')}
+        actions={
+          <>
+            {order.canEdit && (
+              <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/operations/delivery-orders/${o.id}/edit`)}>
+                {t('common.edit')}
+              </Button>
+            )}
+            {order.canSubmit && (
+              <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy} onClick={() => void run(() => operationsApi.submit(o.id))}>
+                {t('operations.delivery.submit')}
+              </Button>
+            )}
+            {canRun && (
+              <RunProcessButton
+                screen="operations.delivery_order"
+                recordId={o.id}
+                title={`${o.orderNo} — ${o.projectName}`}
+                onStarted={() => void reload().then(() => approval.reload())}
+              />
+            )}
+            {order.canCancel && (
+              <Button variant="outlined" startIcon={<CancelOutlinedIcon />} onClick={() => setCanceling('')}>
+                {t('operations.delivery.cancel')}
+              </Button>
+            )}
+            <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/operations/delivery-orders')}>
+              {t('common.back')}
             </Button>
-          )}
-          {order.canSubmit && (
-            <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy} onClick={() => void run(() => operationsApi.submit(o.id))}>
-              {t('operations.delivery.submit')}
-            </Button>
-          )}
-          {canRun && (
-            <RunProcessButton
-              screen="operations.delivery_order"
-              recordId={o.id}
-              title={`${o.orderNo} — ${o.projectName}`}
-              onStarted={() => void reload().then(() => approval.reload())}
-            />
-          )}
-          {order.canCancel && (
-            <Button color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCanceling('')}>
-              {t('operations.delivery.cancel')}
-            </Button>
-          )}
-          <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/operations/delivery-orders')}>
-            {t('common.back')}
-          </Button>
-        </Stack>
-      </Stack>
+          </>
+        }
+      />
 
       <ErrorMessage messageKey={error} />
       {o.source === 'System' && o.status === 'UnderPreparation' && order.awaitingApproval && (
@@ -196,58 +179,38 @@ export function DeliveryOrderDetailPage() {
         />
       )}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '290px minmax(0, 1fr)' }, gap: `${tokens.gap}px`, alignItems: 'start' }}>
-        {/* The order's summary. */}
-        <Box sx={{ ...card, p: 2.25, position: { lg: 'sticky' }, top: { lg: 84 } }}>
-          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <AssignmentOutlinedIcon sx={{ color: tokens.navy700 }} />
-            <Typography sx={{ fontSize: 16, fontWeight: 800, color: tokens.navy800 }}>{t('operations.delivery.summaryTitle')}</Typography>
-          </Stack>
-          <SummaryItem icon={<PersonOutlineOutlinedIcon />} label={t('operations.delivery.createdBy')} sub={date(o.createdAt)}>
-            {o.createdByName}
-          </SummaryItem>
-          <SummaryItem icon={<ApartmentOutlinedIcon />} label={t('commercial.col.project')} sub={o.customerName}>
-            {o.projectName}
-          </SummaryItem>
-          <SummaryItem icon={<ManageAccountsOutlinedIcon />} label={t('commercial.col.manager')}>
-            {o.projectManager ?? '—'}
-          </SummaryItem>
-          <SummaryItem icon={<EventOutlinedIcon />} label={t('operations.delivery.col.deliverOn')} sub={`${t('operations.delivery.col.startOn')}: ${date(o.startOn)}`}>
-            {date(o.deliverOn)}
-          </SummaryItem>
-          <SummaryItem
-            icon={<GroupsOutlinedIcon />}
-            label={t('operations.delivery.col.workers')}
-            sub={o.specialPrices > 0 ? t('operations.delivery.specialCount', { count: o.specialPrices }) : undefined}
-          >
-            {t('operations.delivery.workersCount', { count: o.workers })}
-          </SummaryItem>
-          <SummaryItem icon={<PaymentsOutlinedIcon />} label={t('operations.delivery.monthlyTotal')}>
-            {sar(o.totalPrice)}
-          </SummaryItem>
-          <SummaryItem icon={<BadgeOutlinedIcon />} label={t('operations.delivery.receiverName')} sub={order.receiverTitle}>
-            {o.receiverName}
-          </SummaryItem>
-          {(order.delayReason || order.notes || order.lastComment) && (
-            <Stack spacing={0.75} sx={{ mt: 1, p: 1.5, borderRadius: `${tokens.radius}px`, bgcolor: tokens.gray50, fontSize: 12.5, color: tokens.gray600 }}>
-              {order.delayReason && (
-                <span>
-                  <b>{t('operations.delivery.delayReason')}:</b> {order.delayReason}
-                </span>
-              )}
-              {order.notes && (
-                <span>
-                  <b>{t('operations.delivery.notes')}:</b> {order.notes}
-                </span>
-              )}
-              {order.lastComment && (
-                <span>
-                  <b>{t('operations.delivery.lastComment')}:</b> {order.lastComment}
-                </span>
-              )}
-            </Stack>
-          )}
-        </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '300px minmax(0, 1fr)' }, gap: `${tokens.gap}px`, alignItems: 'start' }}>
+        {/* The order's summary, read top to bottom: who made it, the amount, then each group in its color. */}
+        <SummaryCard>
+          <SummaryCreator label={t('operations.delivery.createdBy')} name={o.createdByName} at={date(o.createdAt)} />
+          <SummaryTotal
+            label={t('operations.delivery.monthlyTotal')}
+            amount={sar(o.totalPrice)}
+            unit={t('operations.delivery.sarUnit')}
+            chips={[
+              { label: t('operations.delivery.workersCount', { count: o.workers }) },
+              ...(o.specialPrices > 0 ? [{ label: t('operations.delivery.specialCount', { count: o.specialPrices }), tone: 'gold' as const }] : []),
+            ]}
+          />
+          <SummaryGroup title={t('commercial.col.project')} color={tokens.teal}>
+            <SummaryFact icon={<ApartmentOutlinedIcon />} color={tokens.teal} label={t('commercial.col.project')} value={o.projectName} sub={o.customerName} />
+            <SummaryFact icon={<ManageAccountsOutlinedIcon />} color={tokens.teal} label={t('commercial.col.manager')} value={o.projectManager ?? '—'} />
+          </SummaryGroup>
+          <SummaryGroup title={t('operations.delivery.dates')} color={tokens.info}>
+            <SummaryDates
+              items={[
+                { icon: <LocalShippingOutlinedIcon />, color: '#1f6fd1', label: t('operations.delivery.col.deliverOn'), value: date(o.deliverOn) },
+                { icon: <EventOutlinedIcon />, color: '#7c4dcc', label: t('operations.delivery.col.startOn'), value: date(o.startOn) },
+              ]}
+            />
+          </SummaryGroup>
+          <SummaryGroup title={t('operations.delivery.receiving')} color={tokens.gold}>
+            <SummaryFact icon={<BadgeOutlinedIcon />} color={tokens.gold} label={t('operations.delivery.receiverName')} value={o.receiverName} sub={order.receiverTitle} />
+          </SummaryGroup>
+          {order.delayReason && <SummaryNote title={t('operations.delivery.delayReason')}>{order.delayReason}</SummaryNote>}
+          {order.notes && <SummaryNote title={t('operations.delivery.notes')}>{order.notes}</SummaryNote>}
+          {order.lastComment && <SummaryNote title={t('operations.delivery.lastComment')}>{order.lastComment}</SummaryNote>}
+        </SummaryCard>
 
         {/* The workers, or the approval log. */}
         <Box sx={{ ...card, p: 2.25, minWidth: 0 }}>

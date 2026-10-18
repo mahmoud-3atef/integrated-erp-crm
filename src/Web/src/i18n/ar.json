@@ -1553,7 +1553,11 @@
         "salary": "راتب {{value}}",
         "housing": "سكن {{value}}",
         "transport": "مواصلات {{value}}"
-      }
+      },
+      "kind": "أمر تسليم",
+      "dates": "التواريخ",
+      "receiving": "الاستلام",
+      "sarUnit": "ريال"
     },
     "status": {
       "UnderPreparation": "قيد الإعداد",
