@@ -4,6 +4,8 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
@@ -34,9 +36,9 @@ import { errorKey } from '../../api/auth';
 import { operationsApi, type DeliveryDetail } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { RecordHero, SummaryCard, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
-import { Badge, PillTabs } from '../../components/ui';
-import { ApprovalBar, ApprovalLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { RecordHero, SectionTitle, SummaryCard, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
+import { Badge } from '../../components/ui';
+import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
@@ -69,7 +71,6 @@ export function DeliveryOrderDetailPage() {
   const { ar, date } = useCommercialFormat();
   const [order, setOrder] = useState<DeliveryDetail | null>(null);
   useCrumb(order?.summary.orderNo);
-  const [tab, setTab] = useState<'workers' | 'approval'>('workers');
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
@@ -210,22 +211,11 @@ export function DeliveryOrderDetailPage() {
           {order.lastComment && <SummaryNote title={t('operations.delivery.lastComment')}>{order.lastComment}</SummaryNote>}
         </SummaryCard>
 
-        {/* The workers, or the approval log. */}
+        {/* The workers, then the approval's history under them. */}
+        <Stack spacing={`${tokens.gap}px`} sx={{ minWidth: 0 }}>
         <Box sx={{ ...card, p: 2.25, minWidth: 0 }}>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-            <PillTabs
-              value={tab}
-              onChange={setTab}
-              options={[
-                { value: 'workers', label: t('operations.delivery.tabs.workers', { count: order.lines.length }) },
-                ...(order.approval ? [{ value: 'approval' as const, label: t('operations.delivery.tabs.approval') }] : []),
-              ]}
-            />
-          </Stack>
-          {tab === 'approval' && order.approval ? (
-            <ApprovalLog status={order.approval} detail={approval.detail} />
-          ) : (
-            <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px` }}>
+          <SectionTitle icon={<GroupsOutlinedIcon />} title={t('operations.delivery.tabs.workers', { count: order.lines.length })} />
+          <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px` }}>
               <Table
                 size="small"
                 sx={{
@@ -324,12 +314,18 @@ export function DeliveryOrderDetailPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
           <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 2, fontSize: 12.5, color: tokens.gray500 }}>
             <InfoOutlinedIcon sx={{ fontSize: 16 }} />
             {o.source === 'Crm' ? t('operations.delivery.crmNote') : t('operations.delivery.parallelNote')}
           </Stack>
         </Box>
+        {order.approval && (
+          <Box sx={{ ...card, p: 2.25 }}>
+            <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
+            <ApprovalFeedLog status={order.approval} detail={approval.detail} />
+          </Box>
+        )}
+        </Stack>
       </Box>
 
       {canceling !== null && (

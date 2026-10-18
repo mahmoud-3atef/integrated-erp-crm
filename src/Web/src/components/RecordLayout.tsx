@@ -209,3 +209,14 @@ export function SummaryNote({ title, children }: { title: string; children: Reac
     </Box>
   );
 }
+
+/** A card's heading: a small icon in the brand color and a bold title, with a thin rule under it. */
+export function SectionTitle({ icon, title, extra }: { icon: ReactNode; title: ReactNode; extra?: ReactNode }) {
+  return (
+    <Stack direction="row" sx={{ alignItems: 'center', gap: 1, pb: 1.25, mb: 1.5, borderBottom: `1px solid ${tokens.gray100}` }}>
+      <Box sx={{ display: 'grid', color: tokens.navy700, '& svg': { fontSize: 20 } }}>{icon}</Box>
+      <Typography sx={{ fontSize: 15.5, fontWeight: 800, color: tokens.navy800, flex: 1 }}>{title}</Typography>
+      {extra}
+    </Stack>
+  );
+}

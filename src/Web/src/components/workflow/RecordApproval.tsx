@@ -10,7 +10,7 @@ import { errorKey } from '../../api/auth';
 import { workflowApi, type ApprovalStatus, type Decision, type FieldValue, type InstanceDetail, type MemberOption } from '../../api/workflow';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { ApprovalTimeline } from '../ApprovalTimeline';
+import { ApprovalFeed, ApprovalTimeline } from '../ApprovalTimeline';
 import { StageTracker } from '../StageTracker';
 
 type Action = Decision | 'Delegate' | 'Cancel';
@@ -118,6 +118,21 @@ export function ApprovalLog({ status, detail }: { status: ApprovalStatus; detail
     return field ? localName(field, i18n.language) : key;
   };
   return <ApprovalTimeline status={detail?.status ?? status} fieldName={fieldName} />;
+}
+
+/** The approval's history as a feed, newest first (under a record's details). */
+export function ApprovalFeedLog({ status, detail }: { status: ApprovalStatus; detail: InstanceDetail | null }) {
+  const { i18n } = useTranslation();
+  const fieldName = (key: string) => {
+    const field = detail?.record.find((r) => r.field.key === key)?.field;
+    return field ? localName(field, i18n.language) : key;
+  };
+  // A choice shows its name (e.g. the order's state), not its stored value.
+  const fieldValue = (key: string, value: string | null) => {
+    const option = detail?.record.find((r) => r.field.key === key)?.field.options?.find((o) => o.value === value);
+    return option ? (i18n.language === 'ar' ? option.nameAr : option.nameEn) : (value ?? '—');
+  };
+  return <ApprovalFeed status={detail?.status ?? status} fieldName={fieldName} fieldValue={fieldValue} />;
 }
 
 function ActionDialog({ detail, action, people, onClose, onDone }: { detail: InstanceDetail; action: Action; people: MemberOption[]; onClose: () => void; onDone: () => void }) {
