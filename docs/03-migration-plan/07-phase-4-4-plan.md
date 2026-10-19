@@ -11,7 +11,7 @@
 | الصورة | ما تعرضه |
 |---|---|
 | [wf-staff-directory.png](../02-target-architecture/assets/wf-staff-directory.png) | دليل الموظفين: البطاقات (العدد بالحالة، تحت التجربة، عقود تنتهي، بلا إدارة، شواغر)، والتابات، والفلاتر، والجدول |
-| [wf-staff-profile.png](../02-target-architecture/assets/wf-staff-profile.png) · [الراتب](../02-target-architecture/assets/wf-staff-profile-salary.png) · [السجل](../02-target-architecture/assets/wf-staff-profile-history.png) | ملف الموظف على نمط شاشة الموظف في النظام القديم (`HR_EmployeeDetails`): بطاقة الملف بالصورة ورقم الموظف بالأزرق فوق الاسم ولوحة رصيد الإجازة الدائرية، ثم أربع بطاقات صغيرة، ثم التابات: معلومات الموظف (مربعات عنوان وقيمة)، وبيانات الراتب (بطاقة لكل عنصر بأيقونة ملونة وبطاقة الإجمالي)، والعقود، والوثائق، وسجل الإجراءات (بطاقات زمنية) |
+| [wf-staff-profile.png](../02-target-architecture/assets/wf-staff-profile.png) · [الراتب](../02-target-architecture/assets/wf-staff-profile-salary.png) · [الإجازات](../02-target-architecture/assets/wf-staff-profile-leave.png) | ملف الموظف على نمط **آخر نسخة** من شاشة الموظف في النظام القديم (`TestCAREV/.../HR_EmployeeDetails.aspx`، 2026-09-15): لوحة جانبية بالصورة وشارة الرقم والاسم والهوية والحقائق وبطاقة السجل التجاري؛ وصفوف «عنوان بأيقونة ⇐ قيمة» مع بطاقة دائرية (رصيد الإجازة بدل نسبة التشغيل)؛ وشريط أربع بطاقات سريعة؛ وتابات على شكل أقراص: معلومات الموظف، وبيانات الراتب (بطاقة بأيقونة ملونة لكل عنصر وبطاقة الإجمالي)، ورصيد الإجازات (بطاقات خضراء)، والعقود، والوثائق، وسجل الإجراءات |
 | [wf-org-structure.png](../02-target-architecture/assets/wf-org-structure.png) | الهيكل التنظيمي: الإدارات ومديروها ومراكز تكلفتها، والملاك الوظيفي بالشاغل والشاغر، وعرض شجري بديل |
 
 الأسماء والأرقام في الرسومات للتوضيح فقط.
