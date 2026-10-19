@@ -33,13 +33,14 @@ import WorkOutlineIcon from '@mui/icons-material/WorkOutlineOutlined';
 import { Box, Button, ButtonBase, LinearProgress, Link, Stack, Typography } from '@mui/material';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { staffApi, type Department, type StaffEvent, type StaffProfile } from '../../api/staff';
+import { staffApi, type ActionRow, type Contract, type Department, type StaffEvent, type StaffProfile } from '../../api/staff';
 import { useCrumb } from '../../app/breadcrumbs';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
+import { ActionDialog, ActionStatusBadge, actionIcon } from './StaffActions';
 import { ContractDialog, JobDialog, PersonalDialog, SalaryDialog } from './StaffDialogs';
 import { useService } from './staff';
 
@@ -50,7 +51,7 @@ import { useService } from './staff';
 const tone = { navy: '#0a3c58', navySoft: '#eaf3f8', green: '#1f9d55', greenSoft: '#e9f7ef', sky: '#1b6a92', skySoft: '#eaf4fa' } as const;
 type BoxTone = 'navy' | 'green' | 'sky';
 type TabKey = 'data' | 'leave' | 'contract' | 'history';
-type Edit = 'personal' | 'job' | 'contract' | 'salary' | null;
+type Edit = 'personal' | 'job' | 'contract' | 'salary' | 'action' | null;
 
 /** The file's fields a change shows, by the stored property's name. */
 const changeLabels: Record<string, string> = {
@@ -71,12 +72,15 @@ export function StaffProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('data');
   const [edit, setEdit] = useState<Edit>(null);
+  const [version, setVersion] = useState(0);
+  const navigate = useNavigate();
   const ar = i18n.language === 'ar';
   useCrumb(p ? (p.nameAr ?? p.nameEn) : undefined, `/hr/employees/${id}`);
 
   const reload = useCallback(async () => {
     try {
       setP(await staffApi.profile(id));
+      setVersion((v) => v + 1);
       setError(null);
     } catch (failure) {
       setError(errorKey(failure));
@@ -156,7 +160,7 @@ export function StaffProfilePage() {
                 <span style={{ color: tokens.gray500 }}>{service(p.hireDate) ?? '—'}</span>
               </Box>
               {p.canEdit && (
-                <Button variant="contained" startIcon={<Add />} onClick={() => setEdit('job')} sx={{ borderRadius: 99, bgcolor: tokens.navy800, boxShadow: '0 6px 14px rgba(10,60,88,.25)', px: 2.5 }}>
+                <Button variant="contained" startIcon={<Add />} disabled={p.status === 'Left'} onClick={() => setEdit('action')} sx={{ borderRadius: 99, bgcolor: tokens.navy800, boxShadow: '0 6px 14px rgba(10,60,88,.25)', px: 2.5 }}>
                   {t('staff.profile.newAction')}
                 </Button>
               )}
@@ -231,17 +235,19 @@ export function StaffProfilePage() {
         )}
         {tab === 'leave' && <LeaveBox p={p} />}
         {tab === 'contract' && (
-          <Box sx={{ maxWidth: 760 }}>
+          <Box sx={{ display: 'grid', gap: 2.25, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, alignItems: 'start' }}>
             <ContractBox p={p} onEdit={p.canEdit ? () => setEdit('contract') : undefined} />
+            <Contracts id={p.id} version={version} />
           </Box>
         )}
-        {tab === 'history' && <History id={p.id} />}
+        {tab === 'history' && <History id={p.id} version={version} />}
       </Box>
 
       {edit === 'personal' && <PersonalDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'job' && <JobDialog profile={p} departments={departments} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'contract' && <ContractDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'salary' && <SalaryDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
+      {edit === 'action' && <ActionDialog profile={p} departments={departments} onClose={() => setEdit(null)} onSent={(actionId) => navigate(`/hr/actions/${actionId}`)} />}
     </Box>
   );
 }
@@ -405,22 +411,40 @@ function LeaveBox({ p }: { p: StaffProfile }) {
   );
 }
 
-function History({ id }: { id: string }) {
+function History({ id, version }: { id: string; version: number }) {
   const { t } = useTranslation();
   const { date } = useCommercialFormat();
   const [events, setEvents] = useState<StaffEvent[] | null>(null);
+  const [actions, setActions] = useState<ActionRow[]>([]);
   useEffect(() => {
     staffApi.history(id).then(setEvents).catch(() => setEvents([]));
-  }, [id]);
+    staffApi.actions({ employeeId: id }).then(setActions).catch(() => setActions([]));
+  }, [id, version]);
   if (!events) return <LinearProgress sx={{ mt: 2 }} />;
   // What a change touched, in the file's words; changes made only by the import (leave balance, dates synced) are left out.
   const shown = events
     .map((e) => ({ ...e, fields: e.changes ? Object.keys(e.changes).filter((k) => k in changeLabels).map((k) => t(`staff.profile.fields.${changeLabels[k]}`)) : [] }))
     .filter((e) => e.kind !== 'Changed' || e.fields.length > 0);
-  if (shown.length === 0) return <Typography sx={{ mt: 2, color: tokens.gray500 }}>{t('staff.profile.history.empty')}</Typography>;
+  if (shown.length === 0 && actions.length === 0) return <Typography sx={{ mt: 2, color: tokens.gray500 }}>{t('staff.profile.history.empty')}</Typography>;
   const look = { Created: { c: tokens.navy700, i: <Add /> }, Changed: { c: tokens.sky, i: <EditNoteOutlinedIcon /> }, Salary: { c: tone.green, i: <PaymentsOutlinedIcon /> } } as const;
   return (
     <Stack sx={{ gap: 1.5, mt: 2.5 }}>
+      {actions.map((a) => (
+        <Stack key={a.id} direction="row" sx={{ gap: 1.5 }}>
+          <Box sx={{ flex: '0 0 auto', width: 34, height: 34, borderRadius: '50%', bgcolor: tokens.navy700, color: '#fff', display: 'grid', placeItems: 'center', '& svg': { fontSize: 17 } }}>{actionIcon[a.kind]}</Box>
+          <Box component={RouterLink} to={`/hr/actions/${a.id}`} sx={{ flex: 1, textDecoration: 'none', color: 'inherit', border: '1px solid #e6eef7', borderInlineStart: `4px solid ${tokens.navy700}`, borderRadius: '14px', px: 1.75, py: 1.25, '&:hover': { bgcolor: tokens.gray50 } }}>
+            <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 1, alignItems: 'center' }}>
+              <Typography sx={{ fontWeight: 700, color: tokens.navy800 }}>
+                {t(`staffActions.kind.${a.kind}`)} · <bdi style={{ color: tokens.gray500, fontWeight: 600 }}>{a.actionNo}</bdi>
+              </Typography>
+              <ActionStatusBadge status={a.status} />
+            </Stack>
+            <Typography sx={{ fontSize: 12, color: tokens.gray500, mt: 0.25 }}>
+              {t('staffActions.effectiveFrom')} <bdi>{date(a.effectiveFrom)}</bdi> · {t('staff.profile.history.by', { by: a.createdByName })}
+            </Typography>
+          </Box>
+        </Stack>
+      ))}
       {shown.map((e, n) => (
         <Stack key={n} direction="row" sx={{ gap: 1.5 }}>
           <Box sx={{ flex: '0 0 auto', width: 34, height: 34, borderRadius: '50%', bgcolor: look[e.kind].c, color: '#fff', display: 'grid', placeItems: 'center', '& svg': { fontSize: 17 } }}>{look[e.kind].i}</Box>
@@ -442,5 +466,52 @@ function History({ id }: { id: string }) {
         </Stack>
       ))}
     </Stack>
+  );
+}
+
+/** The employee's contracts, newest first (a renewal is a new one). */
+function Contracts({ id, version }: { id: string; version: number }) {
+  const { t } = useTranslation();
+  const { date } = useCommercialFormat();
+  const [list, setList] = useState<Contract[] | null>(null);
+  useEffect(() => {
+    staffApi.contracts(id).then(setList).catch(() => setList([]));
+  }, [id, version]);
+  const look = { Active: { c: tone.green, b: tone.greenSoft }, Renewed: { c: tokens.navy500, b: tokens.navy50 }, Ended: { c: tokens.gray500, b: tokens.gray100 } } as const;
+  return (
+    <Section title={t('staffContracts.title')} icon={<HistoryOutlinedIcon />} boxTone="sky">
+      <Box sx={{ gridColumn: '1 / -1' }}>
+        {!list ? (
+          <LinearProgress />
+        ) : list.length === 0 ? (
+          <Typography sx={{ color: tokens.gray500, fontSize: 13, py: 1 }}>{t('staffContracts.none')}</Typography>
+        ) : (
+          <Stack sx={{ gap: 1, py: 0.5 }}>
+            {list.map((c) => (
+              <Box key={c.id} sx={{ border: '1px solid #e6eef7', borderRadius: '12px', px: 1.5, py: 1 }}>
+                <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                  <Typography sx={{ fontWeight: 700, color: tokens.navy800, fontSize: 13.5 }}>
+                    <bdi>{t('staffContracts.from', { date: date(c.startsOn) })}</bdi> {c.endsOn ? <bdi>{t('staffContracts.to', { date: date(c.endsOn) })}</bdi> : `· ${t('staffContracts.open')}`}
+                  </Typography>
+                  <Box component="span" sx={{ bgcolor: look[c.status].b, color: look[c.status].c, borderRadius: 99, px: 1.25, py: 0.25, fontSize: 12, fontWeight: 700 }}>
+                    {t(`staffContracts.status.${c.status}`)}
+                  </Box>
+                </Stack>
+                <Typography sx={{ fontSize: 12, color: tokens.gray500, mt: 0.25 }}>
+                  {t(`staffActions.contractKinds.${c.kind}`)}
+                  {c.months ? ` · ${c.months} ${t('staff.profile.fields.months')}` : ''} · {t('staffContracts.notice', { days: c.noticeDays })}
+                  {c.actionId && (
+                    <>
+                      {' · '}
+                      <RouterLink to={`/hr/actions/${c.actionId}`}>{t('staffContracts.byAction')}</RouterLink>
+                    </>
+                  )}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </Box>
+    </Section>
   );
 }

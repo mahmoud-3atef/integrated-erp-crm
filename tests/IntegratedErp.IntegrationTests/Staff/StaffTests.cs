@@ -47,7 +47,8 @@ public sealed class StaffTests(TestDatabase database)
             ["new_name"] = "A WORKER", ["new_empidnumber"] = "BSS0999", ["new_idnumber"] = "2570418465", ["statuscode"] = 100000000, ["new_employeetype"] = 2, ["new_totalsalary"] = 1500m,
         }, created: Created2025);
         await SyncAsync(tenantId, crm);
-        var hr = await HrAsync(tenantId);
+        var hr = await HrAsync(tenantId, "مسؤول الموارد البشرية", "staff.view", "staff.manage", "staff.structure.manage", "staff.salaries.view", "staff.salaries.manage");
+        var approver = await HrAsync(tenantId, "المعتمد", "staff.view", "staff.actions.review", "staff.actions.approve");
 
         using var scope2 = database.Scope(tenantId, user: hr.ToString());
         var service = scope2.ServiceProvider.GetRequiredService<StaffService>();
@@ -98,18 +99,61 @@ public sealed class StaffTests(TestDatabase database)
         Assert.Equal(("HO00002", "Probation", new DateOnly(2026, 10, 30), 9500m), (profile.EmployeeNo, profile.Status, profile.ProbationEndsOn!.Value, profile.Salary!.Total));
         var org = await queries.StructureAsync(default);
         Assert.Equal((0, 2), (org.Vacancies, org.Departments.Single().Employees));
+
+        // Employment actions go through HR then management, and change the file only when approved.
+        var actions = scope2.ServiceProvider.GetRequiredService<StaffActionService>();
+        var actionQueries = scope2.ServiceProvider.GetRequiredService<StaffActionQueries>();
+        var senior = (await structure.SaveJobTitleAsync(null, new JobTitleInput("محاسب أول", "Senior accountant", null), default)).Value;
+        var seniorSeat = (await structure.SavePositionAsync(null, new PositionInput(finance, senior, g5, null, 1), default)).Value;
+        var promotion = await actions.RequestAsync(manzoor, new ActionInput("Promotion", new DateOnly(2026, 11, 1), "ترقية سنوية", null, null, seniorSeat,
+            new SalaryValues(3500, 875, 0, 350, 0, 0, 0), null, null, null, null, null, null), default);
+        Assert.True(promotion.IsSuccess, promotion.IsFailure ? promotion.Error.Code : null);
+        Assert.Equal("conflict.staff_action_open", (await actions.RequestAsync(manzoor, new ActionInput("SalaryChange", new DateOnly(2026, 12, 1), "زيادة", null, null, null, raise, null, null, null, null, null, null), default)).Error.Code);
+        Assert.Equal("محاسب", (await queries.ProfileAsync(manzoor, default))!.JobTitle!.NameAr);
+        await ApproveAsync(tenantId, approver);
+        await ApproveAsync(tenantId, approver);
+        var applied = (await actionQueries.GetAsync(promotion.Value, default))!;
+        Assert.Equal(("Applied", "محاسب", "محاسب أول", 4050m, 4725m), (applied.Status, applied.Before.JobTitle!.NameAr, applied.After.JobTitle!.NameAr, applied.OldSalaryTotal, applied.NewSalaryTotal));
+        profile = (await queries.ProfileAsync(manzoor, default))!;
+        Assert.Equal("محاسب أول", profile.JobTitle!.NameAr);
+
+        // The probation of the new hire is confirmed; the old contract is renewed for 12 months from the day after it ends.
+        var confirm = (await actions.RequestAsync(hired.Value, new ActionInput("ConfirmProbation", new DateOnly(2026, 10, 30), "أداء جيد", null, null, null, null, null, null, null, null, null, null), default)).Value;
+        await ApproveAsync(tenantId, approver);
+        await ApproveAsync(tenantId, approver);
+        Assert.Equal("Active", (await queries.ProfileAsync(hired.Value, default))!.Status);
+        Assert.True((await service.SetContractAsync(second, new ContractInput(new DateOnly(2025, 1, 1), 24, null), default)).IsSuccess);
+        var renew = (await actions.RequestAsync(second, new ActionInput("RenewContract", new DateOnly(2026, 12, 31), "تجديد", null, null, null, null, null, null, null, "Fixed", 12, null), default)).Value;
+        await ApproveAsync(tenantId, approver);
+        await ApproveAsync(tenantId, approver);
+        var contracts = await actionQueries.ContractsAsync(second, default);
+        Assert.Equal([("Active", new DateOnly(2027, 1, 1), (DateOnly?)new DateOnly(2027, 12, 31)), ("Renewed", new DateOnly(2025, 1, 1), new DateOnly(2026, 12, 31))],
+            contracts.Select(c => (c.Status, c.StartsOn, c.EndsOn)));
+        Assert.Equal(new DateOnly(2027, 12, 31), (await queries.ProfileAsync(second, default))!.ContractEndsOn);
+        Assert.Equal(["ConfirmProbation", "Promotion", "RenewContract"], (await actionQueries.ListAsync(null, "Applied", default)).Select(a => a.Kind).Order());
+        _ = confirm;
+        _ = renew;
     }
 
-    private async Task<Guid> HrAsync(Guid tenantId)
+    /// <summary>The HR user (who holds both review and approve here) takes their open task and approves it.</summary>
+    private async Task ApproveAsync(Guid tenantId, Guid approver)
+    {
+        using var scope = database.Scope(tenantId, user: approver.ToString());
+        var workflow = scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Workflow.Infrastructure.WorkflowDbContext>();
+        var task = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleAsync(workflow.WorkItems, w => w.AssigneeUserId == approver && w.Status == IntegratedErp.Modules.Workflow.Domain.WorkItemStatus.Pending);
+        Assert.True((await scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Workflow.Application.ApprovalEngine>().DecideAsync(task.Id, IntegratedErp.Modules.Workflow.Application.Decision.Approve, "معتمد", null, default)).IsSuccess);
+    }
+
+    private async Task<Guid> HrAsync(Guid tenantId, string name, params string[] permissions)
     {
         using var scope = database.Scope(tenantId, user: "setup");
         var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
         var catalog = scope.ServiceProvider.GetRequiredService<PermissionCatalog>();
-        var user = UserAccount.Create("مسؤول الموارد البشرية", null);
+        var user = UserAccount.Create(name, null);
         identity.Users.Add(user);
         var membership = new Membership(user.Id, tenantId);
         identity.Memberships.Add(membership);
-        var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], "hr", "hr", ["staff.view", "staff.manage", "staff.structure.manage", "staff.salaries.view", "staff.salaries.manage"], catalog).Value;
+        var role = Role.Create($"r-{Guid.NewGuid():N}"[..20], "hr", "hr", permissions, catalog).Value;
         identity.Roles.Add(role);
         identity.RoleAssignments.Add(new RoleAssignment(membership.Id, role.Id, null, tenantId));
         await identity.SaveChangesAsync();

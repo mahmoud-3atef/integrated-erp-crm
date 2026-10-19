@@ -1,3 +1,4 @@
+import WorkHistoryOutlinedIcon from '@mui/icons-material/WorkHistoryOutlined';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
@@ -123,6 +124,7 @@ const menu: MenuSection[] = [
     titleKey: 'menu.hrSection',
     items: [
       { path: '/hr/employees', labelKey: 'menu.hrEmployees', icon: <BadgeOutlinedIcon />, permission: 'staff.view', companyWide: true },
+      { path: '/hr/actions', labelKey: 'menu.hrActions', icon: <WorkHistoryOutlinedIcon />, permission: 'staff.view', companyWide: true },
       { path: '/hr/structure', labelKey: 'menu.hrStructure', icon: <AccountTreeOutlinedIcon />, permission: 'staff.view', companyWide: true },
       { path: '/hr/catalog', labelKey: 'menu.hrCatalog', icon: <CategoryOutlinedIcon />, permission: 'staff.view', companyWide: true },
     ],

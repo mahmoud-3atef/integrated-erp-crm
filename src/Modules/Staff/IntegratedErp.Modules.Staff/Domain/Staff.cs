@@ -418,6 +418,46 @@ public sealed class StaffEmployee : ITenantOwned
         Status = status;
     }
 
+    /// <summary>The day the employment ended (end of probation, contract not renewed, …).</summary>
+    public DateOnly? EndedOn { get; private set; }
+
+    /// <summary>Acting in another position until a date, with a monthly allowance (paid by the payroll).</summary>
+    public Guid? ActingPositionId { get; private set; }
+
+    public DateOnly? ActingUntil { get; private set; }
+
+    public decimal? ActingAllowance { get; private set; }
+
+    public void SetActing(Guid positionId, DateOnly until, decimal allowance)
+    {
+        ActingPositionId = positionId;
+        ActingUntil = until;
+        ActingAllowance = allowance;
+    }
+
+    public void ConfirmProbation()
+    {
+        if (Status == StaffStatus.Probation)
+        {
+            Status = StaffStatus.Active;
+        }
+    }
+
+    public void ExtendProbation(DateOnly until) => ProbationEndsOn = until;
+
+    public void EndEmployment(DateOnly on)
+    {
+        Status = StaffStatus.Left;
+        EndedOn = on;
+    }
+
+    public void Place(Guid? legalEntityId, Guid? departmentId, Guid? positionId)
+    {
+        LegalEntityId = legalEntityId;
+        DepartmentId = departmentId;
+        PositionId = positionId;
+    }
+
     public Result SetContract(DateOnly? startsOn, int? months, DateOnly? endsOn)
     {
         if (months is < 0 or > 600 || (startsOn is { } s && endsOn is { } e && e < s))
@@ -573,5 +613,9 @@ public static class StaffErrors
     public static readonly Error PositionFull = Error.Conflict("staff_position_full", "Every seat of this position is taken.");
     public static readonly Error PositionElsewhere = Error.Validation("staff_position_department", "The position belongs to another department.");
     public static readonly Error InUse = Error.Conflict("staff_in_use", "It is in use: move what uses it first.");
+    public static readonly Error ActionNotFound = Error.NotFound("staff_action", "Action not found.");
+    public static readonly Error ActionFields = Error.Validation("staff_action_fields", "Fill what this action needs (and it applies to the employee's current state).");
+    public static readonly Error ActionNotEditable = Error.Conflict("staff_action_not_editable", "Only a draft or returned action can be sent.");
+    public static readonly Error ActionOpen = Error.Conflict("staff_action_open", "The employee already has an action in approval.");
     public static readonly Error SalaryDate = Error.Validation("staff_salary_date", "A salary change takes effect after the current salary's date.");
 }

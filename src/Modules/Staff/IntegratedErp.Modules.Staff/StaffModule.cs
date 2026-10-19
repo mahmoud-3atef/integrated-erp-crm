@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
@@ -6,6 +7,7 @@ using IntegratedErp.Modules.Staff.Api;
 using IntegratedErp.Modules.Staff.Application;
 using IntegratedErp.Modules.Staff.Contracts;
 using IntegratedErp.Modules.Staff.Infrastructure;
+using IntegratedErp.Modules.Workflow.Contracts;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,9 +29,15 @@ public sealed class StaffModule : IModule
         services.AddScoped<StaffService>();
         services.AddScoped<StructureService>();
         services.AddScoped<StaffQueries>();
+        services.AddScoped<StaffActionService>();
+        services.AddScoped<StaffActionApplier>();
+        services.AddScoped<StaffActionQueries>();
+        services.AddScoped<IApprovalRecordAdapter, StaffActionAdapter>();
+        services.AddAlertProvider<StaffAlerts>();
         services.AddPermissions(StaffPermissions.All);
         services.AddNumberSequences(
-            new NumberSequenceDefinition("staff", StaffDbContext.SchemaName, "الموارد البشرية", "Human resources", "الرقم الوظيفي للموظفين", "Staff numbers", "HO{N:5}", NumberReset.Never));
+            new NumberSequenceDefinition("staff", StaffDbContext.SchemaName, "الموارد البشرية", "Human resources", "الرقم الوظيفي للموظفين", "Staff numbers", "HO{N:5}", NumberReset.Never),
+            new NumberSequenceDefinition("staff_action", StaffDbContext.SchemaName, "الموارد البشرية", "Human resources", "الإجراءات الوظيفية", "Employment actions", "HRA-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapStaffEndpoints();
@@ -42,6 +50,8 @@ internal static class StaffPermissions
     public const string StructureManage = "staff.structure.manage";
     public const string SalariesView = "staff.salaries.view";
     public const string SalariesManage = "staff.salaries.manage";
+    public const string ActionsReview = "staff.actions.review";
+    public const string ActionsApprove = "staff.actions.approve";
 
     private const string GroupAr = "الموارد البشرية";
     private const string GroupEn = "Human resources";
@@ -53,5 +63,7 @@ internal static class StaffPermissions
         new(StructureManage, GroupAr, GroupEn, "إدارة الهيكل التنظيمي والمسميات والدرجات", "Manage the organisation, job titles and grades"),
         new(SalariesView, GroupAr, GroupEn, "عرض رواتب الموظفين", "View the staff's salaries"),
         new(SalariesManage, GroupAr, GroupEn, "تعديل رواتب الموظفين", "Change the staff's salaries"),
+        new(ActionsReview, GroupAr, GroupEn, "مراجعة الإجراءات الوظيفية (الموارد البشرية)", "Review employment actions (HR)"),
+        new(ActionsApprove, GroupAr, GroupEn, "اعتماد الإجراءات الوظيفية (الإدارة العليا)", "Approve employment actions (management)"),
     ];
 }

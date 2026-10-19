@@ -198,6 +198,32 @@ internal sealed class StaffService(
             return set;
         }
 
+        // The active contract follows the file's terms (made the first time they are set here).
+        if (employee.ContractStartsOn is { } start)
+        {
+            var kind = employee.ContractEndsOn is null ? ContractKind.Open : ContractKind.Fixed;
+            var active = await db.Contracts.Where(c => c.EmployeeId == id && c.Status == ContractStatus.Active).OrderByDescending(c => c.StartsOn)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            if (active is null)
+            {
+                var created = StaffContract.Create(id, kind, start, employee.ContractMonths, employee.ContractEndsOn, 90, 30, null, null, null, user.DisplayName, clock.UtcNow);
+                if (created.IsFailure)
+                {
+                    return Result.Failure(created.Error);
+                }
+
+                db.Contracts.Add(created.Value);
+            }
+            else
+            {
+                var corrected = active.Correct(kind, start, employee.ContractMonths, employee.ContractEndsOn);
+                if (corrected.IsFailure)
+                {
+                    return corrected;
+                }
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }

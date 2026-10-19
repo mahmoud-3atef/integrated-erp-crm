@@ -358,11 +358,259 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                     b.ToTable("position", "staff");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Staff.Domain.StaffAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("ActingAllowance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("acting_allowance");
+
+                    b.Property<DateOnly?>("ActingUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("acting_until");
+
+                    b.Property<string>("ActionNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("action_no");
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("applied_at");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("employee_name");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<DateOnly?>("NewContractEndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("new_contract_ends_on");
+
+                    b.Property<string>("NewContractKind")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("new_contract_kind");
+
+                    b.Property<int?>("NewContractMonths")
+                        .HasColumnType("int")
+                        .HasColumnName("new_contract_months");
+
+                    b.Property<Guid?>("NewDepartmentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("new_department_id");
+
+                    b.Property<Guid?>("NewLegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("new_legal_entity_id");
+
+                    b.Property<Guid?>("NewPositionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("new_position_id");
+
+                    b.Property<DateOnly?>("NewProbationEndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("new_probation_ends_on");
+
+                    b.Property<DateOnly?>("OldContractEndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("old_contract_ends_on");
+
+                    b.Property<Guid?>("OldDepartmentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("old_department_id");
+
+                    b.Property<Guid?>("OldLegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("old_legal_entity_id");
+
+                    b.Property<Guid?>("OldPositionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("old_position_id");
+
+                    b.Property<DateOnly?>("OldProbationEndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("old_probation_ends_on");
+
+                    b.Property<decimal?>("OldSalaryTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("old_salary_total");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_action");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_action_tenant_id");
+
+                    b.HasIndex("TenantId", "ActionNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_action_tenant_id_action_no");
+
+                    b.HasIndex("TenantId", "EmployeeId")
+                        .HasDatabaseName("ix_action_tenant_id_employee_id");
+
+                    b.ToTable("action", "staff");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Staff.Domain.StaffContract", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("action_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ends_on");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("kind");
+
+                    b.Property<int?>("Months")
+                        .HasColumnType("int")
+                        .HasColumnName("months");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("NoticeDays")
+                        .HasColumnType("int")
+                        .HasColumnName("notice_days");
+
+                    b.Property<int>("ProbationDays")
+                        .HasColumnType("int")
+                        .HasColumnName("probation_days");
+
+                    b.Property<Guid?>("RenewsId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("renews_id");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("starts_on");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contract");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_contract_tenant_id");
+
+                    b.HasIndex("TenantId", "EmployeeId", "StartsOn")
+                        .HasDatabaseName("ix_contract_tenant_id_employee_id_starts_on");
+
+                    b.ToTable("contract", "staff");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Staff.Domain.StaffEmployee", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
+
+                    b.Property<decimal?>("ActingAllowance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("acting_allowance");
+
+                    b.Property<Guid?>("ActingPositionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("acting_position_id");
+
+                    b.Property<DateOnly?>("ActingUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("acting_until");
 
                     b.Property<decimal?>("AnnualLeaveDays")
                         .HasPrecision(9, 2)
@@ -413,6 +661,10 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("employee_no");
+
+                    b.Property<DateOnly?>("EndedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ended_on");
 
                     b.Property<string>("GosiNo")
                         .HasMaxLength(30)
@@ -641,6 +893,61 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasDatabaseName("ix_salary_tenant_id_employee_id_effective_from");
 
                     b.ToTable("salary", "staff");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Staff.Domain.StaffAction", b =>
+                {
+                    b.OwnsOne("IntegratedErp.Modules.Staff.Domain.SalaryValues", "NewSalary", b1 =>
+                        {
+                            b1.Property<Guid>("StaffActionId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("id");
+
+                            b1.Property<decimal>("Basic")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_basic");
+
+                            b1.Property<decimal>("Food")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_food");
+
+                            b1.Property<decimal>("Housing")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_housing");
+
+                            b1.Property<decimal>("Mobile")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_mobile");
+
+                            b1.Property<decimal>("Other")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_other");
+
+                            b1.Property<decimal>("Project")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_project");
+
+                            b1.Property<decimal>("Transport")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_transport");
+
+                            b1.HasKey("StaffActionId");
+
+                            b1.ToTable("action", "staff");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StaffActionId")
+                                .HasConstraintName("fk_action_action_id");
+                        });
+
+                    b.Navigation("NewSalary");
                 });
 #pragma warning restore 612, 618
         }

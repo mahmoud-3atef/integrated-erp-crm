@@ -26,6 +26,52 @@ internal sealed class StaffDbContext(DbContextOptions<StaffDbContext> options, M
     public DbSet<StaffEmployee> Employees => Set<StaffEmployee>();
 
     public DbSet<StaffSalary> Salaries => Set<StaffSalary>();
+
+    public DbSet<StaffContract> Contracts => Set<StaffContract>();
+
+    public DbSet<StaffAction> Actions => Set<StaffAction>();
+}
+
+internal sealed class StaffContractConfiguration : IEntityTypeConfiguration<StaffContract>
+{
+    public void Configure(EntityTypeBuilder<StaffContract> builder)
+    {
+        builder.ToTable("contract");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+        builder.Property(c => c.Kind).HasConversion<string>().HasMaxLength(10);
+        builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(10);
+        builder.Property(c => c.Notes).HasMaxLength(1000);
+        builder.Property(c => c.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(c => new { c.TenantId, c.EmployeeId, c.StartsOn });
+    }
+}
+
+internal sealed class StaffActionConfiguration : IEntityTypeConfiguration<StaffAction>
+{
+    public void Configure(EntityTypeBuilder<StaffAction> builder)
+    {
+        builder.ToTable("action");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        builder.Property(a => a.ActionNo).HasMaxLength(40).IsRequired();
+        builder.Property(a => a.EmployeeName).HasMaxLength(300).IsRequired();
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(30);
+        builder.Property(a => a.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(a => a.NewContractKind).HasConversion<string>().HasMaxLength(10);
+        builder.Property(a => a.Reason).HasMaxLength(1000).IsRequired();
+        builder.Property(a => a.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(a => a.LastComment).HasMaxLength(2000);
+        builder.OwnsOne(a => a.NewSalary, s =>
+        {
+            foreach (var name in new[] { nameof(SalaryValues.Basic), nameof(SalaryValues.Housing), nameof(SalaryValues.Food), nameof(SalaryValues.Transport), nameof(SalaryValues.Mobile), nameof(SalaryValues.Project), nameof(SalaryValues.Other) })
+            {
+                s.Property<decimal>(name).HasPrecision(18, 2).HasColumnName("new_" + name.ToLowerInvariant());
+            }
+        });
+        builder.HasIndex(a => new { a.TenantId, a.ActionNo }).IsUnique();
+        builder.HasIndex(a => new { a.TenantId, a.EmployeeId });
+    }
 }
 
 internal sealed class DepartmentConfiguration : IEntityTypeConfiguration<Department>

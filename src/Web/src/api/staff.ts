@@ -1,5 +1,6 @@
 // The company's staff and organisation (src/Modules/Staff/.../Api/StaffEndpoints.cs).
 import { request } from './auth';
+import type { ApprovalStatus } from './workflow';
 
 export type StaffStatus = 'Active' | 'Probation' | 'Suspended' | 'Left';
 export const staffStatuses: StaffStatus[] = ['Active', 'Probation', 'Suspended', 'Left'];
@@ -192,6 +193,94 @@ export interface StaffQuery {
   pageSize?: number;
 }
 
+export const actionKinds = ['Promotion', 'Transfer', 'SalaryChange', 'Acting', 'ConfirmProbation', 'ExtendProbation', 'EndProbation', 'RenewContract', 'NotRenew'] as const;
+export type ActionKind = (typeof actionKinds)[number];
+export type ActionStatus = 'Draft' | 'InApproval' | 'Returned' | 'Rejected' | 'Applied';
+
+export interface ActionRow {
+  id: string;
+  actionNo: string;
+  employeeId: string;
+  employeeName: string;
+  kind: ActionKind;
+  effectiveFrom: string;
+  status: ActionStatus;
+  createdByName: string;
+  createdAt: string;
+  appliedAt: string | null;
+}
+
+export interface Place {
+  legalEntity: NamedRef | null;
+  department: NamedRef | null;
+  jobTitle: NamedRef | null;
+  grade: string | null;
+}
+
+export interface StaffActionDetail {
+  id: string;
+  actionNo: string;
+  employeeId: string;
+  employeeName: string;
+  employeeNo: string;
+  kind: ActionKind;
+  effectiveFrom: string;
+  reason: string;
+  status: ActionStatus;
+  awaitingApproval: boolean;
+  before: Place;
+  after: Place;
+  oldSalaryTotal: number | null;
+  newSalary: SalaryValues | null;
+  newSalaryTotal: number | null;
+  actingAllowance: number | null;
+  actingUntil: string | null;
+  oldProbationEndsOn: string | null;
+  newProbationEndsOn: string | null;
+  oldContractEndsOn: string | null;
+  newContractKind: 'Fixed' | 'Open' | null;
+  newContractMonths: number | null;
+  newContractEndsOn: string | null;
+  createdByName: string;
+  createdAt: string;
+  appliedAt: string | null;
+  lastComment: string | null;
+  canResubmit: boolean;
+  canSeeSalary: boolean;
+  approval: ApprovalStatus | null;
+}
+
+export interface Contract {
+  id: string;
+  kind: 'Fixed' | 'Open';
+  startsOn: string;
+  months: number | null;
+  endsOn: string | null;
+  probationDays: number;
+  noticeDays: number;
+  status: 'Active' | 'Renewed' | 'Ended';
+  actionId: string | null;
+  notes: string | null;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface ActionInput {
+  kind: ActionKind;
+  effectiveFrom: string;
+  reason: string;
+  newLegalEntityId: string | null;
+  newDepartmentId: string | null;
+  newPositionId: string | null;
+  newSalary: SalaryValues | null;
+  actingAllowance: number | null;
+  actingUntil: string | null;
+  newProbationEndsOn: string | null;
+  newContractKind: 'Fixed' | 'Open' | null;
+  newContractMonths: number | null;
+  newContractEndsOn: string | null;
+}
+
 const base = '/api/v1/staff';
 
 const qs = (q: StaffQuery) => {
@@ -219,6 +308,11 @@ export const staffApi = {
   changeSalary: (id: string, input: { effectiveFrom: string; salary: SalaryValues; reason: string }) => request<void>('POST', `${base}/employees/${id}/salary`, input),
   nationalities: () => request<{ code: string; nameAr: string; nameEn: string }[]>('GET', `${base}/nationalities`),
   structure: () => request<Structure>('GET', `${base}/structure`),
+  contracts: (id: string) => request<Contract[]>('GET', `${base}/employees/${id}/contracts`),
+  requestAction: (id: string, input: ActionInput) => request<{ id: string }>('POST', `${base}/employees/${id}/actions`, input),
+  actions: (q: { employeeId?: string; status?: string }) => request<ActionRow[]>('GET', `${base}/actions?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()}`),
+  action: (id: string) => request<StaffActionDetail>('GET', `${base}/actions/${id}`),
+  resubmit: (id: string) => request<void>('POST', `${base}/actions/${id}/resubmit`),
   catalog: () => request<Catalog>('GET', `${base}/catalog`),
   saveDepartment: (id: string | null, input: { nameAr: string; nameEn: string | null; parentId: string | null; costCenter: string | null; managerId: string | null; sortOrder: number; isActive: boolean }) =>
     request<{ id: string }>(id ? 'PUT' : 'POST', id ? `${base}/departments/${id}` : `${base}/departments`, input),

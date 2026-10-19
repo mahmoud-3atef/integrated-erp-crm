@@ -60,6 +60,23 @@ internal static class StaffEndpoints
                 Results.Ok((await reference.ListAsync(ReferenceListCodes.Nationalities, ct).ConfigureAwait(false)).Select(n => new { n.Code, n.NameAr, n.NameEn })))
             .RequirePermission(StaffPermissions.View, companyWide: true);
 
+        group.MapGet("/employees/{id:guid}/contracts", async (Guid id, StaffActionQueries queries, CancellationToken ct) => Results.Ok(await queries.ContractsAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.View, companyWide: true);
+
+        group.MapPost("/employees/{id:guid}/actions", async (Guid id, ActionInput input, StaffActionService service, CancellationToken ct) =>
+                await service.RequestAsync(id, input, ct).ConfigureAwait(false) is var result && result.IsSuccess ? Results.Ok(new { id = result.Value }) : Problem(result.Error))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+
+        group.MapGet("/actions", async (Guid? employeeId, string? status, StaffActionQueries queries, CancellationToken ct) => Results.Ok(await queries.ListAsync(employeeId, status, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.View, companyWide: true);
+
+        group.MapGet("/actions/{id:guid}", async (Guid id, StaffActionQueries queries, CancellationToken ct) =>
+                await queries.GetAsync(id, ct).ConfigureAwait(false) is { } action ? Results.Ok(action) : Results.NotFound())
+            .RequirePermission(StaffPermissions.View, companyWide: true);
+
+        group.MapPost("/actions/{id:guid}/resubmit", async (Guid id, StaffActionService service, CancellationToken ct) => ToHttp(await service.ResubmitAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+
         group.MapGet("/structure", async (StaffQueries queries, CancellationToken ct) => Results.Ok(await queries.StructureAsync(ct).ConfigureAwait(false)))
             .RequirePermission(StaffPermissions.View, companyWide: true);
 

@@ -433,7 +433,11 @@
     "validation_staff_position_department": "الوظيفة تتبع إدارة أخرى.",
     "conflict_staff_in_use": "مستخدَم حاليًا: انقل ما يستخدمه أولًا، أو أوقفه.",
     "validation_staff_salary_date": "تاريخ سريان الراتب الجديد بعد تاريخ الراتب الحالي.",
-    "conflict_staff_grade_code_taken": "رمز الدرجة مستخدم لدرجة أخرى."
+    "conflict_staff_grade_code_taken": "رمز الدرجة مستخدم لدرجة أخرى.",
+    "not_found_staff_action": "الإجراء غير موجود.",
+    "validation_staff_action_fields": "أكمل ما يحتاجه هذا الإجراء (ويجب أن يناسب حالة الموظف الحالية).",
+    "conflict_staff_action_not_editable": "لا يُرسل الإجراء إلا وهو مسودة أو مُعاد.",
+    "conflict_staff_action_open": "للموظف إجراء آخر قيد الاعتماد."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -485,7 +489,8 @@
     "hrSection": "الموارد البشرية",
     "hrEmployees": "الموظفون",
     "hrStructure": "الهيكل التنظيمي",
-    "hrCatalog": "المسميات والدرجات"
+    "hrCatalog": "المسميات والدرجات",
+    "hrActions": "الإجراءات الوظيفية"
   },
   "roles": {
     "title": "الأدوار والصلاحيات",
@@ -3112,5 +3117,104 @@
     "positions": "الوظائف",
     "active": "فعّال",
     "empty": "لا شيء بعد"
+  },
+  "staffActions": {
+    "title": "الإجراءات الوظيفية",
+    "intro": "الترقيات والنقل وتعديل الرواتب والتكليف وقرارات التجربة والعقود: بطلب واعتماد، وتُطبَّق على الملف بعد الاعتماد.",
+    "kind": {
+      "Promotion": "ترقية",
+      "Transfer": "نقل",
+      "SalaryChange": "تعديل راتب",
+      "Acting": "تكليف",
+      "ConfirmProbation": "تثبيت بعد التجربة",
+      "ExtendProbation": "تمديد التجربة",
+      "EndProbation": "إنهاء خلال التجربة",
+      "RenewContract": "تجديد العقد",
+      "NotRenew": "عدم تجديد العقد"
+    },
+    "kindHint": {
+      "Promotion": "وظيفة أعلى، ومعها راتب جديد إن لزم",
+      "Transfer": "إدارة أو وظيفة أو سجل تجاري آخر",
+      "SalaryChange": "راتب جديد من تاريخ السريان",
+      "Acting": "وظيفة أخرى مؤقتًا ببدل",
+      "ConfirmProbation": "اجتاز فترة التجربة",
+      "ExtendProbation": "تمديد التجربة إلى تاريخ",
+      "EndProbation": "إنهاء الخدمة خلال التجربة",
+      "RenewContract": "عقد جديد بعد الحالي",
+      "NotRenew": "تنتهي الخدمة بنهاية العقد"
+    },
+    "status": {
+      "Draft": "مسودة",
+      "InApproval": "قيد الاعتماد",
+      "Returned": "مُعاد للتعديل",
+      "Rejected": "مرفوض",
+      "Applied": "مطبَّق"
+    },
+    "new": "إجراء وظيفي جديد",
+    "choose": "اختر الإجراء",
+    "effectiveFrom": "تاريخ السريان",
+    "reason": "السبب",
+    "newDepartment": "الإدارة الجديدة",
+    "newPosition": "الوظيفة الجديدة",
+    "newLegalEntity": "السجل التجاري الجديد",
+    "keep": "بلا تغيير",
+    "withSalary": "مع راتب جديد",
+    "actingPosition": "الوظيفة المكلَّف بها",
+    "actingUntil": "حتى",
+    "actingAllowance": "بدل التكليف الشهري",
+    "probationUntil": "التجربة حتى",
+    "contractKind": "نوع العقد",
+    "contractKinds": {
+      "Fixed": "محدد المدة",
+      "Open": "غير محدد المدة"
+    },
+    "contractMonths": "المدة (أشهر)",
+    "send": "إرسال للاعتماد",
+    "sendHint": "يُرسل الإجراء لمسار الاعتماد (الموارد البشرية ثم الإدارة العليا افتراضيًا)، ولا يتغير الملف إلا بعد الاعتماد.",
+    "resubmit": "إرسال مرة أخرى",
+    "before": "قبل",
+    "after": "بعد",
+    "changes": "ما يغيّره الإجراء",
+    "details": "تفاصيل الطلب",
+    "requestedBy": "طلبه {{by}} في {{date}}",
+    "appliedOn": "طُبِّق على الملف في {{date}}",
+    "employee": "الموظف",
+    "none": "لا توجد إجراءات",
+    "cols": {
+      "no": "الرقم",
+      "employee": "الموظف",
+      "kind": "الإجراء",
+      "effective": "السريان",
+      "status": "الحالة",
+      "by": "بواسطة"
+    },
+    "all": "الكل",
+    "field": {
+      "legalEntity": "السجل التجاري",
+      "department": "الإدارة",
+      "jobTitle": "الوظيفة",
+      "grade": "الدرجة",
+      "salary": "الراتب",
+      "probation": "نهاية التجربة",
+      "contract": "نهاية العقد",
+      "acting": "التكليف"
+    },
+    "actingValue": "{{title}} حتى {{date}} · بدل {{amount}}",
+    "contractValue": "{{kind}}{{months}}",
+    "ends": "تنتهي الخدمة"
+  },
+  "staffContracts": {
+    "title": "العقود",
+    "none": "لا توجد عقود مسجلة بعد: تُسجَّل عند تعديل العقد أو تجديده.",
+    "status": {
+      "Active": "ساري",
+      "Renewed": "جُدِّد",
+      "Ended": "انتهى"
+    },
+    "from": "من {{date}}",
+    "to": "إلى {{date}}",
+    "open": "غير محدد المدة",
+    "notice": "الإشعار {{days}} يومًا",
+    "byAction": "بإجراء"
   }
 }

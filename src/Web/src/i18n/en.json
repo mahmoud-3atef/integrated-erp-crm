@@ -433,7 +433,11 @@
     "validation_staff_position_department": "The position belongs to another department.",
     "conflict_staff_in_use": "It is in use: move what uses it first, or deactivate it.",
     "validation_staff_salary_date": "The new salary takes effect after the current salary's date.",
-    "conflict_staff_grade_code_taken": "Another grade has this code."
+    "conflict_staff_grade_code_taken": "Another grade has this code.",
+    "not_found_staff_action": "The action was not found.",
+    "validation_staff_action_fields": "Fill what this action needs (it has to fit the employee's current state).",
+    "conflict_staff_action_not_editable": "Only a draft or returned action can be sent.",
+    "conflict_staff_action_open": "The employee already has an action in approval."
   },
   "menu": {
     "label": "Main menu",
@@ -485,7 +489,8 @@
     "hrSection": "Human resources",
     "hrEmployees": "Employees",
     "hrStructure": "Organisation",
-    "hrCatalog": "Job titles and grades"
+    "hrCatalog": "Job titles and grades",
+    "hrActions": "Employment actions"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -3112,5 +3117,104 @@
     "positions": "Positions",
     "active": "Active",
     "empty": "Nothing yet"
+  },
+  "staffActions": {
+    "title": "Employment actions",
+    "intro": "Promotions, transfers, salary changes, acting, probation and contract decisions: requested and approved, then applied to the file.",
+    "kind": {
+      "Promotion": "Promotion",
+      "Transfer": "Transfer",
+      "SalaryChange": "Salary change",
+      "Acting": "Acting",
+      "ConfirmProbation": "Confirm after probation",
+      "ExtendProbation": "Extend probation",
+      "EndProbation": "End during probation",
+      "RenewContract": "Renew the contract",
+      "NotRenew": "Do not renew the contract"
+    },
+    "kindHint": {
+      "Promotion": "A higher position, with a new salary if needed",
+      "Transfer": "Another department, position or registration",
+      "SalaryChange": "A new salary from the effective date",
+      "Acting": "Another position for a time, with an allowance",
+      "ConfirmProbation": "Passed the probation",
+      "ExtendProbation": "Extend the probation to a date",
+      "EndProbation": "End the employment during probation",
+      "RenewContract": "A new contract after the current one",
+      "NotRenew": "The employment ends with the contract"
+    },
+    "status": {
+      "Draft": "Draft",
+      "InApproval": "In approval",
+      "Returned": "Returned",
+      "Rejected": "Rejected",
+      "Applied": "Applied"
+    },
+    "new": "New employment action",
+    "choose": "Choose the action",
+    "effectiveFrom": "Effective from",
+    "reason": "Reason",
+    "newDepartment": "New department",
+    "newPosition": "New position",
+    "newLegalEntity": "New commercial registration",
+    "keep": "No change",
+    "withSalary": "With a new salary",
+    "actingPosition": "Acting position",
+    "actingUntil": "Until",
+    "actingAllowance": "Monthly acting allowance",
+    "probationUntil": "Probation until",
+    "contractKind": "Contract kind",
+    "contractKinds": {
+      "Fixed": "Fixed term",
+      "Open": "Open-ended"
+    },
+    "contractMonths": "Length (months)",
+    "send": "Send for approval",
+    "sendHint": "The action goes through the approval process (HR, then management, by default); the file changes only when it is approved.",
+    "resubmit": "Send again",
+    "before": "Before",
+    "after": "After",
+    "changes": "What the action changes",
+    "details": "The request",
+    "requestedBy": "Requested by {{by}} on {{date}}",
+    "appliedOn": "Applied to the file on {{date}}",
+    "employee": "Employee",
+    "none": "No actions",
+    "cols": {
+      "no": "Number",
+      "employee": "Employee",
+      "kind": "Action",
+      "effective": "Effective",
+      "status": "Status",
+      "by": "By"
+    },
+    "all": "All",
+    "field": {
+      "legalEntity": "Commercial registration",
+      "department": "Department",
+      "jobTitle": "Position",
+      "grade": "Grade",
+      "salary": "Salary",
+      "probation": "Probation ends",
+      "contract": "Contract ends",
+      "acting": "Acting"
+    },
+    "actingValue": "{{title}} until {{date}} · allowance {{amount}}",
+    "contractValue": "{{kind}}{{months}}",
+    "ends": "Employment ends"
+  },
+  "staffContracts": {
+    "title": "Contracts",
+    "none": "No contracts recorded yet: one is recorded when the contract is set or renewed.",
+    "status": {
+      "Active": "Active",
+      "Renewed": "Renewed",
+      "Ended": "Ended"
+    },
+    "from": "From {{date}}",
+    "to": "to {{date}}",
+    "open": "Open-ended",
+    "notice": "Notice {{days}} days",
+    "byAction": "By action"
   }
 }
