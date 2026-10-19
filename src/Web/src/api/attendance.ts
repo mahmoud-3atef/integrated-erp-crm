@@ -1,5 +1,6 @@
 // The staff's attendance (src/Modules/Attendance/.../Api/AttendanceEndpoints.cs).
 import { request, upload } from './auth';
+import type { ApprovalStatus } from './workflow';
 
 export interface NamedRef {
   id: string;
@@ -33,13 +34,24 @@ export interface MonthKpis {
   earlyMinutes: number;
   missingPunches: number;
   openExceptions: number;
+  overtimeMinutes: number;
+  overtimePending: number;
 }
+
+export type MonthStatus = 'Open' | 'InApproval' | 'Closed';
 
 export interface AttendanceMonth {
   period: string;
   from: string;
   to: string;
   cycleStartDay: number;
+  monthId: string | null;
+  status: MonthStatus;
+  submittedByName: string | null;
+  submittedAt: string | null;
+  closedAt: string | null;
+  lastComment: string | null;
+  approval: ApprovalStatus | null;
   hasData: boolean;
   lastImport: ImportInfo | null;
   kpis: MonthKpis;
@@ -68,6 +80,7 @@ export interface MonthRow {
   earlyMinutes: number;
   missingPunches: number;
   deduction: number;
+  overtimeMinutes: number;
   state: RowState;
 }
 
@@ -81,6 +94,7 @@ export interface MonthTotals {
   earlyMinutes: number;
   missingPunches: number;
   deduction: number;
+  overtimeMinutes: number;
 }
 
 export interface MonthPage {
@@ -169,7 +183,7 @@ export interface ImportProblem {
   date: string;
   in: string | null;
   out: string | null;
-  code: 'unknown_employee' | 'not_employed' | 'duplicate' | 'bad_time';
+  code: 'unknown_employee' | 'not_employed' | 'month_closed' | 'duplicate' | 'bad_time';
   rejected: boolean;
 }
 
@@ -193,6 +207,27 @@ export interface ImportPreview {
 export type MatchBy = 'IdNumber' | 'EmployeeNo' | 'BadgeNo';
 export const matchBys: MatchBy[] = ['IdNumber', 'EmployeeNo', 'BadgeNo'];
 export type LateFrom = 'GraceEnd' | 'ShiftStart';
+export type MinutesSource = 'Company' | 'Device' | 'Shift';
+export const minutesSources: MinutesSource[] = ['Company', 'Device', 'Shift'];
+
+export type OvertimeStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Approved';
+
+export interface Overtime {
+  id: string;
+  requestNo: string;
+  employeeId: string;
+  employeeName: string;
+  date: string;
+  minutes: number;
+  reason: string;
+  status: OvertimeStatus;
+  awaitingApproval: boolean;
+  createdByName: string;
+  createdAt: string;
+  decidedAt: string | null;
+  lastComment: string | null;
+  approval: ApprovalStatus | null;
+}
 
 export interface Assignment {
   id: string;
@@ -219,6 +254,7 @@ export interface Shift {
   ramadanEndsAt: string | null;
   isActive: boolean;
   isDefault: boolean;
+  minutesSource: MinutesSource;
   employees: number;
   assignments: Assignment[];
 }
@@ -279,6 +315,13 @@ export const attendanceApi = {
   saveHoliday: (id: string | null, input: { nameAr: string; nameEn: string | null; from: string; to: string; kind: HolidayKind }) =>
     id ? request<{ id: string }>('PUT', `${base}/holidays/${id}`, input) : request<{ id: string }>('POST', `${base}/holidays`, input),
   deleteHoliday: (id: string) => request<void>('DELETE', `${base}/holidays/${id}`),
+  monthPeriod: (id: string) => request<{ period: string }>('GET', `${base}/months/by-id/${id}`),
+  submitMonth: (period: string) => request<{ id: string }>('POST', `${base}/months/${period}/submit`),
+  reopenMonth: (period: string, reason: string) => request<void>('POST', `${base}/months/${period}/reopen`, { reason }),
+  overtimeOf: (period: string) => request<Overtime[]>('GET', `${base}/months/${period}/overtime`),
+  overtime: (id: string) => request<Overtime>('GET', `${base}/overtime/${id}`),
+  requestOvertime: (input: { employeeId: string; date: string; minutes: number; reason: string }) => request<{ id: string }>('POST', `${base}/overtime`, input),
+  resubmitOvertime: (id: string, input: { employeeId: string; date: string; minutes: number; reason: string }) => request<{ id: string }>('POST', `${base}/overtime/${id}/resubmit`, input),
 };
 
 /** "2026-09" for a date; the month before/after. */

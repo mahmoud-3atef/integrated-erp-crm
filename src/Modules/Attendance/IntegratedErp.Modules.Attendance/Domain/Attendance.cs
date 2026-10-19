@@ -18,6 +18,19 @@ public enum LateFrom
     ShiftStart,
 }
 
+/// <summary>Where a shift's late and early minutes come from.</summary>
+public enum MinutesSource
+{
+    /// <summary>As the company's setting says.</summary>
+    Company,
+
+    /// <summary>The fingerprint system's report (its own schedules), when the file carries the minutes.</summary>
+    Device,
+
+    /// <summary>Calculated from this shift's hours, whatever the file says.</summary>
+    Shift,
+}
+
 /// <summary>A working shift: its hours, break, grace, rest days and Ramadan hours.</summary>
 public sealed class Shift : ITenantOwned
 {
@@ -45,6 +58,8 @@ public sealed class Shift : ITenantOwned
     public int GraceMinutes { get; private set; }
 
     public LateFrom LateFrom { get; private set; }
+
+    public MinutesSource MinutesSource { get; private set; }
 
     /// <summary>The rest days as a bit set of <see cref="DayOfWeek"/> (Friday and Saturday by default).</summary>
     public int RestDays { get; private set; }
@@ -90,6 +105,7 @@ public sealed class Shift : ITenantOwned
         BreakMinutes = v.BreakMinutes;
         GraceMinutes = v.GraceMinutes;
         LateFrom = v.LateFrom;
+        MinutesSource = v.MinutesSource;
         RestDays = v.RestDays;
         RamadanStartsAt = v.RamadanStartsAt;
         RamadanEndsAt = v.RamadanEndsAt;
@@ -111,7 +127,8 @@ public sealed record ShiftValues(
     int RestDays,
     TimeOnly? RamadanStartsAt,
     TimeOnly? RamadanEndsAt,
-    bool IsActive);
+    bool IsActive,
+    MinutesSource MinutesSource = MinutesSource.Company);
 
 /// <summary>A shift given to a department (and the departments under it) or to one employee, from a date.</summary>
 public sealed class ShiftAssignment : ITenantOwned
@@ -500,4 +517,13 @@ public static class AttendanceErrors
     public static readonly Error Note = Error.Validation("attendance_note", "Excusing an absence needs its reason.");
     public static readonly Error File = Error.Validation("attendance_file", "The file has no rows we can read: a column of employee numbers and a column of dates are needed.");
     public static readonly Error ShiftInUse = Error.Conflict("attendance_shift_in_use", "The shift is assigned, or it is the default shift.");
+    public static readonly Error MonthNotFound = Error.NotFound("attendance_month", "Attendance month not found.");
+    public static readonly Error OvertimeNotFound = Error.NotFound("attendance_overtime", "Overtime request not found.");
+    public static readonly Error MonthNotOpen = Error.Conflict("attendance_month_not_open", "The month is in approval or closed.");
+    public static readonly Error MonthNotClosed = Error.Conflict("attendance_month_not_closed", "Only a closed month can be reopened.");
+    public static readonly Error MonthLocked = Error.Conflict("attendance_month_locked", "The day's month is in approval or closed: its days cannot change.");
+    public static readonly Error MonthEmpty = Error.Validation("attendance_month_empty", "The month has no attendance to close.");
+    public static readonly Error Reason = Error.Validation("attendance_reason", "Give the reason (500 characters at most).");
+    public static readonly Error Overtime = Error.Validation("attendance_overtime_fields", "Overtime is 15 minutes to 12 hours, with its reason.");
+    public static readonly Error OvertimeNotReturned = Error.Conflict("attendance_overtime_not_returned", "Only a returned request can be sent again.");
 }

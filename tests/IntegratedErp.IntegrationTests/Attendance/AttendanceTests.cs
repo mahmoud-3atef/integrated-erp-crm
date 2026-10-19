@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Attendance.Application;
+using IntegratedErp.Modules.Attendance.Contracts;
 using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Organization.Application.Organization;
@@ -23,6 +24,7 @@ public sealed class AttendanceTests(TestDatabase database)
             tenantId = (await scope.ServiceProvider.GetRequiredService<OrganizationService>().CreateTenantAsync($"at-{Guid.NewGuid():N}"[..16], "شركة الحضور", "Attendance Co", default)).Value.Id;
         }
 
+        var approver = await HrAsync(tenantId, "attendance.view", "attendance.month.review", "attendance.month.close", "attendance.overtime.approve");
         var hr = await HrAsync(tenantId, "staff.view", "staff.manage", "attendance.view", "attendance.manage", "attendance.settings");
         using var scope2 = database.Scope(tenantId, user: hr.ToString());
         var staff = scope2.ServiceProvider.GetRequiredService<StaffService>();
@@ -78,6 +80,37 @@ public sealed class AttendanceTests(TestDatabase database)
         Assert.Equal((0, 0, 0m, "Complete"), (monaRow.Absent, monaRow.MissingPunches, monaRow.Deduction, monaRow.State));
         Assert.Empty((await queries.ExceptionsAsync("2026-09", null, default))!);
 
+        // Two hours of overtime for Mona, approved: counted in the month.
+        var overtime = scope2.ServiceProvider.GetRequiredService<OvertimeService>();
+        Assert.Equal("validation.attendance_overtime_fields", (await overtime.RequestAsync(new OvertimeInput(mona, new DateOnly(2026, 9, 7), 120, " "), default)).Error.Code);
+        Assert.True((await overtime.RequestAsync(new OvertimeInput(mona, new DateOnly(2026, 9, 7), 120, "إقفال الربع الثالث"), default)).IsSuccess);
+        await ApproveAsync(tenantId, approver);
+
+        // HR sends the month: its figures are frozen and its days can no longer change.
+        var closing = scope2.ServiceProvider.GetRequiredService<MonthClosing>();
+        Assert.True((await closing.SubmitAsync("2026-09", default)).IsSuccess);
+        Assert.Equal("conflict.attendance_month_not_open", (await closing.SubmitAsync("2026-09", default)).Error.Code);
+        Assert.Equal("conflict.attendance_month_locked", (await service.CorrectAsync(mona, new DateOnly(2026, 9, 8), new CorrectionInput(null, null, "Absent", null, null), default)).Error.Code);
+        var locked = (await importer.PreviewAsync(File(), null, default)).Value;
+        Assert.Equal(0, locked.Accepted);
+        Assert.Contains(locked.Problems, x => x.Code == "month_closed");
+        var frozen = (await queries.EmployeesAsync("2026-09", new MonthQuery(null, "منى", null, null, null, null, false, 1, 25), default))!.Rows.Single();
+        Assert.Equal((120, 0m), (frozen.OvertimeMinutes, frozen.Deduction));
+
+        // The review, then the HR closing: the staff payroll can take it.
+        await ApproveAsync(tenantId, approver);
+        await ApproveAsync(tenantId, approver);
+        using (var scope3 = database.Scope(tenantId, user: hr.ToString()))
+        {
+            var closed = await scope3.ServiceProvider.GetRequiredService<IAttendanceMonths>().ClosedAsync("2026-09", default);
+            Assert.NotNull(closed);
+            var line = closed.Lines.Single(l => l.EmployeeId == mona);
+            Assert.Equal((21, 0, 90, 0m, 120), (line.WorkDays, line.Absent, line.LateMinutes, line.DeductionDays, line.OvertimeMinutes));
+            Assert.Equal("Closed", (await scope3.ServiceProvider.GetRequiredService<AttendanceQueries>().MonthAsync("2026-09", null, default))!.Status);
+            Assert.True((await scope3.ServiceProvider.GetRequiredService<MonthClosing>().ReopenAsync("2026-09", new ReopenInput("تصحيح بصمة متأخر"), default)).IsSuccess);
+            Assert.Null(await scope3.ServiceProvider.GetRequiredService<IAttendanceMonths>().ClosedAsync("2026-09", default));
+        }
+
         // Matching by the fingerprint number instead: a number taken by another is refused.
         Assert.True((await setup.SaveEmployeeAsync(mona, new EmployeeSettingInput("1052", false), default)).IsSuccess);
         Assert.Equal("conflict.attendance_badge_taken", (await setup.SaveEmployeeAsync(raed, new EmployeeSettingInput("1052", false), default)).Error.Code);
@@ -127,6 +160,14 @@ public sealed class AttendanceTests(TestDatabase database)
         wb.SaveAs(stream);
         stream.Position = 0;
         return stream;
+    }
+
+    private async Task ApproveAsync(Guid tenantId, Guid approver)
+    {
+        using var scope = database.Scope(tenantId, user: approver.ToString());
+        var workflow = scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Workflow.Infrastructure.WorkflowDbContext>();
+        var task = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleAsync(workflow.WorkItems, w => w.AssigneeUserId == approver && w.Status == IntegratedErp.Modules.Workflow.Domain.WorkItemStatus.Pending);
+        Assert.True((await scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Workflow.Application.ApprovalEngine>().DecideAsync(task.Id, IntegratedErp.Modules.Workflow.Application.Decision.Approve, "معتمد", null, default)).IsSuccess);
     }
 
     private async Task<Guid> HrAsync(Guid tenantId, params string[] permissions)

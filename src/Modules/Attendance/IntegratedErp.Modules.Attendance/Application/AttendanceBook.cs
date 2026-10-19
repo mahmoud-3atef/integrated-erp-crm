@@ -58,6 +58,9 @@ internal sealed class AttendanceBook
 
     public Shift? DefaultShift { get; }
 
+    /// <summary>Approved overtime in the period, in minutes, per employee.</summary>
+    public Dictionary<Guid, int> Overtime { get; init; } = [];
+
     public static async Task<AttendanceBook> LoadAsync(AttendanceDbContext db, IStaffDirectory staff, DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken)
     {
         var members = await staff.MembersAsync(cancellationToken).ConfigureAwait(false);
@@ -88,8 +91,10 @@ internal sealed class AttendanceBook
         }
 
         var days = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
+        var overtime = await db.Overtime.AsNoTracking().Where(o => o.Status == OvertimeStatus.Approved && o.Date >= from && o.Date <= to)
+            .GroupBy(o => o.EmployeeId).Select(g => new { g.Key, Minutes = g.Sum(o => o.Minutes) }).ToDictionaryAsync(x => x.Key, x => x.Minutes, cancellationToken).ConfigureAwait(false);
         var useDevice = await db.Settings.AsNoTracking().Select(s => (bool?)s.UseDeviceMinutes).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? true;
-        return new AttendanceBook(from, to, members, settings, shifts, assignments, holidays, departments, covered, imports.ToDictionary(i => i.Id, i => (i.From, i.To)), days) { UseDeviceMinutes = useDevice };
+        return new AttendanceBook(from, to, members, settings, shifts, assignments, holidays, departments, covered, imports.ToDictionary(i => i.Id, i => (i.From, i.To)), days) { UseDeviceMinutes = useDevice, Overtime = overtime };
     }
 
     public IEnumerable<DateOnly> Dates()
@@ -153,7 +158,9 @@ internal sealed class AttendanceBook
     public DayFacts Facts(StaffMember m, DateOnly date)
     {
         var stored = Stored(m.Id, date);
-        var device = UseDeviceMinutes && stored is not null && stored.ManualIn is null && stored.ManualOut is null;
+        var shift = ShiftFor(m, date);
+        var source = shift?.MinutesSource is null or MinutesSource.Company ? (UseDeviceMinutes ? MinutesSource.Device : MinutesSource.Shift) : shift.MinutesSource;
+        var device = source == MinutesSource.Device && stored is not null && stored.ManualIn is null && stored.ManualOut is null;
         var setting = Settings.GetValueOrDefault(m.Id);
         return new DayFacts(
             date,
@@ -161,7 +168,7 @@ internal sealed class AttendanceBook
             Covered(m.Id, date, setting?.Exempt ?? false) || stored is not null,
             setting?.Exempt ?? false,
             HolidayOn(date) is not null,
-            Hours(ShiftFor(m, date), date.DayOfWeek, IsRamadan(date)),
+            Hours(shift, date.DayOfWeek, IsRamadan(date)),
             stored?.In,
             stored?.Out,
             stored?.DeviceMark ?? DeviceMark.None,

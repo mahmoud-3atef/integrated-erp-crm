@@ -4,6 +4,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import MoreTimeOutlinedIcon from '@mui/icons-material/MoreTimeOutlined';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import SearchIcon from '@mui/icons-material/Search';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
@@ -12,6 +15,10 @@ import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -33,7 +40,7 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import {
   attendanceApi,
@@ -46,17 +53,27 @@ import {
   type AttendanceMonth,
   type ImportInfo,
   type MonthPage,
+  type MonthStatus,
   type NamedRef,
+  type Overtime,
   type RowState,
 } from '../../api/attendance';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrAccents, hrCard, type HrAccent } from '../../components/hr/Hr';
+import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DaysDrawer } from './DaysDrawer';
 import { ImportDialog } from './ImportDialog';
+import { OvertimeDialog, OvertimeList } from './Overtime';
 
-type View = 'employees' | 'exceptions' | 'imports';
+type View = 'employees' | 'exceptions' | 'overtime' | 'imports';
+
+export const monthLook: Record<MonthStatus, { color: string; tint: string }> = {
+  Open: { color: hr.success, tint: '#D1FAE5' },
+  InApproval: { color: hr.primary, tint: '#EFF6FF' },
+  Closed: { color: hr.textMuted, tint: hr.muted },
+};
 
 export const stateLook: Record<RowState, { color: string; tint: string }> = {
   Complete: { color: hr.success, tint: '#D1FAE5' },
@@ -87,6 +104,10 @@ export function AttendanceMonthPage() {
   const [rows, setRows] = useState<MonthPage | null>(null);
   const [exceptions, setExceptions] = useState<AttendanceException[] | null>(null);
   const [imports, setImports] = useState<ImportInfo[] | null>(null);
+  const [overtime, setOvertime] = useState<Overtime[] | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [closing, setClosing] = useState<'submit' | 'reopen' | null>(null);
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('');
@@ -98,10 +119,13 @@ export function AttendanceMonthPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [open, setOpen] = useState<{ id: string; date?: string } | null>(null);
+  const [drawer, setOpen] = useState<{ id: string; date?: string } | null>(null);
   const [version, setVersion] = useState(0);
   const latest = useRef(0);
   const canManage = can('attendance.manage', true);
+  const approval = useRecordApproval(month?.approval?.instanceId);
+  const open = month?.status === 'Open';
+  const editable = canManage && open;
 
   useEffect(() => {
     const timer = setTimeout(() => setQuery(search), 300);
@@ -116,6 +140,7 @@ export function AttendanceMonthPage() {
       .then((m) => (setMonth(m), setError(null)))
       .catch((failure) => setError(errorKey(failure)));
     attendanceApi.exceptions(period, entity || undefined).then(setExceptions).catch(() => setExceptions([]));
+    attendanceApi.overtimeOf(period).then(setOvertime).catch(() => setOvertime([]));
   }, [period, entity, version]);
 
   useEffect(() => {
@@ -151,6 +176,7 @@ export function AttendanceMonthPage() {
       <HrPageHeader
         icon={<AccessTimeOutlinedIcon />}
         title={t('attendance.title')}
+        status={month && <HrStatusBadge label={t(`attendance.monthStatus.${month.status}`)} {...monthLook[month.status]} />}
         reference={`ATT-${period}`}
         subtitle={
           month ? (
@@ -190,15 +216,45 @@ export function AttendanceMonthPage() {
                 </MenuItem>
               ))}
             </TextField>
-            {canManage && (
-              <Button variant="contained" startIcon={<UploadFileOutlinedIcon />} onClick={() => setImporting(true)}>
-                {t('attendance.import')}
+            {editable && (
+              <>
+                <Button variant="outlined" startIcon={<UploadFileOutlinedIcon />} onClick={() => setImporting(true)}>
+                  {t('attendance.import')}
+                </Button>
+                <Button variant="contained" startIcon={<LockOutlinedIcon />} disabled={!month?.hasData} onClick={() => setClosing('submit')}>
+                  {t('attendance.close.submit')}
+                </Button>
+              </>
+            )}
+            {month?.status === 'Closed' && can('attendance.month.close', true) && (
+              <Button variant="outlined" startIcon={<LockOpenOutlinedIcon />} onClick={() => setClosing('reopen')}>
+                {t('attendance.close.reopen')}
               </Button>
             )}
           </>
         }
       />
       <ErrorMessage messageKey={error} />
+      {month?.approval && (
+        <ApprovalBar
+          status={month.approval}
+          detail={approval.detail}
+          onChanged={() => {
+            setVersion((v) => v + 1);
+            void approval.reload();
+          }}
+        />
+      )}
+      {month && !open && (
+        <Alert severity="info" icon={<LockOutlinedIcon />} sx={{ mb: 1.5 }}>
+          {month.status === 'Closed' ? t('attendance.close.closedNote', { date: date(month.closedAt) }) : t('attendance.close.inApprovalNote', { by: month.submittedByName ?? '', date: date(month.submittedAt) })}
+        </Alert>
+      )}
+      {month && open && month.lastComment && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('attendance.close.comment', { comment: month.lastComment })}
+        </Alert>
+      )}
       {notice && (
         <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice(null)}>
           {notice}
@@ -211,15 +267,17 @@ export function AttendanceMonthPage() {
             <Kpi accent="rose" icon={<EventBusyOutlinedIcon />} label={t('attendance.kpi.absence')} value={k.absenceDays} unit={t('attendance.kpi.days')} parts={[[t('attendance.kpi.deduction'), k.deductionDays], [t('attendance.kpi.excused'), k.excusedDays]]} />
             <Kpi accent="amber" icon={<TimerOutlinedIcon />} label={t('attendance.kpi.late')} value={k.lateMinutes} unit={t('attendance.kpi.minutes')} parts={[[t('attendance.kpi.lateEmployees'), k.lateEmployees], [t('attendance.kpi.early'), k.earlyMinutes]]} />
             <Kpi accent="blue" icon={<PriorityHighIcon />} label={t('attendance.kpi.exceptions')} value={k.openExceptions} unit={t('attendance.kpi.exceptionsUnit')} parts={[[t('attendance.kpi.missing'), k.missingPunches], [t('attendance.kpi.unexcused'), k.openExceptions - k.missingPunches]]} />
+            <Kpi accent="green" icon={<MoreTimeOutlinedIcon />} label={t('attendance.kpi.overtime')} value={Math.round(k.overtimeMinutes / 6) / 10} unit={t('attendance.kpi.hours')} parts={[[t('attendance.kpi.overtimePending'), k.overtimePending], [t('attendance.kpi.overtimeRequests'), overtime?.length ?? 0]]} />
           </>
         ) : (
-          Array.from({ length: 4 }, (_, i) => <Skeleton key={i} variant="rounded" height={118} />)
+          Array.from({ length: 5 }, (_, i) => <Skeleton key={i} variant="rounded" height={118} />)
         )}
       </Box>
       <Box sx={{ ...(hrCard as object), px: 2, pb: 2 }}>
         <Tabs value={view} onChange={(_, v: View) => setView(v)} variant="scrollable" sx={{ borderBottom: `1px solid ${hr.border}`, mb: 1.5 }}>
           <Tab value="employees" label={t('attendance.tabs.employees', { count: k?.employees ?? 0 })} />
           <Tab value="exceptions" label={t('attendance.tabs.exceptions', { count: exceptions?.length ?? 0 })} />
+          <Tab value="overtime" label={t('attendance.tabs.overtime', { count: overtime?.length ?? 0 })} />
           <Tab value="imports" label={t('attendance.tabs.imports')} />
         </Tabs>
         {view === 'employees' && (
@@ -257,6 +315,7 @@ export function AttendanceMonthPage() {
                         <TableCell colSpan={4} align="center">{t('attendance.cols.days')}</TableCell>
                         <TableCell colSpan={3} align="center">{t('attendance.cols.minutes')}</TableCell>
                         <TableCell rowSpan={2}>{sortable('deduction', t('attendance.cols.deduction'))}</TableCell>
+                        <TableCell rowSpan={2}>{sortable('overtime', t('attendance.cols.overtime'))}</TableCell>
                         <TableCell rowSpan={2}>{t('attendance.cols.state')}</TableCell>
                         <TableCell rowSpan={2} />
                       </TableRow>
@@ -294,6 +353,7 @@ export function AttendanceMonthPage() {
                           <TableCell>{r.earlyMinutes ? <bdi>{hm(r.earlyMinutes)}</bdi> : 0}</TableCell>
                           <TableCell>{r.missingPunches}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{r.deduction || '—'}</TableCell>
+                          <TableCell>{r.overtimeMinutes ? <bdi>{hm(r.overtimeMinutes)}</bdi> : '—'}</TableCell>
                           <TableCell>
                             <HrStatusBadge label={t(`attendance.state.${r.state}`)} {...stateLook[r.state]} />
                           </TableCell>
@@ -314,6 +374,7 @@ export function AttendanceMonthPage() {
                         <TableCell><bdi>{hm(rows.totals.earlyMinutes)}</bdi></TableCell>
                         <TableCell>{rows.totals.missingPunches}</TableCell>
                         <TableCell>{rows.totals.deduction}</TableCell>
+                        <TableCell><bdi>{hm(rows.totals.overtimeMinutes)}</bdi></TableCell>
                         <TableCell colSpan={2} />
                       </TableRow>
                     </TableBody>
@@ -381,6 +442,18 @@ export function AttendanceMonthPage() {
               </Table>
             </TableContainer>
           ))}
+        {view === 'overtime' && (
+          <>
+            {editable && (
+              <Box sx={{ mb: 1.5 }}>
+                <Button variant="outlined" startIcon={<MoreTimeOutlinedIcon />} onClick={() => setAsking(true)}>
+                  {t('overtime.new')}
+                </Button>
+              </Box>
+            )}
+            <OvertimeList list={overtime} onOpen={(id) => navigate(`/hr/overtime/${id}`)} />
+          </>
+        )}
         {view === 'imports' &&
           (!imports ? (
             <LinearProgress />
@@ -434,12 +507,25 @@ export function AttendanceMonthPage() {
           }}
         />
       )}
-      {open && (
+      {asking && <OvertimeDialog onClose={() => setAsking(false)} onSent={(id) => navigate(`/hr/overtime/${id}`)} />}
+      {closing && month && (
+        <CloseDialog
+          kind={closing}
+          period={period}
+          month={month}
+          onClose={() => setClosing(null)}
+          onDone={() => {
+            setClosing(null);
+            setVersion((v) => v + 1);
+          }}
+        />
+      )}
+      {drawer && (
         <DaysDrawer
           period={period}
-          employeeId={open.id}
-          initialDate={open.date}
-          canManage={canManage}
+          employeeId={drawer.id}
+          initialDate={drawer.date}
+          canManage={editable}
           onClose={() => setOpen(null)}
           onChanged={() => setVersion((v) => v + 1)}
         />
@@ -483,5 +569,74 @@ function Filter({ label, all, value, onChange, options }: { label: string; all: 
         </MenuItem>
       ))}
     </TextField>
+  );
+}
+
+/** Sending the month for closing (its figures frozen), or reopening a closed month with the reason. */
+function CloseDialog({ kind, period, month, onClose, onDone }: { kind: 'submit' | 'reopen'; period: string; month: AttendanceMonth; onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation();
+  const monthName = useMonthName();
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const k = month.kpis;
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (kind === 'submit') await attendanceApi.submitMonth(period);
+      else await attendanceApi.reopenMonth(period, reason.trim());
+      onDone();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth>
+      <HrScope>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t(kind === 'submit' ? 'attendance.close.submitTitle' : 'attendance.close.reopenTitle', { month: monthName(period) })}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5 }}>
+          {kind === 'submit' ? (
+            <>
+              <Typography sx={{ fontSize: 13.5 }}>{t('attendance.close.submitHint')}</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1 }}>
+                {(
+                  [
+                    [t('attendance.kpi.employees'), k.employees],
+                    [t('attendance.kpi.deduction'), k.deductionDays],
+                    [t('attendance.kpi.late'), hm(k.lateMinutes)],
+                    [t('attendance.kpi.overtime'), hm(k.overtimeMinutes)],
+                  ] as const
+                ).map(([l, v]) => (
+                  <Box key={l} sx={{ bgcolor: hr.muted, borderRadius: '10px', p: 1.25 }}>
+                    <Typography sx={{ fontSize: 11.5, color: hr.textMuted }}>{l}</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: 17, fontVariantNumeric: 'tabular-nums' }}>
+                      <bdi>{v}</bdi>
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              {k.openExceptions > 0 && <Alert severity="warning">{t('attendance.close.openExceptions', { count: k.openExceptions })}</Alert>}
+              {k.overtimePending > 0 && <Alert severity="warning">{t('attendance.close.pendingOvertime', { count: k.overtimePending })}</Alert>}
+            </>
+          ) : (
+            <>
+              <Typography sx={{ fontSize: 13.5 }}>{t('attendance.close.reopenHint')}</Typography>
+              <TextField size="small" required multiline minRows={2} label={t('attendance.close.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 400 } }} />
+            </>
+          )}
+          <ErrorMessage messageKey={error} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+          <Button variant="contained" disabled={busy || (kind === 'reopen' && !reason.trim())} onClick={() => void run()}>
+            {t(kind === 'submit' ? 'attendance.close.submit' : 'attendance.close.reopen')}
+          </Button>
+          <Button disabled={busy} onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+        </DialogActions>
+      </HrScope>
+    </Dialog>
   );
 }

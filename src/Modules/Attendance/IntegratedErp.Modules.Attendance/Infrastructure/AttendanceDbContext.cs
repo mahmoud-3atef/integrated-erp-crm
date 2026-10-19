@@ -28,6 +28,67 @@ internal sealed class AttendanceDbContext(DbContextOptions<AttendanceDbContext> 
     public DbSet<AttendanceDay> Days => Set<AttendanceDay>();
 
     public DbSet<AttendanceImport> Imports => Set<AttendanceImport>();
+
+    public DbSet<AttendanceMonth> Months => Set<AttendanceMonth>();
+
+    public DbSet<AttendanceMonthLine> MonthLines => Set<AttendanceMonthLine>();
+
+    public DbSet<OvertimeRequest> Overtime => Set<OvertimeRequest>();
+}
+
+internal sealed class AttendanceMonthConfiguration : IEntityTypeConfiguration<AttendanceMonth>
+{
+    public void Configure(EntityTypeBuilder<AttendanceMonth> builder)
+    {
+        builder.ToTable("month");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id).ValueGeneratedNever();
+        builder.Property(m => m.Period).HasMaxLength(7).IsRequired();
+        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.SubmittedByName).HasMaxLength(200);
+        builder.Property(m => m.LastComment).HasMaxLength(2000);
+        builder.HasMany(m => m.Lines).WithOne().HasForeignKey(l => l.MonthId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(m => m.Lines).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasIndex(m => new { m.TenantId, m.Period }).IsUnique();
+    }
+}
+
+internal sealed class AttendanceMonthLineConfiguration : IEntityTypeConfiguration<AttendanceMonthLine>
+{
+    public void Configure(EntityTypeBuilder<AttendanceMonthLine> builder)
+    {
+        builder.ToTable("month_line");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Id).ValueGeneratedNever();
+        builder.Property(l => l.EmployeeNo).HasMaxLength(50).IsRequired();
+        builder.Property(l => l.NameAr).HasMaxLength(300);
+        builder.Property(l => l.NameEn).HasMaxLength(300).IsRequired();
+        builder.Property(l => l.DepartmentAr).HasMaxLength(150);
+        builder.Property(l => l.DepartmentEn).HasMaxLength(150);
+        builder.Property(l => l.ShiftAr).HasMaxLength(100);
+        builder.Property(l => l.ShiftEn).HasMaxLength(100);
+        builder.Property(l => l.DeductionDays).HasPrecision(7, 2);
+        builder.Property(l => l.State).HasMaxLength(20).IsRequired();
+        builder.HasIndex(l => new { l.TenantId, l.MonthId, l.EmployeeId }).IsUnique();
+    }
+}
+
+internal sealed class OvertimeRequestConfiguration : IEntityTypeConfiguration<OvertimeRequest>
+{
+    public void Configure(EntityTypeBuilder<OvertimeRequest> builder)
+    {
+        builder.ToTable("overtime");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Id).ValueGeneratedNever();
+        builder.Property(o => o.RequestNo).HasMaxLength(40).IsRequired();
+        builder.Property(o => o.EmployeeName).HasMaxLength(300).IsRequired();
+        builder.Property(o => o.Reason).HasMaxLength(500).IsRequired();
+        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(o => o.LastComment).HasMaxLength(2000);
+        builder.HasIndex(o => new { o.TenantId, o.RequestNo }).IsUnique();
+        builder.HasIndex(o => new { o.TenantId, o.EmployeeId, o.Date });
+    }
 }
 
 internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
@@ -40,6 +101,7 @@ internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
         builder.Property(s => s.NameAr).HasMaxLength(100).IsRequired();
         builder.Property(s => s.NameEn).HasMaxLength(100).IsRequired();
         builder.Property(s => s.LateFrom).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.MinutesSource).HasConversion<string>().HasMaxLength(20);
     }
 }
 

@@ -2,6 +2,7 @@ using IntegratedErp.Modules.Attendance.Domain;
 using IntegratedErp.Modules.Attendance.Infrastructure;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Staff.Contracts;
+using IntegratedErp.Modules.Workflow.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Attendance.Application;
@@ -22,13 +23,22 @@ public sealed record MonthKpis(
     int LateEmployees,
     int EarlyMinutes,
     int MissingPunches,
-    int OpenExceptions);
+    int OpenExceptions,
+    int OvertimeMinutes,
+    int OvertimePending);
 
 public sealed record MonthDto(
     string Period,
     DateOnly From,
     DateOnly To,
     int CycleStartDay,
+    Guid? MonthId,
+    string Status,
+    string? SubmittedByName,
+    DateTimeOffset? SubmittedAt,
+    DateTimeOffset? ClosedAt,
+    string? LastComment,
+    ApprovalStatusInfo? Approval,
     bool HasData,
     ImportInfo? LastImport,
     MonthKpis Kpis,
@@ -53,9 +63,10 @@ public sealed record MonthRowDto(
     int EarlyMinutes,
     int MissingPunches,
     decimal Deduction,
+    int OvertimeMinutes,
     string State);
 
-public sealed record MonthTotals(int Employees, int WorkDays, int Present, int Absent, int Leave, int LateMinutes, int EarlyMinutes, int MissingPunches, decimal Deduction);
+public sealed record MonthTotals(int Employees, int WorkDays, int Present, int Absent, int Leave, int LateMinutes, int EarlyMinutes, int MissingPunches, decimal Deduction, int OvertimeMinutes);
 
 public sealed record MonthPageDto(IReadOnlyList<MonthRowDto> Rows, int Total, MonthTotals Totals);
 
@@ -106,10 +117,26 @@ public sealed record EmployeeMonthDto(
     MonthRowDto Summary,
     IReadOnlyList<DayDto> Days);
 
+public sealed record OvertimeDto(
+    Guid Id,
+    string RequestNo,
+    Guid EmployeeId,
+    string EmployeeName,
+    DateOnly Date,
+    int Minutes,
+    string Reason,
+    string Status,
+    bool AwaitingApproval,
+    string CreatedByName,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? DecidedAt,
+    string? LastComment,
+    ApprovalStatusInfo? Approval);
+
 public sealed record ExceptionDto(Guid EmployeeId, string EmployeeNo, string? NameAr, string NameEn, string? DepartmentAr, string? DepartmentEn, DateOnly Date, string Status, TimeOnly? In, TimeOnly? Out, string? DeviceStatus);
 
 /// <summary>The attendance month (per commercial registration or all), its employees, an employee's days, and the exceptions.</summary>
-internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup)
+internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals)
 {
     public async Task<(DateOnly From, DateOnly To)?> PeriodAsync(string period, CancellationToken cancellationToken)
     {
@@ -166,10 +193,17 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             .Select(i => new ImportInfo(i.Id, i.FileName, i.From, i.To, i.Rows, i.Accepted, i.Rejected, i.Employees, i.CreatedByName, i.CreatedAt))
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         var shifts = await db.Shifts.AsNoTracking().OrderByDescending(s => s.IsDefault).ThenBy(s => s.NameAr).Select(s => new NamedRef(s.Id, s.NameAr, s.NameEn)).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var record = await db.Months.AsNoTracking().FirstOrDefaultAsync(m => m.Period == period, cancellationToken).ConfigureAwait(false);
+        var approval = record is null ? null : await approvals.StatusAsync(MonthAdapter.ScreenCode, record.Id, cancellationToken).ConfigureAwait(false);
+        var ids = rows.Select(r => r.Member.Id).ToHashSet();
+        var overtime = book.Overtime.Where(o => ids.Contains(o.Key)).Sum(o => o.Value);
+        var pending = await db.Overtime.AsNoTracking().CountAsync(o => o.Status == OvertimeStatus.InApproval && o.Date >= p.From && o.Date <= p.To, cancellationToken).ConfigureAwait(false);
         return new MonthDto(
-            period, p.From, p.To, setting.CycleStartDay, last is not null,
+            period, p.From, p.To, setting.CycleStartDay,
+            record?.Id, (record?.Status ?? MonthStatus.Open).ToString(), record?.SubmittedByName, record?.SubmittedAt, record?.ClosedAt, record?.LastComment, approval,
+            last is not null,
             last,
-            new MonthKpis(rows.Count, full, none, allLeave, absence, deduction, excused, late, lateEmployees, early, missing, open),
+            new MonthKpis(rows.Count, full, none, allLeave, absence, deduction, excused, late, lateEmployees, early, missing, open, overtime, pending),
             shifts,
             departments.Select(d => new NamedRef(d.Id, d.NameAr, d.NameEn)).ToList(),
             entities.Select(e => new NamedRef(e.Id, e.NameAr, e.NameEn)).ToList());
@@ -184,7 +218,11 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
         }
 
         var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken).ConfigureAwait(false);
-        var rows = Rows(book, q.LegalEntityId).Select(x => Summary(book, x.Member, x.Days)).ToList();
+        var record = await db.Months.AsNoTracking().Include(m => m.Lines).FirstOrDefaultAsync(m => m.Period == period, cancellationToken).ConfigureAwait(false);
+        var rows = record is { Status: not MonthStatus.Open }
+            ? record.Lines.Where(l => q.LegalEntityId is null || l.LegalEntityId == q.LegalEntityId)
+                .Select(l => new MonthRowDto(l.EmployeeId, l.EmployeeNo, l.NameAr, l.NameEn, l.DepartmentAr, l.DepartmentEn, l.ShiftAr, l.ShiftEn, l.WorkDays, l.Present, l.Absent, l.Leave, l.LateMinutes, l.EarlyMinutes, l.MissingPunches, l.DeductionDays, l.OvertimeMinutes, l.State)).ToList()
+            : Rows(book, q.LegalEntityId).Select(x => Summary(book, x.Member, x.Days)).ToList();
         IEnumerable<MonthRowDto> shown = rows;
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -218,12 +256,13 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             "missing" => r => r.MissingPunches,
             "deduction" => r => r.Deduction,
             "present" => r => r.Present,
+            "overtime" => r => r.OvertimeMinutes,
             _ => r => r.NameAr ?? r.NameEn,
         };
         var list = (q.Desc ? shown.OrderByDescending(key) : shown.OrderBy(key)).ToList();
         var totals = new MonthTotals(
             list.Count, list.Sum(r => r.WorkDays), list.Sum(r => r.Present), list.Sum(r => r.Absent), list.Sum(r => r.Leave),
-            list.Sum(r => r.LateMinutes), list.Sum(r => r.EarlyMinutes), list.Sum(r => r.MissingPunches), list.Sum(r => r.Deduction));
+            list.Sum(r => r.LateMinutes), list.Sum(r => r.EarlyMinutes), list.Sum(r => r.MissingPunches), list.Sum(r => r.Deduction), list.Sum(r => r.OvertimeMinutes));
         var size = Math.Clamp(q.PageSize, 10, 200);
         var page = Math.Max(1, q.Page);
         return new MonthPageDto(list.Skip((page - 1) * size).Take(size).ToList(), list.Count, totals);
@@ -285,16 +324,42 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
 
     internal sealed record CalculatedDay(DateOnly Date, AttendanceDay? Stored, DayResult Result);
 
+    public async Task<IReadOnlyList<OvertimeDto>?> OvertimeAsync(string period, CancellationToken cancellationToken)
+    {
+        if (await PeriodAsync(period, cancellationToken).ConfigureAwait(false) is not { } p)
+        {
+            return null;
+        }
+
+        return await db.Overtime.AsNoTracking().Where(o => o.Date >= p.From && o.Date <= p.To).OrderByDescending(o => o.CreatedAt).Take(1000)
+            .Select(o => new OvertimeDto(o.Id, o.RequestNo, o.EmployeeId, o.EmployeeName, o.Date, o.Minutes, o.Reason, o.Status.ToString(), o.AwaitingApproval, o.CreatedByName, o.CreatedAt, o.DecidedAt, o.LastComment, null))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<OvertimeDto?> OvertimeRequestAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (await db.Overtime.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false) is not { } o)
+        {
+            return null;
+        }
+
+        var approval = await approvals.StatusAsync(OvertimeAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
+        return new OvertimeDto(o.Id, o.RequestNo, o.EmployeeId, o.EmployeeName, o.Date, o.Minutes, o.Reason, o.Status.ToString(), o.AwaitingApproval, o.CreatedByName, o.CreatedAt, o.DecidedAt, o.LastComment, approval);
+    }
+
+    public async Task<string?> PeriodOfAsync(Guid monthId, CancellationToken cancellationToken) =>
+        await db.Months.AsNoTracking().Where(m => m.Id == monthId).Select(m => m.Period).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
     private static List<CalculatedDay> Days(AttendanceBook book, StaffMember m) =>
         book.Dates().Select(d => new CalculatedDay(d, book.Stored(m.Id, d), book.Calculate(m, d))).ToList();
 
-    private static IEnumerable<(StaffMember Member, List<CalculatedDay> Days)> Rows(AttendanceBook book, Guid? legalEntityId) =>
+    internal static IEnumerable<(StaffMember Member, List<CalculatedDay> Days)> Rows(AttendanceBook book, Guid? legalEntityId) =>
         book.Members
             .Where(m => (legalEntityId is null || m.LegalEntityId == legalEntityId) && book.EmployedIn(m))
             .Select(m => (m, Days(book, m)))
             .Where(x => x.Item2.Any(d => d.Result.Status != DayStatus.NoData));
 
-    private static MonthRowDto Summary(AttendanceBook book, StaffMember m, List<CalculatedDay> days)
+    internal static MonthRowDto Summary(AttendanceBook book, StaffMember m, List<CalculatedDay> days)
     {
         var working = days.Where(d => d.Result.IsWorkingDay).ToList();
         var shift = book.ShiftFor(m, book.To);
@@ -317,6 +382,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             working.Sum(d => d.Result.EarlyMinutes),
             missing,
             working.Sum(d => d.Result.Deduction),
+            book.Overtime.GetValueOrDefault(m.Id),
             state);
     }
 

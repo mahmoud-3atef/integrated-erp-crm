@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Attendance.Application;
 
-/// <summary>A row the import refuses or warns about: unknown_employee, not_employed, duplicate, bad_time.</summary>
+/// <summary>A row the import refuses or warns about: unknown_employee, not_employed, month_closed, duplicate, bad_time.</summary>
 public sealed record ImportProblem(int Row, string Key, string? Name, DateOnly Date, TimeOnly? In, TimeOnly? Out, string Code, bool Rejected);
 
 /// <summary>An employee number in the file that matches no one, with how many rows carry it.</summary>
@@ -130,6 +130,7 @@ internal sealed class AttendanceImporter(AttendanceDbContext db, IStaffDirectory
             }
         }
 
+        var locked = await MonthLock.LockedRangesAsync(db, file.Rows.Min(r => r.Date), file.Rows.Max(r => r.Date), cancellationToken).ConfigureAwait(false);
         var problems = new List<ImportProblem>();
         var accepted = new List<(FileRow, Guid)>();
         var seen = new HashSet<(Guid, DateOnly)>();
@@ -153,6 +154,12 @@ internal sealed class AttendanceImporter(AttendanceDbContext db, IStaffDirectory
             if (!AttendanceBook.Employed(m, row.Date))
             {
                 problems.Add(new ImportProblem(row.RowNo, row.Key, row.Name ?? m.NameAr, row.Date, row.In, row.Out, "not_employed", true));
+                continue;
+            }
+
+            if (locked.Any(l => l.From <= row.Date && row.Date <= l.To))
+            {
+                problems.Add(new ImportProblem(row.RowNo, row.Key, row.Name ?? m.NameAr, row.Date, row.In, row.Out, "month_closed", true));
                 continue;
             }
 

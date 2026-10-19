@@ -33,7 +33,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../api/auth';
-import { attendanceApi, hhmm, matchBys, type AttendanceSetupData, type Holiday, type HolidayKind, type MatchBy, type Shift, type ShiftInput } from '../../api/attendance';
+import { attendanceApi, hhmm, matchBys, minutesSources, type AttendanceSetupData, type Holiday, type HolidayKind, type MatchBy, type MinutesSource, type Shift, type ShiftInput } from '../../api/attendance';
 import { staffApi, type Department } from '../../api/staff';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
@@ -130,7 +130,9 @@ export function ShiftsPage() {
                   </Box>
                   {s.ramadanStartsAt ? <bdi dir="ltr">{`${hhmm(s.ramadanStartsAt)} – ${hhmm(s.ramadanEndsAt)}`}</bdi> : t('shifts.noRamadan')}
                 </Box>
-                <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{t(`shifts.lateFrom.${s.lateFrom}`)}</Typography>
+                <Typography sx={{ fontSize: 12, color: hr.textMuted }}>
+                  {t(`shifts.lateFrom.${s.lateFrom}`)} · {t(`shifts.source.${s.minutesSource}`)}
+                </Typography>
                 <Box sx={{ borderTop: `1px dashed ${hr.border}`, pt: 1 }}>
                   <Stack direction="row" sx={{ alignItems: 'center', mb: 0.5 }}>
                     <Typography sx={{ fontSize: 12.5, fontWeight: 600, flex: 1 }}>
@@ -313,7 +315,7 @@ function SettingsCard({ data, canSet, onSaved }: { data: AttendanceSetupData; ca
   );
 }
 
-const blank: ShiftInput = { nameAr: '', nameEn: '', startsAt: '09:00', endsAt: '17:00', breakMinutes: 0, graceMinutes: 15, lateFrom: 'GraceEnd', restDays: [5, 6], ramadanStartsAt: null, ramadanEndsAt: null, isActive: true, isDefault: false };
+const blank: ShiftInput = { nameAr: '', nameEn: '', startsAt: '09:00', endsAt: '17:00', breakMinutes: 0, graceMinutes: 15, lateFrom: 'GraceEnd', minutesSource: 'Company', restDays: [5, 6], ramadanStartsAt: null, ramadanEndsAt: null, isActive: true, isDefault: false };
 
 function ShiftDialog({ shift, onClose, onSaved, onDelete }: { shift: Shift | null; onClose: () => void; onSaved: () => void; onDelete?: () => void }) {
   const { t } = useTranslation();
@@ -359,6 +361,13 @@ function ShiftDialog({ shift, onClose, onSaved, onDelete }: { shift: Shift | nul
             {(['GraceEnd', 'ShiftStart'] as const).map((k) => (
               <MenuItem key={k} value={k}>
                 {t(`shifts.lateFrom.${k}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField select size="small" label={t('shifts.form.minutesSource')} value={v.minutesSource} onChange={(e) => set('minutesSource', e.target.value as MinutesSource)} sx={{ gridColumn: '1 / -1' }} helperText={t('shifts.form.minutesSourceHint')}>
+            {minutesSources.map((k) => (
+              <MenuItem key={k} value={k}>
+                {t(`shifts.sourceOption.${k}`)}
               </MenuItem>
             ))}
           </TextField>

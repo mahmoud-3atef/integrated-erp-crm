@@ -31,6 +31,30 @@ internal static class AttendanceEndpoints
                 await queries.EmployeeAsync(period, id, ct).ConfigureAwait(false) is { } days ? Results.Ok(days) : Results.NotFound())
             .RequirePermission(AttendancePermissions.View, companyWide: true);
 
+        group.MapGet("/months/by-id/{id:guid}", async (Guid id, AttendanceQueries queries, CancellationToken ct) =>
+                await queries.PeriodOfAsync(id, ct).ConfigureAwait(false) is { } period ? Results.Ok(new { period }) : Results.NotFound())
+            .RequirePermission(AttendancePermissions.View, companyWide: true);
+
+        group.MapPost("/months/{period}/submit", async (string period, MonthClosing closing, CancellationToken ct) => Saved(await closing.SubmitAsync(period, ct).ConfigureAwait(false)))
+            .RequirePermission(AttendancePermissions.Manage, companyWide: true);
+
+        group.MapPost("/months/{period}/reopen", async (string period, ReopenInput input, MonthClosing closing, CancellationToken ct) => ToHttp(await closing.ReopenAsync(period, input, ct).ConfigureAwait(false)))
+            .RequirePermission(AttendancePermissions.MonthClose, companyWide: true);
+
+        group.MapGet("/months/{period}/overtime", async (string period, AttendanceQueries queries, CancellationToken ct) =>
+                await queries.OvertimeAsync(period, ct).ConfigureAwait(false) is { } list ? Results.Ok(list) : Results.NotFound())
+            .RequirePermission(AttendancePermissions.View, companyWide: true);
+
+        group.MapGet("/overtime/{id:guid}", async (Guid id, AttendanceQueries queries, CancellationToken ct) =>
+                await queries.OvertimeRequestAsync(id, ct).ConfigureAwait(false) is { } request ? Results.Ok(request) : Results.NotFound())
+            .RequirePermission(AttendancePermissions.View, companyWide: true);
+
+        group.MapPost("/overtime", async (OvertimeInput input, OvertimeService service, CancellationToken ct) => Saved(await service.RequestAsync(input, ct).ConfigureAwait(false)))
+            .RequirePermission(AttendancePermissions.Manage, companyWide: true);
+
+        group.MapPost("/overtime/{id:guid}/resubmit", async (Guid id, OvertimeInput input, OvertimeService service, CancellationToken ct) => Saved(await service.ResubmitAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(AttendancePermissions.Manage, companyWide: true);
+
         group.MapPut("/employees/{id:guid}/days/{date}", async (Guid id, DateOnly date, CorrectionInput input, AttendanceService service, CancellationToken ct) =>
                 ToHttp(await service.CorrectAsync(id, date, input, ct).ConfigureAwait(false)))
             .RequirePermission(AttendancePermissions.Manage, companyWide: true);

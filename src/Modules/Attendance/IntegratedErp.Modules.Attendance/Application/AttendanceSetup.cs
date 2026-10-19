@@ -19,7 +19,8 @@ public sealed record ShiftInput(
     TimeOnly? RamadanStartsAt,
     TimeOnly? RamadanEndsAt,
     bool IsActive,
-    bool IsDefault);
+    bool IsDefault,
+    string? MinutesSource = null);
 
 public sealed record ShiftDto(
     Guid Id,
@@ -35,6 +36,7 @@ public sealed record ShiftDto(
     TimeOnly? RamadanEndsAt,
     bool IsActive,
     bool IsDefault,
+    string MinutesSource,
     int Employees,
     IReadOnlyList<AssignmentDto> Assignments);
 
@@ -98,7 +100,7 @@ internal sealed class AttendanceSetup(AttendanceDbContext db, IStaffDirectory st
             new SettingsDto(setting.MatchBy.ToString(), setting.CycleStartDay, setting.UseDeviceMinutes),
             shifts.Select(s => new ShiftDto(
                 s.Id, s.NameAr, s.NameEn, s.StartsAt, s.EndsAt, s.BreakMinutes, s.GraceMinutes, s.LateFrom.ToString(),
-                Enumerable.Range(0, 7).Where(d => s.IsRestDay((DayOfWeek)d)).ToList(), s.RamadanStartsAt, s.RamadanEndsAt, s.IsActive, s.IsDefault,
+                Enumerable.Range(0, 7).Where(d => s.IsRestDay((DayOfWeek)d)).ToList(), s.RamadanStartsAt, s.RamadanEndsAt, s.IsActive, s.IsDefault, s.MinutesSource.ToString(),
                 counts.GetValueOrDefault(s.Id),
                 assignments.Where(a => a.ShiftId == s.Id).Select(a =>
                 {
@@ -135,7 +137,8 @@ internal sealed class AttendanceSetup(AttendanceDbContext db, IStaffDirectory st
             input.NameAr, input.NameEn, input.StartsAt, input.EndsAt, input.BreakMinutes, input.GraceMinutes,
             Enum.TryParse<LateFrom>(input.LateFrom, out var lateFrom) ? lateFrom : LateFrom.GraceEnd,
             Shift.Days([.. (input.RestDays ?? []).Where(d => d is >= 0 and <= 6).Select(d => (DayOfWeek)d)]),
-            input.RamadanStartsAt, input.RamadanEndsAt, input.IsActive || input.IsDefault);
+            input.RamadanStartsAt, input.RamadanEndsAt, input.IsActive || input.IsDefault,
+            Enum.TryParse<MinutesSource>(input.MinutesSource, out var source) ? source : MinutesSource.Company);
         Shift shift;
         if (id is { } existing)
         {

@@ -28,6 +28,11 @@ internal sealed class AttendanceService(AttendanceDbContext db, IStaffDirectory 
             return Result.Failure(AttendanceErrors.Correction);
         }
 
+        if (await MonthLock.LockedAsync(db, date, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(AttendanceErrors.MonthLocked);
+        }
+
         ManualStatus? status = null;
         if (!string.IsNullOrWhiteSpace(input.Status))
         {

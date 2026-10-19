@@ -336,6 +336,193 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                     b.ToTable("import", "attendance");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.AttendanceMonth", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("closed_at");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date")
+                        .HasColumnName("from");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)")
+                        .HasColumnName("period");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<string>("SubmittedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("submitted_by_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date")
+                        .HasColumnName("to");
+
+                    b.HasKey("Id")
+                        .HasName("pk_month");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_month_tenant_id");
+
+                    b.HasIndex("TenantId", "Period")
+                        .IsUnique()
+                        .HasDatabaseName("ix_month_tenant_id_period");
+
+                    b.ToTable("month", "attendance");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.AttendanceMonthLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Absent")
+                        .HasColumnType("int")
+                        .HasColumnName("absent");
+
+                    b.Property<decimal>("DeductionDays")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("deduction_days");
+
+                    b.Property<string>("DepartmentAr")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("department_ar");
+
+                    b.Property<string>("DepartmentEn")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("department_en");
+
+                    b.Property<int>("EarlyMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("early_minutes");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("employee_no");
+
+                    b.Property<int>("Excused")
+                        .HasColumnType("int")
+                        .HasColumnName("excused");
+
+                    b.Property<int>("LateMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("late_minutes");
+
+                    b.Property<int>("Leave")
+                        .HasColumnType("int")
+                        .HasColumnName("leave");
+
+                    b.Property<Guid?>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<int>("MissingPunches")
+                        .HasColumnType("int")
+                        .HasColumnName("missing_punches");
+
+                    b.Property<Guid>("MonthId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("month_id");
+
+                    b.Property<string>("NameAr")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name_en");
+
+                    b.Property<int>("OvertimeMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("overtime_minutes");
+
+                    b.Property<int>("Present")
+                        .HasColumnType("int")
+                        .HasColumnName("present");
+
+                    b.Property<string>("ShiftAr")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("shift_ar");
+
+                    b.Property<string>("ShiftEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("shift_en");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("WorkDays")
+                        .HasColumnType("int")
+                        .HasColumnName("work_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_month_line");
+
+                    b.HasIndex("MonthId")
+                        .HasDatabaseName("ix_month_line_month_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_month_line_tenant_id");
+
+                    b.HasIndex("TenantId", "MonthId", "EmployeeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_month_line_tenant_id_month_id_employee_id");
+
+                    b.ToTable("month_line", "attendance");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.AttendanceSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -465,6 +652,91 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                     b.ToTable("holiday", "attendance");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.OvertimeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("employee_name");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<int>("Minutes")
+                        .HasColumnType("int")
+                        .HasColumnName("minutes");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RequestNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("request_no");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_overtime");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_overtime_tenant_id");
+
+                    b.HasIndex("TenantId", "RequestNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_overtime_tenant_id_request_no");
+
+                    b.HasIndex("TenantId", "EmployeeId", "Date")
+                        .HasDatabaseName("ix_overtime_tenant_id_employee_id_date");
+
+                    b.ToTable("overtime", "attendance");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.Shift", b =>
                 {
                     b.Property<Guid>("Id")
@@ -496,6 +768,12 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("late_from");
+
+                    b.Property<string>("MinutesSource")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("minutes_source");
 
                     b.Property<string>("NameAr")
                         .IsRequired()
@@ -578,6 +856,21 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                         .HasDatabaseName("ix_shift_assignment_tenant_id_shift_id");
 
                     b.ToTable("shift_assignment", "attendance");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.AttendanceMonthLine", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Attendance.Domain.AttendanceMonth", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("MonthId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_month_line_month_month_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Attendance.Domain.AttendanceMonth", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

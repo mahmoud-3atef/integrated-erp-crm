@@ -33,6 +33,7 @@ import { StaffProfilePage } from '../pages/staff/StaffProfilePage';
 import { StaffActionPage, StaffActionsPage } from '../pages/staff/StaffActions';
 import { AttendanceMonthPage } from '../pages/attendance/AttendanceMonthPage';
 import { ShiftsPage } from '../pages/attendance/ShiftsPage';
+import { AttendanceMonthLink, OvertimePage } from '../pages/attendance/Overtime';
 import { BuildingPage } from '../pages/housing/BuildingPage';
 import { HousingPage } from '../pages/housing/HousingPage';
 import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
@@ -127,6 +128,8 @@ export function App() {
                 <Route path="/hr/actions/:id" element={<StaffActionPage />} />
                 <Route path="/hr/attendance" element={<AttendanceMonthPage />} />
                 <Route path="/hr/shifts" element={<ShiftsPage />} />
+                <Route path="/hr/attendance/months/:id" element={<AttendanceMonthLink />} />
+                <Route path="/hr/overtime/:id" element={<OvertimePage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrdersPage key="new" creating />} />

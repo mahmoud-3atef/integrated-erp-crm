@@ -453,7 +453,16 @@
     "validation_attendance_note": "Excusing an absence needs its reason in the note.",
     "validation_attendance_file": "No readable rows in the file: a column of employee numbers and a column of dates are needed.",
     "validation_attendance_mapping": "The column mapping is not valid.",
-    "conflict_attendance_shift_in_use": "The default shift or an assigned one cannot be deleted."
+    "conflict_attendance_shift_in_use": "The default shift or an assigned one cannot be deleted.",
+    "not_found_attendance_month": "The attendance month was not found.",
+    "not_found_attendance_overtime": "The overtime request was not found.",
+    "conflict_attendance_month_not_open": "The month is closing or closed.",
+    "conflict_attendance_month_not_closed": "Only a closed month can be reopened.",
+    "conflict_attendance_month_locked": "The day's month is closing or closed: its days do not change.",
+    "validation_attendance_month_empty": "There is no attendance in this month to close.",
+    "validation_attendance_reason": "Give the reason (500 characters at most).",
+    "validation_attendance_overtime_fields": "Overtime is 15 minutes to 12 hours, with its reason, on a day within the employee's employment.",
+    "conflict_attendance_overtime_not_returned": "Only a returned request can be sent again."
   },
   "menu": {
     "label": "Main menu",
@@ -3266,12 +3275,17 @@
       "exceptions": "Open exceptions",
       "exceptionsUnit": "exceptions",
       "missing": "Missing punch",
-      "unexcused": "Unexcused absence"
+      "unexcused": "Unexcused absence",
+      "overtime": "Approved overtime",
+      "hours": "hours",
+      "overtimePending": "Awaiting approval",
+      "overtimeRequests": "Requests"
     },
     "tabs": {
       "employees": "Employees ({{count}})",
       "exceptions": "Exceptions ({{count}})",
-      "imports": "Imported files"
+      "imports": "Imported files",
+      "overtime": "Overtime ({{count}})"
     },
     "filters": {
       "search": "Search by name or number…",
@@ -3306,7 +3320,8 @@
       "rows": "Rows",
       "accepted": "Accepted",
       "rejected": "Rejected",
-      "by": "By"
+      "by": "By",
+      "overtime": "Overtime"
     },
     "totalAll": "Total of the results ({{count}} employees)",
     "shown": "Showing {{from}} – {{to}} of {{total}} employees · totals from the server for all results",
@@ -3418,7 +3433,8 @@
         "unknown_employee": "Number not linked to an employee",
         "not_employed": "Outside the employee's employment",
         "duplicate": "Repeated in the file: the first row is taken",
-        "bad_time": "Unreadable time: taken as empty"
+        "bad_time": "Unreadable time: taken as empty",
+        "month_closed": "The day's month is closing or closed"
       },
       "unmatched": "Numbers in the file matching no employee ({{count}})",
       "unmatchedHint": "Their rows will not be imported. Add the ID number to the employee's file (or the fingerprint number), then preview again.",
@@ -3430,7 +3446,26 @@
       "back": "Back"
     },
     "prevMonth": "Previous month",
-    "nextMonth": "Next month"
+    "nextMonth": "Next month",
+    "monthStatus": {
+      "Open": "Open",
+      "InApproval": "Closing",
+      "Closed": "Closed"
+    },
+    "close": {
+      "submit": "Send for closing",
+      "reopen": "Reopen the month",
+      "submitTitle": "Send {{month}} attendance for closing",
+      "submitHint": "Each employee's figures are frozen as they are now and the month's days no longer change. Once approved, the month is closed and the staff payroll takes it.",
+      "openExceptions": "The month has {{count}} open exceptions (missing punch or unexcused absence): an unexcused absence is a day deducted. Review them first if needed.",
+      "pendingOvertime": "{{count}} overtime requests are still in approval: only those approved before sending count.",
+      "reopenTitle": "Reopen {{month}} attendance",
+      "reopenHint": "The month is open again for corrections, then sent for closing again. The reason is recorded.",
+      "reason": "Reason",
+      "inApprovalNote": "Sent for closing by {{by}} on {{date}}: the figures are frozen and no day changes until the approval ends.",
+      "closedNote": "Closed since {{date}}: these are its final figures for the staff payroll. Reopen it to change them.",
+      "comment": "Last decision note: {{comment}}"
+    }
   },
   "shifts": {
     "title": "Shifts and calendar",
@@ -3471,7 +3506,9 @@
       "ramadanHint": "Leave both empty if Ramadan hours are the usual ones.",
       "isDefault": "Default shift (for those without one)",
       "isActive": "Active",
-      "overnight": "Ends the next day"
+      "overnight": "Ends the next day",
+      "minutesSource": "This shift's late and early minutes",
+      "minutesSourceHint": "Fingerprint programs that define their own shifts export lateness calculated on them; choose «system shifts» to calculate it from this shift instead."
     },
     "assignForm": {
       "title": "Assign a shift",
@@ -3548,6 +3585,42 @@
     "minutesFromValue": {
       "device": "As the fingerprint system calculated them (when in the file)",
       "shift": "Calculated from the shift"
+    },
+    "source": {
+      "Company": "Late minutes: company setting",
+      "Device": "Late minutes: fingerprint report",
+      "Shift": "Late minutes: system shifts"
+    },
+    "sourceOption": {
+      "Company": "As the attendance settings say",
+      "Device": "From the fingerprint report",
+      "Shift": "From the system shifts"
+    }
+  },
+  "overtime": {
+    "title": "Overtime request",
+    "new": "Request overtime",
+    "employee": "Employee",
+    "date": "Date",
+    "hours": "Hours",
+    "reason": "Reason",
+    "requested": "Requested",
+    "send": "Send for approval",
+    "resubmit": "Change and send again",
+    "hint": "Overtime counts only by an approved request. The payroll pays it at 1.5 times the basic hourly rate.",
+    "factor": "Paid in the payroll at 1.5 times the basic hourly rate.",
+    "none": "No overtime requests this month",
+    "noneHint": "Overtime is requested for an employee and a day, and counts in the month once approved.",
+    "status": {
+      "InApproval": "In approval",
+      "Returned": "Returned",
+      "Rejected": "Rejected",
+      "Approved": "Approved"
+    },
+    "cols": {
+      "no": "Number",
+      "status": "Status",
+      "by": "Requested by"
     }
   }
 }
