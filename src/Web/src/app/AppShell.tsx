@@ -1,3 +1,4 @@
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import CloudSyncOutlinedIcon from '@mui/icons-material/CloudSyncOutlined';
@@ -119,8 +120,12 @@ const menu: MenuSection[] = [
     ],
   },
   {
-    titleKey: 'menu.staffAffairs',
-    items: [{ path: '/workforce/staff', labelKey: 'menu.staff', icon: <BadgeOutlinedIcon />, permission: 'workforce.staff.view', companyWide: true }],
+    titleKey: 'menu.hrSection',
+    items: [
+      { path: '/hr/employees', labelKey: 'menu.hrEmployees', icon: <BadgeOutlinedIcon />, permission: 'staff.view', companyWide: true },
+      { path: '/hr/structure', labelKey: 'menu.hrStructure', icon: <AccountTreeOutlinedIcon />, permission: 'staff.view', companyWide: true },
+      { path: '/hr/catalog', labelKey: 'menu.hrCatalog', icon: <CategoryOutlinedIcon />, permission: 'staff.view', companyWide: true },
+    ],
   },
   {
     titleKey: 'menu.approvals',

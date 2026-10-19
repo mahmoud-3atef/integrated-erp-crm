@@ -1,0 +1,233 @@
+// The company's staff and organisation (src/Modules/Staff/.../Api/StaffEndpoints.cs).
+import { request } from './auth';
+
+export type StaffStatus = 'Active' | 'Probation' | 'Suspended' | 'Left';
+export const staffStatuses: StaffStatus[] = ['Active', 'Probation', 'Suspended', 'Left'];
+export type StaffTab = 'all' | 'active' | 'probation' | 'ending' | 'incomplete' | 'left';
+
+export interface StaffRow {
+  id: string;
+  employeeNo: string;
+  name: string;
+  nameEn: string;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  departmentAr: string | null;
+  departmentEn: string | null;
+  jobTitleAr: string | null;
+  jobTitleEn: string | null;
+  status: StaffStatus;
+  legacyStatusAr: string | null;
+  hireDate: string | null;
+  probationEndsOn: string | null;
+  contractEndsOn: string | null;
+  completeness: number;
+}
+
+export interface StaffPage {
+  items: StaffRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface StaffKpis {
+  employees: number;
+  active: number;
+  probation: number;
+  suspended: number;
+  left: number;
+  probationEndingIn30: number;
+  contractsEndingIn90: number;
+  contractsEndingIn60: number;
+  contractsEndingIn30: number;
+  incomplete: number;
+  vacancies: number;
+  departmentsWithVacancies: number;
+}
+
+export interface NamedRef {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+}
+
+export interface Salary {
+  id: string;
+  effectiveFrom: string;
+  basic: number;
+  housing: number;
+  food: number;
+  transport: number;
+  mobile: number;
+  project: number;
+  other: number;
+  total: number;
+  source: 'OldSystem' | 'Hire' | 'Change';
+  reason: string | null;
+  createdByName: string;
+  createdAt: string;
+}
+
+export type SalaryValues = Pick<Salary, 'basic' | 'housing' | 'food' | 'transport' | 'mobile' | 'project' | 'other'>;
+
+export interface StaffProfile {
+  id: string;
+  employeeNo: string;
+  nameAr: string | null;
+  nameEn: string;
+  idNumber: string | null;
+  nationalityCode: string | null;
+  nationalityAr: string | null;
+  nationalityEn: string | null;
+  birthDate: string | null;
+  mobile: string | null;
+  email: string | null;
+  gosiNo: string | null;
+  status: StaffStatus;
+  legacyStatusAr: string | null;
+  legacyStatusEn: string | null;
+  sponsor: string | null;
+  hireDate: string | null;
+  probationEndsOn: string | null;
+  legalEntity: NamedRef | null;
+  department: NamedRef | null;
+  positionId: string | null;
+  jobTitle: NamedRef | null;
+  grade: string | null;
+  manager: NamedRef | null;
+  contractStartsOn: string | null;
+  contractMonths: number | null;
+  contractEndsOn: string | null;
+  annualLeaveDays: number | null;
+  leaveBalance: number | null;
+  leaveConsumed: number | null;
+  leaveOldConsumed: number | null;
+  leaveRemaining: number | null;
+  salary: Salary | null;
+  salaryChanges: number;
+  completeness: number;
+  missing: string[];
+  createdByName: string;
+  createdAt: string;
+  canEdit: boolean;
+  canSeeSalary: boolean;
+  canChangeSalary: boolean;
+}
+
+export interface StaffEvent {
+  kind: 'Created' | 'Changed' | 'Salary';
+  at: string;
+  by: string;
+  changes: Record<string, { old?: unknown; new?: unknown }> | null;
+  salary: Salary | null;
+}
+
+export interface Position {
+  id: string;
+  departmentId: string;
+  jobTitleId: string;
+  jobTitleAr: string;
+  jobTitleEn: string;
+  gradeId: string | null;
+  grade: string | null;
+  reportsToId: string | null;
+  seats: number;
+  isActive: boolean;
+  occupants: NamedRef[];
+}
+
+export interface Department {
+  id: string;
+  parentId: string | null;
+  nameAr: string;
+  nameEn: string;
+  costCenter: string | null;
+  manager: NamedRef | null;
+  sortOrder: number;
+  isActive: boolean;
+  employees: number;
+  positions: Position[];
+}
+
+export interface Structure {
+  departments: Department[];
+  employees: number;
+  unassigned: number;
+  vacancies: number;
+}
+
+export interface JobTitle {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  occupationCode: string | null;
+  isActive: boolean;
+  positions: number;
+}
+
+export interface Grade {
+  id: string;
+  code: string;
+  nameAr: string;
+  minBasic: number | null;
+  maxBasic: number | null;
+  isActive: boolean;
+  positions: number;
+}
+
+export interface Catalog {
+  jobTitles: JobTitle[];
+  grades: Grade[];
+}
+
+export interface StaffQuery {
+  search?: string;
+  tab?: StaffTab;
+  departmentId?: string;
+  legalEntityId?: string;
+  sort?: string;
+  desc?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+const base = '/api/v1/staff';
+
+const qs = (q: StaffQuery) => {
+  const p = new URLSearchParams();
+  Object.entries(q).forEach(([k, v]) => {
+    if (v !== undefined && v !== '' && v !== false && v !== null) p.set(k, String(v));
+  });
+  return p.toString();
+};
+
+export const staffApi = {
+  employees: (q: StaffQuery) => request<StaffPage>('GET', `${base}/employees?${qs(q)}`),
+  kpis: () => request<StaffKpis>('GET', `${base}/employees/kpis`),
+  pick: (search: string) => request<NamedRef[]>('GET', `${base}/employees/pick?search=${encodeURIComponent(search)}`),
+  profile: (id: string) => request<StaffProfile>('GET', `${base}/employees/${id}`),
+  history: (id: string) => request<StaffEvent[]>('GET', `${base}/employees/${id}/history`),
+  hire: (input: { nameAr: string | null; nameEn: string; hireDate: string; probationDays: number; legalEntityId: string | null; departmentId: string | null; positionId: string | null; salary: SalaryValues }) =>
+    request<{ id: string }>('POST', `${base}/employees`, input),
+  importOld: () => request<{ created: number; updated: number; left: number }>('POST', `${base}/employees/import`),
+  setPersonal: (id: string, input: { nameAr: string | null; nameEn: string; idNumber: string | null; nationalityCode: string | null; birthDate: string | null; mobile: string | null; email: string | null; gosiNo: string | null }) =>
+    request<void>('PUT', `${base}/employees/${id}/personal`, input),
+  setJob: (id: string, input: { legalEntityId: string | null; departmentId: string | null; positionId: string | null; hireDate: string | null; probationEndsOn: string | null; status: StaffStatus }) =>
+    request<void>('PUT', `${base}/employees/${id}/job`, input),
+  setContract: (id: string, input: { startsOn: string | null; months: number | null; endsOn: string | null }) => request<void>('PUT', `${base}/employees/${id}/contract`, input),
+  changeSalary: (id: string, input: { effectiveFrom: string; salary: SalaryValues; reason: string }) => request<void>('POST', `${base}/employees/${id}/salary`, input),
+  nationalities: () => request<{ code: string; nameAr: string; nameEn: string }[]>('GET', `${base}/nationalities`),
+  structure: () => request<Structure>('GET', `${base}/structure`),
+  catalog: () => request<Catalog>('GET', `${base}/catalog`),
+  saveDepartment: (id: string | null, input: { nameAr: string; nameEn: string | null; parentId: string | null; costCenter: string | null; managerId: string | null; sortOrder: number; isActive: boolean }) =>
+    request<{ id: string }>(id ? 'PUT' : 'POST', id ? `${base}/departments/${id}` : `${base}/departments`, input),
+  deleteDepartment: (id: string) => request<void>('DELETE', `${base}/departments/${id}`),
+  savePosition: (id: string | null, input: { departmentId: string; jobTitleId: string; gradeId: string | null; reportsToId: string | null; seats: number; isActive: boolean }) =>
+    request<{ id: string }>(id ? 'PUT' : 'POST', id ? `${base}/positions/${id}` : `${base}/positions`, input),
+  deletePosition: (id: string) => request<void>('DELETE', `${base}/positions/${id}`),
+  saveJobTitle: (id: string | null, input: { nameAr: string; nameEn: string | null; occupationCode: string | null; isActive: boolean }) =>
+    request<{ id: string }>(id ? 'PUT' : 'POST', id ? `${base}/job-titles/${id}` : `${base}/job-titles`, input),
+  saveGrade: (id: string | null, input: { code: string; nameAr: string; minBasic: number | null; maxBasic: number | null; isActive: boolean }) =>
+    request<{ id: string }>(id ? 'PUT' : 'POST', id ? `${base}/grades/${id}` : `${base}/grades`, input),
+};

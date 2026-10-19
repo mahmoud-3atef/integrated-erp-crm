@@ -106,7 +106,13 @@ internal sealed class StaffService(
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        // The old system's numbers share the sequence's pattern: a number already held is skipped.
         var number = await numbering.NextNumberAsync(db, "staff", input.HireDate, cancellationToken).ConfigureAwait(false);
+        for (var tries = 0; tries < 1000 && await db.Employees.AnyAsync(e => e.EmployeeNo == number, cancellationToken).ConfigureAwait(false); tries++)
+        {
+            number = await numbering.NextNumberAsync(db, "staff", input.HireDate, cancellationToken).ConfigureAwait(false);
+        }
+
         var employee = StaffEmployee.Hire(number, input.NameAr, string.IsNullOrWhiteSpace(input.NameEn) ? input.NameAr! : input.NameEn, input.HireDate, input.ProbationDays, user.DisplayName, clock.UtcNow);
         employee.SetJob(input.LegalEntityId, null, input.DepartmentId, input.PositionId, input.HireDate, employee.ProbationEndsOn, employee.Status);
         db.Employees.Add(employee);

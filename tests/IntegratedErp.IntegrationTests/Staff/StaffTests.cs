@@ -39,7 +39,7 @@ public sealed class StaffTests(TestDatabase database)
         }, created: Created2025);
         crm.Add(CrmEntities.Employee, new()
         {
-            ["new_name"] = "SECOND STAFF", ["new_empidnumber"] = "HM00055", ["new_idnumber"] = "2570418464", ["statuscode"] = 100000000, ["new_employeetype"] = 1,
+            ["new_name"] = "SECOND STAFF", ["new_empidnumber"] = "HO00001", ["new_idnumber"] = "2570418464", ["statuscode"] = 100000000, ["new_employeetype"] = 1,
             ["new_totalsalary"] = 4000m, ["new_basicsalary"] = 3000m, ["new_housingallowance"] = 1000m,
         }, created: Created2025);
         crm.Add(CrmEntities.Employee, new() // a worker, not staff
@@ -58,7 +58,7 @@ public sealed class StaffTests(TestDatabase database)
         Assert.Equal(new ImportResult(2, 0, 0), await service.ImportAsync(default));
         Assert.Equal(new ImportResult(0, 2, 0), await service.ImportAsync(default));
         var page = await queries.DirectoryAsync(new StaffQuery(null, null, null, null, null, false, 1, 25), default);
-        Assert.Equal(["HM00054", "HM00055"], page.Items.Select(i => i.EmployeeNo));
+        Assert.Equal(["HM00054", "HO00001"], page.Items.Select(i => i.EmployeeNo));
         var manzoor = page.Items[0].Id;
         var profile = (await queries.ProfileAsync(manzoor, default))!;
         Assert.Equal((2593m, "OldSystem", new DateOnly(2025, 12, 31)), (profile.Salary!.Total, profile.Salary.Source, profile.ContractEndsOn!.Value));
@@ -91,11 +91,11 @@ public sealed class StaffTests(TestDatabase database)
         Assert.Equal((4050m, "Change", 1), (profile.Salary!.Total, profile.Salary.Source, profile.SalaryChanges));
         Assert.Contains((await queries.HistoryAsync(manzoor, default))!, h => h.Kind == "Salary" && h.Salary!.Reason == "زيادة سنوية");
 
-        // A new hire gets the next staff number and starts on probation.
+        // A new hire gets the next staff number not held by an old file, and starts on probation.
         var hired = await service.HireAsync(new HireInput("منى العتيبي", "Muna Alotaibi", new DateOnly(2026, 8, 1), 90, null, finance, null, new SalaryValues(6500, 1625, 0, 650, 200, 0, 525)), default);
         Assert.True(hired.IsSuccess, hired.IsFailure ? hired.Error.Code : null);
         profile = (await queries.ProfileAsync(hired.Value, default))!;
-        Assert.Equal(("HO00001", "Probation", new DateOnly(2026, 10, 30), 9500m), (profile.EmployeeNo, profile.Status, profile.ProbationEndsOn!.Value, profile.Salary!.Total));
+        Assert.Equal(("HO00002", "Probation", new DateOnly(2026, 10, 30), 9500m), (profile.EmployeeNo, profile.Status, profile.ProbationEndsOn!.Value, profile.Salary!.Total));
         var org = await queries.StructureAsync(default);
         Assert.Equal((0, 2), (org.Vacancies, org.Departments.Single().Employees));
     }
