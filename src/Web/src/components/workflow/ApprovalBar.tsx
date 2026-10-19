@@ -5,7 +5,7 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import ReplyIcon from '@mui/icons-material/Reply';
 import { Box, Button, IconButton, ListItemIcon, Menu, MenuItem, Skeleton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { Fragment, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApprovalStatus } from '../../api/workflow';
 import { fit, pathNodes, stageNodes, type BarItem, type StageNode, type StageState } from './approvalModel';
@@ -111,8 +111,17 @@ export function GlobalCompactApprovalBar({
   const canAct = running && !!(actions?.onApprove || actions?.onReject || actions?.more?.length);
   const ended = status.status !== 'InProgress' && status.status !== 'Failed';
   // Fold distant stages by the room the bar really has (beside the menu, «عرض كل المراحل» and the outcome).
-  const space = useWidth(useRef<HTMLElement>(null));
-  const items = fit(nodes, space.width - (phone ? 60 : 190) - (ended ? 130 : 0), (canAct || !!loadingActions) && !phone);
+  const space = useWidth();
+  // The widths are estimates: when the stages still overflow once drawn, fold one more step (again on each resize).
+  const [list, setList] = useState<HTMLElement | null>(null);
+  const [tighten, setTighten] = useState(0);
+  useEffect(() => setTighten(0), [space.width]);
+  const items = fit(nodes, space.width - (phone ? 60 : 190) - (ended ? 130 : 0) - tighten * 120, (canAct || !!loadingActions) && !phone, tighten > 0);
+  useLayoutEffect(() => {
+    if (list && list.scrollWidth > list.clientWidth + 1 && tighten < 8) {
+      setTighten((n) => n + 1);
+    }
+  });
   const endedAt = [...status.history].reverse().find((h) => h.kind === 'Completed')?.at;
 
   return (
@@ -136,6 +145,7 @@ export function GlobalCompactApprovalBar({
     >
       <Box
         component="ol"
+        ref={setList}
         sx={{ listStyle: 'none', m: 0, p: 0, flex: '1 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', overflowX: 'auto', scrollbarWidth: 'thin', py: 0.25 }}
       >
         {items.map((item, index) => (
@@ -244,18 +254,19 @@ export function GlobalCompactApprovalBar({
 const isolate = (text: string) => String.fromCharCode(0x2068) + text + String.fromCharCode(0x2069);
 
 /** The width of an element, kept up to date (1200px until measured). */
-function useWidth(ref: RefObject<HTMLElement | null>) {
+/** The element's width, measured once it is on the page (it may mount after a loading state) and on every resize. */
+function useWidth() {
+  const [element, setElement] = useState<HTMLElement | null>(null);
   const [width, setWidth] = useState(1200);
   useEffect(() => {
-    const element = ref.current;
     if (!element || typeof ResizeObserver === 'undefined') {
       return;
     }
     const observer = new ResizeObserver(([entry]) => setWidth(entry?.contentRect.width ?? 1200));
     observer.observe(element);
     return () => observer.disconnect();
-  }, [ref]);
-  return { ref, width };
+  }, [element]);
+  return { ref: setElement, width };
 }
 
 /** Whether the line after this item leads on from a done stage (green). */

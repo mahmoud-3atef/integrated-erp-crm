@@ -100,17 +100,18 @@ export const pathNodes = (nodes: StageNode[]) => nodes.filter((n) => !n.supersed
 /**
  * Folds the stages far from the focus (the current stage, or the last one when the approval ended) into chips such
  * as «+3 مراحل», keeping <paramref name="before"/> stages before it and <paramref name="after"/> after it. A chip
- * never stands for a single stage: that stage is shown instead.
+ * never stands for a single stage (that stage is shown instead), unless <paramref name="single"/>: the last resort of a
+ * bar too narrow for even that.
  */
-export function collapse(nodes: StageNode[], before: number, after: number): BarItem[] {
+export function collapse(nodes: StageNode[], before: number, after: number, single = false): BarItem[] {
   const current = nodes.findIndex((n) => n.state === 'Current');
   const focus = current >= 0 ? current : nodes.length - 1;
   let from = Math.max(0, focus - before);
   let to = Math.min(nodes.length - 1, focus + after);
-  if (from === 1) {
+  if (from === 1 && !single) {
     from = 0;
   }
-  if (to === nodes.length - 2) {
+  if (to === nodes.length - 2 && !single) {
     to = nodes.length - 1;
   }
 
@@ -137,7 +138,7 @@ export const alreadyProcessed = (errorKey: string) =>
   ['errors.conflict_approval_task_closed', 'errors.conflict_approval_changed', 'errors.conflict_approval_finished', 'errors.not_found_approval_task'].includes(errorKey);
 
 /** Rough widths (px) of the bar's parts, to fold just enough stages to fit one row. */
-const widths = { node: 150, planned: 110, current: 220, chip: 95, connector: 32, actions: 200 };
+const widths = { node: 205, planned: 150, current: 300, chip: 100, connector: 32, actions: 300 };
 
 const estimate = (items: BarItem[], withActions: boolean) =>
   items.reduce((sum, item) => sum + (item.kind === 'more' ? widths.chip : item.node.state === 'Current' ? widths.current : item.node.state === 'Planned' ? widths.planned : widths.node), 0) +
@@ -148,7 +149,7 @@ const estimate = (items: BarItem[], withActions: boolean) =>
  * The widest fold that fits the space the stages have: as many stages around the focus as fit, the farthest folded
  * first (spec 16 §3.1: collapse distant stages first). At least the focus itself is shown.
  */
-export function fit(nodes: StageNode[], space: number, withActions: boolean): BarItem[] {
+export function fit(nodes: StageNode[], space: number, withActions: boolean, single = false): BarItem[] {
   const folds: [number, number][] = [
     [nodes.length, nodes.length],
     [3, 3],
@@ -163,5 +164,5 @@ export function fit(nodes: StageNode[], space: number, withActions: boolean): Ba
       return items;
     }
   }
-  return collapse(nodes, 0, 0);
+  return collapse(nodes, 0, 0, single);
 }
