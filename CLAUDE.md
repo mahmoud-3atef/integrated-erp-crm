@@ -143,6 +143,8 @@ The full specification is [docs/02-target-architecture/16-approval-workflow-ui.m
 3. **Colours:** the blue `#2563EB` primary and the HR tokens apply inside HR screens and the approval bar. The rest of the app keeps its current tones.
 4. **The first payroll run (4.1) is for company-sponsored workers.** The grid shows the project in place of the department and the profession in place of the job, with the worker's status.
 5. **Approval backend:** concurrency and idempotency (record version and idempotency key) and a choice of return target are authorized as backend changes for the approval bar.
+6. **Commercial registrations:** the company has two, and a worker's registration comes from the old system's sponsor («Care-Pro - 05», «Care-pro - 07»), linked once in `payroll.sponsor_registration`. A payroll run covers one registration.
+7. **Unpaid days:** days in housing are not paid. Only the work periods on approved timesheets are paid.
 
 ### Already verified (answers §2 of the spec for this repository)
 

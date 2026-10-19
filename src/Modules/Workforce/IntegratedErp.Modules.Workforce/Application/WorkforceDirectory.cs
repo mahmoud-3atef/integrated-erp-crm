@@ -6,8 +6,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
-internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData reference) : IWorkforceDirectory
+internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData reference) : IWorkforceDirectory, IWorkerSalaries
 {
+    public async Task<IReadOnlyList<WorkerSalary>> SalariesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        var list = ids.Distinct().ToList();
+        var rows = await db.Workers.AsNoTracking().Where(w => list.Contains(w.Id))
+            .Select(w => new { w.Id, w.Sponsor, w.Salary })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return rows.Select(r => new WorkerSalary(
+                r.Id, r.Sponsor, r.Salary.Basic, r.Salary.Housing, r.Salary.Food, r.Salary.Transport,
+                r.Salary.Overtime + r.Salary.Other + r.Salary.Project + r.Salary.Hardship, r.Salary.Total))
+            .ToList();
+    }
+
     public async Task<IReadOnlyDictionary<Guid, int>> WorkingByProjectAsync(CancellationToken cancellationToken) =>
         await db.Workers.AsNoTracking()
             .Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Placement == Placement.Working && w.ProjectCrmId != null)

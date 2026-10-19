@@ -30,6 +30,7 @@ public sealed class BillingModule : IModule
         services.AddModuleDbContext<BillingDbContext>(configuration, BillingDbContext.SchemaName);
         services.AddScoped<TimesheetService>();
         services.AddScoped<TimesheetQueries>();
+        services.AddScoped<ITimesheetPayroll, TimesheetPayroll>();
         services.AddScoped<IApprovalRecordAdapter, TimesheetAdapter>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<InvoiceQueries>();

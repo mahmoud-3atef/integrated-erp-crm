@@ -97,3 +97,16 @@ public interface IWorkforceDirectory
     /// <summary>The cards of the workers with these worker numbers or CRM ids (for documents copied from the old system).</summary>
     Task<IReadOnlyList<WorkerCard>> CardsByCrmAsync(IReadOnlyCollection<string> workerNos, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// A worker's monthly salary as the payroll splits it: basic, housing, food, transport and the rest (overtime
+/// allowance, project, hardship and other allowances), with the total the old system holds.
+/// </summary>
+public sealed record WorkerSalary(Guid WorkerId, string? Sponsor, decimal Basic, decimal Housing, decimal Food, decimal Transport, decimal Other, decimal Total);
+
+/// <summary>The workers' salaries, for the payroll (salaries are read only by the payroll module).</summary>
+public interface IWorkerSalaries
+{
+    /// <summary>The salaries of these workers (unknown ids are left out).</summary>
+    Task<IReadOnlyList<WorkerSalary>> SalariesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+}
