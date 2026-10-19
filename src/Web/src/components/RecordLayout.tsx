@@ -8,6 +8,7 @@ import { tokens } from '../app/theme';
 /** Each kind of record has its own color, so a page says at a glance what it is. */
 export type RecordTone = 'delivery' | 'return' | 'transfer' | 'movement' | 'timesheet' | 'invoice' | 'receipt';
 
+// The billing bands begin behind the number: --band-angle turns them with the reading direction (set in the theme).
 export const recordTones: Record<RecordTone, { band: string; dark: string; main: string; soft: string }> = {
   // Teal: workers going out to a project.
   delivery: { band: 'linear-gradient(120deg, #0b3954 0%, #0d6e8c 60%, #1aa39a 100%)', dark: 'linear-gradient(135deg, #0f4c6e, #13708f)', main: '#0d6e8c', soft: '#e3f3f9' },
@@ -17,12 +18,12 @@ export const recordTones: Record<RecordTone, { band: string; dark: string; main:
   transfer: { band: 'linear-gradient(120deg, #4a0f2a 0%, #8a1d48 55%, #c4466f 100%)', dark: 'linear-gradient(135deg, #6b1538, #a32a5c)', main: '#a32a5c', soft: '#fbeaf1' },
   // Blue: a change in a worker's state.
   movement: { band: 'linear-gradient(120deg, #0f2f5c 0%, #1f5fbf 55%, #3b8be6 100%)', dark: 'linear-gradient(135deg, #163f7a, #2a6fd0)', main: '#2a6fd0', soft: '#e8f0fc' },
-  // Deep teal to navy (billing): the month's attendance.
-  timesheet: { band: 'linear-gradient(135deg, #043b38 0%, #0a3b57 50%, #17a596 100%)', dark: 'linear-gradient(135deg, #064a46, #0a4a6b)', main: '#0e8278', soft: '#e2f4f2' },
-  // Deep teal to navy (billing): the bill.
-  invoice: { band: 'linear-gradient(135deg, #043b38 0%, #0a3b57 50%, #17a596 100%)', dark: 'linear-gradient(135deg, #064a46, #0a4a6b)', main: '#0e8278', soft: '#e2f4f2' },
-  // Deep teal to navy (billing): money in.
-  receipt: { band: 'linear-gradient(135deg, #043b38 0%, #0a3b57 50%, #17a596 100%)', dark: 'linear-gradient(135deg, #064a46, #0a4a6b)', main: '#0e8278', soft: '#e2f4f2' },
+  // Billing (navy to teal), begun behind the number in gold: the month's attendance.
+  timesheet: { band: 'linear-gradient(var(--band-angle, 240deg), #c9971c 0%, #8a6510 28%, #0a3b57 62%, #17a596 100%)', dark: 'linear-gradient(135deg, #7a5a0e, #a87c12)', main: '#a87c0e', soft: '#fbf3dc' },
+  // Billing (navy to teal), begun behind the number in copper orange: the bill.
+  invoice: { band: 'linear-gradient(var(--band-angle, 240deg), #b8650a 0%, #7a4106 28%, #0a3b57 62%, #17a596 100%)', dark: 'linear-gradient(135deg, #7a4106, #a85a0a)', main: '#b8650a', soft: '#fdf0e0' },
+  // Billing (navy to teal), begun behind the number in emerald: money in.
+  receipt: { band: 'linear-gradient(var(--band-angle, 240deg), #0d7a52 0%, #06503a 28%, #0a3b57 62%, #17a596 100%)', dark: 'linear-gradient(135deg, #06503a, #0b6e4b)', main: '#0d7a52', soft: '#e1f4ec' },
 };
 
 /** The band above a record: its icon, kind and number (large), its state, whom it is for (optional), and its actions. */

@@ -77,7 +77,7 @@ export function buildTheme(direction: 'rtl' | 'ltr') {
     },
     components: {
       MuiCssBaseline: {
-        styleOverrides: { body: { WebkitFontSmoothing: 'antialiased' } },
+        styleOverrides: { body: { WebkitFontSmoothing: 'antialiased' }, ':root': { '--band-angle': direction === 'rtl' ? '240deg' : '120deg' } },
       },
       MuiPaper: {
         styleOverrides: {
