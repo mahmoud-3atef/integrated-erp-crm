@@ -100,21 +100,32 @@ function ReceiptPreview({ amount, method, account, payer, receiptDate, allocated
  * A new or returned receipt in one screen (it needs no steps): the payment, then how it pays the project's open
  * invoices, beside a live card of the receipt. Saved as a draft; sending it for approval is on the receipt's page.
  */
-export function ReceiptDialog({ id, onClose, onSaved }: { id?: string; onClose: () => void; onSaved: (id: string) => void }) {
+export function ReceiptDialog({
+  id,
+  onClose,
+  onSaved,
+  preset,
+}: {
+  id?: string;
+  onClose: () => void;
+  onSaved: (id: string) => void;
+  /** Opened on an invoice: its project, and the amount left on it allocated to it. */
+  preset?: { projectId: string; kind: 'Invoice' | 'DebitNote'; targetId: string; amount: number };
+}) {
   const { t } = useTranslation();
   const { date } = useCommercialFormat();
   const [projects, setProjects] = useState<ReceiptProject[]>([]);
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(preset?.projectId ?? null);
   const [receiptDate, setReceiptDate] = useState(isoToday());
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(preset ? String(preset.amount) : '');
   const [method, setMethod] = useState<PaymentMethod>('BankTransfer');
   const [accountId, setAccountId] = useState<string>('');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [receiptNo, setReceiptNo] = useState<string | null>(null);
   const [open, setOpen] = useState<ProjectOpen | null>(null);
-  const [allocations, setAllocations] = useState<Record<string, string>>({});
+  const [allocations, setAllocations] = useState<Record<string, string>>(preset ? { [key(preset.kind, preset.targetId)]: String(preset.amount) } : {});
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

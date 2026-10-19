@@ -2265,7 +2265,13 @@
       "receipts": "بسندات القبض",
       "dueStop": "الاستحقاق",
       "settled": "السداد الكامل",
-      "components": "مكوّنات الفاتورة"
+      "components": "مكوّنات الفاتورة",
+      "collected": "تحصيل {{amount}}",
+      "inReview": "قيد المراجعة",
+      "unnumbered": "يُرقَّم عند الاعتماد",
+      "notIssued": "لم تصدر بعد",
+      "leftToPay": "متبقٍ {{amount}}",
+      "addReceipt": "إضافة سند قبض"
     }
   },
   "receipts": {

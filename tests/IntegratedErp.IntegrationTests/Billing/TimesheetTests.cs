@@ -306,6 +306,8 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal(("Approved", "RV-2026-00001", 1500m, 500m, true), (receipt.Status, receipt.ReceiptNo, receipt.Allocated, receipt.Unallocated, receipt.CanAllocate));
             var invoice = (await scope.ServiceProvider.GetRequiredService<InvoiceQueries>().GetAsync(invoiceId, default))!;
             Assert.Equal((500m, invoiceTotal - 115 - 500), (invoice.Paid, invoice.Outstanding));
+            // The invoice lists the receipt that paid it, with its number and the amount here.
+            Assert.Equal([("RV-2026-00001", 500m, "Approved")], invoice.Payments!.Select(x => (x.ReceiptNo!, x.Amount, x.Status)));
             // Each line says what is left on its item: the old invoice settled, the new one still owing.
             var oldLine = receipt.Allocations.Single(x => x.Kind == "OpeningBalance");
             var newLine = receipt.Allocations.Single(x => x.Kind == "Invoice");

@@ -311,6 +311,17 @@ export interface InvoiceDetail {
   canSubmit: boolean;
   canDelete: boolean;
   canNote: boolean;
+  /** The receipts on the invoice (drafts not counted), oldest first. */
+  payments: InvoicePayment[] | null;
+}
+
+export interface InvoicePayment {
+  receiptId: string;
+  receiptNo: string | null;
+  receiptDate: string;
+  amount: number;
+  status: ReceiptStatus;
+  approvedAt: string | null;
 }
 
 export interface NoteDraft {

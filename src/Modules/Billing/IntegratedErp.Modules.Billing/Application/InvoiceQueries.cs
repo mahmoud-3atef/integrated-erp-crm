@@ -84,7 +84,11 @@ public sealed record InvoiceDetailDto(
     bool CanEdit,
     bool CanSubmit,
     bool CanDelete,
-    bool CanNote);
+    bool CanNote,
+    IReadOnlyList<InvoicePaymentDto>? Payments = null);
+
+/// <summary>A receipt that pays (or, in review, will pay) part of an invoice: its number, date and the amount here.</summary>
+public sealed record InvoicePaymentDto(Guid ReceiptId, string? ReceiptNo, DateOnly ReceiptDate, decimal Amount, string Status, DateTimeOffset? ApprovedAt);
 
 /// <summary>A timesheet's invoice, as the timesheet screens show it.</summary>
 public sealed record InvoiceRefDto(Guid Id, string? InvoiceNo, string Status);
@@ -195,6 +199,14 @@ internal sealed class InvoiceQueries(
             warnings.Add("no_seller_vat");
         }
 
+        // The receipts on this invoice (drafts are not counted yet), oldest first.
+        var payments = await (from a in db.ReceiptAllocations.AsNoTracking()
+                              join r in db.Receipts.AsNoTracking() on a.ReceiptId equals r.Id
+                              where a.TargetId == id && r.Status != ReceiptStatus.Draft
+                              orderby r.ReceiptDate, r.CreatedAt
+                              select new InvoicePaymentDto(r.Id, r.ReceiptNo, r.ReceiptDate, a.Amount, r.Status.ToString(), r.ApprovedAt))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
         var approval = await approvals.StatusAsync(InvoiceAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
         var canManage = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(BillingPermissions.InvoicesManage);
         return new InvoiceDetailDto(
@@ -208,7 +220,8 @@ internal sealed class InvoiceQueries(
             CanEdit: canManage && i.IsEditable,
             CanSubmit: canManage && i.IsEditable,
             CanDelete: canManage && i.IsEditable,
-            CanNote: canManage && i.Kind == InvoiceKind.Invoice && i.Status == InvoiceStatus.Issued);
+            CanNote: canManage && i.Kind == InvoiceKind.Invoice && i.Status == InvoiceStatus.Issued,
+            Payments: payments);
     }
 
     private static System.Linq.Expressions.Expression<Func<Invoice, InvoiceRowDto>> Row() => i => new InvoiceRowDto(

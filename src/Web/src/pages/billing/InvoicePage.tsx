@@ -1,5 +1,8 @@
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import AddCardOutlinedIcon from '@mui/icons-material/AddCardOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
@@ -22,6 +25,7 @@ import {
   Alert,
   Box,
   Button,
+  ButtonBase,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -40,6 +44,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
@@ -56,6 +61,8 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
 import { InvoiceKindBadge, InvoiceStatusBadge, signed } from './invoices';
 import { useCrumb } from '../../app/breadcrumbs';
+import { useSession } from '../../app/session';
+import { ReceiptDialog } from './ReceiptDialog';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -84,15 +91,30 @@ function Figure({ color, label, value, foot }: { color: string; label: string; v
   );
 }
 
-/** One stop of the invoice's journey: a mark, what happened, and when. */
-function Stop({ first, color, mark, label, when }: { first: boolean; color: string; mark: ReactNode; label: string; when: string }) {
+/** One event of the invoice's journey, down the side: its mark on a line, what happened, when and by whom; a receipt or a note opens. */
+function Event({ last, color, mark, label, lines, onClick }: { last: boolean; color: string; mark: ReactNode; label: ReactNode; lines: ReactNode[]; onClick?: () => void }) {
   return (
-    <Box sx={{ flex: 1, textAlign: 'center', position: 'relative', minWidth: 0 }}>
-      {!first && <Box aria-hidden sx={{ position: 'absolute', top: 15, insetInlineStart: '-50%', width: '100%', height: 3, bgcolor: color, opacity: 0.85 }} />}
-      <Box sx={{ position: 'relative', mx: 'auto', width: 32, height: 32, borderRadius: '50%', bgcolor: color, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, '& svg': { fontSize: 18 } }}>{mark}</Box>
-      <Typography sx={{ fontSize: 13, fontWeight: 800, color: tokens.navy800, mt: 0.75 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{when}</Typography>
-    </Box>
+    <ButtonBase
+      disabled={!onClick}
+      onClick={onClick}
+      sx={{ display: 'flex', alignItems: 'stretch', gap: 1.5, width: '100%', textAlign: 'start', borderRadius: '10px', px: 0.75, '&:hover': onClick ? { bgcolor: tokens.gray50 } : {}, '&.Mui-disabled': { color: 'inherit' } }}
+    >
+      <Stack sx={{ alignItems: 'center', flex: '0 0 auto', pt: 1 }}>
+        <Box sx={{ width: 30, height: 30, borderRadius: '50%', bgcolor: color, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 13, '& svg': { fontSize: 17 } }}>{mark}</Box>
+        {!last && <Box aria-hidden sx={{ flex: 1, width: 2, minHeight: 14, bgcolor: tokens.gray100, mt: 0.5 }} />}
+      </Stack>
+      <Box sx={{ flex: 1, minWidth: 0, py: 1, pb: last ? 1 : 1.5 }}>
+        <Typography component="div" sx={{ fontSize: 13.5, fontWeight: 800, color: tokens.navy800 }}>
+          {label}
+        </Typography>
+        {lines.map((line, n) => (
+          <Typography key={n} component="div" sx={{ fontSize: 12, color: tokens.gray500 }}>
+            {line}
+          </Typography>
+        ))}
+      </Box>
+      {onClick && <ChevronLeftIcon sx={{ alignSelf: 'center', color: tokens.gray300, transform: 'scaleX(var(--flip, 1))' }} />}
+    </ButtonBase>
   );
 }
 
@@ -112,6 +134,8 @@ export function InvoicePage() {
   const [noting, setNoting] = useState<NoteDraft['kind'] | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
+  const [receiving, setReceiving] = useState(false);
+  const { can } = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const approval = useRecordApproval(inv?.approval?.instanceId);
@@ -161,7 +185,11 @@ export function InvoicePage() {
   const discount = inv.items.find((i) => i.component === 'Discount');
   const barColors = [look.main, '#5b7bd6', '#0f8f84', '#7c4dcc', '#d98a06', '#5d6f7b'];
 
-  // The journey: made, issued, due, paid.
+  // The journey: made, issued, the receipts and notes by date with the due date among them, then the full payment.
+  // What is still free to receive: the outstanding less what receipts in review will already pay.
+  const inReview = (inv.payments ?? []).filter((p) => p.status !== 'Approved').reduce((sum, p) => sum + p.amount, 0);
+  const receivable = Math.max(0, Math.round((inv.outstanding - inReview) * 100) / 100);
+  const canReceive = collectible && receivable > 0.005 && can('billing.receipts.manage', true);
   const due = !issued
     ? { color: tokens.gray300, mark: <span>?</span> }
     : payment === 'paid'
@@ -169,6 +197,81 @@ export function InvoicePage() {
       : daysToDue < 0
         ? { color: '#c0392b', mark: <PriorityHighIcon /> }
         : { color: '#d98a06', mark: <HourglassEmptyIcon /> };
+  type JourneyEvent = { key: string; at: string; color: string; mark: ReactNode; label: ReactNode; lines: ReactNode[]; onClick?: () => void };
+  const dated: JourneyEvent[] = [
+    ...(inv.payments ?? []).map((p) => ({
+      key: `r-${p.receiptId}`,
+      at: p.receiptDate,
+      color: p.status === 'Approved' ? '#1f9d55' : '#d98a06',
+      mark: p.status === 'Approved' ? <PaymentsOutlinedIcon /> : <HourglassEmptyIcon />,
+      label: (
+        <>
+          {t('invoices.board.collected', { amount: sar(p.amount) })}
+          {p.status !== 'Approved' && (
+            <Box component="span" sx={{ marginInlineStart: 1, fontSize: 11.5, fontWeight: 700, color: '#b8770a' }}>
+              {t('invoices.board.inReview')}
+            </Box>
+          )}
+        </>
+      ),
+      lines: [
+        <>
+          {t('receipts.voucher')} <bdi style={{ fontWeight: 800, color: recordTones.receipt.main }}>{p.receiptNo ?? t('invoices.board.unnumbered')}</bdi> · <bdi>{date(p.receiptDate)}</bdi>
+        </>,
+      ],
+      onClick: () => navigate(`/billing/receipts/${p.receiptId}`),
+    })),
+    ...inv.notes.map((note) => ({
+      key: `n-${note.id}`,
+      at: note.invoiceDate,
+      color: note.kind === 'CreditNote' ? tokens.danger : '#2b7bd9',
+      mark: note.kind === 'CreditNote' ? <RemoveCircleOutlineIcon /> : <AddCircleOutlineIcon />,
+      label: `${t(`invoices.kind.${note.kind}`)} ${sar(signed(note.kind, note.total))}`,
+      lines: [
+        <>
+          <bdi style={{ fontWeight: 800 }}>{note.invoiceNo ?? t('invoices.noNumber')}</bdi> · <bdi>{date(note.invoiceDate)}</bdi> · {t(`invoices.status.${note.status}`)}
+        </>,
+      ],
+      onClick: () => navigate(`/billing/invoices/${note.id}`),
+    })),
+    ...(inv.kind !== 'CreditNote'
+      ? [
+          {
+            key: 'due',
+            at: inv.dueDate,
+            color: due.color,
+            mark: due.mark,
+            label: t('invoices.board.dueStop'),
+            lines: [<bdi key="d">{date(inv.dueDate)}</bdi>, ...(collectible && payment !== 'paid' && daysToDue < 0 ? [<Box component="span" key="l" sx={{ color: '#c0392b', fontWeight: 700 }}>{t('invoices.board.lateDays', { count: -daysToDue })}</Box>] : [])],
+          },
+        ]
+      : []),
+  ].sort((x, y) => x.at.localeCompare(y.at));
+  const lastPaid = (inv.payments ?? []).filter((p) => p.status === 'Approved').at(-1);
+  const journey: JourneyEvent[] = [
+    { key: 'made', at: inv.createdAt, color: '#1f9d55', mark: <CheckIcon />, label: t('invoices.board.made'), lines: [<><bdi>{date(inv.createdAt)}</bdi> · {inv.createdByName}</>] },
+    {
+      key: 'issued',
+      at: inv.issuedAt ?? '',
+      color: issued ? '#1f9d55' : '#d98a06',
+      mark: issued ? <CheckIcon /> : <HourglassEmptyIcon />,
+      label: issued ? t('invoices.board.issued') : t(`invoices.status.${inv.status}`),
+      lines: inv.issuedAt ? [<><bdi>{date(inv.issuedAt)}</bdi> · {inv.issuedByName ?? '—'}</>] : [t('invoices.board.notIssued')],
+    },
+    ...dated,
+    ...(inv.kind !== 'CreditNote'
+      ? [
+          {
+            key: 'settled',
+            at: '',
+            color: payment === 'paid' ? '#1f9d55' : tokens.gray300,
+            mark: payment === 'paid' ? <CheckIcon /> : <span>?</span>,
+            label: t('invoices.board.settled'),
+            lines: [payment === 'paid' && lastPaid ? <bdi key="p">{date(lastPaid.receiptDate)}</bdi> : collectible ? t('invoices.board.leftToPay', { amount: sar(inv.outstanding) }) : '—'],
+          },
+        ]
+      : []),
+  ];
 
   return (
     <Box>
@@ -200,6 +303,11 @@ export function InvoicePage() {
             {inv.canEdit && (
               <Button variant="outlined" startIcon={<EditOutlinedIcon />} disabled={busy} onClick={() => setEditing(true)}>
                 {t('invoices.editTerms')}
+              </Button>
+            )}
+            {canReceive && (
+              <Button variant="contained" startIcon={<AddCardOutlinedIcon />} onClick={() => setReceiving(true)}>
+                {t('invoices.board.addReceipt')}
               </Button>
             )}
             <Button variant="outlined" startIcon={<PrintOutlinedIcon />} component="a" href={`/billing/invoices/${inv.id}/print`} target="_blank" rel="noopener">
@@ -340,21 +448,8 @@ export function InvoicePage() {
         />
       </Box>
 
-      {/* The journey: made, issued, due, paid. */}
-      <Box sx={{ ...card, px: 3, py: 2.25, mb: `${tokens.gap}px` }}>
-        <SectionTitle icon={<RouteOutlinedIcon />} title={t('invoices.board.journey')} />
-        <Stack direction="row" sx={{ alignItems: 'flex-start' }}>
-          <Stop first color="#1f9d55" mark={<CheckIcon />} label={t('invoices.board.made')} when={date(inv.createdAt)} />
-          <Stop first={false} color={issued ? '#1f9d55' : '#d98a06'} mark={issued ? <CheckIcon /> : <HourglassEmptyIcon />} label={issued ? t('invoices.board.issued') : t(`invoices.status.${inv.status}`)} when={inv.issuedAt ? date(inv.issuedAt) : '—'} />
-          {collectible && inv.paid > 0 && <Stop first={false} color="#1f9d55" mark={<CheckIcon />} label={t('invoices.board.paidSoFar', { amount: sar(inv.paid) })} when={t('invoices.board.receipts')} />}
-          <Stop first={false} color={due.color} mark={due.mark} label={t('invoices.board.dueStop')} when={date(inv.dueDate)} />
-          {inv.kind !== 'CreditNote' && (
-            <Stop first={false} color={payment === 'paid' ? '#1f9d55' : tokens.gray300} mark={payment === 'paid' ? <CheckIcon /> : <span>?</span>} label={t('invoices.board.settled')} when={payment === 'paid' ? t('invoices.payment.paid') : '—'} />
-          )}
-        </Stack>
-      </Box>
-
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '320px minmax(0, 1fr)' }, gap: `${tokens.gap}px`, alignItems: 'start' }}>
+        <Stack spacing={`${tokens.gap}px`}>
         {/* What the invoice is made of. */}
         <Box sx={{ ...card, p: 2.25 }}>
           <SectionTitle icon={<DonutSmallOutlinedIcon />} title={t('invoices.board.components')} />
@@ -394,6 +489,27 @@ export function InvoicePage() {
           {inv.remarks && <Typography sx={{ mt: 1.5, fontSize: 12.5, color: tokens.gray600 }}>{t('invoices.remarks')}: {inv.remarks}</Typography>}
         </Box>
 
+        {/* The journey, down the side: every event with its date; a receipt opens. */}
+        <Box sx={{ ...card, p: 2.25 }}>
+          <SectionTitle
+            icon={<RouteOutlinedIcon />}
+            title={t('invoices.board.journey')}
+            extra={
+              canReceive ? (
+                <Tooltip title={t('invoices.board.addReceipt')}>
+                  <IconButton size="small" onClick={() => setReceiving(true)} sx={{ color: '#fff', bgcolor: recordTones.receipt.main, '&:hover': { bgcolor: '#0a5752' } }}>
+                    <AddCardOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : undefined
+            }
+          />
+          {journey.map((e, n) => (
+            <Event key={e.key} last={n === journey.length - 1} color={e.color} mark={e.mark} label={e.label} lines={e.lines} onClick={e.onClick} />
+          ))}
+        </Box>
+        </Stack>
+
         <Stack spacing={`${tokens.gap}px`} sx={{ minWidth: 0 }}>
           {isInvoice && inv.workers.length > 0 && (
             <Box sx={{ ...card, p: 2.25, minWidth: 0 }}>
@@ -416,6 +532,13 @@ export function InvoicePage() {
         </Stack>
       </Box>
 
+      {receiving && (
+        <ReceiptDialog
+          preset={{ projectId: inv.projectId, kind: inv.kind === 'DebitNote' ? 'DebitNote' : 'Invoice', targetId: inv.id, amount: receivable }}
+          onClose={() => setReceiving(false)}
+          onSaved={(receiptId) => navigate(`/billing/receipts/${receiptId}`)}
+        />
+      )}
       {editing && (
         <EditDialog
           inv={inv}

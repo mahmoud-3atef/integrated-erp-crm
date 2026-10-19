@@ -2265,7 +2265,13 @@
       "receipts": "by receipts",
       "dueStop": "Due date",
       "settled": "Paid in full",
-      "components": "What it is made of"
+      "components": "What it is made of",
+      "collected": "{{amount}} collected",
+      "inReview": "in review",
+      "unnumbered": "Numbered on approval",
+      "notIssued": "Not issued yet",
+      "leftToPay": "{{amount}} left",
+      "addReceipt": "Add a receipt"
     }
   },
   "receipts": {
