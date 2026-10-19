@@ -371,13 +371,20 @@ public sealed class ApprovalWorkItem : ITenantOwned
 
     public string? Comment { get; private set; }
 
+    /// <summary>
+    /// The Idempotency-Key the decision came with: the same key sent again for this task returns the first result
+    /// instead of deciding twice (a double click, a retried request).
+    /// </summary>
+    public string? DecisionKey { get; private set; }
+
     public bool IsOpen => Status == WorkItemStatus.Pending;
 
-    public void Decide(WorkItemStatus status, string? comment, DateTimeOffset at)
+    public void Decide(WorkItemStatus status, string? comment, DateTimeOffset at, string? decisionKey = null)
     {
         Status = status;
         Comment = comment;
         DecidedAt = at;
+        DecisionKey = decisionKey;
     }
 
     public void Close(DateTimeOffset at)

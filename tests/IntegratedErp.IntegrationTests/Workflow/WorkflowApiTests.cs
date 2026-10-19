@@ -224,6 +224,39 @@ public sealed class WorkflowApiTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task A_decision_repeated_with_the_same_idempotency_key_is_made_once()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        await PublishAsync(PurchaseProcess());
+        var id = await NewRequestAsync("شراء خادم", 25000m, _managerId);
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
+
+        // The bar's data: the current stage with its rule and round, and the stage still ahead marked as planned.
+        var approval = (await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"))).GetProperty("approval");
+        var current = Assert.Single(approval.GetProperty("stages").EnumerateArray());
+        Assert.Equal("Current", current.GetProperty("state").GetString());
+        Assert.Equal("Any", current.GetProperty("rule").GetString());
+        Assert.Equal(1, current.GetProperty("round").GetInt32());
+        var planned = Assert.Single(approval.GetProperty("planned").EnumerateArray());
+        Assert.Equal("manager", planned.GetProperty("stepId").GetString());
+
+        var task = Assert.Single(await InboxAsync(_reviewerClient));
+        var key = Guid.NewGuid().ToString("N");
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_reviewerClient, task, "Approve", "موافق", key: key)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_reviewerClient, task, "Approve", "موافق", key: key)).StatusCode);
+
+        // Done once: one approval in the history, and the next stage opened once.
+        approval = (await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"))).GetProperty("approval");
+        Assert.Single(approval.GetProperty("history").EnumerateArray(), h => h.GetProperty("kind").GetString() == "Approved");
+        Assert.Single(approval.GetProperty("history").EnumerateArray(), h => h.GetProperty("stepNameEn").GetString() == "Manager approval");
+        Assert.Empty(approval.GetProperty("planned").EnumerateArray());
+
+        // Another key (or none) on the closed task is still a conflict.
+        Assert.Equal(HttpStatusCode.Conflict, (await DecideAsync(_reviewerClient, task, "Approve", "موافق", key: Guid.NewGuid().ToString("N"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await DecideAsync(_reviewerClient, task, "Approve", "موافق")).StatusCode);
+    }
+
+    [SkippableFact]
     public async Task All_rule_waits_for_everyone_and_a_task_can_be_delegated()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
@@ -330,8 +363,19 @@ public sealed class WorkflowApiTests : IAsyncLifetime
     private static async Task<List<JsonElement>> InboxAsync(HttpClient client) =>
         (await Json(await client.GetAsync("/api/v1/workflow/inbox"))).EnumerateArray().ToList();
 
-    private static Task<HttpResponseMessage> DecideAsync(HttpClient client, JsonElement task, string decision, string? comment, Dictionary<string, string?>? fields = null) =>
-        client.PostAsJsonAsync($"/api/v1/workflow/work-items/{task.GetProperty("id").GetGuid()}/decision", new { decision, comment, fields });
+    private static async Task<HttpResponseMessage> DecideAsync(HttpClient client, JsonElement task, string decision, string? comment, Dictionary<string, string?>? fields = null, string? key = null)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/workflow/work-items/{task.GetProperty("id").GetGuid()}/decision")
+        {
+            Content = JsonContent.Create(new { decision, comment, fields }),
+        };
+        if (key is not null)
+        {
+            message.Headers.Add("Idempotency-Key", key);
+        }
+
+        return await client.SendAsync(message);
+    }
 
     private static async Task<JsonElement> Json(HttpResponseMessage response) =>
         JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
