@@ -24,6 +24,8 @@ import { InvoicePrintPage } from '../pages/billing/InvoicePrintPage';
 import { InvoicesPage } from '../pages/billing/InvoicesPage';
 import { TimesheetPage } from '../pages/billing/TimesheetPage';
 import { TimesheetsPage } from '../pages/billing/TimesheetsPage';
+import { PayrollRunPage } from '../pages/payroll/PayrollRunPage';
+import { PayrollRunsPage } from '../pages/payroll/PayrollRunsPage';
 import { BuildingPage } from '../pages/housing/BuildingPage';
 import { HousingPage } from '../pages/housing/HousingPage';
 import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
@@ -106,6 +108,9 @@ export function App() {
                 <Route path="/billing/aging" element={<AgingPage />} />
                 <Route path="/billing/statements/:id" element={<StatementPage />} />
                 <Route path="/billing/bank-accounts" element={<BankAccountsPage />} />
+                <Route path="/payroll/runs" element={<PayrollRunsPage />} />
+                <Route path="/payroll/runs/new" element={<PayrollRunsPage key="new" creating />} />
+                <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrdersPage key="new" creating />} />
