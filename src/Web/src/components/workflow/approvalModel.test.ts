@@ -67,9 +67,9 @@ describe('approval stages', () => {
     expect(collapse(nodes, 1, 1).every((i) => i.kind === 'node')).toBe(true);
   });
 
-  it('folds even a single stage when the bar is too narrow for it', () => {
+  it('folds even a single stage when the bar is too narrow for it (the submission is a stage too)', () => {
     const nodes = pathNodes(stageNodes(status([stage('a', 'Done'), stage('b', 'Done'), stage('c', 'Current')], ['d'])));
-    expect(fit(nodes, 0, true, true).map((i) => (i.kind === 'more' ? `+${i.nodes.length}` : i.node.state))).toEqual(['+2', 'Current', '+1']);
+    expect(fit(nodes, 0, true, true).map((i) => (i.kind === 'more' ? `+${i.nodes.length}` : i.node.state))).toEqual(['+3', 'Current', '+1']);
   });
 
   it('focuses on the last stage once the approval ended', () => {
