@@ -145,6 +145,7 @@ export function RequestDetailPage() {
         <ApprovalBar
           status={request.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();

@@ -11,7 +11,6 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
@@ -55,7 +54,7 @@ import { invoiceApi, noteComponents, type InvoiceComponent, type InvoiceDetail, 
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
-import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
@@ -399,6 +398,7 @@ export function InvoicePage() {
         <ApprovalBar
           status={inv.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();
@@ -521,12 +521,6 @@ export function InvoicePage() {
             <Box sx={{ ...card, p: 2.25 }}>
               <SectionTitle icon={<ReceiptLongOutlinedIcon />} title={t('invoices.tabs.notes', { count: inv.notes.length })} />
               <NotesTab inv={inv} />
-            </Box>
-          )}
-          {inv.approval && (
-            <Box sx={{ ...card, p: 2.25 }}>
-              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
-              <ApprovalFeedLog status={inv.approval} detail={approval.detail} />
             </Box>
           )}
         </Stack>

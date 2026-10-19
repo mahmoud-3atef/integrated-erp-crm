@@ -406,7 +406,8 @@
     "validation_movement_price_minimum": "The service price cannot be less than 1,000.",
     "validation_movement_price_below_cost": "The service price is less than the salary, housing and transport.",
     "validation_movement_reason": "Choose the reason or type.",
-    "validation_movement_client_vacation": "A vacation on the customer is for a worker on the job."
+    "validation_movement_client_vacation": "A vacation on the customer is for a worker on the job.",
+    "validation_approval_idempotency_key": "The idempotency key is too long."
   },
   "menu": {
     "label": "Main menu",
@@ -2628,5 +2629,44 @@
   },
   "lists": {
     "since": "for {{time}}"
+  },
+  "approvalBar": {
+    "label": "Approval path",
+    "submitted": "Submitted",
+    "waitingFor": "Awaiting",
+    "notStarted": "Not started",
+    "viewAll": "View all stages",
+    "moreDone": "+{{count}} completed stages",
+    "moreStages": "+{{count}} more stages",
+    "moreActions": "More actions",
+    "ruleAll": "Everyone must approve",
+    "ruleAny": "Any one approver",
+    "round": "Round {{round}}",
+    "earlierRound": "Earlier round",
+    "plannedHint": "Planned; its approvers are set when it opens",
+    "state": {
+      "Submitted": "Submitted",
+      "Done": "Approved",
+      "Current": "Current stage",
+      "Rejected": "Rejected",
+      "Returned": "Returned",
+      "Canceled": "Canceled",
+      "Planned": "Planned"
+    },
+    "drawerTitle": "Approval flow",
+    "startedBy": "Started {{date}} by {{name}}",
+    "close": "Close",
+    "assignedOn": "Assigned {{date}}",
+    "awaitingDecision": "Awaiting decision",
+    "approvedOn": "Approved {{date}}",
+    "rejectedOn": "Rejected {{date}}",
+    "returnedOn": "Returned {{date}}",
+    "sentOn": "Sent {{date}}",
+    "eventLog": "Event log ({{count}})",
+    "currentStage": "Current stage",
+    "nextStage": "After approval it moves to: {{name}}",
+    "reasonRequired": "A reason is required",
+    "sending": "Sending…",
+    "alreadyProcessed": "This task was already processed. The page has been refreshed."
   }
 }

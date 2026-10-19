@@ -5,7 +5,6 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
@@ -23,7 +22,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
-import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from './delivery';
@@ -177,6 +176,7 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
         <ApprovalBar
           status={order.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();
@@ -357,12 +357,6 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
             </Box>
           )}
 
-          {order.approval && (
-            <Box sx={{ ...card, p: 2.25 }}>
-              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
-              <ApprovalFeedLog status={order.approval} detail={approval.detail} />
-            </Box>
-          )}
         </Stack>
       </Box>
 

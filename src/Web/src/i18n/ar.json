@@ -406,7 +406,8 @@
     "validation_movement_price_minimum": "لا يقل سعر الخدمة عن 1,000.",
     "validation_movement_price_below_cost": "سعر الخدمة أقل من الراتب والسكن والمواصلات.",
     "validation_movement_reason": "اختر السبب أو النوع.",
-    "validation_movement_client_vacation": "الإجازة على العميل لعامل على رأس العمل فقط."
+    "validation_movement_client_vacation": "الإجازة على العميل لعامل على رأس العمل فقط.",
+    "validation_approval_idempotency_key": "مفتاح منع التكرار أطول من المسموح."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -2628,5 +2629,44 @@
   },
   "lists": {
     "since": "منذ {{time}}"
+  },
+  "approvalBar": {
+    "label": "مسار الاعتماد",
+    "submitted": "تقديم الطلب",
+    "waitingFor": "بانتظار",
+    "notStarted": "لم تبدأ",
+    "viewAll": "عرض كل المراحل",
+    "moreDone": "+{{count}} مراحل مكتملة",
+    "moreStages": "+{{count}} مراحل",
+    "moreActions": "إجراءات أخرى",
+    "ruleAll": "يلزم اعتماد الجميع",
+    "ruleAny": "يكفي اعتماد أحدهم",
+    "round": "الجولة {{round}}",
+    "earlierRound": "جولة سابقة",
+    "plannedHint": "مخططة، ويُحدد معتمدوها عند الوصول إليها",
+    "state": {
+      "Submitted": "مُرسل",
+      "Done": "معتمدة",
+      "Current": "المرحلة الحالية",
+      "Rejected": "مرفوضة",
+      "Returned": "مُعادة",
+      "Canceled": "ملغاة",
+      "Planned": "مخططة"
+    },
+    "drawerTitle": "سير الموافقات",
+    "startedBy": "بدأ في {{date}} بواسطة {{name}}",
+    "close": "إغلاق",
+    "assignedOn": "أُسندت {{date}}",
+    "awaitingDecision": "بانتظار القرار",
+    "approvedOn": "اعتُمدت {{date}}",
+    "rejectedOn": "رُفضت {{date}}",
+    "returnedOn": "أُعيدت {{date}}",
+    "sentOn": "أُرسل {{date}}",
+    "eventLog": "سجل الأحداث ({{count}})",
+    "currentStage": "المرحلة الحالية",
+    "nextStage": "بعد الاعتماد ينتقل إلى: {{name}}",
+    "reasonRequired": "السبب مطلوب",
+    "sending": "جارٍ الإرسال…",
+    "alreadyProcessed": "تمت معالجة هذه المهمة بالفعل، وحُدّثت الصفحة."
   }
 }
