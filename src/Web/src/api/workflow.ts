@@ -260,6 +260,18 @@ export interface ApprovalStage {
   openedAt: string;
   decidedAt: string | null;
   comment: string | null;
+  /** 2 and up: the stage opened again (after a return). */
+  round: number;
+  /** Any: one approver decides; All: everyone must approve. */
+  rule: 'Any' | 'All';
+}
+
+/** A stage not reached yet: its approvers and dates are known only when it opens. */
+export interface PlannedStage {
+  stepId: string;
+  nameAr: string;
+  nameEn: string;
+  rule: 'Any' | 'All';
 }
 
 export interface ApprovalStatus {
@@ -275,6 +287,8 @@ export interface ApprovalStatus {
   submittedAt: string;
   stages: ApprovalStage[];
   history: HistoryEntry[];
+  /** The stages ahead if everything is approved (a forecast); empty once the approval ended. */
+  planned?: PlannedStage[] | null;
 }
 
 export interface FieldValue {
@@ -363,8 +377,9 @@ export const workflowApi = {
   myRequests: () => request<InstanceSummary[]>('GET', `${base}/my-requests`),
   instances: (status: string) => request<InstanceSummary[]>('GET', `${base}/instances${status ? `?status=${status}` : ''}`),
   instance: (id: string) => request<InstanceDetail>('GET', `${base}/instances/${id}`),
-  decide: (workItemId: string, decision: Decision, comment: string, fields: Record<string, string | null>) =>
-    request<void>('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields }),
+  /** The same idempotency key sent again (a retry, a double click) returns the first result without deciding twice. */
+  decide: (workItemId: string, decision: Decision, comment: string, fields: Record<string, string | null>, idempotencyKey?: string) =>
+    request<void>('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields }, idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined),
   delegate: (workItemId: string, userId: string, comment: string) => request<void>('POST', `${base}/work-items/${workItemId}/delegate`, { userId, comment }),
   cancel: (instanceId: string, reason: string) => request<void>('POST', `${base}/instances/${instanceId}/cancel`, { reason }),
   retry: (instanceId: string) => request<void>('POST', `${base}/instances/${instanceId}/retry`),

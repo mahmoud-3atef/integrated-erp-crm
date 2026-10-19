@@ -81,8 +81,9 @@ internal static class WorkflowEndpoints
             return Results.Ok(await engine.CurrentStagesAsync(screen, list, ct));
         });
 
-        group.MapPost("/work-items/{id:guid}/decision", async (Guid id, DecisionRequest r, ApprovalEngine engine, CancellationToken ct) =>
-            ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, r.Fields, ct).ConfigureAwait(false)));
+        // An Idempotency-Key repeated for the same task returns the first result without deciding again.
+        group.MapPost("/work-items/{id:guid}/decision", async (Guid id, DecisionRequest r, HttpRequest http, ApprovalEngine engine, CancellationToken ct) =>
+            ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, r.Fields, ct, http.Headers["Idempotency-Key"].FirstOrDefault()).ConfigureAwait(false)));
 
         group.MapPost("/work-items/{id:guid}/delegate", async (Guid id, DelegateRequest r, ApprovalEngine engine, CancellationToken ct) =>
             ToHttp(await engine.DelegateAsync(id, r.UserId, r.Comment, ct).ConfigureAwait(false)));

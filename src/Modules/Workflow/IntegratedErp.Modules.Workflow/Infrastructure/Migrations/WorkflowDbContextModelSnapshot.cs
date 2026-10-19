@@ -696,6 +696,11 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("decided_at");
 
+                    b.Property<string>("DecisionKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("decision_key");
+
                     b.Property<Guid?>("DelegatedFrom")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("delegated_from");

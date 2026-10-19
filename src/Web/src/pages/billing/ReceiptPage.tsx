@@ -5,7 +5,6 @@ import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined';
@@ -41,7 +40,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { AttachmentsDialog } from '../../components/AttachmentsDialog';
 import { recordTones, SectionTitle } from '../../components/RecordLayout';
-import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
@@ -199,6 +198,7 @@ export function ReceiptPage({ editing = false }: { editing?: boolean } = {}) {
         <ApprovalBar
           status={r.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();
@@ -374,12 +374,6 @@ export function ReceiptPage({ editing = false }: { editing?: boolean } = {}) {
             )}
           </Box>
 
-          {r.approval && (
-            <Box sx={{ ...card, p: 2.25 }}>
-              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
-              <ApprovalFeedLog status={r.approval} detail={approval.detail} />
-            </Box>
-          )}
         </Stack>
       </Box>
 

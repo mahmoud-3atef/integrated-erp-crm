@@ -44,13 +44,13 @@ export class ApiError extends Error {
 
 const csrfHeader = { 'X-ERP-CSRF': '1' };
 
-export async function request<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+export async function request<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
       method,
       credentials: 'same-origin',
-      headers: { Accept: 'application/json', ...(method !== 'GET' ? { 'Content-Type': 'application/json', ...csrfHeader } : {}) },
+      headers: { Accept: 'application/json', ...(method !== 'GET' ? { 'Content-Type': 'application/json', ...csrfHeader } : {}), ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

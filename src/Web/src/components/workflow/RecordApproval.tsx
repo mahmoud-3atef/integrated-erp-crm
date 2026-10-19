@@ -2,16 +2,18 @@ import BlockIcon from '@mui/icons-material/Block';
 import ForwardIcon from '@mui/icons-material/Forward';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ReplyIcon from '@mui/icons-material/Reply';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useCallback, useEffect, useState } from 'react';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localName } from '../../api/access';
 import { errorKey } from '../../api/auth';
 import { workflowApi, type ApprovalStatus, type Decision, type FieldValue, type InstanceDetail, type MemberOption } from '../../api/workflow';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { ApprovalFeed, ApprovalTimeline } from '../ApprovalTimeline';
-import { StageTracker } from '../StageTracker';
+import { ApprovalTimeline } from '../ApprovalTimeline';
+import { flow, GlobalCompactApprovalBar } from './ApprovalBar';
+import { ApprovalHistoryDrawer } from './ApprovalHistoryDrawer';
+import { alreadyProcessed, newIdempotencyKey } from './approvalModel';
 
 type Action = Decision | 'Delegate' | 'Cancel';
 
@@ -21,15 +23,20 @@ type Action = Decision | 'Delegate' | 'Cancel';
  */
 export function useRecordApproval(instanceId: string | null | undefined) {
   const [detail, setDetail] = useState<InstanceDetail | null>(null);
+  const [loading, setLoading] = useState(!!instanceId);
   const reload = useCallback(async () => {
     if (!instanceId) {
       setDetail(null);
+      setLoading(false);
       return;
     }
+    setLoading(true);
     try {
       setDetail(await workflowApi.instance(instanceId));
     } catch {
       setDetail(null);
+    } finally {
+      setLoading(false);
     }
   }, [instanceId]);
 
@@ -37,16 +44,49 @@ export function useRecordApproval(instanceId: string | null | undefined) {
     void reload();
   }, [reload]);
 
-  return { detail, reload };
+  return { detail, loading, reload };
 }
 
-/** The stage bar above a record, with approve / reject on the current stage and the other actions in its menu. */
-export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalStatus; detail: InstanceDetail | null; onChanged: () => void }) {
+/** Field names and choice names of the record, for the event log. */
+function useFieldText(detail: InstanceDetail | null) {
+  const { i18n } = useTranslation();
+  const fieldName = (key: string) => {
+    const field = detail?.record.find((r) => r.field.key === key)?.field;
+    return field ? localName(field, i18n.language) : key;
+  };
+  // A choice shows its name (e.g. the order's state), not its stored value.
+  const fieldValue = (key: string, value: string | null) => {
+    const option = detail?.record.find((r) => r.field.key === key)?.field.options?.find((o) => o.value === value);
+    return option ? (i18n.language === 'ar' ? option.nameAr : option.nameEn) : (value ?? '—');
+  };
+  return { fieldName, fieldValue };
+}
+
+/**
+ * The shared approval bar above a record (GlobalCompactApprovalBar), its history drawer and the decision dialog.
+ * Every page with a workflow-linked record uses this one component; none builds its own.
+ */
+export function ApprovalBar({
+  status,
+  detail,
+  loading,
+  onChanged,
+}: {
+  status: ApprovalStatus;
+  detail: InstanceDetail | null;
+  /** The user's actions are still loading. */
+  loading?: boolean;
+  onChanged: () => void;
+}) {
   const { t } = useTranslation();
   const [action, setAction] = useState<Action | null>(null);
+  const [drawer, setDrawer] = useState(false);
   const [people, setPeople] = useState<MemberOption[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const actions = detail?.actions;
+  const shown = detail?.status ?? status;
+  const { fieldName, fieldValue } = useFieldText(detail);
 
   useEffect(() => {
     if (actions?.canDelegate) {
@@ -64,13 +104,35 @@ export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalSta
     }
   };
 
+  // Only one surface at a time: a decision taken from the drawer closes it first.
+  const start = (next: Action) => {
+    setDrawer(false);
+    setNotice(null);
+    setAction(next);
+  };
+
+  const barActions = {
+    onApprove: actions?.canApprove ? () => start('Approve') : undefined,
+    onReject: actions?.canReject ? () => start('Reject') : undefined,
+    more: [
+      ...(actions?.canReturn ? [{ key: 'return', label: t('approval.return'), icon: <ReplyIcon />, color: flow.amber, onClick: () => start('Return') }] : []),
+      ...(actions?.canDelegate ? [{ key: 'delegate', label: t('approval.delegate'), icon: <ForwardIcon />, onClick: () => start('Delegate') }] : []),
+      ...(actions?.canCancel ? [{ key: 'cancel', label: t('approval.cancel'), icon: <BlockIcon />, color: tokens.gray600, onClick: () => start('Cancel') }] : []),
+    ],
+  };
+
   return (
     <>
       <ErrorMessage messageKey={error} />
+      {notice && (
+        <Alert severity="info" onClose={() => setNotice(null)} sx={{ mb: 1.5 }}>
+          {t(notice)}
+        </Alert>
+      )}
       {detail?.summary.status === 'Failed' && detail.summary.error && (
         <Alert
           severity="error"
-          sx={{ mb: 2 }}
+          sx={{ mb: 1.5 }}
           action={
             actions?.canRetry ? (
               <Button color="inherit" size="small" startIcon={<ReplayIcon />} onClick={() => void retry()}>
@@ -82,20 +144,20 @@ export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalSta
           {t('approval.failedBecause', { error: detail.summary.error })}
         </Alert>
       )}
-      <StageTracker
-        status={detail?.status ?? status}
-        actions={{
-          onApprove: actions?.canApprove ? () => setAction('Approve') : undefined,
-          onReject: actions?.canReject ? () => setAction('Reject') : undefined,
-          more: [
-            ...(actions?.canReturn ? [{ key: 'return', label: t('approval.return'), icon: <ReplyIcon />, color: tokens.warning, onClick: () => setAction('Return') }] : []),
-            ...(actions?.canDelegate ? [{ key: 'delegate', label: t('approval.delegate'), icon: <ForwardIcon />, onClick: () => setAction('Delegate') }] : []),
-            ...(actions?.canCancel ? [{ key: 'cancel', label: t('approval.cancel'), icon: <BlockIcon />, color: tokens.gray600, onClick: () => setAction('Cancel') }] : []),
-          ],
-        }}
+      <GlobalCompactApprovalBar status={shown} actions={barActions} loadingActions={loading && !detail} onViewAll={() => setDrawer(true)} />
+      <ApprovalHistoryDrawer
+        open={drawer}
+        onClose={() => setDrawer(false)}
+        status={shown}
+        title={detail?.summary.title}
+        actions={barActions}
+        canReturn={!!actions?.canReturn}
+        onReturn={() => start('Return')}
+        fieldName={fieldName}
+        fieldValue={fieldValue}
       />
       {action && detail && (
-        <ActionDialog
+        <DecisionDialog
           detail={detail}
           action={action}
           people={people}
@@ -104,39 +166,45 @@ export function ApprovalBar({ status, detail, onChanged }: { status: ApprovalSta
             setAction(null);
             onChanged();
           }}
+          onAlreadyProcessed={() => {
+            setAction(null);
+            setNotice('approvalBar.alreadyProcessed');
+            onChanged();
+          }}
         />
       )}
     </>
   );
 }
 
-/** Every event of the approval (the detailed log, for the record page's approval tab). */
+/** Every event of the approval (the detailed log, for the approval's own page and the request's approval tab). */
 export function ApprovalLog({ status, detail }: { status: ApprovalStatus; detail: InstanceDetail | null }) {
-  const { i18n } = useTranslation();
-  const fieldName = (key: string) => {
-    const field = detail?.record.find((r) => r.field.key === key)?.field;
-    return field ? localName(field, i18n.language) : key;
-  };
+  const { fieldName } = useFieldText(detail);
   return <ApprovalTimeline status={detail?.status ?? status} fieldName={fieldName} />;
 }
 
-/** The approval's history as a feed, newest first (under a record's details). */
-export function ApprovalFeedLog({ status, detail }: { status: ApprovalStatus; detail: InstanceDetail | null }) {
-  const { i18n } = useTranslation();
-  const fieldName = (key: string) => {
-    const field = detail?.record.find((r) => r.field.key === key)?.field;
-    return field ? localName(field, i18n.language) : key;
-  };
-  // A choice shows its name (e.g. the order's state), not its stored value.
-  const fieldValue = (key: string, value: string | null) => {
-    const option = detail?.record.find((r) => r.field.key === key)?.field.options?.find((o) => o.value === value);
-    return option ? (i18n.language === 'ar' ? option.nameAr : option.nameEn) : (value ?? '—');
-  };
-  return <ApprovalFeed status={detail?.status ?? status} fieldName={fieldName} fieldValue={fieldValue} />;
-}
-
-function ActionDialog({ detail, action, people, onClose, onDone }: { detail: InstanceDetail; action: Action; people: MemberOption[]; onClose: () => void; onDone: () => void }) {
+/**
+ * DecisionDialog (spec 16 §3.3): the record, the current stage and the action; a reason is required to reject, return
+ * or cancel. Each opening sends one idempotency key, so a double click or a retried request decides once; a task
+ * already decided elsewhere closes the dialog with «تمت معالجة هذه المهمة بالفعل» and refreshes the page.
+ */
+function DecisionDialog({
+  detail,
+  action,
+  people,
+  onClose,
+  onDone,
+  onAlreadyProcessed,
+}: {
+  detail: InstanceDetail;
+  action: Action;
+  people: MemberOption[];
+  onClose: () => void;
+  onDone: () => void;
+  onAlreadyProcessed: () => void;
+}) {
   const { t, i18n } = useTranslation();
+  const ar = i18n.language === 'ar';
   const [comment, setComment] = useState('');
   const [delegateTo, setDelegateTo] = useState('');
   const [fields, setFields] = useState<Record<string, string>>(() =>
@@ -144,10 +212,21 @@ function ActionDialog({ detail, action, people, onClose, onDone }: { detail: Ins
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [key] = useState(newIdempotencyKey);
+  const sending = useRef(false);
   const needsReason = action !== 'Approve' && action !== 'Delegate';
   const missingField = action === 'Approve' && detail.actions.requiredFields.some((f) => !fields[f.field.key]?.trim());
+  const status = detail.status;
+  const step = ar ? status.currentStepAr : status.currentStepEn;
+  const next = action === 'Approve' ? status.planned?.[0] : undefined;
+  const all = status.stages.find((s) => s.state === 'Current')?.rule === 'All';
 
   const submit = async () => {
+    // A second click while the first is on its way does nothing (the key also guards the server).
+    if (sending.current) {
+      return;
+    }
+    sending.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -157,23 +236,40 @@ function ActionDialog({ detail, action, people, onClose, onDone }: { detail: Ins
       } else if (action === 'Cancel') {
         await workflowApi.cancel(detail.summary.id, comment);
       } else {
-        await workflowApi.decide(itemId, action, comment, action === 'Approve' ? fields : {});
+        await workflowApi.decide(itemId, action, comment, action === 'Approve' ? fields : {}, key);
       }
       onDone();
     } catch (failure) {
-      setError(errorKey(failure));
+      const code = errorKey(failure);
+      if (alreadyProcessed(code)) {
+        onAlreadyProcessed();
+        return;
+      }
+      setError(code);
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   };
 
   const color = action === 'Approve' ? 'success' : action === 'Return' ? 'warning' : action === 'Reject' ? 'error' : 'primary';
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t(`approval.confirm.${action}`)}</DialogTitle>
+    <Dialog open onClose={busy ? undefined : onClose} fullWidth maxWidth="sm" aria-labelledby="decision-title">
+      <DialogTitle id="decision-title">{t(`approval.confirm.${action}`)}</DialogTitle>
       <DialogContent dividers>
         <ErrorMessage messageKey={error} />
-        <Typography sx={{ mb: 2, fontWeight: 600, color: tokens.navy800 }}>{detail.summary.title}</Typography>
+        <Box sx={{ mb: 2, p: 1.5, borderRadius: '10px', bgcolor: '#F6F8FC', border: `1px solid ${flow.border}` }}>
+          <Typography sx={{ fontWeight: 700, color: flow.text }}>
+            <bdi>{detail.summary.title}</bdi>
+          </Typography>
+          {step && (
+            <Typography sx={{ fontSize: 13, color: flow.textMuted, mt: 0.25 }}>
+              {t('approvalBar.currentStage')}: <b style={{ color: flow.blue }}>{step}</b>
+            </Typography>
+          )}
+          {next && !all && <Typography sx={{ fontSize: 13, color: flow.textMuted, mt: 0.25 }}>{t('approvalBar.nextStage', { name: ar ? next.nameAr : next.nameEn })}</Typography>}
+          {all && action === 'Approve' && <Typography sx={{ fontSize: 13, color: flow.textMuted, mt: 0.25 }}>{t('approvalBar.ruleAll')}</Typography>}
+        </Box>
         <Stack spacing={2}>
           {action === 'Approve' &&
             detail.actions.requiredFields.map(({ field }) => (
@@ -204,14 +300,18 @@ function ActionDialog({ detail, action, people, onClose, onDone }: { detail: Ins
             required={needsReason}
             multiline
             minRows={3}
+            helperText={`${needsReason ? `${t('approvalBar.reasonRequired')} · ` : ''}${comment.length}/1000`}
             slotProps={{ htmlInput: { maxLength: 1000 } }}
+            autoFocus
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        <Button onClick={onClose} disabled={busy}>
+          {t('common.cancel')}
+        </Button>
         <Button variant="contained" color={color} onClick={() => void submit()} disabled={busy || (needsReason && !comment.trim()) || missingField || (action === 'Delegate' && !delegateTo)}>
-          {busy ? t('common.loading') : t(`approval.do.${action}`)}
+          {busy ? t('approvalBar.sending') : t(`approval.do.${action}`)}
         </Button>
       </DialogActions>
     </Dialog>

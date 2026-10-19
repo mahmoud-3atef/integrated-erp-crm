@@ -3,7 +3,6 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
@@ -21,7 +20,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
-import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useStateName } from './movements/movementMeta';
@@ -144,6 +143,7 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
         <ApprovalBar
           status={order.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();
@@ -211,12 +211,6 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
             </Box>
           </Box>
 
-          {order.approval && (
-            <Box sx={{ ...card, p: 2.25 }}>
-              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
-              <ApprovalFeedLog status={order.approval} detail={approval.detail} />
-            </Box>
-          )}
         </Stack>
       </Box>
 

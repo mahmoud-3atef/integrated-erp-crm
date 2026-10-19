@@ -3,7 +3,6 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
@@ -21,7 +20,7 @@ import { useCrumb } from '../../../app/breadcrumbs';
 import { tokens } from '../../../app/theme';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../../components/RecordLayout';
-import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval } from '../../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { sar } from '../../operations/delivery';
 import { Journey, JourneyLine, WorkerFact, WorkerHead } from '../recordParts';
@@ -113,6 +112,7 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
         <ApprovalBar
           status={m.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();
@@ -237,12 +237,6 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
             </Box>
           </Box>
 
-          {m.approval && (
-            <Box sx={{ ...card, p: 2.25 }}>
-              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
-              <ApprovalFeedLog status={m.approval} detail={approval.detail} />
-            </Box>
-          )}
         </Stack>
       </Box>
 

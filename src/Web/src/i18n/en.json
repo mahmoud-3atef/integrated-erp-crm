@@ -415,7 +415,8 @@
     "validation_payroll_no_sponsors": "No sponsor of the old system is linked to this registration: link one first.",
     "conflict_payroll_overlap": "Another run of this registration covers part of the period.",
     "validation_payroll_sponsor": "Enter the sponsor as the old system writes it.",
-    "conflict_payroll_changed": "Another run took some of these timesheet lines meanwhile: recalculate."
+    "conflict_payroll_changed": "Another run took some of these timesheet lines meanwhile: recalculate.",
+    "validation_approval_idempotency_key": "The idempotency key is too long."
   },
   "menu": {
     "label": "Main menu",
@@ -2811,5 +2812,44 @@
       "none": "Not linked",
       "saved": "The links were saved."
     }
+  },
+  "approvalBar": {
+    "label": "Approval path",
+    "submitted": "Submitted",
+    "waitingFor": "Awaiting",
+    "notStarted": "Not started",
+    "viewAll": "View all stages",
+    "moreDone": "+{{count}} completed stages",
+    "moreStages": "+{{count}} more stages",
+    "moreActions": "More actions",
+    "ruleAll": "Everyone must approve",
+    "ruleAny": "Any one approver",
+    "round": "Round {{round}}",
+    "earlierRound": "Earlier round",
+    "plannedHint": "Planned; its approvers are set when it opens",
+    "state": {
+      "Submitted": "Submitted",
+      "Done": "Approved",
+      "Current": "Current stage",
+      "Rejected": "Rejected",
+      "Returned": "Returned",
+      "Canceled": "Canceled",
+      "Planned": "Planned"
+    },
+    "drawerTitle": "Approval flow",
+    "startedBy": "Started {{date}} by {{name}}",
+    "close": "Close",
+    "assignedOn": "Assigned {{date}}",
+    "awaitingDecision": "Awaiting decision",
+    "approvedOn": "Approved {{date}}",
+    "rejectedOn": "Rejected {{date}}",
+    "returnedOn": "Returned {{date}}",
+    "sentOn": "Sent {{date}}",
+    "eventLog": "Event log ({{count}})",
+    "currentStage": "Current stage",
+    "nextStage": "After approval it moves to: {{name}}",
+    "reasonRequired": "A reason is required",
+    "sending": "Sending…",
+    "alreadyProcessed": "This task was already processed. The page has been refreshed."
   }
 }

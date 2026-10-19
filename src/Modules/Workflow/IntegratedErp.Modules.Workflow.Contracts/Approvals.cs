@@ -138,6 +138,8 @@ public sealed record ApprovalTimelineEntry(
 /// <summary>
 /// One approval stage as people read it (the stage bar): who it is (or was) with, who decided what and when, and how
 /// long it took since the previous stage. <paramref name="State"/>: Done, Rejected, Returned, Current, Canceled.
+/// <paramref name="Round"/> counts the openings of the same stage (2 and up: it opened again after a return);
+/// <paramref name="Rule"/>: Any (one approver decides) or All (everyone must approve).
 /// </summary>
 public sealed record ApprovalStageInfo(
     string StepId,
@@ -149,7 +151,15 @@ public sealed record ApprovalStageInfo(
     string? OnBehalfOf,
     DateTimeOffset OpenedAt,
     DateTimeOffset? DecidedAt,
-    string? Comment);
+    string? Comment,
+    int Round = 1,
+    string Rule = "Any");
+
+/// <summary>
+/// A stage the approval has not reached yet, as far as it can be told now (the path if everything is approved, with
+/// conditions on the record as it is now): its approvers and dates are not known until it opens.
+/// </summary>
+public sealed record ApprovalPlannedStage(string StepId, string NameAr, string NameEn, string Rule);
 
 /// <summary>The latest approval of a record: where it stands, who it waits for, and its full history.</summary>
 public sealed record ApprovalStatusInfo(
@@ -164,7 +174,8 @@ public sealed record ApprovalStatusInfo(
     string SubmittedBy,
     DateTimeOffset SubmittedAt,
     IReadOnlyList<ApprovalStageInfo> Stages,
-    IReadOnlyList<ApprovalTimelineEntry> History);
+    IReadOnlyList<ApprovalTimelineEntry> History,
+    IReadOnlyList<ApprovalPlannedStage>? Planned = null);
 
 /// <summary>Used by modules that own records: start, follow and cancel approvals.</summary>
 public interface IApprovalService

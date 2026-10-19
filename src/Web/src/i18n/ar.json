@@ -415,7 +415,8 @@
     "validation_payroll_no_sponsors": "لم يُربط أي كفيل من النظام القديم بهذا السجل: اربطه أولًا.",
     "conflict_payroll_overlap": "يوجد مسير آخر لهذا السجل يغطي جزءًا من الفترة.",
     "validation_payroll_sponsor": "اكتب الكفيل كما يكتبه النظام القديم.",
-    "conflict_payroll_changed": "أخذ مسير آخر بعض سطور هذه التحضيرات في الوقت نفسه: أعد الحساب."
+    "conflict_payroll_changed": "أخذ مسير آخر بعض سطور هذه التحضيرات في الوقت نفسه: أعد الحساب.",
+    "validation_approval_idempotency_key": "مفتاح منع التكرار أطول من المسموح."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -2811,5 +2812,44 @@
       "none": "غير مربوط",
       "saved": "حُفظ الربط."
     }
+  },
+  "approvalBar": {
+    "label": "مسار الاعتماد",
+    "submitted": "تقديم الطلب",
+    "waitingFor": "بانتظار",
+    "notStarted": "لم تبدأ",
+    "viewAll": "عرض كل المراحل",
+    "moreDone": "+{{count}} مراحل مكتملة",
+    "moreStages": "+{{count}} مراحل",
+    "moreActions": "إجراءات أخرى",
+    "ruleAll": "يلزم اعتماد الجميع",
+    "ruleAny": "يكفي اعتماد أحدهم",
+    "round": "الجولة {{round}}",
+    "earlierRound": "جولة سابقة",
+    "plannedHint": "مخططة، ويُحدد معتمدوها عند الوصول إليها",
+    "state": {
+      "Submitted": "مُرسل",
+      "Done": "معتمدة",
+      "Current": "المرحلة الحالية",
+      "Rejected": "مرفوضة",
+      "Returned": "مُعادة",
+      "Canceled": "ملغاة",
+      "Planned": "مخططة"
+    },
+    "drawerTitle": "سير الموافقات",
+    "startedBy": "بدأ في {{date}} بواسطة {{name}}",
+    "close": "إغلاق",
+    "assignedOn": "أُسندت {{date}}",
+    "awaitingDecision": "بانتظار القرار",
+    "approvedOn": "اعتُمدت {{date}}",
+    "rejectedOn": "رُفضت {{date}}",
+    "returnedOn": "أُعيدت {{date}}",
+    "sentOn": "أُرسل {{date}}",
+    "eventLog": "سجل الأحداث ({{count}})",
+    "currentStage": "المرحلة الحالية",
+    "nextStage": "بعد الاعتماد ينتقل إلى: {{name}}",
+    "reasonRequired": "السبب مطلوب",
+    "sending": "جارٍ الإرسال…",
+    "alreadyProcessed": "تمت معالجة هذه المهمة بالفعل، وحُدّثت الصفحة."
   }
 }

@@ -3,7 +3,6 @@ import AutoModeOutlinedIcon from '@mui/icons-material/AutoModeOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
@@ -46,7 +45,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
-import { ApprovalBar, ApprovalFeedLog, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
@@ -263,6 +262,7 @@ export function TimesheetPage() {
         <ApprovalBar
           status={sheet.approval}
           detail={approval.detail}
+          loading={approval.loading}
           onChanged={() => {
             void approval.reload();
             void reload();
@@ -413,12 +413,6 @@ export function TimesheetPage() {
             )}
           </Box>
 
-          {sheet.approval && (
-            <Box sx={{ ...card, p: 2.25 }}>
-              <SectionTitle icon={<HistoryOutlinedIcon />} title={t('operations.delivery.tabs.approval')} />
-              <ApprovalFeedLog status={sheet.approval} detail={approval.detail} />
-            </Box>
-          )}
         </Stack>
 
       </Box>

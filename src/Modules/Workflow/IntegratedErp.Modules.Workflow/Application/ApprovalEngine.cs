@@ -148,13 +148,34 @@ internal sealed partial class ApprovalEngine(
 
     // ------------------------------------------------------------------ Decide / delegate / cancel / retry
 
-    public async Task<Result> DecideAsync(Guid workItemId, Decision decision, string? comment, IReadOnlyDictionary<string, string?>? fieldValues, CancellationToken cancellationToken)
+    /// <param name="idempotencyKey">
+    /// From the Idempotency-Key header: when this task was already decided with the same key, the first result is
+    /// returned and nothing is done again.
+    /// </param>
+    public async Task<Result> DecideAsync(
+        Guid workItemId,
+        Decision decision,
+        string? comment,
+        IReadOnlyDictionary<string, string?>? fieldValues,
+        CancellationToken cancellationToken,
+        string? idempotencyKey = null)
     {
+        idempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim();
+        if (idempotencyKey?.Length > 64)
+        {
+            return Result.Failure(Error.Validation("approval_idempotency_key", "The Idempotency-Key is limited to 64 characters."));
+        }
+
         var me = Me();
         var item = await db.WorkItems.FirstOrDefaultAsync(w => w.Id == workItemId && w.AssigneeUserId == me, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
             return Result.Failure(WorkItemNotFound);
+        }
+
+        if (idempotencyKey is not null && item.DecisionKey == idempotencyKey)
+        {
+            return Result.Success();
         }
 
         var instance = await db.Instances.FirstAsync(i => i.Id == item.InstanceId, cancellationToken).ConfigureAwait(false);
@@ -198,7 +219,7 @@ internal sealed partial class ApprovalEngine(
             Decision.Approve => WorkItemStatus.Approved,
             Decision.Reject => WorkItemStatus.Rejected,
             _ => WorkItemStatus.Returned,
-        }, comment, now);
+        }, comment, now, idempotencyKey);
         var onBehalf = item.DelegatedFrom is { } from ? await NameOfAsync(from, cancellationToken).ConfigureAwait(false) : null;
         History(
             instance,
@@ -211,7 +232,7 @@ internal sealed partial class ApprovalEngine(
         var stillOpen = stageItems.Where(w => w.IsOpen && w.Id != item.Id).ToList();
         if (decision == Decision.Approve && step.Rule == CompletionRule.All && stillOpen.Count > 0)
         {
-            return await SaveAsync(cancellationToken).ConfigureAwait(false);
+            return await SaveDecisionAsync(workItemId, idempotencyKey, cancellationToken).ConfigureAwait(false);
         }
 
         stillOpen.ForEach(w => w.Close(now));
@@ -234,7 +255,23 @@ internal sealed partial class ApprovalEngine(
             await RunAsync(instance, adapter, cancellationToken).ConfigureAwait(false);
         }
 
-        return await SaveAsync(cancellationToken).ConfigureAwait(false);
+        return await SaveDecisionAsync(workItemId, idempotencyKey, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Saves a decision. When a request with the same key won the race (two identical requests at once), the loser
+    /// returns the winner's result rather than a conflict.
+    /// </summary>
+    private async Task<Result> SaveDecisionAsync(Guid workItemId, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        var saved = await SaveAsync(cancellationToken).ConfigureAwait(false);
+        if (saved.IsFailure && idempotencyKey is not null
+            && await db.WorkItems.AsNoTracking().AnyAsync(w => w.Id == workItemId && w.DecisionKey == idempotencyKey, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Success();
+        }
+
+        return saved;
     }
 
     public async Task<Result> DelegateAsync(Guid workItemId, Guid toUserId, string? comment, CancellationToken cancellationToken)
@@ -392,18 +429,75 @@ internal sealed partial class ApprovalEngine(
             : [];
         var items = await db.WorkItems.AsNoTracking().Where(w => w.InstanceId == instance.Id)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var definition = await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false);
+        var rules = DefinitionRules.Walk(definition.Steps).OfType<ApprovalStep>()
+            .GroupBy(s => s.Id, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Rule.ToString(), StringComparer.Ordinal);
         return new ApprovalStatusInfo(
             instance.Id, instance.ProcessNameAr, instance.ProcessNameEn, instance.Version, instance.Status.ToString(),
             instance.WaitingStepAr, instance.WaitingStepEn, waiting, instance.SubmittedByName, instance.SubmittedAt,
-            Stages(items),
+            Stages(items, rules),
             history.Select(h => new ApprovalTimelineEntry(
                 h.Sequence, h.Kind, h.StepNameAr, h.StepNameEn, h.ActorName, h.OnBehalfOf, h.Outcome, h.Comment,
                 h.Kind == nameof(HistoryKind.RecordUpdated) && h.Details is not null ? JsonSerializer.Deserialize<Dictionary<string, string?>>(h.Details) : null,
-                h.At)).ToList());
+                h.At)).ToList(),
+            await PlannedAsync(instance, definition, cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// The stages still ahead if every stage from the current one is approved, following conditions on the record's
+    /// values as they are now. Only a forecast: a later change to the record, or a rejection, can take another path,
+    /// and their approvers are known only when they open.
+    /// </summary>
+    private async Task<List<ApprovalPlannedStage>> PlannedAsync(ApprovalInstance instance, ProcessDefinition definition, CancellationToken cancellationToken)
+    {
+        var planned = new List<ApprovalPlannedStage>();
+        if (instance.Status != InstanceStatus.InProgress || AdapterFor(instance.Screen) is not { } adapter)
+        {
+            return planned;
+        }
+
+        var cursor = ProcessCursor.Parse(instance.Cursor);
+        if (cursor.Next(definition) is not ApprovalStep waiting || waiting.Id != instance.WaitingStepId)
+        {
+            return planned;
+        }
+
+        cursor.Advance(waiting, ProcessCursor.Approve, definition);
+        var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        IReadOnlyDictionary<string, string?>? values = null;
+        for (var guard = 0; guard < MaxStepsPerRun; guard++)
+        {
+            var step = cursor.Next(definition);
+            switch (step)
+            {
+                case ApprovalStep stage:
+                    planned.Add(new ApprovalPlannedStage(stage.Id, stage.NameAr, stage.NameEn, stage.Rule.ToString()));
+                    cursor.Advance(stage, ProcessCursor.Approve, definition);
+                    break;
+                case ConditionStep condition:
+                    values ??= await ValuesAsync(instance, adapter, cancellationToken).ConfigureAwait(false);
+                    if (values is null)
+                    {
+                        return planned;
+                    }
+
+                    var index = condition.Branches.ToList().FindIndex(b => FieldValues.Matches(b.Condition, fields, values));
+                    cursor.Advance(condition, index >= 0 ? $"b{index}" : ProcessCursor.Else, definition);
+                    break;
+                case UpdateStep or NotifyStep:
+                    cursor.Advance(step, null, definition);
+                    break;
+                default:
+                    // A stop, or the end of the process.
+                    return planned;
+            }
+        }
+
+        return planned;
     }
 
     /// <summary>Each opening of a stage (step and round), in order, as the stage bar shows it.</summary>
-    private static List<ApprovalStageInfo> Stages(List<ApprovalWorkItem> items) =>
+    private static List<ApprovalStageInfo> Stages(List<ApprovalWorkItem> items, Dictionary<string, string> rules) =>
         items.GroupBy(w => (w.StepId, w.Round))
             .OrderBy(g => g.Min(w => w.CreatedAt))
             .Select(g =>
@@ -423,7 +517,9 @@ internal sealed partial class ApprovalEngine(
                     g.Where(w => w.Status != WorkItemStatus.Delegated).Select(w => w.AssigneeName).Distinct().ToList(),
                     last?.AssigneeName, onBehalf, first.CreatedAt,
                     state == "Current" ? null : last?.DecidedAt ?? g.Max(w => w.DecidedAt),
-                    last?.Comment);
+                    last?.Comment,
+                    g.Key.Round,
+                    rules.GetValueOrDefault(g.Key.StepId, nameof(CompletionRule.Any)));
             })
             .ToList();
 
