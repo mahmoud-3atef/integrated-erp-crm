@@ -48,7 +48,7 @@ function ReceiptPreview({ amount, method, account, payer, receiptDate, allocated
           minHeight: 180,
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(135deg, #043b38 0%, #0b6e66 50%, #17a596 100%)',
+          background: recordTones.receipt.band,
           boxShadow: '0 14px 30px rgba(6,90,82,.28)',
           '&::before': { content: '""', position: 'absolute', width: 200, height: 200, borderRadius: '50%', bgcolor: 'rgba(255,255,255,.07)', top: -100, insetInlineEnd: -70 },
         }}

@@ -217,7 +217,7 @@ export function ReceiptPage({ editing = false }: { editing?: boolean } = {}) {
                 borderRadius: '22px',
                 p: 2.75,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #043b38 0%, #0b6e66 50%, #17a596 100%)',
+                background: recordTones.receipt.band,
                 boxShadow: '0 18px 40px rgba(6,90,82,.32)',
                 minHeight: 220,
                 display: 'flex',

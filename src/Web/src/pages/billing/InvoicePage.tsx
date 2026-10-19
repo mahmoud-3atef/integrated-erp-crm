@@ -183,7 +183,7 @@ export function InvoicePage() {
   const paidShare = inv.total > 0 ? Math.min(100, Math.round((inv.paid / inv.total) * 100)) : 0;
   const lines = inv.items.filter((i) => i.component !== 'Discount');
   const discount = inv.items.find((i) => i.component === 'Discount');
-  const barColors = [look.main, '#5b7bd6', '#0f8f84', '#7c4dcc', '#d98a06', '#5d6f7b'];
+  const barColors = [look.main, '#5b7bd6', '#2a9bd1', '#7c4dcc', '#d98a06', '#5d6f7b'];
 
   // The journey: made, issued, the receipts and notes by date with the due date among them, then the full payment.
   // What is still free to receive: the outstanding less what receipts in review will already pay.
