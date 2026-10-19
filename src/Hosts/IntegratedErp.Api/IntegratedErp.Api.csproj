@@ -17,6 +17,7 @@
     <ProjectReference Include="..\..\Modules\Billing\IntegratedErp.Modules.Billing\IntegratedErp.Modules.Billing.csproj" />
     <ProjectReference Include="..\..\Modules\Payroll\IntegratedErp.Modules.Payroll\IntegratedErp.Modules.Payroll.csproj" />
     <ProjectReference Include="..\..\Modules\Staff\IntegratedErp.Modules.Staff\IntegratedErp.Modules.Staff.csproj" />
+    <ProjectReference Include="..\..\Modules\Attendance\IntegratedErp.Modules.Attendance\IntegratedErp.Modules.Attendance.csproj" />
     <ProjectReference Include="..\..\Modules\Operations\IntegratedErp.Modules.Operations\IntegratedErp.Modules.Operations.csproj" />
   </ItemGroup>
 </Project>

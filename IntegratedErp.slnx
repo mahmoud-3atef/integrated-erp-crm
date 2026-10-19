@@ -7,6 +7,10 @@
     <Project Path="src/Hosts/IntegratedErp.Api/IntegratedErp.Api.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Attendance/">
+    <Project Path="src/Modules/Attendance/IntegratedErp.Modules.Attendance.Contracts/IntegratedErp.Modules.Attendance.Contracts.csproj" />
+    <Project Path="src/Modules/Attendance/IntegratedErp.Modules.Attendance/IntegratedErp.Modules.Attendance.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Commercial/">
     <Project Path="src/Modules/Commercial/IntegratedErp.Modules.Commercial.Contracts/IntegratedErp.Modules.Commercial.Contracts.csproj" />
     <Project Path="src/Modules/Commercial/IntegratedErp.Modules.Commercial/IntegratedErp.Modules.Commercial.csproj" />

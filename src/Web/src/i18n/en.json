@@ -437,7 +437,23 @@
     "not_found_staff_action": "The action was not found.",
     "validation_staff_action_fields": "Fill what this action needs (it has to fit the employee's current state).",
     "conflict_staff_action_not_editable": "Only a draft or returned action can be sent.",
-    "conflict_staff_action_open": "The employee already has an action in approval."
+    "conflict_staff_action_open": "The employee already has an action in approval.",
+    "not_found_attendance_shift": "The shift was not found.",
+    "not_found_attendance_holiday": "The holiday was not found.",
+    "not_found_attendance_assignment": "The assignment was not found.",
+    "not_found_attendance_employee": "The employee was not found.",
+    "validation_attendance_name": "Enter the Arabic name (100 characters at most).",
+    "validation_attendance_shift_hours": "Check the shift's hours, break, grace and Ramadan hours.",
+    "validation_attendance_assignment": "Assign the shift to a department or an employee, with an end after the start.",
+    "validation_attendance_dates": "The end is before the start, or the period is longer than 60 days.",
+    "validation_attendance_badge": "The fingerprint number is 30 characters at most.",
+    "conflict_attendance_badge_taken": "Another employee has this fingerprint number.",
+    "validation_attendance_cycle": "The month starts on a day from 1 to 28.",
+    "validation_attendance_correction": "Deduction from 0 to 3 days, a note of 500 characters at most, and a day within the employee's employment.",
+    "validation_attendance_note": "Excusing an absence needs its reason in the note.",
+    "validation_attendance_file": "No readable rows in the file: a column of employee numbers and a column of dates are needed.",
+    "validation_attendance_mapping": "The column mapping is not valid.",
+    "conflict_attendance_shift_in_use": "The default shift or an assigned one cannot be deleted."
   },
   "menu": {
     "label": "Main menu",
@@ -490,7 +506,9 @@
     "hrEmployees": "Employees",
     "hrStructure": "Organisation",
     "hrCatalog": "Job titles and grades",
-    "hrActions": "Employment actions"
+    "hrActions": "Employment actions",
+    "hrAttendance": "Attendance",
+    "hrShifts": "Shifts and calendar"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -3216,5 +3234,320 @@
     "open": "Open-ended",
     "notice": "Notice {{days}} days",
     "byAction": "By action"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "intro": "The staff's attendance from the fingerprint file: each employee's days calculated on their shift and the holidays, with the exceptions to review.",
+    "period": "{{from}} – {{to}}",
+    "lastImport": "Last import:",
+    "noImport": "No fingerprint file imported for this month yet",
+    "import": "Import the fingerprint file",
+    "allEntities": "All commercial registrations",
+    "state": {
+      "Complete": "Complete",
+      "Exceptions": "Open exceptions",
+      "NoPunches": "No punches",
+      "NoWorkDays": "No working days"
+    },
+    "kpi": {
+      "employees": "Employees in the month",
+      "employeesUnit": "employees",
+      "full": "Complete punches",
+      "none": "No punches",
+      "allLeave": "On leave all month",
+      "absence": "Days of absence",
+      "days": "days",
+      "deduction": "Deduction days",
+      "excused": "Excused",
+      "late": "Minutes late",
+      "minutes": "minutes",
+      "lateEmployees": "Employees late",
+      "early": "Left early",
+      "exceptions": "Open exceptions",
+      "exceptionsUnit": "exceptions",
+      "missing": "Missing punch",
+      "unexcused": "Unexcused absence"
+    },
+    "tabs": {
+      "employees": "Employees ({{count}})",
+      "exceptions": "Exceptions ({{count}})",
+      "imports": "Imported files"
+    },
+    "filters": {
+      "search": "Search by name or number…",
+      "department": "Department",
+      "allDepartments": "All departments",
+      "shift": "Shift",
+      "allShifts": "All shifts",
+      "state": "State",
+      "allStates": "All states"
+    },
+    "cols": {
+      "employee": "Employee",
+      "shift": "Shift",
+      "days": "Days",
+      "workDays": "Working days",
+      "present": "Present",
+      "absent": "Absent",
+      "leave": "Leave",
+      "minutes": "Minutes and punches",
+      "late": "Late",
+      "early": "Left early",
+      "missing": "Missing punch",
+      "deduction": "Deduction days",
+      "state": "State",
+      "date": "Date",
+      "status": "Status",
+      "in": "In",
+      "out": "Out",
+      "device": "Fingerprint status",
+      "file": "File",
+      "range": "Period",
+      "rows": "Rows",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "by": "By"
+    },
+    "totalAll": "Total of the results ({{count}} employees)",
+    "shown": "Showing {{from}} – {{to}} of {{total}} employees · totals from the server for all results",
+    "perPage": "{{count}} per page",
+    "days": "Days",
+    "empty": "No attendance for this month",
+    "emptyHint": "Import the file exported from the fingerprint system to see the employees' days.",
+    "noResults": "No matching results",
+    "noExceptions": "No open exceptions this month",
+    "noImports": "No file imported yet",
+    "weekdays": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    ],
+    "status": {
+      "NoData": "No data",
+      "Present": "Present",
+      "MissingPunch": "Missing punch",
+      "Absent": "Absent",
+      "Rest": "Rest day",
+      "Holiday": "Official holiday",
+      "Leave": "Leave",
+      "Mission": "Work mission",
+      "Excused": "Excused absence",
+      "Exempt": "Exempt from fingerprint",
+      "Late": "Late"
+    },
+    "manual": {
+      "Present": "Present",
+      "Excused": "Excused absence",
+      "Leave": "Leave",
+      "Mission": "Work mission",
+      "Absent": "Absent"
+    },
+    "drawer": {
+      "summary": "The month",
+      "pick": "Choose a day in the calendar to see and correct it.",
+      "device": "Fingerprint system: {{status}}",
+      "deviceTimes": "From the file: {{in}} – {{out}}",
+      "permission": "Permission of {{minutes}} minutes",
+      "edited": "Corrected by {{by}} on {{date}}",
+      "correct": "Correct the day",
+      "in": "In",
+      "out": "Out",
+      "statusOver": "Status",
+      "calculated": "As calculated",
+      "note": "Note or reason",
+      "deduction": "Deduction days",
+      "deductionHint": "Empty = calculated ({{value}})",
+      "save": "Save the correction",
+      "saved": "Correction saved",
+      "worked": "Hours worked",
+      "settings": "Fingerprint settings",
+      "badge": "Fingerprint number",
+      "badgeHint": "The employee's number on the fingerprint device (used when matching by fingerprint number)",
+      "exempt": "Exempt from the fingerprint (counted present on working days)",
+      "idNumber": "ID number:",
+      "grace": "{{minutes}} minutes of grace",
+      "deviceMinutes": "Device: late {{late}} · early {{early}}"
+    },
+    "dialog": {
+      "title": "Import the fingerprint file",
+      "steps": [
+        "Upload",
+        "Columns",
+        "Preview and errors",
+        "Import"
+      ],
+      "pick": "Choose the Excel file (.xlsx) exported from the fingerprint system",
+      "pickHint": "The attendance report for all employees: one row per employee and day, with the in and out times and the status.",
+      "choose": "Choose a file",
+      "matchBy": "Employees are matched by: {{value}}",
+      "matchByChange": "Changed in «Shifts and calendar» › Settings",
+      "mapping": "Columns",
+      "mappingHint": "The columns were recognised by their headers. Correct them if needed; they are kept for next time.",
+      "fileColumn": "File column",
+      "samples": "Samples",
+      "field": "Field",
+      "none": "— not imported —",
+      "required": "Required",
+      "fields": {
+        "key": "Employee number in the file",
+        "name": "Name (for review only)",
+        "date": "Date",
+        "status": "Status",
+        "in": "In time",
+        "out": "Out time",
+        "permission": "Permission minutes",
+        "late": "Late minutes (from the device)",
+        "early": "Early minutes (from the device)"
+      },
+      "reread": "Preview again",
+      "summary": {
+        "accepted": "Accepted rows",
+        "rejected": "Rejected",
+        "warnings": "Warnings",
+        "employees": "Employees",
+        "skipped": "No data"
+      },
+      "range": "Period in the file: {{from}} – {{to}}",
+      "problems": "Rejected rows and warnings",
+      "noProblems": "No errors: every row is valid.",
+      "codes": {
+        "unknown_employee": "Number not linked to an employee",
+        "not_employed": "Outside the employee's employment",
+        "duplicate": "Repeated in the file: the first row is taken",
+        "bad_time": "Unreadable time: taken as empty"
+      },
+      "unmatched": "Numbers in the file matching no employee ({{count}})",
+      "unmatchedHint": "Their rows will not be imported. Add the ID number to the employee's file (or the fingerprint number), then preview again.",
+      "rows": "{{count}} rows",
+      "note": "Importing the same period again replaces what came from the file and recalculates the days; corrections and reasons stay.",
+      "apply": "Import ({{count}} rows)",
+      "done": "File imported: {{accepted}} rows for {{employees}} employees.",
+      "next": "Next",
+      "back": "Back"
+    },
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
+  },
+  "shifts": {
+    "title": "Shifts and calendar",
+    "intro": "The shifts and who has them from which date, the official holidays and Ramadan: the attendance days are calculated from them.",
+    "new": "Shift",
+    "newHoliday": "Holiday",
+    "default": "Default",
+    "inactive": "Inactive",
+    "hours": "Hours",
+    "break": "Break",
+    "grace": "Grace",
+    "rest": "Rest days",
+    "ramadan": "Ramadan",
+    "noRamadan": "Same hours",
+    "minutes": "{{count}} minutes",
+    "employees": "{{count}} employees today",
+    "assigned": "Assigned to",
+    "assignedDefault": "Everyone without a shift",
+    "assign": "Assign",
+    "edit": "Edit",
+    "delete": "Delete",
+    "lateFrom": {
+      "GraceEnd": "Lateness counted from the end of the grace",
+      "ShiftStart": "Lateness counted from the start of the shift"
+    },
+    "form": {
+      "title": "Shift",
+      "nameAr": "Arabic name",
+      "nameEn": "English name",
+      "startsAt": "Starts at",
+      "endsAt": "Ends at",
+      "breakMinutes": "Break (minutes)",
+      "graceMinutes": "Grace (minutes)",
+      "lateFrom": "Lateness past the grace",
+      "restDays": "Rest days",
+      "ramadanStartsAt": "Ramadan start",
+      "ramadanEndsAt": "Ramadan end",
+      "ramadanHint": "Leave both empty if Ramadan hours are the usual ones.",
+      "isDefault": "Default shift (for those without one)",
+      "isActive": "Active",
+      "overnight": "Ends the next day"
+    },
+    "assignForm": {
+      "title": "Assign a shift",
+      "to": "To",
+      "department": "A department (and those under it)",
+      "employee": "An employee",
+      "pickDepartment": "Department",
+      "pickEmployee": "Employee",
+      "from": "From",
+      "until": "Until (optional)"
+    },
+    "holidays": "Holidays {{year}}",
+    "noHolidays": "No holidays recorded for this year",
+    "holidayForm": {
+      "title": "Holiday",
+      "nameAr": "Arabic name",
+      "nameEn": "English name",
+      "from": "From",
+      "to": "To",
+      "kind": "Kind"
+    },
+    "kind": {
+      "Official": "Official holiday",
+      "Ramadan": "Ramadan (Ramadan hours)"
+    },
+    "cols": {
+      "name": "Holiday",
+      "from": "From",
+      "to": "To",
+      "days": "Days",
+      "kind": "Kind"
+    },
+    "settings": "Attendance settings",
+    "matchBy": "Employee number in the fingerprint file",
+    "matchByValue": {
+      "IdNumber": "ID number",
+      "EmployeeNo": "Employee number in the system",
+      "BadgeNo": "Fingerprint number (set per employee)"
+    },
+    "cycle": "Attendance month starts",
+    "cycleValue": "On day {{day}}",
+    "cycleHint": "1 = the calendar month; 21, say = from the 21st of the month before to the 20th.",
+    "rules": "How days are calculated",
+    "rule": {
+      "absent": [
+        "A working day without punches",
+        "Absent; a day is deducted unless excused"
+      ],
+      "missing": [
+        "Only one punch",
+        "A «missing punch» exception to review"
+      ],
+      "late": [
+        "Late and early minutes",
+        "From the fingerprint system when in the file, otherwise from the shift past the grace"
+      ],
+      "early": [
+        "Deduction for lateness",
+        "Decided by the reviewer for each day"
+      ],
+      "device": [
+        "Leave, permission or mission in the fingerprint system",
+        "Respected: leave is not absence, and permission minutes are not late"
+      ],
+      "holiday": [
+        "Official holidays and rest days",
+        "Not counted as absence"
+      ]
+    },
+    "rulesNote": "There are no approved penalty rules yet: deductions for lateness are decided in the review until they are.",
+    "saved": "Saved",
+    "confirmDelete": "Delete «{{name}}»?",
+    "minutesFrom": "Late and early minutes",
+    "minutesFromValue": {
+      "device": "As the fingerprint system calculated them (when in the file)",
+      "shift": "Calculated from the shift"
+    }
   }
 }

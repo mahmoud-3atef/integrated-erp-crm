@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="ClosedXML" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\Organization\IntegratedErp.Modules.Organization.Contracts\IntegratedErp.Modules.Organization.Contracts.csproj" />
+    <ProjectReference Include="..\..\Staff\IntegratedErp.Modules.Staff.Contracts\IntegratedErp.Modules.Staff.Contracts.csproj" />
+    <ProjectReference Include="..\IntegratedErp.Modules.Attendance.Contracts\IntegratedErp.Modules.Attendance.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="IntegratedErp.UnitTests" />
+    <InternalsVisibleTo Include="IntegratedErp.IntegrationTests" />
+  </ItemGroup>
+</Project>

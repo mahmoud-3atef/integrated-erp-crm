@@ -29,6 +29,7 @@ public sealed class StaffModule : IModule
         services.AddScoped<StaffService>();
         services.AddScoped<StructureService>();
         services.AddScoped<StaffQueries>();
+        services.AddScoped<IStaffDirectory, StaffDirectory>();
         services.AddScoped<StaffActionService>();
         services.AddScoped<StaffActionApplier>();
         services.AddScoped<StaffActionQueries>();
