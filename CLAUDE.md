@@ -145,6 +145,7 @@ The full specification is [docs/02-target-architecture/16-approval-workflow-ui.m
 5. **Approval backend:** concurrency and idempotency (record version and idempotency key) and a choice of return target are authorized as backend changes for the approval bar.
 6. **Commercial registrations:** the company has two, and a worker's registration comes from the old system's sponsor («Care-Pro - 05», «Care-pro - 07»), linked once in `payroll.sponsor_registration`. A payroll run covers one registration.
 7. **Unpaid days:** days in housing are not paid. Only the work periods on approved timesheets are paid.
+8. **Employee file (staff profile page): exception to the HR tokens.** It follows the old system's latest employee screen (`C:\Cl\Project-Update\project05-10-2026\...\HR_EmployeeDetails.aspx` and `content/css/pages/hr-employee-details.css`, 2026-10-14) in its navy colours: the hero with the facts, the dark «ملخص عام» card, pill tabs, and boxes titled on their border with «تعديل». The wireframe is [wf-staff-profile.png](docs/02-target-architecture/assets/wf-staff-profile.png). The directory and the organisation pages keep the HR design.
 
 ### Already verified (answers §2 of the spec for this repository)
 

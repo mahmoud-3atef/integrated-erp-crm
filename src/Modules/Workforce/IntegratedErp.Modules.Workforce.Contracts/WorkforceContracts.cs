@@ -110,3 +110,41 @@ public interface IWorkerSalaries
     /// <summary>The salaries of these workers (unknown ids are left out).</summary>
     Task<IReadOnlyList<WorkerSalary>> SalariesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// A company staff member as the old system holds them (new_employeetype = staff), for the Staff module to build its
+/// employee files from: who they are, their salary, contract dates and leave balance there.
+/// </summary>
+public sealed record StaffRecord(
+    Guid WorkerId,
+    Guid PersonId,
+    string EmployeeNo,
+    string NameEn,
+    string? NameAr,
+    string? IdNumber,
+    string? NationalityCode,
+    string? NationalityAr,
+    string? NationalityEn,
+    string? ProfessionCode,
+    string? StatusAr,
+    string? StatusEn,
+    bool Active,
+    string? Sponsor,
+    DateOnly? JoinedOn,
+    WorkerSalary Salary,
+    decimal Mobile,
+    decimal Project,
+    DateOnly? ContractStartsOn,
+    int? ContractMonths,
+    DateOnly? ContractEndsOn,
+    decimal? AnnualLeaveDays,
+    decimal? LeaveBalance,
+    decimal? LeaveConsumed,
+    decimal? LeaveOldConsumed,
+    decimal? LeaveRemaining);
+
+/// <summary>The company's staff in the old system's copy (read by the Staff module).</summary>
+public interface IStaffRecords
+{
+    Task<IReadOnlyList<StaffRecord>> StaffAsync(CancellationToken cancellationToken);
+}

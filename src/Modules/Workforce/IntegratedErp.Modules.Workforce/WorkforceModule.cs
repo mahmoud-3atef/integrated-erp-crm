@@ -30,6 +30,7 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<WorkforceDirectory>();
         services.AddScoped<IWorkforceDirectory>(sp => sp.GetRequiredService<WorkforceDirectory>());
         services.AddScoped<IWorkerSalaries>(sp => sp.GetRequiredService<WorkforceDirectory>());
+        services.AddScoped<IStaffRecords>(sp => sp.GetRequiredService<WorkforceDirectory>());
         services.AddScoped<IPeriodLedger, PeriodLedger>();
         services.AddScoped<WorkerImportService>();
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<WorkerImportService>());
@@ -41,8 +42,7 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<InvoiceCheckQueries>();
         services.AddScoped<WorkforceDashboard>();
         services.AddNumberSequences(
-            new NumberSequenceDefinition("worker", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للعمالة", "Worker numbers", "BSS{N:6}", NumberReset.Never, InUse: false),
-            new NumberSequenceDefinition("staff", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للموظفين", "Staff numbers", "HO{N:5}", NumberReset.Never, InUse: false));
+            new NumberSequenceDefinition("worker", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للعمالة", "Worker numbers", "BSS{N:6}", NumberReset.Never, InUse: false));
         services.AddOptions<WorkforceOptions>().Bind(configuration.GetSection(WorkforceOptions.Section));
         services.AddPermissions(WorkforcePermissions.All);
         services.AddAlertProvider<WorkforceAlerts>();

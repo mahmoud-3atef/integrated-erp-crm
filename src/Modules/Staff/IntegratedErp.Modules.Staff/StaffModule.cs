@@ -1,0 +1,57 @@
+using IntegratedErp.BuildingBlocks.Modules;
+using IntegratedErp.BuildingBlocks.Numbering;
+using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Security;
+using IntegratedErp.Modules.Staff.Api;
+using IntegratedErp.Modules.Staff.Application;
+using IntegratedErp.Modules.Staff.Contracts;
+using IntegratedErp.Modules.Staff.Infrastructure;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace IntegratedErp.Modules.Staff;
+
+/// <summary>
+/// Staff module (docs/02-target-architecture/08): the company's own staff, apart from the operation workers — the
+/// organisation (departments, job titles, grades, positions) and the employee files, built from the old system's
+/// staff and kept here.
+/// </summary>
+public sealed class StaffModule : IModule
+{
+    public string Name => StaffContracts.ModuleName;
+
+    public void RegisterServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddModuleDbContext<StaffDbContext>(configuration, StaffDbContext.SchemaName);
+        services.AddScoped<StaffService>();
+        services.AddScoped<StructureService>();
+        services.AddScoped<StaffQueries>();
+        services.AddPermissions(StaffPermissions.All);
+        services.AddNumberSequences(
+            new NumberSequenceDefinition("staff", StaffDbContext.SchemaName, "الموارد البشرية", "Human resources", "الرقم الوظيفي للموظفين", "Staff numbers", "HO{N:5}", NumberReset.Never));
+    }
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapStaffEndpoints();
+}
+
+internal static class StaffPermissions
+{
+    public const string View = "staff.view";
+    public const string Manage = "staff.manage";
+    public const string StructureManage = "staff.structure.manage";
+    public const string SalariesView = "staff.salaries.view";
+    public const string SalariesManage = "staff.salaries.manage";
+
+    private const string GroupAr = "الموارد البشرية";
+    private const string GroupEn = "Human resources";
+
+    public static readonly PermissionDefinition[] All =
+    [
+        new(View, GroupAr, GroupEn, "عرض الموظفين والهيكل التنظيمي", "View the staff and the organisation"),
+        new(Manage, GroupAr, GroupEn, "تعيين الموظفين وتعديل ملفاتهم", "Hire staff and change their files"),
+        new(StructureManage, GroupAr, GroupEn, "إدارة الهيكل التنظيمي والمسميات والدرجات", "Manage the organisation, job titles and grades"),
+        new(SalariesView, GroupAr, GroupEn, "عرض رواتب الموظفين", "View the staff's salaries"),
+        new(SalariesManage, GroupAr, GroupEn, "تعديل رواتب الموظفين", "Change the staff's salaries"),
+    ];
+}

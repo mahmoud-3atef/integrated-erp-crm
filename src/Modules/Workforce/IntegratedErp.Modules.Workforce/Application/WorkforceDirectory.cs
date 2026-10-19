@@ -6,8 +6,39 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
-internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData reference) : IWorkforceDirectory, IWorkerSalaries
+internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData reference) : IWorkforceDirectory, IWorkerSalaries, IStaffRecords
 {
+    public async Task<IReadOnlyList<StaffRecord>> StaffAsync(CancellationToken cancellationToken)
+    {
+        var rows = await db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Staff && !w.RemovedInCrm)
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { Worker = w, Person = p })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var personIds = rows.Select(r => r.Person.Id).ToList();
+        var ids = (await db.Identifiers.AsNoTracking()
+                .Where(i => personIds.Contains(i.PersonId) && i.Type == IdentifierType.Iqama && i.IsCurrent)
+                .ToListAsync(cancellationToken).ConfigureAwait(false))
+            .GroupBy(i => i.PersonId).ToDictionary(g => g.Key, g => g.First().Number);
+        var nationalities = (await reference.ListAllAsync(ReferenceListCodes.Nationalities, cancellationToken).ConfigureAwait(false))
+            .ToDictionary(i => i.Code, StringComparer.Ordinal);
+        return rows.Select(r =>
+            {
+                var w = r.Worker;
+                var s = w.Salary;
+                var nationality = r.Person.NationalityCode is { } nc ? nationalities.GetValueOrDefault(nc) : null;
+                var status = CrmWorkerStatus.Name(w.CrmStatus);
+                return new StaffRecord(
+                    w.Id, r.Person.Id, w.WorkerNo, r.Person.NameEn, r.Person.NameAr, ids.GetValueOrDefault(r.Person.Id), r.Person.NationalityCode,
+                    nationality?.NameAr, nationality?.NameEn, w.ProfessionCode, status?.Ar, status?.En, w.Lifecycle == Lifecycle.Active, w.Sponsor,
+                    w.ArrivedOn ?? w.ProjectJoinedOn,
+                    new WorkerSalary(w.Id, w.Sponsor, s.Basic, s.Housing, s.Food, s.Transport, s.Overtime + s.Other, s.Total),
+                    s.Project, s.Hardship, // the old system's mobile allowance is kept as Project, its project allowance as Hardship
+                    w.Contract.StartsOn, w.Contract.Months, w.Contract.EndsOn,
+                    w.Leave.AnnualDays, w.Leave.Balance, w.Leave.Consumed, w.Leave.OldConsumed, w.Leave.Remaining);
+            })
+            .OrderBy(x => x.EmployeeNo, StringComparer.Ordinal)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<WorkerSalary>> SalariesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);
