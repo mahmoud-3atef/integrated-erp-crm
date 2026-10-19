@@ -136,6 +136,14 @@ The full specification is [docs/02-target-architecture/16-approval-workflow-ui.m
 **States**
 - Loading, no workflow, actionable, read-only, parallel, returned or reopened, completed, rejected, and error or stale.
 
+### Decisions confirmed by the user (2026-10-19)
+
+1. **Approval buttons:** where the payroll image and spec v1.1 disagree, follow spec v1.1: Approve on the right of the current stage and Reject on its left, in the same row.
+2. **«سير الموافقات»:** it is not a permanent side panel. It is the history drawer, opened by «عرض كل المراحل», so the grid keeps the full width.
+3. **Colours:** the blue `#2563EB` primary and the HR tokens apply inside HR screens and the approval bar. The rest of the app keeps its current tones.
+4. **The first payroll run (4.1) is for company-sponsored workers.** The grid shows the project in place of the department and the profession in place of the job, with the worker's status.
+5. **Approval backend:** concurrency and idempotency (record version and idempotency key) and a choice of return target are authorized as backend changes for the approval bar.
+
 ### Already verified (answers §2 of the spec for this repository)
 
 - **Frontend:**
