@@ -90,6 +90,27 @@ function Hero({ children }: { children: ReactNode }) {
 }
 const filling = (delay = 0) => ({ transformOrigin: 'left center', animation: `${fill} .9s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
 
+/**
+ * A ticker sentence with its data in a colour of its own: the marked values (figures, names, months) and any other
+ * number of the sentence, with the % that follows it.
+ */
+function Marked({ text }: { text: string }) {
+  const parts = text.split(/(⟦[^⟧]*⟧%?|\d[\d,.]*%?)/);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <Box key={i} component="bdi" sx={{ color: '#C2410C', fontWeight: 800 }}>
+            {part.replace(/[⟦⟧]/g, '')}
+          </Box>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 /** Whether the device asks for less motion (then the ticker shows one sentence at a time). */
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -367,22 +388,25 @@ function Loading() {
 function Insights({ data }: { data: Overview }) {
   const { t } = useTranslation();
   const f = useFormat();
+  // Each value put in a sentence is marked, so the ticker shows it in its own colour.
+  const mark = (key: string, values: Record<string, string | number>) =>
+    t(key, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, `⟦${v}⟧`])));
   const lines: string[] = [];
   const s = data.starts.value ?? 0;
   const ps = data.starts.previous;
-  lines.push(ps === null ? t('exec.ins.starts', { count: f.n(s) }) : t(s >= ps ? 'exec.ins.startsUp' : 'exec.ins.startsDown', { count: f.n(s), diff: f.n(Math.abs(s - ps)) }));
-  lines.push(t('exec.ins.net', { net: f.n(data.net.value ?? 0), starts: f.n(s), returns: f.n(data.returns.value ?? 0) }));
-  if (data.startsByManager[0]) lines.push(t('exec.ins.topManager', { name: data.startsByManager[0].name, count: f.n(data.startsByManager[0].count) }));
+  lines.push(ps === null ? mark('exec.ins.starts', { count: f.n(s) }) : mark(s >= ps ? 'exec.ins.startsUp' : 'exec.ins.startsDown', { count: f.n(s), diff: f.n(Math.abs(s - ps)) }));
+  lines.push(mark('exec.ins.net', { net: f.n(data.net.value ?? 0), starts: f.n(s), returns: f.n(data.returns.value ?? 0) }));
+  if (data.startsByManager[0]) lines.push(mark('exec.ins.topManager', { name: data.startsByManager[0].name, count: f.n(data.startsByManager[0].count) }));
   if (data.financeVisible && data.collectionRate.value !== null) {
     lines.push(
       data.collectionRate.previous === null
-        ? t('exec.ins.rate', { rate: data.collectionRate.value })
-        : t('exec.ins.rateCompare', { rate: data.collectionRate.value, previous: data.collectionRate.previous }),
+        ? mark('exec.ins.rate', { rate: data.collectionRate.value })
+        : mark('exec.ins.rateCompare', { rate: data.collectionRate.value, previous: data.collectionRate.previous }),
     );
   }
-  if (data.financeVisible && data.overdue60 > 0) lines.push(t('exec.ins.overdue', { amount: f.n(data.overdue60), share: data.totalDebt > 0 ? Math.round((data.overdue60 * 100) / data.totalDebt) : 0 }));
+  if (data.financeVisible && data.overdue60 > 0) lines.push(mark('exec.ins.overdue', { amount: f.n(data.overdue60), share: data.totalDebt > 0 ? Math.round((data.overdue60 * 100) / data.totalDebt) : 0 }));
   if (data.financeVisible && data.coverage.month && data.coverage.missing + data.coverage.partial > 0) {
-    lines.push(t('exec.ins.coverage', { month: f.monthLong(data.coverage.month), count: data.coverage.missing + data.coverage.partial, workers: f.n(data.coverage.workersNotInvoiced) }));
+    lines.push(mark('exec.ins.coverage', { month: f.monthLong(data.coverage.month), count: data.coverage.missing + data.coverage.partial, workers: f.n(data.coverage.workersNotInvoiced) }));
   }
   const seconds = Math.max(28, lines.join(' ').length * 0.16);
   const calm = useReducedMotion();
@@ -396,8 +420,8 @@ function Insights({ data }: { data: Overview }) {
     <Stack direction="row" aria-hidden={copy === 1 ? true : undefined} sx={{ flex: '0 0 auto', alignItems: 'center' }}>
       {lines.map((l) => (
         <Stack key={`${copy}-${l}`} direction="row" sx={{ alignItems: 'center', flex: '0 0 auto' }}>
-          <Typography component="span" dir="rtl" sx={{ fontSize: 13.5, whiteSpace: 'nowrap', px: 2 }}>
-            {l}
+          <Typography component="span" sx={{ fontSize: 13.5, whiteSpace: 'nowrap', px: 2 }}>
+            <Marked text={l} />
           </Typography>
           <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#FCD34D', flex: '0 0 auto' }} />
         </Stack>
@@ -430,7 +454,7 @@ function Insights({ data }: { data: Overview }) {
         {calm ? (
           // Less motion asked by the device: one sentence at a time, changing every few seconds.
           <Typography key={shown} sx={{ ...appear(0), fontSize: 13.5, px: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {lines[shown % lines.length]}
+            <Marked text={lines[shown % lines.length]!} />
           </Typography>
         ) : (
           <Box className="ticker" sx={{ display: 'flex', width: 'max-content', animation: `${ticker} ${seconds}s linear infinite` }}>
