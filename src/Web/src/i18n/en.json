@@ -583,7 +583,10 @@
     "hrAdvances": "Salary advances",
     "hrPenalties": "Penalties and deductions",
     "payrollStaff": "Staff payroll runs",
-    "payrollGosi": "Social insurance"
+    "payrollGosi": "Social insurance",
+    "pin": "Pin the menu",
+    "unpin": "Unpin the menu",
+    "sections": "Sections"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -1232,7 +1235,16 @@
       "project": "Project allowance",
       "hardship": "Hardship allowance",
       "total": "Total salary",
-      "fixed": "Fixed allowance"
+      "fixed": "Fixed allowance",
+      "short": {
+        "basic": "Basic",
+        "food": "Food",
+        "housing": "Housing",
+        "transport": "Transport",
+        "other": "Other",
+        "total": "Total"
+      },
+      "group": "Salary"
     },
     "sar": "SAR",
     "days": "days",

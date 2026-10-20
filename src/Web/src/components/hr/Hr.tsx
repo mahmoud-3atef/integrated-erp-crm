@@ -49,7 +49,7 @@ export function HrScope({ children }: { children: ReactNode }) {
           MuiTableHead: {
             styleOverrides: {
               root: {
-                '& .MuiTableCell-head': { backgroundColor: hr.muted, color: '#475569', fontWeight: 600, fontSize: 12, paddingBlock: 8, whiteSpace: 'nowrap', borderBottom: `1px solid ${hr.border}` },
+                '& .MuiTableCell-head': { backgroundColor: hr.muted, color: '#475569', fontWeight: 600, fontSize: 12, lineHeight: 1.25, paddingBlock: 8, whiteSpace: 'normal', borderBottom: `1px solid ${hr.border}` },
               },
             },
           },

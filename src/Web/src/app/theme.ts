@@ -122,7 +122,8 @@ export function buildTheme(direction: 'rtl' | 'ltr') {
       MuiTableHead: {
         styleOverrides: {
           root: {
-            '& .MuiTableCell-head': { backgroundColor: tokens.navy900, color: '#fff', fontWeight: 600, fontSize: 12.5, paddingBlock: 10, whiteSpace: 'nowrap' },
+            // Headers wrap onto two lines rather than widen their column: the grid shows as many columns as the screen holds.
+            '& .MuiTableCell-head': { backgroundColor: tokens.navy900, color: '#fff', fontWeight: 600, fontSize: 12, lineHeight: 1.25, paddingBlock: 8, whiteSpace: 'normal' },
             '& .MuiTableCell-head:first-of-type': { borderStartStartRadius: 6 },
             '& .MuiTableCell-head:last-of-type': { borderStartEndRadius: 6 },
           },
@@ -136,7 +137,8 @@ export function buildTheme(direction: 'rtl' | 'ltr') {
           },
         },
       },
-      MuiTableCell: { styleOverrides: { root: { borderBottomColor: tokens.gray100, paddingBlock: 8, fontSize: 13 }, body: { color: tokens.gray700 } } },
+      // Every grid is dense (docs/02-target-architecture/15 §6): narrow cells so the columns fit without a sideways scroll.
+      MuiTableCell: { styleOverrides: { root: { borderBottomColor: tokens.gray100, paddingBlock: 6, paddingInline: 8, fontSize: 12.5 }, body: { color: tokens.gray700 } } },
       MuiTooltip: { styleOverrides: { tooltip: { backgroundColor: tokens.navy900, fontSize: 12 } } },
       MuiSwitch: { styleOverrides: { switchBase: { '&.Mui-checked': { color: tokens.navy700 } } } },
       MuiListSubheader: { styleOverrides: { root: { lineHeight: '32px' } } },
