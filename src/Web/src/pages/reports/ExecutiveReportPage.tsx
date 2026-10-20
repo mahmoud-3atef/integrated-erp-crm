@@ -35,9 +35,25 @@ import { reportsApi, type Drill, type Figure, type Finance, type InvoiceRow, typ
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { Columns, RankedBars, Ring } from '../../components/charts';
+import { Columns, RankedBars, Ring, useCountUp } from '../../components/charts';
+import { keyframes } from '@mui/material/styles';
 
 type Tab = 'overview' | 'finance';
+
+// As on the home page: cards rise in one after the other, numbers count up, bars grow (from the reading start:
+// «left» becomes «right» in Arabic through the RTL style plugin).
+const rise = keyframes`from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; }`;
+const grow = keyframes`from { transform: scaleY(0); } to { transform: scaleY(1); }`;
+const fill = keyframes`from { transform: scaleX(0); } to { transform: scaleX(1); }`;
+const appear = (delay: number) => ({ animation: `${rise} .55s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
+const filling = (delay = 0) => ({ transformOrigin: 'left center', animation: `${fill} .9s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
+
+/** A number counting up from zero when it shows (to two decimals for the millions and the rates). */
+function Count({ value, decimals = 0, format }: { value: number; decimals?: number; format: (n: number) => string }) {
+  const scale = 10 ** decimals;
+  const shown = useCountUp(Math.round(value * scale)) / scale;
+  return <>{decimals ? shown.toFixed(decimals) : format(shown)}</>;
+}
 type Preset = 'month' | 'last' | 'quarter' | 'ytd' | 'custom';
 type Good = 'up' | 'down' | 'none';
 
@@ -133,37 +149,6 @@ export function ExecutiveReportPage() {
   return (
     <Box>
       <GlobalStyles styles={{ '@media print': { aside: { display: 'none !important' }, header: { display: 'none !important' }, '.no-print': { display: 'none !important' }, body: { background: '#fff' } } }} />
-      <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 1.5, alignItems: { lg: 'center' }, mb: 1.75 }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography component="h1" sx={{ fontSize: 23, fontWeight: 800, color: tokens.navy800 }}>
-            {t('exec.title')}
-          </Typography>
-          <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('exec.subtitle')}</Typography>
-        </Box>
-        <Stack direction="row" className="no-print" sx={{ gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
-          {presets.map((p) => (
-            <Button
-              key={p}
-              size="small"
-              variant={preset === p ? 'contained' : 'outlined'}
-              onClick={() => choose(p)}
-              sx={{ borderRadius: 999, px: 1.75, ...(preset === p ? { bgcolor: tokens.navy800 } : { bgcolor: '#fff', borderColor: tokens.border, color: tokens.navy800 }) }}
-            >
-              {t(`exec.preset.${p}`)}
-            </Button>
-          ))}
-          {preset === 'custom' && (
-            <>
-              <TextField size="small" type="date" label={t('exec.from')} value={from} onChange={(e) => e.target.value && setRange([e.target.value, to])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 160 }} />
-              <TextField size="small" type="date" label={t('exec.to')} value={to} onChange={(e) => e.target.value && setRange([from, e.target.value])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 160 }} />
-            </>
-          )}
-          <Button size="small" variant="outlined" startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} sx={{ borderRadius: 999, bgcolor: '#fff' }}>
-            {t('exec.print')}
-          </Button>
-        </Stack>
-      </Stack>
-
       <Stack direction="row" className="no-print" sx={{ ...card, p: 0.75, gap: 0.5, mb: 1.75, flexWrap: 'wrap' }} role="tablist">
         {(['overview', 'finance'] as Tab[])
           .filter((k) => k !== 'finance' || overview?.financeVisible !== false)
@@ -180,19 +165,50 @@ export function ExecutiveReportPage() {
             </ButtonBase>
           ))}
         <Box sx={{ flex: 1 }} />
-        {overview && (
-          <Typography sx={{ alignSelf: 'center', px: 1.5, fontSize: 12.5, color: tokens.gray500 }}>
-            <bdi>{t('exec.comparing', { from: overview.period.from.replaceAll('-', '/'), to: overview.period.to.replaceAll('-', '/'), pfrom: overview.period.previousFrom.replaceAll('-', '/'), pto: overview.period.previousTo.replaceAll('-', '/') })}</bdi>
-            {overview.period.movesPreviousTo !== overview.period.previousTo && <> · {t('exec.sameDays', { to: overview.period.movesPreviousTo.replaceAll('-', '/') })}</>}
-          </Typography>
-        )}
+        <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap', alignItems: 'center', px: 0.5 }}>
+          {presets.map((p) => (
+            <Tooltip
+              key={p}
+              title={
+                preset === p && overview ? (
+                  <bdi>
+                    {t('exec.comparing', { from: overview.period.from.replaceAll('-', '/'), to: overview.period.to.replaceAll('-', '/'), pfrom: overview.period.previousFrom.replaceAll('-', '/'), pto: overview.period.previousTo.replaceAll('-', '/') })}
+                    {overview.period.movesPreviousTo !== overview.period.previousTo && ` · ${t('exec.sameDays', { to: overview.period.movesPreviousTo.replaceAll('-', '/') })}`}
+                  </bdi>
+                ) : (
+                  ''
+                )
+              }
+            >
+              <Button
+                size="small"
+                variant={preset === p ? 'contained' : 'outlined'}
+                onClick={() => choose(p)}
+                sx={{ borderRadius: 999, px: 1.5, height: 32, ...(preset === p ? { bgcolor: tokens.navy800 } : { bgcolor: '#fff', borderColor: tokens.border, color: tokens.navy800 }) }}
+              >
+                {t(`exec.preset.${p}`)}
+              </Button>
+            </Tooltip>
+          ))}
+          {preset === 'custom' && (
+            <>
+              <TextField size="small" type="date" label={t('exec.from')} value={from} onChange={(e) => e.target.value && setRange([e.target.value, to])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
+              <TextField size="small" type="date" label={t('exec.to')} value={to} onChange={(e) => e.target.value && setRange([from, e.target.value])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
+            </>
+          )}
+          <Tooltip title={t('exec.print')}>
+            <IconButton size="small" onClick={() => window.print()} aria-label={t('exec.print')} sx={{ border: `1px solid ${tokens.border}`, width: 32, height: 32 }}>
+              <PrintOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Stack>
 
       <ErrorMessage messageKey={error} />
       {tab === 'overview' ? (
-        <OverviewTab data={overview} onDrill={(kind, title, d) => setDrill({ kind, title, drill: d })} />
+        <OverviewTab key={`${from}-${to}`} data={overview} onDrill={(kind, title, d) => setDrill({ kind, title, drill: d })} />
       ) : (
-        <FinanceTab data={finance} onDrill={(title, d) => setDrill({ kind: 'invoices', title, drill: d })} />
+        <FinanceTab key={`${from}-${to}`} data={finance} onDrill={(title, d) => setDrill({ kind: 'invoices', title, drill: d })} />
       )}
       {drill && <DrillDrawer from={from} to={to} {...drill} onClose={() => setDrill(null)} />}
     </Box>
@@ -200,7 +216,7 @@ export function ExecutiveReportPage() {
 }
 
 /** A figure's card: its value, the comparison with the period before (the colour follows the meaning), six months. */
-function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, money }: { label: string; figure?: Figure; value?: number | null; unit?: string; good?: Good; accent: string; spark?: (number | null)[]; note?: ReactNode; money?: boolean }) {
+function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, money, index = 0 }: { label: string; figure?: Figure; value?: number | null; unit?: string; good?: Good; accent: string; spark?: (number | null)[]; note?: ReactNode; money?: boolean; index?: number }) {
   const { t } = useTranslation();
   const f = useFormat();
   const v = figure ? figure.value : (value ?? null);
@@ -213,7 +229,7 @@ function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, m
   const unitShown = money && v !== null && Math.abs(v) >= 1_000_000 ? t('exec.millionSar') : unit;
   const max = Math.max(1, ...(spark ?? []).map((x) => Math.abs(x ?? 0)));
   return (
-    <Box sx={{ ...card, position: 'relative', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', insetBlock: 0, insetInlineStart: 0, width: 4, bgcolor: accent } }}>
+    <Box sx={{ ...card, ...appear(index * 0.06), position: 'relative', overflow: 'hidden', transition: 'box-shadow .2s, transform .2s', '&:hover': { boxShadow: tokens.shadowMd, transform: 'translateY(-2px)' }, '&::before': { content: '""', position: 'absolute', insetBlock: 0, insetInlineStart: 0, width: 4, bgcolor: accent } }}>
       <Typography sx={{ fontSize: 12, fontWeight: 600, color: tokens.gray600 }}>{label}</Typography>
       <Typography sx={{ fontSize: 24, fontWeight: 800, color: tokens.navy800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>
         {v === null ? (
@@ -221,7 +237,9 @@ function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, m
             <span>—</span>
           </Tooltip>
         ) : (
-          <bdi>{shown(v)}</bdi>
+          <bdi>
+            <Count value={money && Math.abs(v) >= 1_000_000 ? v / 1_000_000 : v} decimals={money && Math.abs(v) >= 1_000_000 ? 2 : points && !Number.isInteger(v) ? 1 : 0} format={f.n} />
+          </bdi>
         )}{' '}
         {unitShown && <Box component="span" sx={{ fontSize: 12, fontWeight: 500, color: tokens.gray500 }}>{unitShown}</Box>}
       </Typography>
@@ -239,7 +257,7 @@ function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, m
       {spark && spark.length > 0 && (
         <Box aria-hidden sx={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: 24, mt: 0.75 }}>
           {spark.map((x, i) => (
-            <Box key={i} sx={{ width: 9, height: `${Math.max(8, (Math.abs(x ?? 0) / max) * 100)}%`, borderRadius: '2px 2px 0 0', bgcolor: accent, opacity: i === spark.length - 1 ? 1 : 0.35 }} />
+            <Box key={i} sx={{ width: 9, height: `${Math.max(8, (Math.abs(x ?? 0) / max) * 100)}%`, borderRadius: '2px 2px 0 0', bgcolor: accent, opacity: i === spark.length - 1 ? 1 : 0.35, transformOrigin: 'bottom', animation: `${grow} .7s ${index * 0.06 + 0.25 + i * 0.05}s cubic-bezier(.2,.8,.2,1) both` }} />
           ))}
         </Box>
       )}
@@ -295,13 +313,15 @@ function Insights({ data }: { data: Overview }) {
     lines.push(t('exec.ins.coverage', { month: f.monthLong(data.coverage.month), count: data.coverage.missing + data.coverage.partial, workers: f.n(data.coverage.workersNotInvoiced) }));
   }
   return (
-    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', background: `linear-gradient(90deg, ${tokens.navy700}, #12597f)`, color: '#fff', borderRadius: `${tokens.radiusLg}px`, p: 2, mb: 1.75 }}>
+    <Box sx={{ ...appear(0.3), display: 'flex', gap: 1.5, alignItems: 'flex-start', background: `linear-gradient(90deg, ${tokens.navy700}, #12597f)`, color: '#fff', borderRadius: `${tokens.radiusLg}px`, p: 2, mb: 1.75 }}>
       <LightbulbOutlinedIcon sx={{ color: '#FCD34D', mt: 0.25 }} />
       <Box sx={{ flex: 1 }}>
         <Typography sx={{ fontWeight: 700, mb: 0.75 }}>{t('exec.ins.title')}</Typography>
         <Box component="ul" sx={{ m: 0, paddingInlineStart: 2.25, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 3, rowGap: 0.5, fontSize: 13 }}>
-          {lines.map((l) => (
-            <li key={l}>{l}</li>
+          {lines.map((l, i) => (
+            <Box component="li" key={l} sx={appear(0.45 + i * 0.08)}>
+              {l}
+            </Box>
           ))}
         </Box>
       </Box>
@@ -319,16 +339,16 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
   return (
     <Box>
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' }, mb: 1.75 }}>
-        <Kpi label={t('exec.kpi.onJob')} value={data.onJob} unit={t('exec.worker')} accent={accents.navy} note={t('exec.kpi.activeProjects', { count: f.n(data.activeProjects) })} />
-        <Kpi label={t('exec.kpi.starts')} figure={data.starts} unit={t('exec.worker')} good="up" accent={accents.teal} spark={data.moves.map((m) => m.starts)} />
-        <Kpi label={t('exec.kpi.net')} figure={data.net} good="up" accent={accents.green} spark={data.moves.map((m) => m.starts - m.returns)} note={t('exec.kpi.netNote', { starts: f.n(data.starts.value ?? 0), returns: f.n(data.returns.value ?? 0) })} />
-        <Kpi label={t('exec.kpi.inHousing')} value={data.inHousing} unit={t('exec.worker')} accent={accents.amber} note={t('exec.kpi.inHousingNote')} />
-        <Kpi label={t('exec.kpi.invoiced')} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.invoiced)} note={data.invoiceCount.value !== null ? t('exec.kpi.invoiceCount', { count: f.n(data.invoiceCount.value) }) : undefined} />
-        <Kpi label={t('exec.kpi.rate')} figure={data.collectionRate} unit="%" good="up" accent={accents.rose} spark={data.money.map((m) => m.rate)} note={data.financeVisible ? t('exec.kpi.overdue', { amount: f.n(data.overdue60) }) : undefined} />
+        <Kpi index={0} label={t('exec.kpi.onJob')} value={data.onJob} unit={t('exec.worker')} accent={accents.navy} note={t('exec.kpi.activeProjects', { count: f.n(data.activeProjects) })} />
+        <Kpi index={1} label={t('exec.kpi.starts')} figure={data.starts} unit={t('exec.worker')} good="up" accent={accents.teal} spark={data.moves.map((m) => m.starts)} />
+        <Kpi index={2} label={t('exec.kpi.net')} figure={data.net} good="up" accent={accents.green} spark={data.moves.map((m) => m.starts - m.returns)} note={t('exec.kpi.netNote', { starts: f.n(data.starts.value ?? 0), returns: f.n(data.returns.value ?? 0) })} />
+        <Kpi index={3} label={t('exec.kpi.inHousing')} value={data.inHousing} unit={t('exec.worker')} accent={accents.amber} note={t('exec.kpi.inHousingNote')} />
+        <Kpi index={4} label={t('exec.kpi.invoiced')} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.invoiced)} note={data.invoiceCount.value !== null ? t('exec.kpi.invoiceCount', { count: f.n(data.invoiceCount.value) }) : undefined} />
+        <Kpi index={5} label={t('exec.kpi.rate')} figure={data.collectionRate} unit="%" good="up" accent={accents.rose} spark={data.money.map((m) => m.rate)} note={data.financeVisible ? t('exec.kpi.overdue', { amount: f.n(data.overdue60) }) : undefined} />
       </Box>
       <Insights data={data} />
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.35) }}>
           <CardTitle title={t('exec.moves.title')} hint={t('exec.moves.hint')} />
           <Columns
             categories={months}
@@ -341,7 +361,7 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
           />
           <Legend items={[[t('exec.moves.starts'), tokens.navy700], [t('exec.moves.returns'), accents.amber]]} />
         </Box>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.43) }}>
           <CardTitle title={t('exec.managers.title')} hint={t('exec.managers.hint')} />
           {data.startsByManager.length === 0 ? (
             <Empty />
@@ -351,7 +371,7 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
         </Box>
       </Box>
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' } }}>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.51) }}>
           <CardTitle title={t('exec.projects.title')} hint={t('exec.projects.hint')} />
           {data.projects.length === 0 ? (
             <Empty />
@@ -369,8 +389,10 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
                       {p.name}
                     </Typography>
                     <Box sx={{ display: 'flex', height: 9, borderRadius: 5, overflow: 'hidden', bgcolor: tokens.gray100 }}>
-                      <Box sx={{ width: `${(p.starts / max) * 100}%`, bgcolor: tokens.navy700 }} />
-                      <Box sx={{ width: `${(p.returns / max) * 100}%`, bgcolor: accents.amber }} />
+                      <Box sx={{ display: 'flex', width: `${((p.starts + p.returns) / max) * 100}%`, ...filling(0.5) }}>
+                        <Box sx={{ flex: p.starts, bgcolor: tokens.navy700 }} />
+                        <Box sx={{ flex: p.returns, bgcolor: accents.amber }} />
+                      </Box>
                     </Box>
                     <Typography sx={{ fontSize: 12.5, fontWeight: 700, textAlign: 'end' }}>
                       <bdi>{`${p.starts} / ${p.returns}`}</bdi>
@@ -383,7 +405,7 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
           )}
         </Box>
         {data.financeVisible && (
-          <Box sx={card}>
+          <Box sx={{ ...card, ...appear(0.59) }}>
             <CardTitle title={c.month ? t('exec.coverage.title', { month: f.monthLong(c.month) }) : t('exec.coverage.titleNone')} hint={t('exec.coverage.hint')} />
             {covTotal === 0 ? (
               <Empty />
@@ -431,15 +453,15 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
   return (
     <Box>
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' }, mb: 1.75 }}>
-        <Kpi label={t('exec.fin.invoiced')} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.green} spark={data.money.map((m) => m.invoiced)} note={t('exec.fin.invoicedNote', { count: f.n(data.invoiceCount.value ?? 0), vat: f.n(data.vat.value ?? 0) })} />
-        <Kpi label={t('exec.fin.collected')} figure={data.collected} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.collected)} />
-        <Kpi label={t('exec.fin.rate')} figure={data.collectionRate} unit="%" good="up" accent={accents.teal} spark={data.money.map((m) => m.rate)} />
-        <Kpi label={t('exec.fin.debt')} value={data.totalDebt} unit={t('exec.sar')} money accent={accents.navy} note={t('exec.fin.debtNote', { count: f.n(data.openInvoices) })} />
-        <Kpi label={t('exec.fin.overdue')} value={data.overdue60} unit={t('exec.sar')} money accent={accents.rose} note={t('exec.fin.overdueNote', { count: f.n(data.overdue60Invoices), share: data.overdue60Share ?? 0 })} />
-        <Kpi label={t('exec.fin.dso')} value={data.dso} unit={t('exec.days')} accent={accents.amber} note={t('exec.fin.dsoNote')} />
+        <Kpi index={0} label={t('exec.fin.invoiced')} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.green} spark={data.money.map((m) => m.invoiced)} note={t('exec.fin.invoicedNote', { count: f.n(data.invoiceCount.value ?? 0), vat: f.n(data.vat.value ?? 0) })} />
+        <Kpi index={1} label={t('exec.fin.collected')} figure={data.collected} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.collected)} />
+        <Kpi index={2} label={t('exec.fin.rate')} figure={data.collectionRate} unit="%" good="up" accent={accents.teal} spark={data.money.map((m) => m.rate)} />
+        <Kpi index={3} label={t('exec.fin.debt')} value={data.totalDebt} unit={t('exec.sar')} money accent={accents.navy} note={t('exec.fin.debtNote', { count: f.n(data.openInvoices) })} />
+        <Kpi index={4} label={t('exec.fin.overdue')} value={data.overdue60} unit={t('exec.sar')} money accent={accents.rose} note={t('exec.fin.overdueNote', { count: f.n(data.overdue60Invoices), share: data.overdue60Share ?? 0 })} />
+        <Kpi index={5} label={t('exec.fin.dso')} value={data.dso} unit={t('exec.days')} accent={accents.amber} note={t('exec.fin.dsoNote')} />
       </Box>
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.35) }}>
           <CardTitle title={t('exec.fin.trend')} hint={t('exec.fin.trendHint')} />
           <Columns
             categories={months}
@@ -454,9 +476,9 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
           />
           <Legend items={[[t('exec.fin.invoicedShort'), accents.green], [t('exec.fin.collectedShort'), accents.violet], [t('exec.fin.rateLine'), tokens.navy800]]} />
         </Box>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.43) }}>
           <CardTitle title={t('exec.fin.aging')} hint={t('exec.fin.agingHint')} />
-          <Box sx={{ display: 'flex', height: 22, borderRadius: '7px', overflow: 'hidden', mb: 1.25, bgcolor: tokens.gray100 }}>
+          <Box sx={{ display: 'flex', height: 22, borderRadius: '7px', overflow: 'hidden', mb: 1.25, bgcolor: tokens.gray100, '& > *': filling(0.5) }}>
             {data.aging.map((a) => (
               <Tooltip key={a.bucket} title={`${t(`exec.bucket.${a.bucket}`)}: ${f.n(a.amount)}`}>
                 <Box sx={{ width: `${a.percent}%`, bgcolor: agingColors[a.bucket - 1] }} />
@@ -488,7 +510,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
         </Box>
       </Box>
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.51) }}>
           <CardTitle title={t('exec.fin.debtors')} hint={t('exec.fin.debtorsHint')} />
           <TableContainer>
             <Table size="small">
@@ -519,7 +541,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
             </Table>
           </TableContainer>
         </Box>
-        <Box sx={card}>
+        <Box sx={{ ...card, ...appear(0.59) }}>
           <CardTitle title={t('exec.fin.managers')} hint={t('exec.fin.managersHint')} />
           {data.managers.length === 0 ? (
             <Empty />
@@ -535,7 +557,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
                     <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: rateColor(m.rate) }}>{`${m.rate}%`}</Typography>
                   </Stack>
                   <Box sx={{ height: 8, borderRadius: 4, bgcolor: tokens.gray100, overflow: 'hidden' }}>
-                    <Box sx={{ height: '100%', width: `${Math.min(100, m.rate)}%`, bgcolor: rateColor(m.rate), borderRadius: 4 }} />
+                    <Box sx={{ height: '100%', width: `${Math.min(100, m.rate)}%`, bgcolor: rateColor(m.rate), borderRadius: 4, ...filling(0.5) }} />
                   </Box>
                 </ButtonBase>
               ))}
@@ -555,7 +577,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
           )}
         </Box>
       </Box>
-      <Box sx={card}>
+      <Box sx={{ ...card, ...appear(0.67) }}>
         <CardTitle
           title={t('exec.fin.list')}
           hint={t('exec.fin.listHint', { shown: data.invoices.length, total: data.invoicesTotal })}
