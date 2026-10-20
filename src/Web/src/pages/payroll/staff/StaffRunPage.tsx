@@ -1,3 +1,4 @@
+import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -53,7 +54,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
 import { staffNotes, staffPayrollApi, type StaffDeferred, type StaffLine, type StaffLineDetail, type StaffLinePage, type StaffLineQuery, type StaffNote, type StaffRun, type StaffRunItem } from '../../../api/staffPayroll';
+import { payslipsPath } from '../../../api/payslips';
 import { useCrumb } from '../../../app/breadcrumbs';
+import { useSession } from '../../../app/session';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { HrAvatar, HrCoverageCard, HrDrawer, HrEmptyState, HrKpiCard, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../../components/hr/Hr';
 import { ApprovalBar, useRecordApproval } from '../../../components/workflow/RecordApproval';
@@ -101,6 +104,7 @@ export function StaffRunPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { date } = useCommercialFormat();
+  const { can } = useSession();
   const periodName = usePeriodName();
   const [params, setParams] = useSearchParams();
   const tab = (params.get('tab') as TabKey | null) ?? 'employees';
@@ -198,6 +202,19 @@ export function StaffRunPage() {
             <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={staffPayrollApi.excelUrl(run.id, scope)} download>
               {t('staffPayroll.excel')}
             </Button>
+            {can('staff.salaries.view') && (
+              <Button
+                variant="outlined"
+                startIcon={<ReceiptOutlinedIcon />}
+                component="a"
+                href={payslipsPath('staff', run.id, { search: scope.search, department: scope.department, note: scope.note })}
+                target="_blank"
+                rel="noopener"
+                title={t('payslip.printAllHint')}
+              >
+                {t('payslip.printAll')}
+              </Button>
+            )}
             {run.canEdit && (
               <>
                 <Button variant="outlined" endIcon={<ArrowDropDownIcon />} onClick={(e) => setMoreAnchor(e.currentTarget)}>
@@ -587,6 +604,7 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
 /** One employee's pay: each amount with how it is made and where it comes from, GOSI, the cap, the bank, and the adjustments. */
 function LineDrawer({ run, line, onClose, onChanged }: { run: StaffRun; line: StaffLine; onClose: () => void; onChanged: () => Promise<void> }) {
   const { t, i18n } = useTranslation();
+  const { can } = useSession();
   const ar = i18n.language === 'ar';
   const [detail, setDetail] = useState<StaffLineDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -658,6 +676,11 @@ function LineDrawer({ run, line, onClose, onChanged }: { run: StaffRun; line: St
       }
     >
       <ErrorMessage messageKey={error} />
+      {can('staff.salaries.view') && (
+        <Button size="small" variant="outlined" startIcon={<ReceiptOutlinedIcon />} component="a" href={payslipsPath('staff', run.id, { line: line.id })} target="_blank" rel="noopener" sx={{ alignSelf: 'flex-start' }}>
+          {t('payslip.open')}
+        </Button>
+      )}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
         {[
           [t('staffPayroll.drawer.days'), `${money(l.paidDays)} / 30`, hr.text],

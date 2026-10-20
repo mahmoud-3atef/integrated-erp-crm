@@ -33,6 +33,7 @@ public sealed class PayrollModule : IModule
         services.AddScoped<StaffPayrollQueries>();
         services.AddScoped<IApprovalRecordAdapter, StaffPayrollAdapter>();
         services.AddScoped<GosiService>();
+        services.AddScoped<PayslipService>();
         services.AddAlertProvider<GosiAlerts>();
         services.AddPermissions(PayrollPermissions.All);
         services.AddNumberSequences(

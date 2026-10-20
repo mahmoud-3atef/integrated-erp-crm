@@ -337,6 +337,22 @@ internal sealed class ApprovedTimeOffs(LeaveDbContext db, LeaveSetup setup) : IA
 /// </summary>
 internal sealed class LeavePayroll(LeaveDbContext db, IAttendanceCalendar calendar) : ILeavePayroll
 {
+    public async Task<IReadOnlyList<AnnualLeaveBalance>> AnnualAsync(DateOnly on, CancellationToken cancellationToken)
+    {
+        var annual = await db.Types.AsNoTracking().Where(t => t.Code == LeaveSetup.Annual).Select(t => (Guid?)t.Id).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (annual is not { } id)
+        {
+            return [];
+        }
+
+        var yearStart = new DateOnly(on.Year, 1, 1);
+        var balances = await db.Entries.AsNoTracking().Where(e => e.LeaveTypeId == id && e.Date <= on)
+            .GroupBy(e => e.EmployeeId).Select(g => new { EmployeeId = g.Key, Days = g.Sum(e => e.Days) }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var taken = await db.Requests.AsNoTracking().Where(r => r.LeaveTypeId == id && r.Status == RequestStatus.Approved && r.From >= yearStart && r.From <= on)
+            .GroupBy(r => r.EmployeeId).Select(g => new { EmployeeId = g.Key, Days = g.Sum(r => r.Days) }).ToDictionaryAsync(x => x.EmployeeId, x => x.Days, cancellationToken).ConfigureAwait(false);
+        return balances.Select(b => new AnnualLeaveBalance(b.EmployeeId, b.Days, taken.GetValueOrDefault(b.EmployeeId))).ToList();
+    }
+
     public async Task<IReadOnlyList<LeavePayDays>> DaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         var yearStart = new DateOnly(from.Year, 1, 1);

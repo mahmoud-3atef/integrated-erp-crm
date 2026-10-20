@@ -1,8 +1,9 @@
-import { LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { LinearProgress, Link, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
+import { payslipsPath } from '../../../api/payslips';
 import { staffPayrollApi, type StaffEmployeeRun } from '../../../api/staffPayroll';
 import { useSession } from '../../../app/session';
 import { ErrorMessage } from '../../../auth/AuthLayout';
@@ -42,6 +43,7 @@ export function EmployeePayrollPanel({ employeeId }: { employeeId: string }) {
               <TableCell align="right">{t('staffPayroll.cols.deductionsGroup')}</TableCell>
               <TableCell align="right">{t('staffPayroll.cols.net')}</TableCell>
               <TableCell>{t('staffPayroll.cols.status')}</TableCell>
+              <TableCell />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -61,6 +63,11 @@ export function EmployeePayrollPanel({ employeeId }: { employeeId: string }) {
                 </TableCell>
                 <TableCell>
                   <RunStatusBadge status={r.status} />
+                </TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Link href={payslipsPath('staff', r.runId, { line: r.lineId })} target="_blank" rel="noopener" sx={{ fontWeight: 600, color: hr.primary }}>
+                    {t('payslip.open')}
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}

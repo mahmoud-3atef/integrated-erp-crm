@@ -7,8 +7,10 @@ using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Payroll.Application;
+using IntegratedErp.Modules.Payroll.Infrastructure;
 using IntegratedErp.Modules.Staff.Application;
 using IntegratedErp.Modules.Staff.Domain;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegratedErp.IntegrationTests.Payroll;
@@ -105,6 +107,22 @@ public sealed class StaffPayrollTests(TestDatabase database)
             var detail = (await queries.LineAsync(runId, (await queries.LinesAsync(runId, new StaffLineQuery("عمر", null, null, null, false, 1, 25), default))!.Items.Single().Id, default))!;
             Assert.Equal((8620m, 160m), (detail.Line.Net, detail.GosiEmployer));
             Assert.Single(detail.Adjustments);
+
+            // The payslips (4.12) before approval: drafts, each adding up to its line.
+            var payslips = scope.ServiceProvider.GetRequiredService<PayslipService>();
+            var draft = (await payslips.StaffAsync(runId, new PayslipQuery(null, null, null, null), default))!;
+            Assert.Equal((true, 2, 2), (draft.Draft, draft.Total, draft.Items.Count));
+            foreach (var slip in draft.Items)
+            {
+                Assert.Equal(slip.TotalEarnings, slip.Earnings.Sum(e => e.Amount));
+                Assert.Equal(slip.TotalDeductions, slip.Deductions.Sum(d => d.Amount));
+                Assert.Equal(slip.Net, slip.TotalEarnings - slip.TotalDeductions);
+            }
+
+            var omarSlip = draft.Items.Single(x => x.PersonId == omar);
+            Assert.Contains(omarSlip.Earnings, e => e.Code == "addition" && e.Amount == 500 && e.Note == "مكافأة إنجاز");
+            Assert.Equal(8620m, omarSlip.Net);
+            Assert.Contains(draft.Items.Single(x => x.PersonId == sara).Deductions, d => d.Code == "installment" && d.Amount == 1000);
             Assert.True((await service.SubmitAsync(runId, default)).IsSuccess);
         }
 
@@ -118,6 +136,13 @@ public sealed class StaffPayrollTests(TestDatabase database)
             Assert.Empty(await scope.ServiceProvider.GetRequiredService<IStaffDeductions>().DueAsync("2026-11", default));
             Assert.Equal("Settled", (await scope.ServiceProvider.GetRequiredService<DeductionQueries>().AdvanceAsync(advanceId, default))!.Advance.Status);
             Assert.Equal("conflict.payroll_not_editable", (await scope.ServiceProvider.GetRequiredService<StaffPayrollService>().RecalculateAsync(runId, default)).Error.Code);
+
+            // One employee's official payslip, and each printing recorded (without amounts).
+            var omarLine = (await scope.ServiceProvider.GetRequiredService<StaffPayrollQueries>().LinesAsync(runId, new StaffLineQuery("عمر", null, null, null, false, 1, 25), default))!.Items.Single();
+            var official = (await scope.ServiceProvider.GetRequiredService<PayslipService>().StaffAsync(runId, new PayslipQuery(omarLine.Id, null, null, null), default))!;
+            Assert.Equal((false, 1, omar), (official.Draft, official.Total, official.Items.Single().PersonId));
+            var prints = await scope.ServiceProvider.GetRequiredService<PayrollDbContext>().PayslipPrints.OrderBy(x => x.PrintedAt).ToListAsync();
+            Assert.Equal((2, 1, (Guid?)omar, false), (prints.Count, prints[^1].Count, prints[^1].PersonId, prints[^1].Draft));
         }
     }
 

@@ -319,6 +319,16 @@ internal sealed class StaffDeductions(DeductionsDbContext db, DeductionSetup set
             .ToList();
     }
 
+    public async Task<IReadOnlyList<AdvanceBalance>> OutstandingAsync(CancellationToken cancellationToken)
+    {
+        var open = await (from i in db.Installments.AsNoTracking()
+                          join a in db.Advances.AsNoTracking() on i.AdvanceId equals a.Id
+                          where a.Status == AdvanceStatus.Disbursed && (i.Status == InstallmentStatus.Scheduled || i.Status == InstallmentStatus.Deferred || i.Status == InstallmentStatus.Postponed)
+                          select new { a.EmployeeId, a.AdvanceNo, Left = i.Amount - i.Deducted }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return open.GroupBy(x => (x.EmployeeId, x.AdvanceNo)).Select(g => new AdvanceBalance(g.Key.EmployeeId, g.Key.AdvanceNo, g.Sum(x => x.Left), g.Count()))
+            .Where(b => b.Remaining > 0).OrderBy(b => b.AdvanceNo, StringComparer.Ordinal).ToList();
+    }
+
     public async Task<DeductionRules> RulesAsync(CancellationToken cancellationToken) =>
         new((await setup.SettingAsync(cancellationToken).ConfigureAwait(false)).MonthlyCapPercent);
 

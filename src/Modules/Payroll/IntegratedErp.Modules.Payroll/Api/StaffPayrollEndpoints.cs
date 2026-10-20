@@ -49,6 +49,12 @@ internal static class StaffPayrollEndpoints
                 return Results.File(StaffPayrollWorkbook.Build(scope.Run, scope.Lines, filtered), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"{scope.Run.RunNo}.xlsx");
             })
             .RequirePermission(PayrollPermissions.StaffView, companyWide: true);
+        // The payslips (4.12) show the salaries, so they also need the right to see them.
+        group.MapGet("/runs/{id:guid}/payslips", async (Guid id, Guid? line, string? search, Guid? department, string? note, PayslipService payslips, IPermissionService permissions, CancellationToken ct) =>
+                !(await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).Has("staff.salaries.view")
+                    ? Results.Forbid()
+                    : await payslips.StaffAsync(id, new PayslipQuery(line, search, department, note), ct).ConfigureAwait(false) is { } batch ? Results.Ok(batch) : Results.NotFound())
+            .RequirePermission(PayrollPermissions.StaffView, companyWide: true);
         group.MapPost("/runs/{id:guid}/recalculate", async (Guid id, StaffPayrollService service, CancellationToken ct) => ToHttp(await service.RecalculateAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(PayrollPermissions.StaffManage, companyWide: true);
         group.MapPost("/runs/{id:guid}/submit", async (Guid id, StaffPayrollService service, CancellationToken ct) => ToHttp(await service.SubmitAsync(id, ct).ConfigureAwait(false)))

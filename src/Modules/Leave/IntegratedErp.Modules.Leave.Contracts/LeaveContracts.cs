@@ -34,5 +34,10 @@ public sealed record LeavePayDays(Guid EmployeeId, decimal FullPay, decimal Thre
 public interface ILeavePayroll
 {
     Task<IReadOnlyList<LeavePayDays>> DaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>The annual leave balance on a day (its entries up to that day) and the days taken that year (for the payslip).</summary>
+    Task<IReadOnlyList<AnnualLeaveBalance>> AnnualAsync(DateOnly on, CancellationToken cancellationToken);
 }
+
+public sealed record AnnualLeaveBalance(Guid EmployeeId, decimal Balance, decimal TakenThisYear);
 

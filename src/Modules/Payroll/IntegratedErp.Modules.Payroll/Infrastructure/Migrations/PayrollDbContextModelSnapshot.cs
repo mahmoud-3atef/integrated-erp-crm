@@ -971,6 +971,66 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                     b.ToTable("payroll_run", "payroll");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayslipPrint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int")
+                        .HasColumnName("count");
+
+                    b.Property<bool>("Draft")
+                        .HasColumnType("bit")
+                        .HasColumnName("draft");
+
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("person_id");
+
+                    b.Property<DateTimeOffset>("PrintedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("printed_at");
+
+                    b.Property<string>("PrintedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("printed_by_name");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("run_id");
+
+                    b.Property<string>("RunKind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("run_kind");
+
+                    b.Property<string>("RunNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("run_no");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payslip_print");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_payslip_print_tenant_id");
+
+                    b.HasIndex("TenantId", "RunId")
+                        .HasDatabaseName("ix_payslip_print_tenant_id_run_id");
+
+                    b.ToTable("payslip_print", "payroll");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SaudizationSetting", b =>
                 {
                     b.Property<Guid>("Id")

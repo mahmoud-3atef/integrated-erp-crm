@@ -91,7 +91,7 @@ internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory, IStaf
                 e.Id, e.EmployeeNo, e.NameAr ?? e.NameEn, e.LegalEntityId, e.DepartmentId, d?.NameAr, d?.NameEn, t?.NameAr, t?.NameEn, e.Status.ToString(),
                 e.HireDate, e.EndedOn, e.NationalityCode, e.GosiSince, e.BankName, e.Iban,
                 current is null ? null : new StaffSalaryInfo(current.Basic, current.Housing, current.Food, current.Transport, current.Mobile, current.Project, current.Other, current.Total),
-                mine.Any(s => s.EffectiveFrom > from && s.EffectiveFrom <= to), acting, e.GosiNo);
+                mine.Any(s => s.EffectiveFrom > from && s.EffectiveFrom <= to), acting, e.GosiNo, e.IdNumber);
         }).ToList();
     }
 

@@ -76,7 +76,8 @@ public sealed record StaffPayInfo(
     StaffSalaryInfo? Salary,
     bool SalaryChangedInPeriod,
     decimal ActingAllowance,
-    string? GosiNo = null);
+    string? GosiNo = null,
+    string? IdNumber = null);
 
 public sealed record StaffSalaryInfo(decimal Basic, decimal Housing, decimal Food, decimal Transport, decimal Mobile, decimal Project, decimal Other, decimal Total);
 

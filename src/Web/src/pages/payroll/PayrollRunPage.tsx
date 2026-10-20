@@ -1,3 +1,4 @@
+import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -54,6 +55,7 @@ import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'rea
 import { errorKey } from '../../api/auth';
 import { payrollApi, payrollNotes, type LineQuery, type PayrollExclusion, type PayrollLine, type PayrollLineDetail, type PayrollLinePage, type PayrollRun, type PayrollRunItem } from '../../api/payroll';
 import { useCrumb } from '../../app/breadcrumbs';
+import { payslipsPath } from '../../api/payslips';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrCoverageCard, HrDrawer, HrEmptyState, HrKpiCard, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
@@ -184,6 +186,17 @@ export function PayrollRunPage() {
             )}
             <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={payrollApi.excelUrl(run.id, scope)} download>
               {t('payroll.excel')}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ReceiptOutlinedIcon />}
+              component="a"
+              href={payslipsPath('workers', run.id, { search: scope.search, note: scope.note, project: scope.project })}
+              target="_blank"
+              rel="noopener"
+              title={t('payslip.printAllHint')}
+            >
+              {t('payslip.printAll')}
             </Button>
             <Button variant="outlined" endIcon={<ArrowDropDownIcon />} onClick={(e) => setMoreAnchor(e.currentTarget)}>
               {t('payroll.more')}
@@ -597,6 +610,9 @@ function WorkerDrawer({ runId, line, onClose }: { runId: string; line: PayrollLi
       }
     >
       <ErrorMessage messageKey={error} />
+      <Button size="small" variant="outlined" startIcon={<ReceiptOutlinedIcon />} component="a" href={payslipsPath('workers', runId, { line: line.id })} target="_blank" rel="noopener" sx={{ alignSelf: 'flex-start' }}>
+        {t('payslip.open')}
+      </Button>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
         {[
           [t('payroll.drawer.days'), `${money(line.paidDays)} / 30`, hr.text],

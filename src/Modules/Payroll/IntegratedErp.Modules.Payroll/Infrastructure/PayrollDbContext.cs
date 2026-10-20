@@ -46,6 +46,8 @@ internal sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> option
     public DbSet<SaudizationSetting> SaudizationSettings => Set<SaudizationSetting>();
 
     public DbSet<SaudizationTarget> SaudizationTargets => Set<SaudizationTarget>();
+
+    public DbSet<PayslipPrint> PayslipPrints => Set<PayslipPrint>();
 }
 
 internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<PayrollRun>
@@ -366,6 +368,20 @@ internal sealed class SaudizationSettingConfiguration : IEntityTypeConfiguration
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.Property(s => s.FullWage).HasPrecision(18, 2);
         builder.HasIndex(s => s.TenantId).IsUnique();
+    }
+}
+
+internal sealed class PayslipPrintConfiguration : IEntityTypeConfiguration<PayslipPrint>
+{
+    public void Configure(EntityTypeBuilder<PayslipPrint> builder)
+    {
+        builder.ToTable("payslip_print");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.RunKind).HasMaxLength(10).IsRequired();
+        builder.Property(p => p.RunNo).HasMaxLength(30).IsRequired();
+        builder.Property(p => p.PrintedByName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(p => new { p.TenantId, p.RunId });
     }
 }
 

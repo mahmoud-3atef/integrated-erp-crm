@@ -40,6 +40,9 @@ internal static class PayrollEndpoints
                 await queries.LineAsync(id, lineId, ct).ConfigureAwait(false) is { } line ? Results.Ok(line) : Results.NotFound())
             .RequirePermission(PayrollPermissions.WorkersView, companyWide: true);
 
+        group.MapGet("/runs/{id:guid}/payslips", async (Guid id, Guid? line, string? search, string? note, Guid? project, PayslipService payslips, CancellationToken ct) =>
+                await payslips.WorkersAsync(id, new PayslipQuery(line, search, project, note), ct).ConfigureAwait(false) is { } batch ? Results.Ok(batch) : Results.NotFound())
+            .RequirePermission(PayrollPermissions.WorkersView, companyWide: true);
         group.MapGet("/runs/{id:guid}/exclusions", async (Guid id, PayrollQueries queries, CancellationToken ct) =>
                 await queries.ExclusionsAsync(id, ct).ConfigureAwait(false) is { } list ? Results.Ok(list) : Results.NotFound())
             .RequirePermission(PayrollPermissions.WorkersView, companyWide: true);

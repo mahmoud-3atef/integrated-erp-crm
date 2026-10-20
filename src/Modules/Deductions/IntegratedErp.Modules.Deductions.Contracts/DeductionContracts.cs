@@ -38,7 +38,12 @@ public interface IStaffDeductions
 
     /// <summary>The approved staff payroll's result: what it deducted of each item, and what it deferred to the next month.</summary>
     Task RecordAsync(string runNo, IReadOnlyList<DeductionSettlement> settlements, CancellationToken cancellationToken);
+
+    /// <summary>Each paid advance still being deducted: what is left of it and in how many installments (for the payslip).</summary>
+    Task<IReadOnlyList<AdvanceBalance>> OutstandingAsync(CancellationToken cancellationToken);
 }
+
+public sealed record AdvanceBalance(Guid EmployeeId, string AdvanceNo, decimal Remaining, int Installments);
 
 public enum DeductionItemKind
 {

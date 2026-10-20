@@ -27,6 +27,7 @@ import { TimesheetsPage } from '../pages/billing/TimesheetsPage';
 import { PayrollRunPage } from '../pages/payroll/PayrollRunPage';
 import { PayrollRunsPage } from '../pages/payroll/PayrollRunsPage';
 import { GosiPage } from '../pages/payroll/gosi/GosiPage';
+import { PayslipsPrintPage } from '../pages/payroll/PayslipsPrintPage';
 import { StaffPaySettingsPage } from '../pages/payroll/staff/StaffPaySettingsPage';
 import { StaffRunPage } from '../pages/payroll/staff/StaffRunPage';
 import { StaffRunsPage } from '../pages/payroll/staff/StaffRunsPage';
@@ -182,6 +183,8 @@ export function App() {
               </Route>
               <Route path="/billing/invoices/:id/print" element={<InvoicePrintPage />} />
               <Route path="/billing/statements/:id/print" element={<StatementPage print />} />
+              <Route path="/payroll/staff/:id/payslips" element={<PayslipsPrintPage kind="staff" />} />
+              <Route path="/payroll/runs/:id/payslips" element={<PayslipsPrintPage kind="workers" />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />
               <Route path="/login/recovery-codes" element={<RecoveryCodesPage />} />
