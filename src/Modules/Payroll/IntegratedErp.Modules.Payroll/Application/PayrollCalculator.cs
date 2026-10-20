@@ -14,12 +14,14 @@ namespace IntegratedErp.Modules.Payroll.Application;
 /// net           = basic + allowances − deductions  = Σ the timesheet's own net (checked)
 /// paid days     = Σ (work days − absent days)
 /// </code>
-/// The absence is in the paid days and in the salary paid; it is not counted again as a deduction.
+/// The absence is in the paid days and in the salary paid; it is not counted again as a deduction. GOSI (4.9): the
+/// company's share on everyone (occupational hazards for non-Saudis), and the worker's share deducted from a Saudi's net.
 /// </summary>
 internal static class PayrollCalculator
 {
     public static (PayrollLineValues Values, IReadOnlyList<PayrollLineSource> Sources) Worker(
-        IReadOnlyList<PayrollTimesheetLine> lines, WorkerSalary? salary, WorkerCard? card, DateOnly from, DateOnly to)
+        IReadOnlyList<PayrollTimesheetLine> lines, WorkerSalary? salary, WorkerCard? card, DateOnly from, DateOnly to,
+        IReadOnlyDictionary<GosiCategory, StaffGosi>? gosiRates = null, decimal? registeredWage = null)
     {
         ArgumentNullException.ThrowIfNull(lines);
         if (lines.Count == 0)
@@ -92,6 +94,15 @@ internal static class PayrollCalculator
             notes.Add("multi_project");
         }
 
+        // GOSI on the registered wage (else the basic and housing) for the days worked in the period, 30 at most.
+        var category = GosiRules.CategoryOf(card?.NationalityCode, card?.ProjectJoinedOn);
+        decimal gosiBase = 0, gosiEmployee = 0, gosiEmployer = 0;
+        if (gosiRates is not null && gosiRates.TryGetValue(category, out var rate))
+        {
+            (gosiBase, gosiEmployee, gosiEmployer) = GosiRules.Contribution(rate, registeredWage ?? (salary is null ? monthly : salary.Basic + salary.Housing), lines.Sum(l => l.WorkDays));
+            net -= gosiEmployee;
+        }
+
         if (net <= 0)
         {
             notes.Add("net_not_positive");
@@ -101,14 +112,15 @@ internal static class PayrollCalculator
             first.WorkerId, first.WorkerNo, card?.Name ?? first.Name, card?.ProfessionCode ?? first.ProfessionCode, card?.StatusAr, card?.StatusEn,
             byProject[0].Key.ProjectCrmId, byProject[0].Key.ProjectName, byProject.Count, monthly,
             lines.Sum(l => l.WorkDays - l.AbsenceDays), absence, basic, housing, food, transport, other, overtime,
-            clientAdditions, internalAdditions, clientDeductions, loans, internalDeductions, net, notes);
+            clientAdditions, internalAdditions, clientDeductions, loans, internalDeductions, net, notes,
+            gosiRates is null ? string.Empty : category.ToString(), gosiBase, gosiEmployee, gosiEmployer);
         return (values, sources);
     }
 
     /// <summary>The net the split adds up to; it equals the timesheet's net unless the timesheet's own sums differ.</summary>
     public static decimal NetOf(PayrollLineValues v) =>
         v.Base + v.Housing + v.Food + v.Transport + v.OtherAllowances + v.Overtime + v.ClientAdditions + v.InternalAdditions
-        - v.ClientDeductions - v.CustomerLoans - v.InternalDeductions;
+        - v.ClientDeductions - v.CustomerLoans - v.InternalDeductions - v.GosiEmployee;
 
     private static decimal Round(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 }

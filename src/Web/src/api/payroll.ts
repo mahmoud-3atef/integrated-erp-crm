@@ -1,5 +1,6 @@
 // The company workers' payroll runs (src/Modules/Payroll/.../Api/PayrollEndpoints.cs).
 import { request } from './auth';
+import type { GosiCategory } from './staffPayroll';
 import type { ApprovalStatus } from './workflow';
 
 export type PayrollStatus = 'Draft' | 'InApproval' | 'Returned' | 'Approved';
@@ -103,6 +104,10 @@ export interface PayrollLine {
   deductions: number;
   net: number;
   notes: PayrollNote[];
+  gosiCategory: GosiCategory | '';
+  gosiBase: number;
+  gosiEmployee: number;
+  gosiEmployer: number;
 }
 
 export type PayrollSums = Omit<PayrollTotals, 'excluded'>;

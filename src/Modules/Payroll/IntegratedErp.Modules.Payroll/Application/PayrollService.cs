@@ -248,12 +248,16 @@ internal sealed class PayrollService(
         var cards = (await workforce.CardsAsync(payable.Select(l => l.WorkerId).Concat(worked.Where(Ours)).Distinct().ToList(), cancellationToken).ConfigureAwait(false))
             .ToDictionary(c => c.Id);
 
+        var gosiRates = await GosiRules.RatesAsync(db, run.To, cancellationToken).ConfigureAwait(false);
+        var registered = await db.GosiMembers.AsNoTracking().Where(m => m.Kind == GosiPersonKind.Worker && m.RegisteredWage != null && m.ExcludedOn == null)
+            .ToDictionaryAsync(m => m.PersonId, m => m.RegisteredWage!.Value, cancellationToken).ConfigureAwait(false);
         var paidLines = new List<PayrollLine>();
         var exceptions = new List<PayrollExclusion>();
         foreach (var worker in payable.GroupBy(l => l.WorkerId).OrderBy(g => g.First().WorkerNo, StringComparer.Ordinal))
         {
             var mine = worker.OrderBy(l => l.LineFrom).ToList();
-            var (values, sources) = PayrollCalculator.Worker(mine, pay.GetValueOrDefault(worker.Key), cards.GetValueOrDefault(worker.Key), run.From, run.To);
+            var (values, sources) = PayrollCalculator.Worker(
+                mine, pay.GetValueOrDefault(worker.Key), cards.GetValueOrDefault(worker.Key), run.From, run.To, gosiRates, registered.TryGetValue(worker.Key, out var wage) ? wage : null);
             if (mine.Any(l => l.LineTo < run.From))
             {
                 values = values with { Notes = [.. values.Notes, "late"] };

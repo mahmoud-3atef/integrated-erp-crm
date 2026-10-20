@@ -26,6 +26,7 @@ import { TimesheetPage } from '../pages/billing/TimesheetPage';
 import { TimesheetsPage } from '../pages/billing/TimesheetsPage';
 import { PayrollRunPage } from '../pages/payroll/PayrollRunPage';
 import { PayrollRunsPage } from '../pages/payroll/PayrollRunsPage';
+import { GosiPage } from '../pages/payroll/gosi/GosiPage';
 import { StaffPaySettingsPage } from '../pages/payroll/staff/StaffPaySettingsPage';
 import { StaffRunPage } from '../pages/payroll/staff/StaffRunPage';
 import { StaffRunsPage } from '../pages/payroll/staff/StaffRunsPage';
@@ -131,6 +132,7 @@ export function App() {
                 <Route path="/payroll/staff" element={<StaffRunsPage />} />
                 <Route path="/payroll/staff/:id" element={<StaffRunPage />} />
                 <Route path="/payroll/staff-settings" element={<StaffPaySettingsPage />} />
+                <Route path="/payroll/gosi" element={<GosiPage />} />
                 <Route path="/hr/employees" element={<StaffDirectoryPage />} />
                 <Route path="/hr/employees/new" element={<StaffDirectoryPage key="new" creating />} />
                 <Route path="/hr/employees/:id" element={<StaffProfilePage />} />

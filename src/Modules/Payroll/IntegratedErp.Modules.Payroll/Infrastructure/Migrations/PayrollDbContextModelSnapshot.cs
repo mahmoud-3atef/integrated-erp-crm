@@ -169,6 +169,105 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                     b.ToTable("outbox_message", "payroll");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.GosiInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset>("EnteredAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("entered_at");
+
+                    b.Property<string>("EnteredByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("entered_by_name");
+
+                    b.Property<Guid>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)")
+                        .HasColumnName("period");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gosi_invoice");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_gosi_invoice_tenant_id");
+
+                    b.HasIndex("TenantId", "LegalEntityId", "Period")
+                        .IsUnique()
+                        .HasDatabaseName("ix_gosi_invoice_tenant_id_legal_entity_id_period");
+
+                    b.ToTable("gosi_invoice", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.GosiMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly?>("ExcludedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("excluded_on");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("person_id");
+
+                    b.Property<DateOnly?>("RegisteredOn")
+                        .HasColumnType("date")
+                        .HasColumnName("registered_on");
+
+                    b.Property<decimal?>("RegisteredWage")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("registered_wage");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gosi_member");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_gosi_member_tenant_id");
+
+                    b.HasIndex("TenantId", "Kind", "PersonId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_gosi_member_tenant_id_kind_person_id");
+
+                    b.ToTable("gosi_member", "payroll");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.GosiRate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -220,6 +319,99 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                         .HasDatabaseName("ix_gosi_rate_tenant_id_category_effective_from");
 
                     b.ToTable("gosi_rate", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.GosiTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DoneAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("done_at");
+
+                    b.Property<string>("DoneByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("done_by_name");
+
+                    b.Property<DateOnly?>("DoneOn")
+                        .HasColumnType("date")
+                        .HasColumnName("done_on");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("employee_no");
+
+                    b.Property<DateOnly?>("EventOn")
+                        .HasColumnType("date")
+                        .HasColumnName("event_on");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal?>("NewWage")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("new_wage");
+
+                    b.Property<decimal?>("OldWage")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("old_wage");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gosi_task");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_gosi_task_tenant_id");
+
+                    b.HasIndex("TenantId", "EmployeeId")
+                        .HasDatabaseName("ix_gosi_task_tenant_id_employee_id");
+
+                    b.HasIndex("TenantId", "Status", "Kind")
+                        .HasDatabaseName("ix_gosi_task_tenant_id_status_kind");
+
+                    b.ToTable("gosi_task", "payroll");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayrollExclusion", b =>
@@ -325,6 +517,29 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("food");
+
+                    b.Property<decimal>("GosiBase")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi_base");
+
+                    b.Property<string>("GosiCategory")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("")
+                        .HasColumnName("gosi_category");
+
+                    b.Property<decimal>("GosiEmployee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi_employee");
+
+                    b.Property<decimal>("GosiEmployer")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi_employer");
 
                     b.Property<decimal>("Housing")
                         .HasPrecision(18, 2)
@@ -695,6 +910,16 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                                 .HasColumnType("decimal(18,2)")
                                 .HasColumnName("total_food");
 
+                            b1.Property<decimal>("GosiEmployee")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_gosi_employee");
+
+                            b1.Property<decimal>("GosiEmployer")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_gosi_employer");
+
                             b1.Property<decimal>("Housing")
                                 .HasPrecision(18, 2)
                                 .HasColumnType("decimal(18,2)")
@@ -744,6 +969,63 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                         .HasDatabaseName("ix_payroll_run_tenant_id_group_legal_entity_id_from");
 
                     b.ToTable("payroll_run", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SaudizationSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("FullWage")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("full_wage");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_saudization_setting");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_saudization_setting_tenant_id");
+
+                    b.ToTable("saudization_setting", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SaudizationTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<decimal>("RequiredPercent")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("required_percent");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_saudization_target");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_saudization_target_tenant_id");
+
+                    b.HasIndex("TenantId", "LegalEntityId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_saudization_target_tenant_id_legal_entity_id");
+
+                    b.ToTable("saudization_target", "payroll");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SponsorRegistration", b =>

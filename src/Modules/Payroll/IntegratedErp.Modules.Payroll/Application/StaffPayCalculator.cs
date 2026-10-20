@@ -26,12 +26,7 @@ public static class StaffPayCalculator
     public static GosiCategory CategoryOf(StaffPayInfo e, DateOnly from)
     {
         ArgumentNullException.ThrowIfNull(e);
-        if (e.NationalityCode is not ("SAU" or "SA"))
-        {
-            return GosiCategory.NonSaudi;
-        }
-
-        return (e.GosiSince ?? e.HireDate ?? from) < GosiNewFrom ? GosiCategory.SaudiLegacy : GosiCategory.SaudiNew;
+        return GosiRules.CategoryOf(e.NationalityCode, e.GosiSince ?? e.HireDate ?? from);
     }
 
     /// <summary>The days in service in the period by the 30-day rule: the whole period is 30; part of it is its days, 30 at most.</summary>
@@ -56,7 +51,8 @@ public static class StaffPayCalculator
         StaffGosi? gosi,
         StaffPayRules rules,
         DateOnly from,
-        DateOnly to)
+        DateOnly to,
+        decimal? registeredWage = null)
     {
         ArgumentNullException.ThrowIfNull(e);
         ArgumentNullException.ThrowIfNull(salary);
@@ -187,7 +183,7 @@ public static class StaffPayCalculator
             notes.Add("above_cap");
         }
 
-        // GOSI on the basic and housing within the floor and ceiling, for the days in service.
+        // GOSI on the wage registered with GOSI (else the basic and housing) within the floor and ceiling, for the days in service.
         decimal gosiBase = 0, gosiEmployee = 0, gosiEmployer = 0;
         if (gosi is null)
         {
@@ -195,9 +191,7 @@ public static class StaffPayCalculator
         }
         else
         {
-            gosiBase = Money(Math.Clamp(salary.Basic + salary.Housing, gosi.MinBase, gosi.MaxBase) * service / 30m);
-            gosiEmployee = Money(gosiBase * gosi.EmployeePercent / 100m);
-            gosiEmployer = Money(gosiBase * gosi.EmployerPercent / 100m);
+            (gosiBase, gosiEmployee, gosiEmployer) = GosiRules.Contribution(gosi, registeredWage ?? salary.Basic + salary.Housing, service);
         }
 
         var net = gross - absence - late - sick - penalties - others - adjustedDeductions - advances - gosiEmployee;

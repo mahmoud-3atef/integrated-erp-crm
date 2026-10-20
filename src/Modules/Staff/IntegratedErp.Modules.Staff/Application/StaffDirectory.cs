@@ -91,8 +91,27 @@ internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory, IStaf
                 e.Id, e.EmployeeNo, e.NameAr ?? e.NameEn, e.LegalEntityId, e.DepartmentId, d?.NameAr, d?.NameEn, t?.NameAr, t?.NameEn, e.Status.ToString(),
                 e.HireDate, e.EndedOn, e.NationalityCode, e.GosiSince, e.BankName, e.Iban,
                 current is null ? null : new StaffSalaryInfo(current.Basic, current.Housing, current.Food, current.Transport, current.Mobile, current.Project, current.Other, current.Total),
-                mine.Any(s => s.EffectiveFrom > from && s.EffectiveFrom <= to), acting);
+                mine.Any(s => s.EffectiveFrom > from && s.EffectiveFrom <= to), acting, e.GosiNo);
         }).ToList();
+    }
+
+    public async Task<bool> SetGosiAsync(Guid employeeId, string gosiNo, DateOnly? since, CancellationToken cancellationToken)
+    {
+        var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == employeeId, cancellationToken).ConfigureAwait(false);
+        if (e is null || string.IsNullOrWhiteSpace(gosiNo) || gosiNo.Trim().Length > 30)
+        {
+            return false;
+        }
+
+        var set = e.SetPersonal(e.NameAr, e.NameEn, e.IdNumber, e.NationalityCode, e.NationalityAr, e.NationalityEn, e.BirthDate, e.Mobile, e.Email, gosiNo.Trim());
+        if (set.IsFailure)
+        {
+            return false;
+        }
+
+        e.SetGosiSince(since ?? e.GosiSince);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     public Task<int> WithoutRegistrationAsync(CancellationToken cancellationToken) =>

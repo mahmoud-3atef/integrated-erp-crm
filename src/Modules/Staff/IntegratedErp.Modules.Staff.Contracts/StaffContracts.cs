@@ -75,7 +75,8 @@ public sealed record StaffPayInfo(
     string? Iban,
     StaffSalaryInfo? Salary,
     bool SalaryChangedInPeriod,
-    decimal ActingAllowance);
+    decimal ActingAllowance,
+    string? GosiNo = null);
 
 public sealed record StaffSalaryInfo(decimal Basic, decimal Housing, decimal Food, decimal Transport, decimal Mobile, decimal Project, decimal Other, decimal Total);
 
@@ -87,4 +88,7 @@ public interface IStaffPayroll
 
     /// <summary>How many active employees have no commercial registration (they are in no payroll).</summary>
     Task<int> WithoutRegistrationAsync(CancellationToken cancellationToken);
+
+    /// <summary>Records the GOSI number and the day the employee joined GOSI (closing a GOSI registration task, 4.9).</summary>
+    Task<bool> SetGosiAsync(Guid employeeId, string gosiNo, DateOnly? since, CancellationToken cancellationToken);
 }

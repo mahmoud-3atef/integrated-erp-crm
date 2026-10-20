@@ -36,6 +36,16 @@ internal sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> option
     public DbSet<StaffPaySetting> StaffPaySettings => Set<StaffPaySetting>();
 
     public DbSet<GosiRate> GosiRates => Set<GosiRate>();
+
+    public DbSet<GosiMember> GosiMembers => Set<GosiMember>();
+
+    public DbSet<GosiTask> GosiTasks => Set<GosiTask>();
+
+    public DbSet<GosiInvoice> GosiInvoices => Set<GosiInvoice>();
+
+    public DbSet<SaudizationSetting> SaudizationSettings => Set<SaudizationSetting>();
+
+    public DbSet<SaudizationTarget> SaudizationTargets => Set<SaudizationTarget>();
 }
 
 internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<PayrollRun>
@@ -61,6 +71,7 @@ internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<Payroll
                          nameof(PayrollTotals.PaidDays), nameof(PayrollTotals.Base), nameof(PayrollTotals.Housing), nameof(PayrollTotals.Food),
                          nameof(PayrollTotals.Transport), nameof(PayrollTotals.OtherAllowances), nameof(PayrollTotals.Overtime), nameof(PayrollTotals.Additions),
                          nameof(PayrollTotals.Allowances), nameof(PayrollTotals.Deductions), nameof(PayrollTotals.Net),
+                         nameof(PayrollTotals.GosiEmployee), nameof(PayrollTotals.GosiEmployer),
                      })
             {
                 t.Property<decimal>(name).HasPrecision(18, 2).HasColumnName("total_" + Snake(name));
@@ -92,6 +103,7 @@ internal sealed class PayrollLineConfiguration : IEntityTypeConfiguration<Payrol
         builder.Property(l => l.StatusEn).HasMaxLength(100);
         builder.Property(l => l.ProjectName).HasMaxLength(300).IsRequired();
         builder.Property(l => l.Notes).HasMaxLength(200).IsRequired();
+        builder.Property(l => l.GosiCategory).HasMaxLength(20).IsRequired().HasDefaultValue(string.Empty);
         foreach (var name in new[]
                  {
                      nameof(PayrollLine.MonthlySalary), nameof(PayrollLine.PaidDays), nameof(PayrollLine.AbsenceDays), nameof(PayrollLine.Base),
@@ -99,6 +111,7 @@ internal sealed class PayrollLineConfiguration : IEntityTypeConfiguration<Payrol
                      nameof(PayrollLine.Overtime), nameof(PayrollLine.ClientAdditions), nameof(PayrollLine.InternalAdditions), nameof(PayrollLine.Allowances),
                      nameof(PayrollLine.ClientDeductions), nameof(PayrollLine.CustomerLoans), nameof(PayrollLine.InternalDeductions),
                      nameof(PayrollLine.Deductions), nameof(PayrollLine.Net),
+                     nameof(PayrollLine.GosiBase), nameof(PayrollLine.GosiEmployee), nameof(PayrollLine.GosiEmployer),
                  })
         {
             builder.Property<decimal>(name).HasPrecision(18, 2);
@@ -293,6 +306,78 @@ internal sealed class GosiRateConfiguration : IEntityTypeConfiguration<GosiRate>
         builder.Property(r => r.MinBase).HasPrecision(18, 2);
         builder.Property(r => r.MaxBase).HasPrecision(18, 2);
         builder.HasIndex(r => new { r.TenantId, r.Category, r.EffectiveFrom }).IsUnique();
+    }
+}
+
+internal sealed class GosiMemberConfiguration : IEntityTypeConfiguration<GosiMember>
+{
+    public void Configure(EntityTypeBuilder<GosiMember> builder)
+    {
+        builder.ToTable("gosi_member");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id).ValueGeneratedNever();
+        builder.Property(m => m.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.RegisteredWage).HasPrecision(18, 2);
+        builder.HasIndex(m => new { m.TenantId, m.Kind, m.PersonId }).IsUnique();
+    }
+}
+
+internal sealed class GosiTaskConfiguration : IEntityTypeConfiguration<GosiTask>
+{
+    public void Configure(EntityTypeBuilder<GosiTask> builder)
+    {
+        builder.ToTable("gosi_task");
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.Id).ValueGeneratedNever();
+        builder.Property(t => t.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(t => t.EmployeeNo).HasMaxLength(50).IsRequired();
+        builder.Property(t => t.Name).HasMaxLength(300).IsRequired();
+        builder.Property(t => t.OldWage).HasPrecision(18, 2);
+        builder.Property(t => t.NewWage).HasPrecision(18, 2);
+        builder.Property(t => t.DoneByName).HasMaxLength(200);
+        builder.Property(t => t.Reference).HasMaxLength(100);
+        builder.HasIndex(t => new { t.TenantId, t.Status, t.Kind });
+        builder.HasIndex(t => new { t.TenantId, t.EmployeeId });
+    }
+}
+
+internal sealed class GosiInvoiceConfiguration : IEntityTypeConfiguration<GosiInvoice>
+{
+    public void Configure(EntityTypeBuilder<GosiInvoice> builder)
+    {
+        builder.ToTable("gosi_invoice");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
+        builder.Property(i => i.Period).HasMaxLength(7).IsRequired();
+        builder.Property(i => i.Amount).HasPrecision(18, 2);
+        builder.Property(i => i.Note).HasMaxLength(500);
+        builder.Property(i => i.EnteredByName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(i => new { i.TenantId, i.LegalEntityId, i.Period }).IsUnique();
+    }
+}
+
+internal sealed class SaudizationSettingConfiguration : IEntityTypeConfiguration<SaudizationSetting>
+{
+    public void Configure(EntityTypeBuilder<SaudizationSetting> builder)
+    {
+        builder.ToTable("saudization_setting");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.FullWage).HasPrecision(18, 2);
+        builder.HasIndex(s => s.TenantId).IsUnique();
+    }
+}
+
+internal sealed class SaudizationTargetConfiguration : IEntityTypeConfiguration<SaudizationTarget>
+{
+    public void Configure(EntityTypeBuilder<SaudizationTarget> builder)
+    {
+        builder.ToTable("saudization_target");
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.Id).ValueGeneratedNever();
+        builder.Property(t => t.RequiredPercent).HasPrecision(6, 2);
+        builder.HasIndex(t => new { t.TenantId, t.LegalEntityId }).IsUnique();
     }
 }
 

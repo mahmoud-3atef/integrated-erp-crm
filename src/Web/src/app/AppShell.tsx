@@ -7,6 +7,7 @@ import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import WorkHistoryOutlinedIcon from '@mui/icons-material/WorkHistoryOutlined';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import CloudSyncOutlinedIcon from '@mui/icons-material/CloudSyncOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
@@ -115,6 +116,7 @@ const menu: MenuSection[] = [
     items: [
       { path: '/payroll/runs', labelKey: 'menu.payrollRuns', icon: <RequestQuoteOutlinedIcon />, permission: 'payroll.workers.view', companyWide: true },
       { path: '/payroll/staff', labelKey: 'menu.payrollStaff', icon: <ReceiptLongOutlinedIcon />, permission: 'payroll.staff.view', companyWide: true },
+      { path: '/payroll/gosi', labelKey: 'menu.payrollGosi', icon: <ShieldOutlinedIcon />, permission: 'payroll.gosi.view', companyWide: true },
     ],
   },
   {

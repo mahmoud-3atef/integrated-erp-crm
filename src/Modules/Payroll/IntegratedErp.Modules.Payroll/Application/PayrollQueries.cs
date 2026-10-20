@@ -36,7 +36,9 @@ public sealed record PayrollTotalsDto(
     decimal Additions,
     decimal Allowances,
     decimal Deductions,
-    decimal Net);
+    decimal Net,
+    decimal GosiEmployee = 0,
+    decimal GosiEmployer = 0);
 
 /// <summary>An earlier approved run of the same registration: its period and totals (the comparison and the trend).</summary>
 public sealed record PayrollPastRunDto(Guid Id, string RunNo, DateOnly From, DateOnly To, PayrollTotalsDto Totals);
@@ -102,7 +104,11 @@ public sealed record PayrollLineDto(
     decimal Allowances,
     decimal Deductions,
     decimal Net,
-    IReadOnlyList<string> Notes);
+    IReadOnlyList<string> Notes,
+    string GosiCategory = "",
+    decimal GosiBase = 0,
+    decimal GosiEmployee = 0,
+    decimal GosiEmployer = 0);
 
 /// <summary>The sums of the whole filtered scope (not of the page).</summary>
 public sealed record PayrollLineSumsDto(int Workers, decimal PaidDays, decimal Base, decimal Housing, decimal Food, decimal Transport, decimal OtherAllowances, decimal Overtime, decimal Additions, decimal Allowances, decimal Deductions, decimal Net);
@@ -328,9 +334,9 @@ internal sealed class PayrollQueries(PayrollDbContext db, IApprovalService appro
             l.Id, l.WorkerId, l.WorkerNo, l.Name, l.ProfessionCode, profession?.NameAr, profession?.NameEn, l.StatusAr, l.StatusEn,
             l.ProjectCrmId, l.ProjectName, l.Projects, l.MonthlySalary, l.PaidDays, l.AbsenceDays, l.Base, l.Housing, l.Food, l.Transport,
             l.OtherAllowances, l.Overtime, l.ClientAdditions + l.InternalAdditions, l.Allowances, l.Deductions, l.Net,
-            l.Notes.Split(',', StringSplitOptions.RemoveEmptyEntries));
+            l.Notes.Split(',', StringSplitOptions.RemoveEmptyEntries), l.GosiCategory, l.GosiBase, l.GosiEmployee, l.GosiEmployer);
     }
 
     private static PayrollTotalsDto Totals(PayrollTotals t) =>
-        new(t.Workers, t.Excluded, t.PaidDays, t.Base, t.Housing, t.Food, t.Transport, t.OtherAllowances, t.Overtime, t.Additions, t.Allowances, t.Deductions, t.Net);
+        new(t.Workers, t.Excluded, t.PaidDays, t.Base, t.Housing, t.Food, t.Transport, t.OtherAllowances, t.Overtime, t.Additions, t.Allowances, t.Deductions, t.Net, t.GosiEmployee, t.GosiEmployer);
 }

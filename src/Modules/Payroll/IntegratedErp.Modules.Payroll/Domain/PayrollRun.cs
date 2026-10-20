@@ -194,7 +194,9 @@ public sealed record PayrollTotals(
     decimal Additions,
     decimal Allowances,
     decimal Deductions,
-    decimal Net)
+    decimal Net,
+    decimal GosiEmployee = 0,
+    decimal GosiEmployer = 0)
 {
     public static readonly PayrollTotals Zero = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -211,7 +213,9 @@ public sealed record PayrollTotals(
         lines.Sum(l => l.ClientAdditions + l.InternalAdditions),
         lines.Sum(l => l.Allowances),
         lines.Sum(l => l.Deductions),
-        lines.Sum(l => l.Net));
+        lines.Sum(l => l.Net),
+        lines.Sum(l => l.GosiEmployee),
+        lines.Sum(l => l.GosiEmployer));
 }
 
 /// <summary>A worker's pay in a run: the days, the salary by element, what the month added and deducted, and the net.</summary>
@@ -287,6 +291,17 @@ public sealed class PayrollLine : ITenantOwned
 
     public decimal Net { get; private set; }
 
+    /// <summary>The GOSI category (SaudiLegacy, SaudiNew, NonSaudi), the contributory wage and both shares (4.9).</summary>
+    public string GosiCategory { get; private set; } = string.Empty;
+
+    public decimal GosiBase { get; private set; }
+
+    /// <summary>The worker's share, deducted from the net (Saudis).</summary>
+    public decimal GosiEmployee { get; private set; }
+
+    /// <summary>The company's share: a cost outside the net.</summary>
+    public decimal GosiEmployer { get; private set; }
+
     /// <summary>The review notes, comma-separated: absence, joined, left, multi_project, salary_split, net_not_positive.</summary>
     public string Notes { get; private set; }
 
@@ -324,8 +339,12 @@ public sealed class PayrollLine : ITenantOwned
             ClientDeductions = v.ClientDeductions,
             CustomerLoans = v.CustomerLoans,
             InternalDeductions = v.InternalDeductions,
-            Deductions = v.ClientDeductions + v.CustomerLoans + v.InternalDeductions,
+            Deductions = v.ClientDeductions + v.CustomerLoans + v.InternalDeductions + v.GosiEmployee,
             Net = v.Net,
+            GosiCategory = v.GosiCategory,
+            GosiBase = v.GosiBase,
+            GosiEmployee = v.GosiEmployee,
+            GosiEmployer = v.GosiEmployer,
             Notes = string.Join(',', v.Notes),
         };
         foreach (var source in sources)
@@ -363,7 +382,11 @@ public sealed record PayrollLineValues(
     decimal CustomerLoans,
     decimal InternalDeductions,
     decimal Net,
-    IReadOnlyList<string> Notes);
+    IReadOnlyList<string> Notes,
+    string GosiCategory = "",
+    decimal GosiBase = 0,
+    decimal GosiEmployee = 0,
+    decimal GosiEmployer = 0);
 
 /// <summary>
 /// An approved timesheet line paid in a run. A timesheet line is paid once: the key on <see cref="TimesheetLineId"/>
@@ -546,4 +569,8 @@ public static class PayrollErrors
     public static readonly Error EarlierOpen = Error.Conflict("payroll_earlier_open", "An earlier payroll run of this registration is not approved yet: approve it first.");
     public static readonly Error PeriodTaken = Error.Conflict("payroll_period_taken", "This registration already has a payroll run for this attendance month.");
     public static readonly Error LineNotFound = Error.NotFound("payroll_line", "The employee is not in this payroll run.");
+    public static readonly Error GosiTask = Error.Conflict("payroll_gosi_task", "Only an open task can be closed (the reference 100 characters at most).");
+    public static readonly Error GosiTaskNotFound = Error.NotFound("payroll_gosi_task", "GOSI task not found.");
+    public static readonly Error GosiInvoice = Error.Validation("payroll_gosi_invoice", "Enter the invoice amount (zero or more).");
+    public static readonly Error GosiWage = Error.Validation("payroll_gosi_wage", "Enter the contributory wage and the GOSI number the task needs.");
 }

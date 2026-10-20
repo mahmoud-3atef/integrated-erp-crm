@@ -515,7 +515,11 @@
     "conflict_payroll_attendance_not_closed": "The attendance month is not closed yet: close it first.",
     "conflict_payroll_earlier_open": "An earlier payroll run of this registration is not approved yet: approve it first.",
     "conflict_payroll_period_taken": "This registration already has a payroll run for this attendance month.",
-    "not_found_payroll_line": "The employee is not in this payroll run."
+    "not_found_payroll_line": "The employee is not in this payroll run.",
+    "conflict_payroll_gosi_task": "Only an open task can be closed (the reference 100 characters at most).",
+    "not_found_payroll_gosi_task": "GOSI task not found.",
+    "validation_payroll_gosi_invoice": "Enter the invoice amount (zero or more).",
+    "validation_payroll_gosi_wage": "Enter the contributory wage and the GOSI number the task needs."
   },
   "menu": {
     "label": "Main menu",
@@ -575,7 +579,8 @@
     "hrLeaveBalances": "Leave balances",
     "hrAdvances": "Salary advances",
     "hrPenalties": "Penalties and deductions",
-    "payrollStaff": "Staff payroll runs"
+    "payrollStaff": "Staff payroll runs",
+    "payrollGosi": "Social insurance"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -2934,7 +2939,11 @@
       "source": "{{days}} days · {{from}} – {{to}}",
       "matches": "Matches the worker's net on the timesheet",
       "formula": "{{value}} × {{days}} ÷ 30",
-      "none": "None"
+      "none": "None",
+      "gosi": "GOSI (worker's share)",
+      "gosiHint": "on {{base}} · {{category}}",
+      "gosiEmployer": "The company's GOSI share: SAR {{amount}} (not deducted from the worker).",
+      "matchesAfterGosi": "Matches the worker's net on the timesheet after their GOSI share"
     },
     "create": {
       "title": "New payroll run",
@@ -4477,5 +4486,149 @@
     "total": "Total",
     "totalScopeShort": "Filtered · {{count}} employees",
     "totalAllShort": "Whole run · {{count}} employees"
+  },
+  "gosi": {
+    "title": "Social insurance (GOSI)",
+    "intro": "Each commercial registration's monthly statement from the approved runs (staff and workers), reconciled with GOSI's invoice, the registration and wage-update tasks, and Saudization.",
+    "noAccess": "You do not have permission to view social insurance.",
+    "legalEntity": "Commercial registration",
+    "retry": "Retry",
+    "tabs": {
+      "statement": "Monthly statement",
+      "tasks": "GOSI tasks",
+      "tasksCount": "GOSI tasks ({{count}})",
+      "saudization": "Saudization"
+    },
+    "kpi": {
+      "members": "Subscribers",
+      "staff": "Staff",
+      "workers": "Workers",
+      "base": "Contributory wage",
+      "saudi": "Saudis",
+      "nonSaudi": "Non-Saudis",
+      "employee": "Subscribers' share",
+      "employeeHint": "Deducted from the salaries",
+      "employer": "Company's share",
+      "hazards": "Of which occupational hazards 2%",
+      "due": "Due to GOSI",
+      "invoice": "Invoice",
+      "difference": "Difference"
+    },
+    "openRuns": "{{count}} run(s) for this month are not approved yet: the statement covers approved runs only.",
+    "noRuns": "No approved runs for this registration this month.",
+    "search": "Search by subscriber name or number",
+    "kind": {
+      "label": "Subscriber type",
+      "all": "All",
+      "Staff": "Employee",
+      "Worker": "Worker",
+      "flags": "Needs action"
+    },
+    "cols": {
+      "member": "Subscriber",
+      "kind": "Type",
+      "category": "Category",
+      "base": "Contributory wage",
+      "flag": "Status",
+      "employee": "Subscriber",
+      "employer": "Company",
+      "amount": "Amount"
+    },
+    "flags": {
+      "ok": "Matches",
+      "not_registered": "Not registered",
+      "wage_update": "Wage changed"
+    },
+    "empty": "No subscribers this month.",
+    "emptyHint": "The statement is built from this registration's approved payroll runs.",
+    "noResults": "No results match the search.",
+    "totalAll": "Total ({{count}} subscribers, whole statement)",
+    "shown": "Showing {{from}} - {{to}} of {{total}} subscribers",
+    "byCategory": "By category",
+    "invoice": {
+      "title": "GOSI invoice reconciliation",
+      "record": "Record GOSI invoice",
+      "edit": "Edit the invoice",
+      "dialog": "GOSI invoice · {{entity}} · {{month}}",
+      "due": "Due from the runs",
+      "amount": "GOSI invoice",
+      "note": "Note",
+      "difference": "Difference",
+      "differenceHint": "A difference means the runs' wages differ from those registered with GOSI, or subscribers are not in the runs: check the GOSI tasks.",
+      "matches": "The invoice matches the runs.",
+      "none": "No invoice recorded for this month yet.",
+      "by": "Entered by: {{name}}"
+    },
+    "tasks": {
+      "open": "Open",
+      "done": "Done",
+      "kind": "Task",
+      "employee": "Employee",
+      "oldWage": "Registered wage",
+      "newWage": "New wage",
+      "eventOn": "Date",
+      "doneOn": "Done on",
+      "reference": "Transaction no.",
+      "action": "Action",
+      "none": "No open tasks.",
+      "noneDone": "No tasks done yet.",
+      "noneHint": "Tasks open automatically from the staff files: a Saudi employee without a GOSI number, a changed wage, or an employee whose service ended.",
+      "readOnly": "View only"
+    },
+    "taskKind": {
+      "WageUpdate": "Wage update",
+      "Register": "New registration",
+      "Exclude": "Exclusion"
+    },
+    "close": {
+      "action": {
+        "WageUpdate": "Update the wage with GOSI",
+        "Register": "Register with GOSI",
+        "Exclude": "Exclude from GOSI"
+      },
+      "title": {
+        "WageUpdate": "Update the wage with GOSI · {{name}}",
+        "Register": "Register with GOSI · {{name}}",
+        "Exclude": "Exclude from GOSI · {{name}}"
+      },
+      "wage": "Contributory wage",
+      "doneOn": {
+        "WageUpdate": "Updated with GOSI on",
+        "Register": "Registered on",
+        "Exclude": "Excluded on"
+      },
+      "gosiNo": "GOSI number",
+      "since": "Subscribed since",
+      "reference": "Note or transaction number",
+      "hint": {
+        "WageUpdate": "The contribution is calculated on the new registered wage from this month, and the update is kept in the employee's history.",
+        "Register": "The GOSI number and the subscription date are saved on the employee's file, and the contribution is calculated on this wage.",
+        "Exclude": "No contribution is calculated for the employee after the exclusion date."
+      }
+    },
+    "saudization": {
+      "none": "No active commercial registrations.",
+      "noTarget": "No required share",
+      "below": "Below the required share",
+      "meets": "Meets the share",
+      "counted": "Saudis counted {{counted}} of {{total}}",
+      "required": "Required share {{percent}}%",
+      "requiredNone": "The required share is not set (settings)",
+      "staffSaudis": "Saudi staff",
+      "withHalf": "{{count}} ({{half}} with a wage under {{wage}} counted as half)",
+      "workerSaudis": "Saudi workers",
+      "nonSaudis": "Non-Saudis",
+      "needed": "Needed to reach the share",
+      "neededCount": "+ {{count}} full-wage Saudis",
+      "belowAlert": "Below the required share: {{names}}. Whoever follows GOSI is alerted until it is met.",
+      "rule": "A Saudi counts as one with a contributory wage of {{wage}} SAR or more, and as half below it. Each registration's required share is entered from Nitaqat (settings)."
+    },
+    "settings": {
+      "title": "Saudization settings",
+      "fullWage": "Wage at which a Saudi counts as one",
+      "fullWageHint": "Below it a Saudi counts as half (Nitaqat: SAR 4,000).",
+      "required": "Required share per commercial registration",
+      "hint": "Enter each registration's required share from the Nitaqat platform; leave it empty if not set."
+    }
   }
 }

@@ -631,10 +631,12 @@ function WorkerDrawer({ runId, line, onClose }: { runId: string; line: PayrollLi
       </Box>
       <Box>
         <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('payroll.drawer.deductions')}</Typography>
-        {detail && detail.clientDeductions + detail.customerLoans + detail.internalDeductions === 0 && <Typography sx={{ fontSize: 13, color: hr.textMuted }}>{t('payroll.drawer.none')}</Typography>}
+        {detail && detail.clientDeductions + detail.customerLoans + detail.internalDeductions + line.gosiEmployee === 0 && <Typography sx={{ fontSize: 13, color: hr.textMuted }}>{t('payroll.drawer.none')}</Typography>}
         {detail && detail.clientDeductions !== 0 && row(t('payroll.drawer.clientDeductions'), detail.clientDeductions, undefined, '#B45309')}
         {detail && detail.customerLoans !== 0 && row(t('payroll.drawer.customerLoans'), detail.customerLoans, undefined, '#B45309')}
         {detail && detail.internalDeductions !== 0 && row(t('payroll.drawer.internalDeductions'), detail.internalDeductions, undefined, '#B45309')}
+        {line.gosiEmployee !== 0 && row(t('payroll.drawer.gosi'), line.gosiEmployee, t('payroll.drawer.gosiHint', { base: money(line.gosiBase), category: t(`staffPayroll.gosiCategory.${line.gosiCategory}`) }), '#B45309')}
+        {line.gosiEmployer !== 0 && <Typography sx={{ fontSize: 12, color: hr.textMuted, mt: 0.75 }}>{t('payroll.drawer.gosiEmployer', { amount: money(line.gosiEmployer) })}</Typography>}
         {line.absenceDays > 0 && <Typography sx={{ fontSize: 12, color: hr.textMuted, mt: 0.75 }}>{t('payroll.drawer.absenceNote', { days: money(line.absenceDays), paid: money(line.paidDays) })}</Typography>}
       </Box>
       <Stack direction="row" sx={{ justifyContent: 'space-between', bgcolor: '#ECFDF5', borderRadius: '10px', p: 1.5, fontWeight: 700 }}>
@@ -662,10 +664,10 @@ function WorkerDrawer({ runId, line, onClose }: { runId: string; line: PayrollLi
                 </Typography>
               </Box>
             ))}
-            {Math.abs(sourceNet - line.net) < 0.005 && (
+            {Math.abs(sourceNet - line.gosiEmployee - line.net) < 0.005 && (
               <Typography sx={{ fontSize: 12.5, color: hr.success, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <CheckCircleOutlineIcon sx={{ fontSize: 16 }} />
-                {t('payroll.drawer.matches')}
+                {line.gosiEmployee ? t('payroll.drawer.matchesAfterGosi') : t('payroll.drawer.matches')}
               </Typography>
             )}
           </Stack>

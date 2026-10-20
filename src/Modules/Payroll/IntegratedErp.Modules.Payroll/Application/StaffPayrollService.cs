@@ -261,6 +261,7 @@ internal sealed class StaffPayrollService(
         var setting = await db.StaffPaySettings.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (setting is not null)
         {
+            await EnsureNewSubscriberStepsAsync(cancellationToken).ConfigureAwait(false);
             return setting;
         }
 
@@ -276,7 +277,30 @@ internal sealed class StaffPayrollService(
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureNewSubscriberStepsAsync(cancellationToken).ConfigureAwait(false);
         return setting;
+    }
+
+    /// <summary>The new subscribers' graduated rates (4.9), added once beside the first rate if they are missing.</summary>
+    private async Task EnsureNewSubscriberStepsAsync(CancellationToken cancellationToken)
+    {
+        var dates = await db.GosiRates.Where(r => r.Category == GosiCategory.SaudiNew).Select(r => r.EffectiveFrom).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (dates.Count == 0)
+        {
+            return;
+        }
+
+        var added = false;
+        foreach (var (from, employee, employer) in GosiRules.NewSubscriberSteps.Where(s => !dates.Contains(s.From)))
+        {
+            db.GosiRates.Add(GosiRate.Create(GosiCategory.SaudiNew, from, employee, employer, 1500, 45000).Value);
+            added = true;
+        }
+
+        if (added)
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task<PaySettingsDto> SettingsAsync(CancellationToken cancellationToken)
@@ -360,8 +384,9 @@ internal sealed class StaffPayrollService(
 
         var setting = await SettingAsync(cancellationToken).ConfigureAwait(false);
         var rules = new StaffPayRules(setting.OvertimePremiumPercent, setting.HoursPerDay, setting.LateMode, (await deductions.RulesAsync(cancellationToken).ConfigureAwait(false)).MonthlyCapPercent);
-        var rates = await db.GosiRates.AsNoTracking().Where(r => r.EffectiveFrom <= run.To).ToListAsync(cancellationToken).ConfigureAwait(false);
-        var gosi = rates.GroupBy(r => r.Category).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.EffectiveFrom).First());
+        var gosi = await GosiRules.RatesAsync(db, run.To, cancellationToken).ConfigureAwait(false);
+        var registered = await db.GosiMembers.AsNoTracking().Where(m => m.Kind == GosiPersonKind.Staff && m.RegisteredWage != null && m.ExcludedOn == null)
+            .ToDictionaryAsync(m => m.PersonId, m => m.RegisteredWage!.Value, cancellationToken).ConfigureAwait(false);
 
         var employees = (await staff.PayInfoAsync(run.From, run.To, cancellationToken).ConfigureAwait(false))
             .Where(e => e.LegalEntityId == run.LegalEntityId && StaffPayCalculator.ServiceDays(run.From, run.To, e.HireDate, e.EndedOn) > 0).ToList();
@@ -385,8 +410,7 @@ internal sealed class StaffPayrollService(
             var (values, items) = StaffPayCalculator.Line(
                 e, salary, attended.GetValueOrDefault(e.EmployeeId), due[e.EmployeeId].ToList(),
                 adjustments[e.EmployeeId].Select(a => new StaffAdjustmentInput(a.Id, a.Kind, a.Amount, a.Reason)).ToList(),
-                rate is null ? null : new StaffGosi(category, rate.EmployeePercent, rate.EmployerPercent, rate.MinBase, rate.MaxBase),
-                rules, run.From, run.To);
+                rate, rules, run.From, run.To, registered.TryGetValue(e.EmployeeId, out var wage) ? wage : null);
             lines.Add(StaffPayrollLine.Create(run.Id, values, items));
         }
 

@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
@@ -31,6 +32,8 @@ public sealed class PayrollModule : IModule
         services.AddScoped<StaffPayrollService>();
         services.AddScoped<StaffPayrollQueries>();
         services.AddScoped<IApprovalRecordAdapter, StaffPayrollAdapter>();
+        services.AddScoped<GosiService>();
+        services.AddAlertProvider<GosiAlerts>();
         services.AddPermissions(PayrollPermissions.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("payroll", PayrollDbContext.SchemaName, "الرواتب", "Payroll", "مسيرات الرواتب", "Payroll runs", "PR-{YYYY}-{N:5}", NumberReset.Yearly),
@@ -41,6 +44,7 @@ public sealed class PayrollModule : IModule
     {
         endpoints.MapPayrollEndpoints();
         endpoints.MapStaffPayrollEndpoints();
+        endpoints.MapGosiEndpoints();
     }
 }
 
@@ -61,6 +65,9 @@ internal static class PayrollPermissions
     public const string StaffApproveHr = "payroll.staff.approve.hr";
     public const string StaffApproveFinance = "payroll.staff.approve.finance";
     public const string StaffApproveManagement = "payroll.staff.approve.management";
+    public const string GosiView = "payroll.gosi.view";
+    public const string GosiManage = "payroll.gosi.manage";
+    public const string GosiInvoice = "payroll.gosi.invoice";
 
     private const string GroupAr = "الرواتب";
     private const string GroupEn = "Payroll";
@@ -78,5 +85,8 @@ internal static class PayrollPermissions
         new(StaffApproveHr, GroupAr, GroupEn, "اعتماد مسيرات رواتب الموظفين (الموارد البشرية)", "Approve the staff payroll runs (HR)"),
         new(StaffApproveFinance, GroupAr, GroupEn, "اعتماد مسيرات رواتب الموظفين (المالية)", "Approve the staff payroll runs (finance)"),
         new(StaffApproveManagement, GroupAr, GroupEn, "اعتماد مسيرات رواتب الموظفين (الإدارة العليا)", "Approve the staff payroll runs (senior management)"),
+        new(GosiView, GroupAr, GroupEn, "عرض التأمينات الاجتماعية والسعودة", "View GOSI and Saudization"),
+        new(GosiManage, GroupAr, GroupEn, "إغلاق مهام التأمينات الاجتماعية (التسجيل وتحديث الأجر والاستبعاد)", "Close GOSI tasks (registration, wage update, exclusion)"),
+        new(GosiInvoice, GroupAr, GroupEn, "تسجيل فاتورة التأمينات الاجتماعية ومطابقتها (المالية)", "Record and reconcile GOSI's invoice (finance)"),
     ];
 }
