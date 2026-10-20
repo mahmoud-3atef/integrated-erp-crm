@@ -539,4 +539,11 @@ public static class PayrollErrors
     public static readonly Error NoSponsors = Error.Validation("payroll_no_sponsors", "No sponsor of the old system is linked to this registration: link them first.");
     public static readonly Error Overlap = Error.Conflict("payroll_overlap", "Another payroll run of this registration covers part of the period.");
     public static readonly Error Sponsor = Error.Validation("payroll_sponsor", "Enter the sponsor as the old system writes it.");
+    public static readonly Error NetNotPositive = Error.Conflict("payroll_net_not_positive", "Some employees' net is zero or less: review their lines first.");
+    public static readonly Error Adjustment = Error.Validation("payroll_adjustment", "Give the amount (above zero) and the reason.");
+    public static readonly Error Setting = Error.Validation("payroll_setting", "A setting is out of range.");
+    public static readonly Error AttendanceNotClosed = Error.Conflict("payroll_attendance_not_closed", "The attendance month is not closed yet: close it first.");
+    public static readonly Error EarlierOpen = Error.Conflict("payroll_earlier_open", "An earlier payroll run of this registration is not approved yet: approve it first.");
+    public static readonly Error PeriodTaken = Error.Conflict("payroll_period_taken", "This registration already has a payroll run for this attendance month.");
+    public static readonly Error LineNotFound = Error.NotFound("payroll_line", "The employee is not in this payroll run.");
 }

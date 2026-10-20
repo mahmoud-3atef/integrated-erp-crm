@@ -1,5 +1,5 @@
 // The company's staff and organisation (src/Modules/Staff/.../Api/StaffEndpoints.cs).
-import { request } from './auth';
+import { request, upload } from './auth';
 import type { ApprovalStatus } from './workflow';
 
 export type StaffStatus = 'Active' | 'Probation' | 'Suspended' | 'Left';
@@ -72,6 +72,23 @@ export interface Salary {
 
 export type SalaryValues = Pick<Salary, 'basic' | 'housing' | 'food' | 'transport' | 'mobile' | 'project' | 'other'>;
 
+export interface StaffPayDetails {
+  bankName: string | null;
+  iban: string | null;
+  accountHolder: string | null;
+  gosiSince: string | null;
+}
+
+export interface BulkUpdateResult {
+  rows: number;
+  employees: number;
+  changes: number;
+  rejected: number;
+  applied: boolean;
+  items: { row: number; employeeId: string; employeeNo: string; name: string; field: string; from: string | null; to: string | null }[];
+  problems: { row: number; employeeNo: string | null; field: string | null; problem: string; value: string | null }[];
+}
+
 export interface StaffProfile {
   id: string;
   employeeNo: string;
@@ -114,6 +131,8 @@ export interface StaffProfile {
   canEdit: boolean;
   canSeeSalary: boolean;
   canChangeSalary: boolean;
+  payDetails: StaffPayDetails | null;
+  canManageBank: boolean;
 }
 
 export interface StaffEvent {
@@ -308,6 +327,13 @@ export const staffApi = {
     request<void>('PUT', `${base}/employees/${id}/job`, input),
   setContract: (id: string, input: { startsOn: string | null; months: number | null; endsOn: string | null }) => request<void>('PUT', `${base}/employees/${id}/contract`, input),
   changeSalary: (id: string, input: { effectiveFrom: string; salary: SalaryValues; reason: string }) => request<void>('POST', `${base}/employees/${id}/salary`, input),
+  setPayDetails: (id: string, input: StaffPayDetails) => request<void>('PUT', `${base}/employees/${id}/pay-details`, input),
+  updateTemplateUrl: (lang: string) => `${base}/employees/update-template?lang=${lang}`,
+  bulkUpdate: (file: File, apply: boolean) => {
+    const form = new FormData();
+    form.append('file', file);
+    return upload<BulkUpdateResult>(`${base}/employees/bulk-update?apply=${apply}`, form);
+  },
   nationalities: () => request<{ code: string; nameAr: string; nameEn: string }[]>('GET', `${base}/nationalities`),
   structure: () => request<Structure>('GET', `${base}/structure`),
   contracts: (id: string) => request<Contract[]>('GET', `${base}/employees/${id}/contracts`),

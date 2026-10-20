@@ -24,6 +24,18 @@ internal sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> option
     public DbSet<PayrollExclusion> Exclusions => Set<PayrollExclusion>();
 
     public DbSet<SponsorRegistration> Sponsors => Set<SponsorRegistration>();
+
+    public DbSet<StaffPayrollRun> StaffRuns => Set<StaffPayrollRun>();
+
+    public DbSet<StaffPayrollLine> StaffLines => Set<StaffPayrollLine>();
+
+    public DbSet<StaffPayrollItem> StaffItems => Set<StaffPayrollItem>();
+
+    public DbSet<StaffPayrollAdjustment> StaffAdjustments => Set<StaffPayrollAdjustment>();
+
+    public DbSet<StaffPaySetting> StaffPaySettings => Set<StaffPaySetting>();
+
+    public DbSet<GosiRate> GosiRates => Set<GosiRate>();
 }
 
 internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<PayrollRun>
@@ -151,6 +163,143 @@ internal sealed class SponsorRegistrationConfiguration : IEntityTypeConfiguratio
         builder.Property(s => s.Sponsor).HasMaxLength(100).IsRequired();
         builder.HasIndex(s => new { s.TenantId, s.Sponsor }).IsUnique();
     }
+}
+
+internal sealed class StaffPayrollRunConfiguration : IEntityTypeConfiguration<StaffPayrollRun>
+{
+    public void Configure(EntityTypeBuilder<StaffPayrollRun> builder)
+    {
+        builder.ToTable("staff_run");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.RunNo).HasMaxLength(40).IsRequired();
+        builder.Property(r => r.LegalEntityName).HasMaxLength(300).IsRequired();
+        builder.Property(r => r.Period).HasMaxLength(7).IsRequired();
+        builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(r => r.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(r => r.ApprovedByName).HasMaxLength(200);
+        builder.Property(r => r.LastComment).HasMaxLength(2000);
+        builder.ComplexProperty(r => r.Totals, t =>
+        {
+            foreach (var name in new[] { nameof(StaffRunTotals.Employees), nameof(StaffRunTotals.NoSalary), nameof(StaffRunTotals.WithoutIban), nameof(StaffRunTotals.Joiners), nameof(StaffRunTotals.Leavers) })
+            {
+                t.Property<int>(name).HasColumnName("total_" + Names.Snake(name));
+            }
+
+            foreach (var name in new[]
+                     {
+                         nameof(StaffRunTotals.PaidDays), nameof(StaffRunTotals.Basic), nameof(StaffRunTotals.Housing), nameof(StaffRunTotals.OtherAllowances),
+                         nameof(StaffRunTotals.Overtime), nameof(StaffRunTotals.Additions), nameof(StaffRunTotals.Allowances), nameof(StaffRunTotals.Absence),
+                         nameof(StaffRunTotals.Penalties), nameof(StaffRunTotals.Advances), nameof(StaffRunTotals.OtherDeductions), nameof(StaffRunTotals.GosiEmployee),
+                         nameof(StaffRunTotals.GosiEmployer), nameof(StaffRunTotals.Deductions), nameof(StaffRunTotals.Deferred), nameof(StaffRunTotals.Net),
+                     })
+            {
+                t.Property<decimal>(name).HasPrecision(18, 2).HasColumnName("total_" + Names.Snake(name));
+            }
+        });
+        builder.HasMany(r => r.Lines).WithOne().HasForeignKey(l => l.RunId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(r => r.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasIndex(r => new { r.TenantId, r.RunNo }).IsUnique();
+        builder.HasIndex(r => new { r.TenantId, r.LegalEntityId, r.Period }).IsUnique();
+    }
+}
+
+internal sealed class StaffPayrollLineConfiguration : IEntityTypeConfiguration<StaffPayrollLine>
+{
+    public void Configure(EntityTypeBuilder<StaffPayrollLine> builder)
+    {
+        builder.ToTable("staff_line");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Id).ValueGeneratedNever();
+        builder.Property(l => l.EmployeeNo).HasMaxLength(50).IsRequired();
+        builder.Property(l => l.Name).HasMaxLength(300).IsRequired();
+        builder.Property(l => l.DepartmentAr).HasMaxLength(200);
+        builder.Property(l => l.DepartmentEn).HasMaxLength(200);
+        builder.Property(l => l.JobTitleAr).HasMaxLength(200);
+        builder.Property(l => l.JobTitleEn).HasMaxLength(200);
+        builder.Property(l => l.GosiCategory).HasMaxLength(20).IsRequired();
+        builder.Property(l => l.BankName).HasMaxLength(100);
+        builder.Property(l => l.Iban).HasMaxLength(34);
+        builder.Property(l => l.Notes).HasMaxLength(300).IsRequired();
+        foreach (var p in typeof(StaffPayrollLine).GetProperties().Where(p => p.PropertyType == typeof(decimal)))
+        {
+            builder.Property(p.Name).HasPrecision(18, 2);
+        }
+
+        builder.HasMany(l => l.Items).WithOne().HasForeignKey(i => i.LineId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(l => l.Items).HasField("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasIndex(l => new { l.RunId, l.EmployeeId }).IsUnique();
+        builder.HasIndex(l => new { l.RunId, l.DepartmentId });
+    }
+}
+
+internal sealed class StaffPayrollItemConfiguration : IEntityTypeConfiguration<StaffPayrollItem>
+{
+    public void Configure(EntityTypeBuilder<StaffPayrollItem> builder)
+    {
+        builder.ToTable("staff_item");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
+        builder.Property(i => i.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(i => i.Reference).HasMaxLength(60).IsRequired();
+        builder.Property(i => i.Description).HasMaxLength(500).IsRequired();
+        builder.Property(i => i.Period).HasMaxLength(7);
+        builder.Property(i => i.Days).HasPrecision(9, 2);
+        builder.Property(i => i.Due).HasPrecision(18, 2);
+        builder.Property(i => i.Deducted).HasPrecision(18, 2);
+        builder.HasIndex(i => i.RunId);
+    }
+}
+
+internal sealed class StaffPayrollAdjustmentConfiguration : IEntityTypeConfiguration<StaffPayrollAdjustment>
+{
+    public void Configure(EntityTypeBuilder<StaffPayrollAdjustment> builder)
+    {
+        builder.ToTable("staff_adjustment");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(a => a.Amount).HasPrecision(18, 2);
+        builder.Property(a => a.Reason).HasMaxLength(500).IsRequired();
+        builder.Property(a => a.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(a => new { a.RunId, a.EmployeeId });
+    }
+}
+
+internal sealed class StaffPaySettingConfiguration : IEntityTypeConfiguration<StaffPaySetting>
+{
+    public void Configure(EntityTypeBuilder<StaffPaySetting> builder)
+    {
+        builder.ToTable("staff_pay_setting");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.OvertimePremiumPercent).HasPrecision(6, 2);
+        builder.Property(s => s.HoursPerDay).HasPrecision(5, 2);
+        builder.Property(s => s.LateMode).HasConversion<string>().HasMaxLength(20);
+        builder.HasIndex(s => s.TenantId).IsUnique();
+    }
+}
+
+internal sealed class GosiRateConfiguration : IEntityTypeConfiguration<GosiRate>
+{
+    public void Configure(EntityTypeBuilder<GosiRate> builder)
+    {
+        builder.ToTable("gosi_rate");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.Category).HasConversion<string>().HasMaxLength(20);
+        builder.Property(r => r.EmployeePercent).HasPrecision(6, 3);
+        builder.Property(r => r.EmployerPercent).HasPrecision(6, 3);
+        builder.Property(r => r.MinBase).HasPrecision(18, 2);
+        builder.Property(r => r.MaxBase).HasPrecision(18, 2);
+        builder.HasIndex(r => new { r.TenantId, r.Category, r.EffectiveFrom }).IsUnique();
+    }
+}
+
+internal static class Names
+{
+    public static string Snake(string name) =>
+        string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
 }
 
 internal sealed class PayrollDesignTimeDbContextFactory : IDesignTimeDbContextFactory<PayrollDbContext>

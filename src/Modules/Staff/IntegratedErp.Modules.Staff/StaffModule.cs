@@ -29,7 +29,10 @@ public sealed class StaffModule : IModule
         services.AddScoped<StaffService>();
         services.AddScoped<StructureService>();
         services.AddScoped<StaffQueries>();
-        services.AddScoped<IStaffDirectory, StaffDirectory>();
+        services.AddScoped<StaffDirectory>();
+        services.AddScoped<StaffBulkUpdate>();
+        services.AddScoped<IStaffDirectory>(sp => sp.GetRequiredService<StaffDirectory>());
+        services.AddScoped<IStaffPayroll>(sp => sp.GetRequiredService<StaffDirectory>());
         services.AddScoped<StaffActionService>();
         services.AddScoped<StaffActionApplier>();
         services.AddScoped<StaffActionQueries>();
@@ -51,6 +54,8 @@ internal static class StaffPermissions
     public const string StructureManage = "staff.structure.manage";
     public const string SalariesView = "staff.salaries.view";
     public const string SalariesManage = "staff.salaries.manage";
+    public const string BankManage = "staff.bank.manage";
+    public const string BulkUpdate = "staff.bulk_update";
     public const string ActionsReview = "staff.actions.review";
     public const string ActionsApprove = "staff.actions.approve";
 
@@ -64,6 +69,8 @@ internal static class StaffPermissions
         new(StructureManage, GroupAr, GroupEn, "إدارة الهيكل التنظيمي والمسميات والدرجات", "Manage the organisation, job titles and grades"),
         new(SalariesView, GroupAr, GroupEn, "عرض رواتب الموظفين", "View the staff's salaries"),
         new(SalariesManage, GroupAr, GroupEn, "تعديل رواتب الموظفين", "Change the staff's salaries"),
+        new(BankManage, GroupAr, GroupEn, "عرض البيانات البنكية للموظفين وتعديلها", "View and change the staff's bank details"),
+        new(BulkUpdate, GroupAr, GroupEn, "تحديث بيانات الموظفين بملف Excel", "Update the staff's data from an Excel file"),
         new(ActionsReview, GroupAr, GroupEn, "مراجعة الإجراءات الوظيفية (الموارد البشرية)", "Review employment actions (HR)"),
         new(ActionsApprove, GroupAr, GroupEn, "اعتماد الإجراءات الوظيفية (الإدارة العليا)", "Approve employment actions (management)"),
     ];

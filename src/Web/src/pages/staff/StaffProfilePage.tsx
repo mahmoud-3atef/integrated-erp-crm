@@ -41,7 +41,8 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { ActionDialog, ActionStatusBadge, actionIcon } from './StaffActions';
-import { ContractDialog, JobDialog, PersonalDialog, SalaryDialog } from './StaffDialogs';
+import { ContractDialog, JobDialog, PayDetailsDialog, PersonalDialog, SalaryDialog } from './StaffDialogs';
+import { EmployeePayrollPanel } from '../payroll/staff/EmployeePayrollPanel';
 import { EmployeeLeavePanel } from '../leave/leave';
 import { EmployeeDeductionsPanel } from '../deductions/settings';
 import { useService } from './staff';
@@ -52,14 +53,15 @@ import { useService } from './staff';
 
 const tone = { navy: '#0a3c58', navySoft: '#eaf3f8', green: '#1f9d55', greenSoft: '#e9f7ef', sky: '#1b6a92', skySoft: '#eaf4fa' } as const;
 type BoxTone = 'navy' | 'green' | 'sky';
-type TabKey = 'data' | 'leave' | 'deductions' | 'contract' | 'history';
-type Edit = 'personal' | 'job' | 'contract' | 'salary' | 'action' | null;
+type TabKey = 'data' | 'leave' | 'deductions' | 'payroll' | 'contract' | 'history';
+type Edit = 'personal' | 'job' | 'contract' | 'salary' | 'pay' | 'action' | null;
 
 /** The file's fields a change shows, by the stored property's name. */
 const changeLabels: Record<string, string> = {
   NameAr: 'nameAr', NameEn: 'nameEn', IdNumber: 'idNumber', NationalityCode: 'nationality', BirthDate: 'birthDate', Mobile: 'mobile', Email: 'email', GosiNo: 'gosiNo',
   DepartmentId: 'department', PositionId: 'position', LegalEntityId: 'legalEntity', HireDate: 'hireDate', ProbationEndsOn: 'probationEnds', Status: 'status',
   ContractStartsOn: 'contractStart', ContractMonths: 'contractMonths', ContractEndsOn: 'contractEnd',
+  BankName: 'bank', Iban: 'iban', AccountHolder: 'accountHolder', GosiSince: 'gosiSince',
 };
 
 const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n.toLocaleString('en-US', { maximumFractionDigits: 2 }));
@@ -187,8 +189,8 @@ export function StaffProfilePage() {
       {/* The tabs and their boxes */}
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 2.5 } }}>
         <Stack direction="row" sx={{ display: 'inline-flex', bgcolor: tokens.gray100, borderRadius: 99, p: 0.6, gap: 0.5, flexWrap: 'wrap' }} role="tablist">
-          {(['data', 'leave', 'deductions', 'contract', 'history'] as TabKey[]).map((k) => {
-            const icons = { data: <BadgeOutlinedIcon />, leave: <BeachAccessOutlinedIcon />, deductions: <CreditCardOutlinedIcon />, contract: <DescriptionOutlinedIcon />, history: <HistoryOutlinedIcon /> };
+          {(['data', 'leave', 'deductions', 'payroll', 'contract', 'history'] as TabKey[]).map((k) => {
+            const icons = { data: <BadgeOutlinedIcon />, leave: <BeachAccessOutlinedIcon />, deductions: <CreditCardOutlinedIcon />, payroll: <PaymentsOutlinedIcon />, contract: <DescriptionOutlinedIcon />, history: <HistoryOutlinedIcon /> };
             return (
               <ButtonBase
                 key={k}
@@ -231,6 +233,7 @@ export function StaffProfilePage() {
             </Box>
             <Box>
               <SalaryBox p={p} onChange={p.canChangeSalary ? () => setEdit('salary') : undefined} />
+              {p.payDetails && <PayBox p={p} onEdit={p.canManageBank ? () => setEdit('pay') : undefined} />}
               <ContractBox p={p} onEdit={p.canEdit ? () => setEdit('contract') : undefined} />
             </Box>
           </Box>
@@ -246,6 +249,11 @@ export function StaffProfilePage() {
             <EmployeeDeductionsPanel employee={{ id: p.id, nameAr: p.nameAr ?? p.nameEn, nameEn: p.nameEn }} />
           </Box>
         )}
+        {tab === 'payroll' && (
+          <Box sx={{ mt: 2.25 }}>
+            <EmployeePayrollPanel employeeId={p.id} />
+          </Box>
+        )}
         {tab === 'contract' && (
           <Box sx={{ display: 'grid', gap: 2.25, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, alignItems: 'start' }}>
             <ContractBox p={p} onEdit={p.canEdit ? () => setEdit('contract') : undefined} />
@@ -259,6 +267,7 @@ export function StaffProfilePage() {
       {edit === 'job' && <JobDialog profile={p} departments={departments} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'contract' && <ContractDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'salary' && <SalaryDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
+      {edit === 'pay' && <PayDetailsDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'action' && <ActionDialog profile={p} departments={departments} onClose={() => setEdit(null)} onSent={(actionId) => navigate(`/hr/actions/${actionId}`)} />}
     </Box>
   );
@@ -388,6 +397,21 @@ function SalaryBox({ p, onChange }: { p: StaffProfile; onChange?: () => void }) 
           </Box>
         </>
       )}
+    </Section>
+  );
+}
+
+/** The bank the salary goes to and the GOSI start (shown to those who manage bank details or see salaries). */
+function PayBox({ p, onEdit }: { p: StaffProfile; onEdit?: () => void }) {
+  const { t } = useTranslation();
+  const { date } = useCommercialFormat();
+  const d = p.payDetails!;
+  return (
+    <Section title={t('staff.profile.boxes.pay')} icon={<AccountBalanceOutlinedIcon />} boxTone="sky" onEdit={onEdit}>
+      <Field icon={<AccountBalanceOutlinedIcon />} label={t('staff.profile.fields.bank')} value={d.bankName ?? '—'} />
+      <Field icon={<PersonOutlineIcon />} label={t('staff.profile.fields.accountHolder')} value={d.accountHolder ?? '—'} />
+      <Field wide icon={<CreditCardOutlinedIcon />} label={t('staff.profile.fields.iban')} value={d.iban ? <bdi dir="ltr">{d.iban.replace(/(.{4})/g, '$1 ').trim()}</bdi> : <Box component="span" sx={{ color: '#b45309' }}>{t('staff.profile.noIban')}</Box>} />
+      <Field icon={<ShieldOutlinedIcon />} label={t('staff.profile.fields.gosiSince')} value={d.gosiSince ? date(d.gosiSince) : '—'} />
     </Section>
   );
 }

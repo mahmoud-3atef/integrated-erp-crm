@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IntegratedErp.Modules.Staff.Application;
 
 /// <summary>The staff and the departments for other modules (attendance first).</summary>
-internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory
+internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory, IStaffPayroll
 {
     public async Task<IReadOnlyList<StaffMember>> MembersAsync(CancellationToken cancellationToken)
     {
@@ -67,4 +67,34 @@ internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory
     public async Task<IReadOnlyList<StaffDepartment>> DepartmentsAsync(CancellationToken cancellationToken) =>
         await db.Departments.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.SortOrder).ThenBy(d => d.NameAr)
             .Select(d => new StaffDepartment(d.Id, d.NameAr, d.NameEn, d.ParentId)).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<StaffPayInfo>> PayInfoAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var departments = await db.Departments.AsNoTracking().ToDictionaryAsync(d => d.Id, cancellationToken).ConfigureAwait(false);
+        var titles = await (from p in db.Positions.AsNoTracking()
+                            join t in db.JobTitles.AsNoTracking() on p.JobTitleId equals t.Id
+                            select new { p.Id, t.NameAr, t.NameEn }).ToDictionaryAsync(x => x.Id, cancellationToken).ConfigureAwait(false);
+        var employees = await db.Employees.AsNoTracking()
+            .Where(e => (e.HireDate == null || e.HireDate <= to) && (e.Status != Domain.StaffStatus.Left || (e.EndedOn != null && e.EndedOn >= from)))
+            .OrderBy(e => e.EmployeeNo).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var ids = employees.Select(e => e.Id).ToList();
+        var salaries = (await db.Salaries.AsNoTracking().Where(s => ids.Contains(s.EmployeeId)).ToListAsync(cancellationToken).ConfigureAwait(false))
+            .GroupBy(s => s.EmployeeId).ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.EffectiveFrom).ThenByDescending(s => s.CreatedAt).ToList());
+        return employees.Select(e =>
+        {
+            var d = e.DepartmentId is { } did ? departments.GetValueOrDefault(did) : null;
+            var t = e.PositionId is { } pid ? titles.GetValueOrDefault(pid) : null;
+            var mine = salaries.GetValueOrDefault(e.Id) ?? [];
+            var current = mine.FirstOrDefault(s => s.EffectiveFrom <= to);
+            var acting = e.ActingUntil is { } until && until >= from ? e.ActingAllowance ?? 0 : 0;
+            return new StaffPayInfo(
+                e.Id, e.EmployeeNo, e.NameAr ?? e.NameEn, e.LegalEntityId, e.DepartmentId, d?.NameAr, d?.NameEn, t?.NameAr, t?.NameEn, e.Status.ToString(),
+                e.HireDate, e.EndedOn, e.NationalityCode, e.GosiSince, e.BankName, e.Iban,
+                current is null ? null : new StaffSalaryInfo(current.Basic, current.Housing, current.Food, current.Transport, current.Mobile, current.Project, current.Other, current.Total),
+                mine.Any(s => s.EffectiveFrom > from && s.EffectiveFrom <= to), acting);
+        }).ToList();
+    }
+
+    public Task<int> WithoutRegistrationAsync(CancellationToken cancellationToken) =>
+        db.Employees.CountAsync(e => e.LegalEntityId == null && e.Status != Domain.StaffStatus.Left, cancellationToken);
 }

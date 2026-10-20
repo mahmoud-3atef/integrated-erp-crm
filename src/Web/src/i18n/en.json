@@ -506,7 +506,15 @@
     "conflict_deduction_not_disbursable": "Only an approved advance can be paid, with its payment method.",
     "conflict_deduction_not_open": "Only a paid advance not yet settled can be settled early, with a note.",
     "conflict_deduction_not_postponable": "Only a due installment with nothing deducted can be postponed, with a note.",
-    "conflict_deduction_not_returned": "Only a returned request can be sent again."
+    "conflict_deduction_not_returned": "Only a returned request can be sent again.",
+    "validation_staff_iban": "The IBAN is not valid: a Saudi IBAN is SA and 22 digits.",
+    "conflict_payroll_net_not_positive": "Some employees' net is zero or less: review their lines first.",
+    "validation_payroll_adjustment": "Give the amount (above zero) and the reason.",
+    "validation_payroll_setting": "A setting is out of range.",
+    "conflict_payroll_attendance_not_closed": "The attendance month is not closed yet: close it first.",
+    "conflict_payroll_earlier_open": "An earlier payroll run of this registration is not approved yet: approve it first.",
+    "conflict_payroll_period_taken": "This registration already has a payroll run for this attendance month.",
+    "not_found_payroll_line": "The employee is not in this payroll run."
   },
   "menu": {
     "label": "Main menu",
@@ -554,7 +562,7 @@
     "movements": "Worker actions",
     "alerts": "Alerts",
     "payrollSection": "Payroll",
-    "payrollRuns": "Payroll runs",
+    "payrollRuns": "Workers' payroll runs",
     "hrSection": "Human resources",
     "hrEmployees": "Employees",
     "hrStructure": "Organisation",
@@ -565,7 +573,8 @@
     "hrLeave": "Leave",
     "hrLeaveBalances": "Leave balances",
     "hrAdvances": "Salary advances",
-    "hrPenalties": "Penalties and deductions"
+    "hrPenalties": "Penalties and deductions",
+    "payrollStaff": "Staff payroll runs"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -3039,7 +3048,8 @@
         "leave": "Leave",
         "contract": "Contract",
         "history": "Actions log",
-        "deductions": "Advances and penalties"
+        "deductions": "Advances and penalties",
+        "payroll": "Payroll"
       },
       "edit": "Edit",
       "boxes": {
@@ -3048,7 +3058,8 @@
         "salary": "Salary",
         "contract": "Contract",
         "leave": "Leave balance",
-        "leaveOld": "The old system's leave figures (for reference)"
+        "leaveOld": "The old system's leave figures (for reference)",
+        "pay": "Payment and GOSI"
       },
       "fields": {
         "employeeNo": "Employee number",
@@ -3089,7 +3100,11 @@
         "oldConsumed": "Earlier consumed",
         "consumed": "Consumed",
         "remaining": "Remaining",
-        "days": "days"
+        "days": "days",
+        "bank": "Bank",
+        "iban": "IBAN",
+        "accountHolder": "Account holder",
+        "gosiSince": "GOSI since"
       },
       "salaryHidden": "You are not allowed to see salaries.",
       "noSalary": "No salary recorded.",
@@ -3121,7 +3136,8 @@
         "OldSystem": "From the old system",
         "Hire": "At hiring",
         "Change": "Change"
-      }
+      },
+      "noIban": "Not recorded yet"
     },
     "dialogs": {
       "personal": "Edit basic data",
@@ -3136,7 +3152,54 @@
       "noPosition": "No position",
       "noDepartment": "No department",
       "noEntity": "No registration",
-      "positionLabel": "{{title}} ({{taken}}/{{seats}})"
+      "positionLabel": "{{title}} ({{taken}}/{{seats}})",
+      "payDetails": "Payment and GOSI",
+      "ibanHint": "A Saudi IBAN: SA and 22 digits. It is checked before payment, and each change is in the history.",
+      "gosiSinceHint": "It sets the GOSI rates: those who joined from 2024-07-03 have the new pension rates."
+    },
+    "bulk": {
+      "action": "Update from Excel",
+      "title": "Update the staff's data from Excel",
+      "hint": "Download the template (the staff with their current data), write only what should change, then upload it. An empty cell changes nothing, and a row with a problem is left out entirely. A preview shows before applying.",
+      "template": "Download the template",
+      "upload": "Upload the file to preview",
+      "another": "Upload another file",
+      "summary": "Rows: {{rows}} · employees changing: {{employees}} · changes: {{changes}} · rows left out: {{rejected}}",
+      "problemsTitle": "Rows that will not be applied",
+      "changesTitle": "Changes",
+      "row": "Row",
+      "employee": "Employee",
+      "field": "Field",
+      "problem": "Problem",
+      "from": "From",
+      "to": "To",
+      "nothing": "Nothing in the file changes.",
+      "apply": "Apply {{count}} changes",
+      "applyNone": "Apply",
+      "applied": "{{count}} changes applied to the staff's files.",
+      "fields": {
+        "employee_no": "Employee no.",
+        "id_number": "ID no.",
+        "mobile": "Mobile",
+        "email": "E-mail",
+        "gosi_no": "GOSI no.",
+        "gosi_since": "GOSI since",
+        "legal_entity": "Commercial registration",
+        "department": "Department",
+        "bank": "Bank",
+        "iban": "IBAN",
+        "account_holder": "Account holder"
+      },
+      "problems": {
+        "bad_file": "The file is not a valid Excel file.",
+        "no_key_column": "There is no «Employee no.» column in the first row.",
+        "unknown_employee": "No employee has this number.",
+        "unknown_legal_entity": "No commercial registration has this name.",
+        "unknown_department": "No department has this name.",
+        "bad_iban": "The IBAN is not valid.",
+        "bad_date": "The date is not valid (write 2026-10-01).",
+        "too_long": "The value is longer than allowed."
+      }
     }
   },
   "org": {
@@ -4154,6 +4217,230 @@
       "days": "Penalty days this year",
       "advances": "Advances",
       "penalties": "Penalties and deductions"
+    }
+  },
+  "staffPayroll": {
+    "title": "Staff payroll runs",
+    "intro": "A run per commercial registration and closed attendance month, calculated from the salary, the attendance, the advances, penalties and GOSI, approved by HR, then finance, then senior management.",
+    "new": "New payroll run",
+    "create": "Create and calculate the run",
+    "newHint": "The run is calculated from the salary in effect, the closed attendance (absence, unpaid leave, sick part and approved overtime), the approved advances, penalties and deductions, and GOSI.",
+    "attendanceMonth": "Closed attendance month",
+    "checks": {
+      "closed": "The {{month}} attendance is closed and approved",
+      "notClosed": "The {{month}} attendance is not closed yet: close it first",
+      "employees": "Employees in the run: {{count}}",
+      "noRegistration": "Employees without a commercial registration: {{count}} (in no run until it is set)",
+      "noSalary": "Employees without a salary: {{count}}",
+      "noIban": "Employees without an IBAN: {{count}} (calculated; paid by hand)",
+      "existing": "This registration has a run for this month: {{no}}",
+      "earlier": "An earlier run of this registration is not approved yet: {{no}}",
+      "noOverlap": "No other run of this registration covers this month"
+    },
+    "tabs": {
+      "all": "All",
+      "open": "Drafts",
+      "pending": "In approval",
+      "approved": "Approved",
+      "employees": "Employees",
+      "summary": "Financial summary",
+      "gosi": "GOSI",
+      "deferred": "Deferred for the month's cap ({{count}})"
+    },
+    "cols": {
+      "no": "Number",
+      "legalEntity": "Commercial registration",
+      "period": "Attendance month",
+      "employees": "Employees",
+      "net": "Net",
+      "status": "Status",
+      "employee": "Employee",
+      "number": "No.",
+      "department": "Department",
+      "days": "Days",
+      "basic": "Basic",
+      "allowancesGroup": "Allowances and overtime",
+      "housing": "Housing",
+      "other": "Other and additions",
+      "overtime": "Overtime",
+      "total": "Total",
+      "deductionsGroup": "Deductions",
+      "absence": "Absence and unpaid",
+      "penalties": "Penalties",
+      "advances": "Advances",
+      "otherDeductions": "Other",
+      "gosi": "GOSI",
+      "gross": "Gross"
+    },
+    "none": "No payroll runs yet.",
+    "noneHint": "Create a run for a closed attendance month with the button above.",
+    "retry": "Try again",
+    "runTitle": "Staff payroll run",
+    "periodLine": "From {{from}} to {{to}}",
+    "calculatedAt": "Calculated {{at}}",
+    "recalculate": "Recalculate",
+    "recalculated": "The run was recalculated from the current inputs.",
+    "excel": "Export to Excel",
+    "more": "More",
+    "submit": "Send for approval",
+    "submitConfirm": "Run {{no}} is recalculated, then sent for approval ({{count}} employees, net SAR {{net}}). It cannot change after that unless returned. Continue?",
+    "delete": "Delete the run",
+    "deleteConfirm": "Run {{no}} and its adjustments are deleted. Continue?",
+    "kpi": {
+      "employees": "Employees in the run",
+      "employeesUnit": "employees",
+      "of": "of {{count}} on the registration",
+      "joiners": "New joiners",
+      "noIban": "No IBAN",
+      "noSalary": "No salary",
+      "basic": "Basic salaries",
+      "allowances": "Allowances and overtime",
+      "deductions": "Deductions",
+      "net": "Net pay",
+      "inRun": "In the run"
+    },
+    "filters": {
+      "search": "Search by name or number…",
+      "allDepartments": "All departments",
+      "notes": "Notes",
+      "allNotes": "All",
+      "anyNote": "With notes",
+      "density": "Density",
+      "compact": "Compact",
+      "comfortable": "Comfortable"
+    },
+    "clearFilters": "Clear filters",
+    "noResults": "Nothing matches.",
+    "empty": "No employees in the run.",
+    "totalScope": "Total of the filtered scope ({{count}} employees)",
+    "totalAll": "Total of the whole run ({{count}} employees)",
+    "shown": "Showing {{from}} – {{to}} of {{total}} employees",
+    "perPage": "{{count}} per page",
+    "notes": {
+      "joined": "Joined this month",
+      "left": "Left",
+      "no_iban": "No IBAN",
+      "no_attendance": "Not in the attendance",
+      "salary_changed": "Salary changed",
+      "deferred": "Deferred (month's cap)",
+      "above_cap": "Approved above the cap",
+      "no_gosi_rate": "No GOSI rate",
+      "net_not_positive": "Net zero or less"
+    },
+    "items": {
+      "Installment": "Advance installment",
+      "PenaltyDays": "Penalty (days)",
+      "PenaltyAmount": "Penalty (amount)",
+      "Suspension": "Suspension without pay",
+      "Other": "Other deduction",
+      "Addition": "Addition",
+      "Deduction": "Deduction (adjustment)"
+    },
+    "gosiCategory": {
+      "SaudiLegacy": "Saudi, joined before 2024-07-03",
+      "SaudiNew": "Saudi, joined from 2024-07-03",
+      "NonSaudi": "Not Saudi"
+    },
+    "drawer": {
+      "days": "Paid days",
+      "monthly": "Monthly salary",
+      "net": "Net",
+      "earnings": "Earnings",
+      "basic": "Basic",
+      "share": "{{monthly}} × {{days}} ÷ 30",
+      "housing": "Housing allowance",
+      "other": "Other allowances",
+      "overtime": "Overtime, {{hours}} hours",
+      "overtimeHint": "The hourly wage + 50% of the basic hourly wage (article 107)",
+      "addition": "Addition",
+      "deductions": "Deductions",
+      "absence": "Absence and unpaid, {{days}} days",
+      "dayWage": "day wage {{wage}}",
+      "late": "Lateness and early leaving, {{minutes}} minutes",
+      "sick": "Sick leave at three quarters, {{days}} days",
+      "deferredPart": "{{amount}} deferred",
+      "gosi": "GOSI (employee's share)",
+      "gosiHint": "on {{base}} · company's share {{employer}} (cost)",
+      "none": "No deductions.",
+      "cap": "The month's deduction cap {{cap}}: {{used}} subject to it.",
+      "deferred": "{{amount}} deferred to the next run.",
+      "payment": "Payment",
+      "transfer": "Bank transfer",
+      "noIban": "No IBAN is recorded for the employee: paid by hand until one is.",
+      "adjustments": "Adjustments",
+      "noAdjustments": "No adjustments on the line."
+    },
+    "adjustment": {
+      "Addition": "Addition",
+      "Deduction": "Deduction",
+      "addAddition": "+ Addition with a reason",
+      "addDeduction": "− Deduction with a reason",
+      "reason": "Reason",
+      "remove": "Remove the adjustment",
+      "hint": "Only while the run is a draft; recorded with who added it, and the run is recalculated with it."
+    },
+    "summary": {
+      "elements": "The run's elements",
+      "basic": "Basic salaries",
+      "housing": "Housing allowance",
+      "other": "Other allowances",
+      "overtime": "Overtime",
+      "additions": "Additions",
+      "absence": "Absence, unpaid and lateness",
+      "penalties": "Penalties",
+      "advances": "Advance installments",
+      "otherDeductions": "Other deductions",
+      "gosi": "GOSI (employee's share)",
+      "net": "Net pay",
+      "deferred": "Deferred for the month's cap: SAR {{amount}}",
+      "byDepartment": "Net by department",
+      "noDepartment": "No department",
+      "employees": "{{count}} employees"
+    },
+    "gosi": {
+      "hint": "GOSI is on the basic and housing within the floor and ceiling, at each category's rates in force. The employee's share is deducted from the salary; the company's is a cost outside the net.",
+      "category": "Category",
+      "base": "Contributory wage",
+      "employee": "Employee's share",
+      "employer": "Company's share",
+      "total": "Total"
+    },
+    "deferredEmpty": "Nothing was deferred this month.",
+    "deferredHint": "What passed the month's deduction cap, deducted in the next run (advances first, then other deductions, then penalties).",
+    "deferredCols": {
+      "kind": "Kind",
+      "reference": "Reference",
+      "due": "Due",
+      "deducted": "Deducted",
+      "deferred": "Deferred"
+    },
+    "employeeNone": "The employee is in no payroll run yet.",
+    "noAccess": "You do not have permission to view the payroll runs.",
+    "settings": {
+      "title": "Payroll and GOSI settings",
+      "pageTitle": "Staff payroll and GOSI settings",
+      "intro": "The overtime and lateness rules, and GOSI's rates by category from their date.",
+      "saved": "Saved",
+      "rules": "Calculation rules",
+      "premium": "Overtime hour's premium on the basic hourly wage",
+      "hours": "Working hours a day",
+      "hoursUnit": "hours",
+      "late": "Lateness and early leaving",
+      "lateModes": {
+        "None": "Not deducted (the reviewer sets deduction days in the attendance)",
+        "PerMinute": "At the minute's wage"
+      },
+      "rulesHint": "The day wage = the monthly salary ÷ 30, and the hourly wage = the day wage ÷ the hours of a day. An overtime hour = the hourly wage + the share above of the basic hourly wage (article 107).",
+      "cap": "The month's deduction cap: {{percent}}% of the month's wage.",
+      "capLink": "set in the advance and penalty settings",
+      "gosi": "GOSI rates",
+      "gosiHint": "To change a rate, add a row from a new date: the old one stays for the earlier months. Review them with finance before the first run.",
+      "newRate": "New rate",
+      "editRate": "Edit the rate",
+      "from": "In force from",
+      "min": "Wage floor",
+      "max": "Wage ceiling",
+      "range": "Contributory wage"
     }
   }
 }

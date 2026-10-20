@@ -93,7 +93,12 @@ public sealed record StaffProfileDto(
     DateTimeOffset CreatedAt,
     bool CanEdit,
     bool CanSeeSalary,
-    bool CanChangeSalary);
+    bool CanChangeSalary,
+    StaffPayDetailsDto? PayDetails = null,
+    bool CanManageBank = false);
+
+/// <summary>The bank and the GOSI start: shown to those who manage the bank details or see the salaries.</summary>
+public sealed record StaffPayDetailsDto(string? BankName, string? Iban, string? AccountHolder, DateOnly? GosiSince);
 
 public sealed record PositionDto(Guid Id, Guid DepartmentId, Guid JobTitleId, string JobTitleAr, string JobTitleEn, Guid? GradeId, string? Grade, Guid? ReportsToId, int Seats, bool IsActive, IReadOnlyList<NamedRef> Occupants);
 
@@ -226,7 +231,9 @@ internal sealed class StaffQueries(StaffDbContext db, ILegalEntityDirectory lega
             e.ContractStartsOn, e.ContractMonths, e.ContractEndsOn, e.AnnualLeaveDays, e.LeaveBalance, e.LeaveConsumed, e.LeaveOldConsumed, e.LeaveRemaining,
             seeSalary && current is not null ? ToDto(current) : null, seeSalary ? Math.Max(0, salaries.Count - 1) : 0,
             score, missing, e.CreatedByName, e.CreatedAt,
-            granted.Has(StaffPermissions.Manage), seeSalary, granted.Has(StaffPermissions.SalariesManage));
+            granted.Has(StaffPermissions.Manage), seeSalary, granted.Has(StaffPermissions.SalariesManage),
+            seeSalary || granted.Has(StaffPermissions.BankManage) ? new StaffPayDetailsDto(e.BankName, e.Iban, e.AccountHolder, e.GosiSince) : null,
+            granted.Has(StaffPermissions.BankManage));
     }
 
     public async Task<IReadOnlyList<StaffEventDto>?> HistoryAsync(Guid id, CancellationToken cancellationToken)
@@ -239,15 +246,34 @@ internal sealed class StaffQueries(StaffDbContext db, ILegalEntityDirectory lega
         var key = id.ToString();
         var audit = await db.AuditLog.AsNoTracking().Where(a => a.TenantId == db.CurrentTenantId && a.EntityType == nameof(StaffEmployee) && a.EntityId == key)
             .OrderByDescending(a => a.OccurredAt).Take(200).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var seeBank = granted.Has(StaffPermissions.SalariesView) || granted.Has(StaffPermissions.BankManage);
         var events = audit.Select(a => new StaffEventDto(a.Action == "Added" ? "Created" : "Changed", a.OccurredAt, a.UserName,
-            JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(a.Changes), null)).ToList();
-        if ((await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(StaffPermissions.SalariesView))
+            Masked(JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(a.Changes), seeBank), null)).ToList();
+        if (granted.Has(StaffPermissions.SalariesView))
         {
             var salaries = await db.Salaries.AsNoTracking().Where(s => s.EmployeeId == id).ToListAsync(cancellationToken).ConfigureAwait(false);
             events.AddRange(salaries.Select(s => new StaffEventDto("Salary", s.CreatedAt, s.CreatedByName, null, ToDto(s))));
         }
 
         return events.OrderByDescending(x => x.At).ToList();
+    }
+
+    /// <summary>The bank fields' values are hidden from those who may not see them (that they changed still shows).</summary>
+    private static Dictionary<string, JsonElement>? Masked(Dictionary<string, JsonElement>? changes, bool seeBank)
+    {
+        if (changes is null || seeBank)
+        {
+            return changes;
+        }
+
+        var hidden = JsonSerializer.SerializeToElement(new { old = "•••", @new = "•••" });
+        foreach (var key in changes.Keys.Where(k => k is nameof(StaffEmployee.Iban) or nameof(StaffEmployee.BankName) or nameof(StaffEmployee.AccountHolder)).ToList())
+        {
+            changes[key] = hidden;
+        }
+
+        return changes;
     }
 
     public async Task<StructureDto> StructureAsync(CancellationToken cancellationToken)

@@ -16,6 +16,8 @@ public sealed record PersonalInput(string? NameAr, string NameEn, string? IdNumb
 
 public sealed record JobInput(Guid? LegalEntityId, Guid? DepartmentId, Guid? PositionId, DateOnly? HireDate, DateOnly? ProbationEndsOn, string Status);
 
+public sealed record PayDetailsInput(string? BankName, string? Iban, string? AccountHolder, DateOnly? GosiSince);
+
 public sealed record ContractInput(DateOnly? StartsOn, int? Months, DateOnly? EndsOn);
 
 public sealed record SalaryChangeInput(DateOnly EffectiveFrom, SalaryValues Salary, string Reason);
@@ -183,6 +185,27 @@ internal sealed class StaffService(
             return set;
         }
 
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>The bank the salary goes to and the GOSI start (each change is in the file's audited history).</summary>
+    public async Task<Result> SetPayDetailsAsync(Guid id, PayDetailsInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
+        if (employee is null)
+        {
+            return Result.Failure(StaffErrors.NotFound);
+        }
+
+        var set = employee.SetBank(input.BankName, input.Iban, input.AccountHolder);
+        if (set.IsFailure)
+        {
+            return set;
+        }
+
+        employee.SetGosiSince(input.GosiSince);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }

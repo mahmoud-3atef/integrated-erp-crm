@@ -26,6 +26,9 @@ import { TimesheetPage } from '../pages/billing/TimesheetPage';
 import { TimesheetsPage } from '../pages/billing/TimesheetsPage';
 import { PayrollRunPage } from '../pages/payroll/PayrollRunPage';
 import { PayrollRunsPage } from '../pages/payroll/PayrollRunsPage';
+import { StaffPaySettingsPage } from '../pages/payroll/staff/StaffPaySettingsPage';
+import { StaffRunPage } from '../pages/payroll/staff/StaffRunPage';
+import { StaffRunsPage } from '../pages/payroll/staff/StaffRunsPage';
 import { CatalogPage } from '../pages/staff/CatalogPage';
 import { OrgStructurePage } from '../pages/staff/OrgStructurePage';
 import { StaffDirectoryPage } from '../pages/staff/StaffDirectoryPage';
@@ -125,6 +128,9 @@ export function App() {
                 <Route path="/payroll/runs" element={<PayrollRunsPage />} />
                 <Route path="/payroll/runs/new" element={<PayrollRunsPage key="new" creating />} />
                 <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
+                <Route path="/payroll/staff" element={<StaffRunsPage />} />
+                <Route path="/payroll/staff/:id" element={<StaffRunPage />} />
+                <Route path="/payroll/staff-settings" element={<StaffPaySettingsPage />} />
                 <Route path="/hr/employees" element={<StaffDirectoryPage />} />
                 <Route path="/hr/employees/new" element={<StaffDirectoryPage key="new" creating />} />
                 <Route path="/hr/employees/:id" element={<StaffProfilePage />} />

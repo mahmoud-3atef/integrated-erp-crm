@@ -95,6 +95,7 @@ internal sealed class AdvanceInstallmentConfiguration : IEntityTypeConfiguration
         builder.Property(i => i.Deducted).HasPrecision(18, 2);
         builder.Property(i => i.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(i => i.Note).HasMaxLength(500);
+        builder.Property(i => i.DeductedIn).HasMaxLength(40);
         builder.HasIndex(i => new { i.TenantId, i.Period });
     }
 }
@@ -118,6 +119,8 @@ internal sealed class PenaltyConfiguration : IEntityTypeConfiguration<Penalty>
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(p => p.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(p => p.LastComment).HasMaxLength(2000);
+        builder.Property(p => p.DeductedIn).HasMaxLength(40);
+        builder.Property(p => p.DeductedAmount).HasPrecision(18, 2);
         builder.HasIndex(p => new { p.TenantId, p.PenaltyNo }).IsUnique();
         builder.HasIndex(p => new { p.TenantId, p.EmployeeId, p.Period });
     }

@@ -305,3 +305,29 @@ export function SalaryDialog({ profile, onClose, onSaved }: { profile: StaffProf
     </Frame>
   );
 }
+
+/** The bank the salary is transferred to, and the date the employee joined GOSI (the rates differ after 2024-07-03). */
+export function PayDetailsDialog({ profile, onClose, onSaved }: { profile: StaffProfile; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const p = profile.payDetails;
+  const [bank, setBank] = useState(p?.bankName ?? '');
+  const [iban, setIban] = useState(p?.iban ?? '');
+  const [holder, setHolder] = useState(p?.accountHolder ?? profile.nameAr ?? profile.nameEn);
+  const [since, setSince] = useState(p?.gosiSince ?? '');
+  const { busy, error, run } = useSave(onSaved);
+  return (
+    <Frame
+      open
+      title={t('staff.dialogs.payDetails')}
+      busy={busy}
+      error={error}
+      onClose={onClose}
+      onSave={() => void run(() => staffApi.setPayDetails(profile.id, { bankName: nz(bank), iban: nz(iban), accountHolder: nz(holder), gosiSince: nz(since) }))}
+    >
+      <TextField label={t('staff.profile.fields.bank')} value={bank} onChange={(e) => setBank(e.target.value)} slotProps={{ htmlInput: { maxLength: 100 } }} />
+      <TextField label={t('staff.profile.fields.iban')} value={iban} onChange={(e) => setIban(e.target.value)} placeholder="SA00 0000 0000 0000 0000 0000" helperText={t('staff.dialogs.ibanHint')} slotProps={{ htmlInput: { maxLength: 34, dir: 'ltr' } }} />
+      <TextField label={t('staff.profile.fields.accountHolder')} value={holder} onChange={(e) => setHolder(e.target.value)} slotProps={{ htmlInput: { maxLength: 200 } }} />
+      <TextField type="date" label={t('staff.profile.fields.gosiSince')} value={since} onChange={(e) => setSince(e.target.value)} helperText={t('staff.dialogs.gosiSinceHint')} slotProps={{ inputLabel: { shrink: true } }} />
+    </Frame>
+  );
+}

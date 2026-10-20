@@ -599,6 +599,11 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
+                    b.Property<string>("AccountHolder")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("account_holder");
+
                     b.Property<decimal?>("ActingAllowance")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -616,6 +621,11 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasPrecision(9, 2)
                         .HasColumnType("decimal(9,2)")
                         .HasColumnName("annual_leave_days");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("bank_name");
 
                     b.Property<DateOnly?>("BirthDate")
                         .HasColumnType("date")
@@ -671,9 +681,18 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasColumnType("nvarchar(30)")
                         .HasColumnName("gosi_no");
 
+                    b.Property<DateOnly?>("GosiSince")
+                        .HasColumnType("date")
+                        .HasColumnName("gosi_since");
+
                     b.Property<DateOnly?>("HireDate")
                         .HasColumnType("date")
                         .HasColumnName("hire_date");
+
+                    b.Property<string>("Iban")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)")
+                        .HasColumnName("iban");
 
                     b.Property<string>("IdNumber")
                         .HasMaxLength(30)

@@ -146,6 +146,9 @@ internal sealed class StaffEmployeeConfiguration : IEntityTypeConfiguration<Staf
         builder.Property(e => e.LegacyStatusAr).HasMaxLength(100);
         builder.Property(e => e.LegacyStatusEn).HasMaxLength(100);
         builder.Property(e => e.Sponsor).HasMaxLength(100);
+        builder.Property(e => e.BankName).HasMaxLength(100);
+        builder.Property(e => e.Iban).HasMaxLength(34);
+        builder.Property(e => e.AccountHolder).HasMaxLength(200);
         builder.Property(e => e.CreatedByName).HasMaxLength(200).IsRequired();
         foreach (var name in new[] { nameof(StaffEmployee.AnnualLeaveDays), nameof(StaffEmployee.LeaveBalance), nameof(StaffEmployee.LeaveConsumed), nameof(StaffEmployee.LeaveOldConsumed), nameof(StaffEmployee.LeaveRemaining) })
         {

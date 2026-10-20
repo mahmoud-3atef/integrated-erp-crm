@@ -312,6 +312,11 @@ namespace IntegratedErp.Modules.Deductions.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("deducted");
 
+                    b.Property<string>("DeductedIn")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("deducted_in");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
@@ -452,6 +457,20 @@ namespace IntegratedErp.Modules.Deductions.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("DecidedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("decided_at");
+
+                    b.Property<decimal?>("DeductedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("deducted_amount");
+
+                    b.Property<string>("DeductedIn")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("deducted_in");
+
+                    b.Property<int>("Deferrals")
+                        .HasColumnType("int")
+                        .HasColumnName("deferrals");
 
                     b.Property<string>("Description")
                         .IsRequired()

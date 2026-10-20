@@ -51,3 +51,40 @@ public interface IStaffDirectory
 public sealed record StaffPay(decimal Basic, decimal Total);
 
 public sealed record StaffManager(Guid EmployeeId, string Name, Guid? UserId);
+
+/// <summary>
+/// An employee as the staff payroll needs them (4.8): where they work, their dates and nationality, their GOSI start,
+/// their bank, and the salary in effect at the period's end with the salary changes inside the period.
+/// </summary>
+public sealed record StaffPayInfo(
+    Guid EmployeeId,
+    string EmployeeNo,
+    string Name,
+    Guid? LegalEntityId,
+    Guid? DepartmentId,
+    string? DepartmentAr,
+    string? DepartmentEn,
+    string? JobTitleAr,
+    string? JobTitleEn,
+    string Status,
+    DateOnly? HireDate,
+    DateOnly? EndedOn,
+    string? NationalityCode,
+    DateOnly? GosiSince,
+    string? BankName,
+    string? Iban,
+    StaffSalaryInfo? Salary,
+    bool SalaryChangedInPeriod,
+    decimal ActingAllowance);
+
+public sealed record StaffSalaryInfo(decimal Basic, decimal Housing, decimal Food, decimal Transport, decimal Mobile, decimal Project, decimal Other, decimal Total);
+
+/// <summary>The staff's pay data, read-only, for the staff payroll.</summary>
+public interface IStaffPayroll
+{
+    /// <summary>Every employee file employed at some time in the period (and those who left in it).</summary>
+    Task<IReadOnlyList<StaffPayInfo>> PayInfoAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>How many active employees have no commercial registration (they are in no payroll).</summary>
+    Task<int> WithoutRegistrationAsync(CancellationToken cancellationToken);
+}

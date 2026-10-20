@@ -426,6 +426,32 @@ public sealed class StaffEmployee : ITenantOwned
 
     public void LinkUser(Guid? userId) => UserId = userId;
 
+    /// <summary>The bank the salary is transferred to (the payroll's bank file and Mudad).</summary>
+    public string? BankName { get; private set; }
+
+    public string? Iban { get; private set; }
+
+    public string? AccountHolder { get; private set; }
+
+    /// <summary>The day the employee joined GOSI (the rates differ for those who joined after 2024-07-03).</summary>
+    public DateOnly? GosiSince { get; private set; }
+
+    public Result SetBank(string? bankName, string? iban, string? accountHolder)
+    {
+        var cleaned = Ibans.Normalize(iban);
+        if ((cleaned is not null && !Ibans.Valid(cleaned)) || (bankName?.Trim().Length ?? 0) > 100 || (accountHolder?.Trim().Length ?? 0) > 200)
+        {
+            return Result.Failure(StaffErrors.Iban);
+        }
+
+        BankName = Clean(bankName);
+        Iban = cleaned;
+        AccountHolder = Clean(accountHolder);
+        return Result.Success();
+    }
+
+    public void SetGosiSince(DateOnly? since) => GosiSince = since;
+
     /// <summary>Acting in another position until a date, with a monthly allowance (paid by the payroll).</summary>
     public Guid? ActingPositionId { get; private set; }
 
@@ -623,5 +649,34 @@ public static class StaffErrors
     public static readonly Error ActionFields = Error.Validation("staff_action_fields", "Fill what this action needs (and it applies to the employee's current state).");
     public static readonly Error ActionNotEditable = Error.Conflict("staff_action_not_editable", "Only a draft or returned action can be sent.");
     public static readonly Error ActionOpen = Error.Conflict("staff_action_open", "The employee already has an action in approval.");
+    public static readonly Error Iban = Error.Validation("staff_iban", "The IBAN is not valid: a Saudi IBAN is SA and 22 digits.");
     public static readonly Error SalaryDate = Error.Validation("staff_salary_date", "A salary change takes effect after the current salary's date.");
+}
+
+/// <summary>Saudi IBANs: «SA» and 22 digits, checked with the ISO 13616 mod-97 rule.</summary>
+public static class Ibans
+{
+    public static string? Normalize(string? iban) =>
+        string.IsNullOrWhiteSpace(iban) ? null : string.Concat(iban.Where(c => !char.IsWhiteSpace(c) && c != '-')).ToUpperInvariant();
+
+    public static bool Valid(string iban)
+    {
+        if (iban.Length != 24 || !iban.StartsWith("SA", StringComparison.Ordinal) || !iban[2..].All(char.IsAsciiDigit))
+        {
+            return false;
+        }
+
+        var rearranged = iban[4..] + iban[..4];
+        var remainder = 0;
+        foreach (var c in rearranged)
+        {
+            var value = char.IsAsciiDigit(c) ? (c - '0').ToString(System.Globalization.CultureInfo.InvariantCulture) : (c - 'A' + 10).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            foreach (var d in value)
+            {
+                remainder = ((remainder * 10) + (d - '0')) % 97;
+            }
+        }
+
+        return remainder == 1;
+    }
 }

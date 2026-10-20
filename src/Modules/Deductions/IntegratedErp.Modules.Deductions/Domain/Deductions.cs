@@ -374,11 +374,15 @@ public sealed class AdvanceInstallment : ITenantOwned
         Note = note;
     }
 
-    /// <summary>The payroll's deduction (4.8): all of it, or part with the rest deferred.</summary>
-    public void Deduct(decimal amount)
+    /// <summary>The payroll run that last deducted from it (or deferred it).</summary>
+    public string? DeductedIn { get; private set; }
+
+    /// <summary>The payroll's deduction (4.8): all of it, or part with the rest deferred to the next payroll month.</summary>
+    public void Deduct(decimal amount, string runNo)
     {
-        Deducted = Math.Min(Amount, Deducted + amount);
+        Deducted = Math.Min(Amount, Deducted + Math.Max(0, amount));
         Status = Deducted >= Amount ? InstallmentStatus.Deducted : InstallmentStatus.Deferred;
+        DeductedIn = runNo;
     }
 }
 
@@ -498,6 +502,22 @@ public sealed class Penalty : ITenantOwned
         LastComment = comment;
         DecidedAt = at;
     }
+
+    /// <summary>The payroll run that deducted it (null while due).</summary>
+    public string? DeductedIn { get; private set; }
+
+    public decimal? DeductedAmount { get; private set; }
+
+    /// <summary>How many payroll months it was deferred for the month's cap.</summary>
+    public int Deferrals { get; private set; }
+
+    public void Deduct(decimal amount, string runNo)
+    {
+        DeductedIn = runNo;
+        DeductedAmount = decimal.Round(amount, 2);
+    }
+
+    public void Defer() => Deferrals++;
 }
 
 /// <summary>Payroll months as "2026-11".</summary>

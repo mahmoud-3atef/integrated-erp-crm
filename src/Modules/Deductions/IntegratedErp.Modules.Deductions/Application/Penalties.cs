@@ -321,4 +321,68 @@ internal sealed class StaffDeductions(DeductionsDbContext db, DeductionSetup set
 
     public async Task<DeductionRules> RulesAsync(CancellationToken cancellationToken) =>
         new((await setup.SettingAsync(cancellationToken).ConfigureAwait(false)).MonthlyCapPercent);
+
+#pragma warning disable CA1309 // EF translates string.Compare to SQL; the periods are ASCII "YYYY-MM", so the order is the same.
+    public async Task<IReadOnlyList<DueDeduction>> DueAsync(string period, CancellationToken cancellationToken)
+    {
+        var installments = await (from i in db.Installments.AsNoTracking()
+                                  join a in db.Advances.AsNoTracking() on i.AdvanceId equals a.Id
+                                  where a.Status == AdvanceStatus.Disbursed && string.Compare(i.Period, period) <= 0
+                                      && (i.Status == InstallmentStatus.Scheduled || i.Status == InstallmentStatus.Deferred)
+                                  orderby i.Period
+                                  select new { i.Id, a.EmployeeId, a.AdvanceNo, i.Period, Due = i.Amount - i.Deducted, a.AboveCap, a.Months })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var penalties = await db.Penalties.AsNoTracking()
+            .Where(p => p.Status == PenaltyStatus.Applied && p.DeductedIn == null && p.Effect != PenaltyEffect.Warning && string.Compare(p.Period, period) <= 0)
+            .OrderBy(p => p.Period).ThenBy(p => p.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return installments.Where(i => i.Due > 0)
+            .Select(i => new DueDeduction(i.Id, DeductionItemKind.Installment, i.EmployeeId, i.AdvanceNo, i.Period, 0, i.Due, i.AboveCap, i.AdvanceNo))
+            .Concat(penalties.Select(p => new DueDeduction(
+                p.Id,
+                p.Category == PenaltyCategory.Other ? DeductionItemKind.Other
+                    : p.Effect switch { PenaltyEffect.DeductDays => DeductionItemKind.PenaltyDays, PenaltyEffect.Suspension => DeductionItemKind.Suspension, _ => DeductionItemKind.PenaltyAmount },
+                p.EmployeeId, p.PenaltyNo, p.Period, p.Days ?? 0, p.Amount ?? 0, p.AboveCap, p.Description)))
+            .ToList();
+    }
+#pragma warning restore CA1309
+
+    public async Task RecordAsync(string runNo, IReadOnlyList<DeductionSettlement> settlements, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settlements);
+        var installmentIds = settlements.Where(s => s.Kind == DeductionItemKind.Installment).Select(s => s.Id).ToList();
+        var penaltyIds = settlements.Where(s => s.Kind != DeductionItemKind.Installment).Select(s => s.Id).ToList();
+        var installments = await db.Installments.Where(i => installmentIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken).ConfigureAwait(false);
+        var penalties = await db.Penalties.Where(p => penaltyIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken).ConfigureAwait(false);
+        foreach (var s in settlements)
+        {
+            if (s.Kind == DeductionItemKind.Installment)
+            {
+                installments.GetValueOrDefault(s.Id)?.Deduct(s.Deducted, runNo);
+            }
+            else if (penalties.GetValueOrDefault(s.Id) is { } p)
+            {
+                if (s.Deferred)
+                {
+                    p.Defer();
+                }
+                else
+                {
+                    p.Deduct(s.Deducted, runNo);
+                }
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // An advance whose last installment is deducted is settled.
+        var advanceIds = installments.Values.Select(i => i.AdvanceId).Distinct().ToList();
+        var advances = await db.Advances.Include(a => a.Installments).Where(a => advanceIds.Contains(a.Id)).ToListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var a in advances)
+        {
+            a.CheckSettled();
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

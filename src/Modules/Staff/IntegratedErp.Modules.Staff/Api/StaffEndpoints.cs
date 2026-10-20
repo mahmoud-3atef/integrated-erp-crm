@@ -44,6 +44,36 @@ internal static class StaffEndpoints
                 ToHttp(await service.SetPersonalAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(StaffPermissions.Manage, companyWide: true);
 
+        group.MapGet("/employees/update-template", async (string? lang, StaffBulkUpdate bulk, CancellationToken ct) =>
+                Results.File(await bulk.TemplateAsync(lang != "en", ct).ConfigureAwait(false), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "staff-update.xlsx"))
+            .RequirePermission(StaffPermissions.BulkUpdate, companyWide: true);
+
+        group.MapPost("/employees/bulk-update", async (HttpRequest request, bool? apply, StaffBulkUpdate bulk, CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType)
+                {
+                    return Results.Problem("A multipart form is required.", statusCode: StatusCodes.Status400BadRequest, title: "validation.file_empty");
+                }
+
+                var form = await request.ReadFormAsync(ct).ConfigureAwait(false);
+                var file = form.Files.GetFile("file");
+                if (file is null || file.Length > 10 * 1024 * 1024 || file.Length == 0 || !file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Problem("An .xlsx file is required.", statusCode: StatusCodes.Status400BadRequest, title: "validation.excel_file");
+                }
+
+                await using var content = new MemoryStream();
+                await file.CopyToAsync(content, ct).ConfigureAwait(false);
+                content.Position = 0;
+                return Results.Ok(await bulk.RunAsync(content, apply ?? false, ct).ConfigureAwait(false));
+            })
+            .DisableAntiforgery()
+            .RequirePermission(StaffPermissions.BulkUpdate, companyWide: true);
+
+        group.MapPut("/employees/{id:guid}/pay-details", async (Guid id, PayDetailsInput input, StaffService service, CancellationToken ct) =>
+                ToHttp(await service.SetPayDetailsAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.BankManage, companyWide: true);
+
         group.MapPut("/employees/{id:guid}/job", async (Guid id, JobInput input, StaffService service, CancellationToken ct) =>
                 ToHttp(await service.SetJobAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(StaffPermissions.Manage, companyWide: true);

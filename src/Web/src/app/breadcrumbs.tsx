@@ -23,6 +23,8 @@ const parents: Record<string, string> = {
   '/billing/statements': '/billing/aging',
   '/workflow/approvals': '/workflow/inbox',
   '/housing/buildings': '/housing',
+  '/payroll/staff-settings': '/payroll/staff',
+  '/hr/deductions-settings': '/hr/advances',
 };
 
 const named: Record<string, string> = { new: 'crumbs.new', edit: 'crumbs.edit', print: 'crumbs.print' };

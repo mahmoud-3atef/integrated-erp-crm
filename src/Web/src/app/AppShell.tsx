@@ -112,7 +112,10 @@ const menu: MenuSection[] = [
   },
   {
     titleKey: 'menu.payrollSection',
-    items: [{ path: '/payroll/runs', labelKey: 'menu.payrollRuns', icon: <RequestQuoteOutlinedIcon />, permission: 'payroll.workers.view', companyWide: true }],
+    items: [
+      { path: '/payroll/runs', labelKey: 'menu.payrollRuns', icon: <RequestQuoteOutlinedIcon />, permission: 'payroll.workers.view', companyWide: true },
+      { path: '/payroll/staff', labelKey: 'menu.payrollStaff', icon: <ReceiptLongOutlinedIcon />, permission: 'payroll.staff.view', companyWide: true },
+    ],
   },
   {
     titleKey: 'menu.housingSection',

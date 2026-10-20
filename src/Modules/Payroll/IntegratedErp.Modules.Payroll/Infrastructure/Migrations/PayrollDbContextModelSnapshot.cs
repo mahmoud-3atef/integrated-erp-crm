@@ -169,6 +169,59 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                     b.ToTable("outbox_message", "payroll");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.GosiRate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("category");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<decimal>("EmployeePercent")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("decimal(6,3)")
+                        .HasColumnName("employee_percent");
+
+                    b.Property<decimal>("EmployerPercent")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("decimal(6,3)")
+                        .HasColumnName("employer_percent");
+
+                    b.Property<decimal>("MaxBase")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("max_base");
+
+                    b.Property<decimal>("MinBase")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("min_base");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gosi_rate");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_gosi_rate_tenant_id");
+
+                    b.HasIndex("TenantId", "Category", "EffectiveFrom")
+                        .IsUnique()
+                        .HasDatabaseName("ix_gosi_rate_tenant_id_category_effective_from");
+
+                    b.ToTable("gosi_rate", "payroll");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayrollExclusion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -726,6 +779,618 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                     b.ToTable("sponsor_registration", "payroll");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPaySetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("HoursPerDay")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("hours_per_day");
+
+                    b.Property<string>("LateMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("late_mode");
+
+                    b.Property<decimal>("OvertimePremiumPercent")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("overtime_premium_percent");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_staff_pay_setting");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_pay_setting_tenant_id");
+
+                    b.ToTable("staff_pay_setting", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("run_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_staff_adjustment");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_staff_adjustment_tenant_id");
+
+                    b.HasIndex("RunId", "EmployeeId")
+                        .HasDatabaseName("ix_staff_adjustment_run_id_employee_id");
+
+                    b.ToTable("staff_adjustment", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AboveCap")
+                        .HasColumnType("bit")
+                        .HasColumnName("above_cap");
+
+                    b.Property<decimal>("Days")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)")
+                        .HasColumnName("days");
+
+                    b.Property<decimal>("Deducted")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("deducted");
+
+                    b.Property<bool>("Deferred")
+                        .HasColumnType("bit")
+                        .HasColumnName("deferred");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<decimal>("Due")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("due");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("LineId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("line_id");
+
+                    b.Property<string>("Period")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)")
+                        .HasColumnName("period");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("run_id");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("source_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_staff_item");
+
+                    b.HasIndex("LineId")
+                        .HasDatabaseName("ix_staff_item_line_id");
+
+                    b.HasIndex("RunId")
+                        .HasDatabaseName("ix_staff_item_run_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_staff_item_tenant_id");
+
+                    b.ToTable("staff_item", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Absence")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("absence");
+
+                    b.Property<decimal>("Additions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("additions");
+
+                    b.Property<decimal>("Advances")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("advances");
+
+                    b.Property<decimal>("Allowances")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("allowances");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<decimal>("Basic")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("basic");
+
+                    b.Property<decimal>("CapLimit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("cap_limit");
+
+                    b.Property<decimal>("Deductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("deductions");
+
+                    b.Property<decimal>("Deferred")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("deferred");
+
+                    b.Property<string>("DepartmentAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("department_ar");
+
+                    b.Property<string>("DepartmentEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("department_en");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("department_id");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("employee_no");
+
+                    b.Property<decimal>("GosiBase")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi_base");
+
+                    b.Property<string>("GosiCategory")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("gosi_category");
+
+                    b.Property<decimal>("GosiEmployee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi_employee");
+
+                    b.Property<decimal>("GosiEmployer")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gosi_employer");
+
+                    b.Property<decimal>("Gross")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("gross");
+
+                    b.Property<decimal>("Housing")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("housing");
+
+                    b.Property<string>("Iban")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)")
+                        .HasColumnName("iban");
+
+                    b.Property<string>("JobTitleAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("job_title_ar");
+
+                    b.Property<string>("JobTitleEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("job_title_en");
+
+                    b.Property<decimal>("Late")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("late");
+
+                    b.Property<decimal>("LateMinutes")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("late_minutes");
+
+                    b.Property<decimal>("MonthlyBasic")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("monthly_basic");
+
+                    b.Property<decimal>("MonthlySalary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("monthly_salary");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("Net")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("net");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("notes");
+
+                    b.Property<decimal>("OtherAllowances")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("other_allowances");
+
+                    b.Property<decimal>("OtherDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("other_deductions");
+
+                    b.Property<decimal>("Overtime")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("overtime");
+
+                    b.Property<decimal>("OvertimeHours")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("overtime_hours");
+
+                    b.Property<decimal>("PaidDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("paid_days");
+
+                    b.Property<decimal>("Penalties")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("penalties");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("run_id");
+
+                    b.Property<decimal>("ServiceDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("service_days");
+
+                    b.Property<decimal>("SickPart")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("sick_part");
+
+                    b.Property<decimal>("SickPartDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("sick_part_days");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("UnpaidDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unpaid_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_staff_line");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_staff_line_tenant_id");
+
+                    b.HasIndex("RunId", "DepartmentId")
+                        .HasDatabaseName("ix_staff_line_run_id_department_id");
+
+                    b.HasIndex("RunId", "EmployeeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_line_run_id_employee_id");
+
+                    b.ToTable("staff_line", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("approved_at");
+
+                    b.Property<string>("ApprovedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("approved_by_name");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset>("CalculatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("calculated_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date")
+                        .HasColumnName("from");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<Guid>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<string>("LegalEntityName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("legal_entity_name");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)")
+                        .HasColumnName("period");
+
+                    b.Property<string>("RunNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("run_no");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date")
+                        .HasColumnName("to");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Totals", "IntegratedErp.Modules.Payroll.Domain.StaffPayrollRun.Totals#StaffRunTotals", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("Absence")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_absence");
+
+                            b1.Property<decimal>("Additions")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_additions");
+
+                            b1.Property<decimal>("Advances")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_advances");
+
+                            b1.Property<decimal>("Allowances")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_allowances");
+
+                            b1.Property<decimal>("Basic")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_basic");
+
+                            b1.Property<decimal>("Deductions")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_deductions");
+
+                            b1.Property<decimal>("Deferred")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_deferred");
+
+                            b1.Property<int>("Employees")
+                                .HasColumnType("int")
+                                .HasColumnName("total_employees");
+
+                            b1.Property<decimal>("GosiEmployee")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_gosi_employee");
+
+                            b1.Property<decimal>("GosiEmployer")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_gosi_employer");
+
+                            b1.Property<decimal>("Housing")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_housing");
+
+                            b1.Property<int>("Joiners")
+                                .HasColumnType("int")
+                                .HasColumnName("total_joiners");
+
+                            b1.Property<int>("Leavers")
+                                .HasColumnType("int")
+                                .HasColumnName("total_leavers");
+
+                            b1.Property<decimal>("Net")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_net");
+
+                            b1.Property<int>("NoSalary")
+                                .HasColumnType("int")
+                                .HasColumnName("total_no_salary");
+
+                            b1.Property<decimal>("OtherAllowances")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_other_allowances");
+
+                            b1.Property<decimal>("OtherDeductions")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_other_deductions");
+
+                            b1.Property<decimal>("Overtime")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_overtime");
+
+                            b1.Property<decimal>("PaidDays")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_paid_days");
+
+                            b1.Property<decimal>("Penalties")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("total_penalties");
+
+                            b1.Property<int>("WithoutIban")
+                                .HasColumnType("int")
+                                .HasColumnName("total_without_iban");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_staff_run");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_staff_run_tenant_id");
+
+                    b.HasIndex("TenantId", "RunNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_run_tenant_id_run_no");
+
+                    b.HasIndex("TenantId", "LegalEntityId", "Period")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_run_tenant_id_legal_entity_id_period");
+
+                    b.ToTable("staff_run", "payroll");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayrollExclusion", b =>
                 {
                     b.HasOne("IntegratedErp.Modules.Payroll.Domain.PayrollRun", null)
@@ -756,6 +1421,26 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                         .HasConstraintName("fk_payroll_line_source_payroll_line_line_id");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollItem", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Payroll.Domain.StaffPayrollLine", null)
+                        .WithMany("Items")
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_item_staff_line_line_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollLine", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Payroll.Domain.StaffPayrollRun", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_line_staff_run_run_id");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayrollLine", b =>
                 {
                     b.Navigation("Sources");
@@ -765,6 +1450,16 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                 {
                     b.Navigation("Exclusions");
 
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollLine", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollRun", b =>
+                {
                     b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618

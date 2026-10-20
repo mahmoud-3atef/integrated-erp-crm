@@ -29,4 +29,31 @@ public interface IStaffDeductions
     Task<IReadOnlyList<MonthDeductions>> MonthAsync(string period, CancellationToken cancellationToken);
 
     Task<DeductionRules> RulesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// What is due in a payroll month and not deducted yet: the installments of paid advances, and the applied penalties
+    /// and other deductions, of that month or deferred from an earlier one.
+    /// </summary>
+    Task<IReadOnlyList<DueDeduction>> DueAsync(string period, CancellationToken cancellationToken);
+
+    /// <summary>The approved staff payroll's result: what it deducted of each item, and what it deferred to the next month.</summary>
+    Task RecordAsync(string runNo, IReadOnlyList<DeductionSettlement> settlements, CancellationToken cancellationToken);
 }
+
+public enum DeductionItemKind
+{
+    Installment,
+    PenaltyDays,
+    PenaltyAmount,
+    Suspension,
+    Other,
+}
+
+/// <param name="Amount">The amount still due (installments, amount penalties, other deductions).</param>
+/// <param name="Days">The days (day penalties and suspensions).</param>
+/// <param name="AboveCap">An approved request allowed going above the month's cap: never deferred.</param>
+public sealed record DueDeduction(Guid Id, DeductionItemKind Kind, Guid EmployeeId, string Reference, string Period, decimal Days, decimal Amount, bool AboveCap, string Description);
+
+/// <param name="Deducted">The amount the payroll deducted (for a day penalty or a suspension: its money value).</param>
+/// <param name="Deferred">Left, in all or part, for the next payroll month.</param>
+public sealed record DeductionSettlement(Guid Id, DeductionItemKind Kind, decimal Deducted, bool Deferred);

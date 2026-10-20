@@ -16,6 +16,8 @@ import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, hr, hrAccents, hrCard } 
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useLegalEntities } from '../payroll/RunDialogs';
 import { HireDialog } from './StaffDialogs';
+import { BulkUpdateDialog } from './BulkUpdateDialog';
+import TableViewOutlinedIcon from '@mui/icons-material/TableViewOutlined';
 import { daysUntil, StaffStatusBadge } from './staff';
 
 const tabs: StaffTab[] = ['all', 'active', 'probation', 'ending', 'incomplete', 'left'];
@@ -42,6 +44,7 @@ export function StaffDirectoryPage({ creating = false }: { creating?: boolean } 
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hire, setHire] = useState(creating);
+  const [bulk, setBulk] = useState(false);
   const [version, setVersion] = useState(0);
   const latest = useRef(0);
   const canManage = can('staff.manage', true);
@@ -104,6 +107,11 @@ export function StaffDirectoryPage({ creating = false }: { creating?: boolean } 
               <Button variant="outlined" startIcon={<SyncIcon />} disabled={busy} onClick={() => void runImport()}>
                 {t('staff.import')}
               </Button>
+              {can('staff.bulk_update', true) && (
+                <Button variant="outlined" startIcon={<TableViewOutlinedIcon />} onClick={() => setBulk(true)}>
+                  {t('staff.bulk.action')}
+                </Button>
+              )}
               <Button variant="contained" startIcon={<Add />} onClick={() => setHire(true)}>
                 {t('staff.new')}
               </Button>
@@ -253,6 +261,16 @@ export function StaffDirectoryPage({ creating = false }: { creating?: boolean } 
         }}
         onSaved={(id) => navigate(`/hr/employees/${id}`)}
       />
+      {bulk && (
+        <BulkUpdateDialog
+          onClose={() => setBulk(false)}
+          onApplied={(changes) => {
+            setBulk(false);
+            setNotice(t('staff.bulk.applied', { count: changes }));
+            setVersion((v) => v + 1);
+          }}
+        />
+      )}
     </HrScope>
   );
 }
