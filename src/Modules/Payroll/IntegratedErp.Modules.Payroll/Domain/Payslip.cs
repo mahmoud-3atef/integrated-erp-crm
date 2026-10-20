@@ -50,3 +50,54 @@ public sealed class PayslipPrint : ITenantOwned
         PrintedAt = at,
     };
 }
+
+/// <summary>
+/// A payslip emailed to an employee (4.12b): which run and line, to which address, by whom, and the queued email in
+/// the outbox that says how it went. Never the amounts: the email's body lives only in the outbox until it is sent.
+/// </summary>
+public sealed class PayslipEmail : ITenantOwned
+{
+    private PayslipEmail()
+    {
+        EmployeeNo = string.Empty;
+        Name = string.Empty;
+        Email = string.Empty;
+        QueuedByName = string.Empty;
+    }
+
+    public Guid Id { get; private set; }
+
+    public Guid TenantId { get; private set; }
+
+    public Guid RunId { get; private set; }
+
+    public Guid LineId { get; private set; }
+
+    public Guid EmployeeId { get; private set; }
+
+    public string EmployeeNo { get; private set; }
+
+    public string Name { get; private set; }
+
+    public string Email { get; private set; }
+
+    public Guid OutgoingEmailId { get; private set; }
+
+    public string QueuedByName { get; private set; }
+
+    public DateTimeOffset QueuedAt { get; private set; }
+
+    public static PayslipEmail Of(Guid runId, Guid lineId, Guid employeeId, string employeeNo, string name, string email, Guid outgoingEmailId, string by, DateTimeOffset at) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        RunId = runId,
+        LineId = lineId,
+        EmployeeId = employeeId,
+        EmployeeNo = employeeNo,
+        Name = name,
+        Email = email,
+        OutgoingEmailId = outgoingEmailId,
+        QueuedByName = by,
+        QueuedAt = at,
+    };
+}

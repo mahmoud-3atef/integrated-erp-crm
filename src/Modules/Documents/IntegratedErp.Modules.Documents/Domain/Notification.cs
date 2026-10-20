@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.SharedKernel;
 
 namespace IntegratedErp.Modules.Documents.Domain;
@@ -62,9 +63,10 @@ public enum EmailStatus
 
 /// <summary>
 /// An email waiting to be sent, saved in the same transaction as its notification so none is lost; a background
-/// dispatcher sends it and retries with back-off (a small, dedicated outbox).
+/// dispatcher sends it and retries with back-off (a small, dedicated outbox). Not in the audit trail, like the other
+/// outbox: its body may be confidential (a payslip), and a confidential one's body is cleared once it is sent or given up.
 /// </summary>
-public sealed class OutgoingEmail : ITenantOwned
+public sealed class OutgoingEmail : ITenantOwned, INotAudited
 {
     public const int MaxAttempts = 6;
 
@@ -76,8 +78,9 @@ public sealed class OutgoingEmail : ITenantOwned
         TextBody = string.Empty;
     }
 
-    public OutgoingEmail(Guid? notificationId, string to, string subject, string htmlBody, string textBody, DateTimeOffset createdAt)
+    public OutgoingEmail(Guid? notificationId, string to, string subject, string htmlBody, string textBody, DateTimeOffset createdAt, bool confidential = false)
     {
+        Confidential = confidential;
         Id = Guid.CreateVersion7();
         NotificationId = notificationId;
         To = to;
@@ -114,12 +117,16 @@ public sealed class OutgoingEmail : ITenantOwned
 
     public string? LastError { get; private set; }
 
+    /// <summary>Its body (a payslip) is cleared once it is sent or given up.</summary>
+    public bool Confidential { get; private set; }
+
     public void MarkSent(DateTimeOffset at)
     {
         Status = EmailStatus.Sent;
         SentAt = at;
         Attempts++;
         LastError = null;
+        Clear();
     }
 
     /// <summary>Retries after 1, 2, 4, 8, 16 minutes, then gives up (visible as Failed).</summary>
@@ -130,9 +137,19 @@ public sealed class OutgoingEmail : ITenantOwned
         if (Attempts >= MaxAttempts)
         {
             Status = EmailStatus.Failed;
+            Clear();
             return;
         }
 
         NextAttemptAt = at.AddMinutes(Math.Pow(2, Attempts - 1));
+    }
+
+    private void Clear()
+    {
+        if (Confidential)
+        {
+            HtmlBody = string.Empty;
+            TextBody = string.Empty;
+        }
     }
 }

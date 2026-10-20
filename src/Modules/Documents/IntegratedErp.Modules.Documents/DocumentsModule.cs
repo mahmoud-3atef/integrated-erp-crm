@@ -34,6 +34,7 @@ public sealed class DocumentsModule : IModule
         services.AddScoped<AttachmentService>();
         services.AddScoped<NotificationService>();
         services.AddScoped<INotifier>(sp => sp.GetRequiredService<NotificationService>());
+        services.AddScoped<IEmailOutbox, EmailOutbox>();
         services.AddHostedService<EmailDispatcher>();
         services.AddReferenceLists(DocumentTypes.List);
 

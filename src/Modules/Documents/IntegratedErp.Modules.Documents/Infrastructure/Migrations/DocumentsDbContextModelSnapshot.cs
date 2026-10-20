@@ -348,6 +348,10 @@ namespace IntegratedErp.Modules.Documents.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("attempts");
 
+                    b.Property<bool>("Confidential")
+                        .HasColumnType("bit")
+                        .HasColumnName("confidential");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("created_at");

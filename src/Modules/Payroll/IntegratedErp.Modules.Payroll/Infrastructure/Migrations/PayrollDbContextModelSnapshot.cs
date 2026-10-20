@@ -971,6 +971,72 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                     b.ToTable("payroll_run", "payroll");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayslipEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("email");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("employee_no");
+
+                    b.Property<Guid>("LineId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("line_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OutgoingEmailId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("outgoing_email_id");
+
+                    b.Property<DateTimeOffset>("QueuedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("queued_at");
+
+                    b.Property<string>("QueuedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("queued_by_name");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("run_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payslip_email");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_payslip_email_tenant_id");
+
+                    b.HasIndex("TenantId", "RunId", "EmployeeId")
+                        .HasDatabaseName("ix_payslip_email_tenant_id_run_id_employee_id");
+
+                    b.ToTable("payslip_email", "payroll");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.PayslipPrint", b =>
                 {
                     b.Property<Guid>("Id")

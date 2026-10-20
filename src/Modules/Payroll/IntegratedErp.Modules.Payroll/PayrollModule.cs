@@ -34,6 +34,7 @@ public sealed class PayrollModule : IModule
         services.AddScoped<IApprovalRecordAdapter, StaffPayrollAdapter>();
         services.AddScoped<GosiService>();
         services.AddScoped<PayslipService>();
+        services.AddScoped<PayslipMailer>();
         services.AddAlertProvider<GosiAlerts>();
         services.AddPermissions(PayrollPermissions.All);
         services.AddNumberSequences(
@@ -69,6 +70,7 @@ internal static class PayrollPermissions
     public const string GosiView = "payroll.gosi.view";
     public const string GosiManage = "payroll.gosi.manage";
     public const string GosiInvoice = "payroll.gosi.invoice";
+    public const string PayslipsSend = "payroll.payslips.send";
 
     private const string GroupAr = "الرواتب";
     private const string GroupEn = "Payroll";
@@ -89,5 +91,6 @@ internal static class PayrollPermissions
         new(GosiView, GroupAr, GroupEn, "عرض التأمينات الاجتماعية والسعودة", "View GOSI and Saudization"),
         new(GosiManage, GroupAr, GroupEn, "إغلاق مهام التأمينات الاجتماعية (التسجيل وتحديث الأجر والاستبعاد)", "Close GOSI tasks (registration, wage update, exclusion)"),
         new(GosiInvoice, GroupAr, GroupEn, "تسجيل فاتورة التأمينات الاجتماعية ومطابقتها (المالية)", "Record and reconcile GOSI's invoice (finance)"),
+        new(PayslipsSend, GroupAr, GroupEn, "إرسال قسائم الرواتب إلى بريد الموظفين", "Email the payslips to the employees"),
     ];
 }

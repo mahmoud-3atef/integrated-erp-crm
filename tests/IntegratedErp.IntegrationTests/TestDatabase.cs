@@ -96,6 +96,10 @@ public sealed class TestDatabase : IAsyncLifetime
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 [$"ConnectionStrings:{PersistenceExtensions.ConnectionStringName}"] = ConnectionString,
+
+                // Email on, written as files to a temporary folder (nothing is sent; the dispatcher does not run here).
+                ["Email:FromAddress"] = "erp-test@example.test",
+                ["Email:PickupDirectory"] = Path.Combine(Path.GetTempPath(), "IntegratedErp.Tests.Mail"),
             })
             .Build();
 

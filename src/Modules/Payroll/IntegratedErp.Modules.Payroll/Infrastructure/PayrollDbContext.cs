@@ -48,6 +48,8 @@ internal sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> option
     public DbSet<SaudizationTarget> SaudizationTargets => Set<SaudizationTarget>();
 
     public DbSet<PayslipPrint> PayslipPrints => Set<PayslipPrint>();
+
+    public DbSet<PayslipEmail> PayslipEmails => Set<PayslipEmail>();
 }
 
 internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<PayrollRun>
@@ -382,6 +384,21 @@ internal sealed class PayslipPrintConfiguration : IEntityTypeConfiguration<Paysl
         builder.Property(p => p.RunNo).HasMaxLength(30).IsRequired();
         builder.Property(p => p.PrintedByName).HasMaxLength(200).IsRequired();
         builder.HasIndex(p => new { p.TenantId, p.RunId });
+    }
+}
+
+internal sealed class PayslipEmailConfiguration : IEntityTypeConfiguration<PayslipEmail>
+{
+    public void Configure(EntityTypeBuilder<PayslipEmail> builder)
+    {
+        builder.ToTable("payslip_email");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.EmployeeNo).HasMaxLength(30).IsRequired();
+        builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.Email).HasMaxLength(256).IsRequired();
+        builder.Property(p => p.QueuedByName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(p => new { p.TenantId, p.RunId, p.EmployeeId });
     }
 }
 

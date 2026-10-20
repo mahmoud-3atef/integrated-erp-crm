@@ -1,3 +1,4 @@
+import MailOutlineIcon from '@mui/icons-material/EmailOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -61,6 +62,7 @@ import { ErrorMessage } from '../../../auth/AuthLayout';
 import { HrAvatar, HrCoverageCard, HrDrawer, HrEmptyState, HrKpiCard, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../../components/hr/Hr';
 import { ApprovalBar, useRecordApproval } from '../../../components/workflow/RecordApproval';
 import { useMonthName as usePeriodName } from '../../attendance/AttendanceMonthPage';
+import { PayslipEmailDialog } from './PayslipEmailDialog';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { money, RunStatusBadge } from '../payroll';
 
@@ -115,6 +117,7 @@ export function StaffRunPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<'submit' | 'delete' | null>(null);
+  const [emailing, setEmailing] = useState(false);
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
   const [scope, setScope] = useState<StaffLineQuery>({});
   const [version, setVersion] = useState(0);
@@ -215,6 +218,11 @@ export function StaffRunPage() {
                 {t('payslip.printAll')}
               </Button>
             )}
+            {run.status === 'Approved' && can('payroll.payslips.send', true) && can('staff.salaries.view') && (
+              <Button variant="outlined" startIcon={<MailOutlineIcon />} onClick={() => setEmailing(true)}>
+                {t('payslip.email.open')}
+              </Button>
+            )}
             {run.canEdit && (
               <>
                 <Button variant="outlined" endIcon={<ArrowDropDownIcon />} onClick={(e) => setMoreAnchor(e.currentTarget)}>
@@ -240,6 +248,7 @@ export function StaffRunPage() {
           {notice}
         </Alert>
       )}
+      {emailing && <PayslipEmailDialog runId={run.id} scope={{ search: scope.search, department: scope.department, note: scope.note }} onClose={() => setEmailing(false)} />}
       {run.lastComment && run.status === 'Returned' && (
         <Alert severity="warning" sx={{ mb: 1.5 }}>
           {run.lastComment}

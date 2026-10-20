@@ -519,7 +519,9 @@
     "conflict_payroll_gosi_task": "Only an open task can be closed (the reference 100 characters at most).",
     "not_found_payroll_gosi_task": "GOSI task not found.",
     "validation_payroll_gosi_invoice": "Enter the invoice amount (zero or more).",
-    "validation_payroll_gosi_wage": "Enter the contributory wage and the GOSI number the task needs."
+    "validation_payroll_gosi_wage": "Enter the contributory wage and the GOSI number the task needs.",
+    "conflict_payroll_payslip_not_approved": "Payslips are emailed only for an approved run.",
+    "validation_payroll_email_not_configured": "The server has no email account to send from."
   },
   "menu": {
     "label": "Main menu",
@@ -4714,6 +4716,35 @@
       "late": "minutes: {{value}}",
       "sick": "days: {{value}}",
       "penaltyDays": "days: {{value}}"
+    },
+    "email": {
+      "open": "Email payslips",
+      "title": "Email the payslips to the employees",
+      "notConfigured": "No sending email is set up on the server yet. The system administrator sets it in the server settings (the address and its password), then redeploys.",
+      "from": "Sent from: {{from}}",
+      "withEmail": "With an email in their file: {{count}} of {{total}} employees",
+      "withoutEmail": "Without a valid email in their file: {{count}} (not sent)",
+      "alreadySent": "Already sent this run's payslip: {{count}}",
+      "withoutList": "Without an email:",
+      "andMore": "and {{count}} more.",
+      "resend": "Send again to those already sent ({{count}})",
+      "hint": "The payslip goes in the message body, in Arabic and English, for an approved run only; the scope is the run grid's current filter. Sent in the background and retried on failure.",
+      "queued": "{{count}} messages were queued for sending.",
+      "send": "Send ({{count}})",
+      "log": "Sending log",
+      "counts": "Sent {{Sent}} · Pending {{Pending}} · Failed {{Failed}}",
+      "refresh": "Refresh",
+      "cols": {
+        "employee": "Employee",
+        "email": "Email",
+        "status": "Status",
+        "by": "Sent by"
+      },
+      "status": {
+        "Sent": "Sent",
+        "Pending": "Pending",
+        "Failed": "Failed"
+      }
     }
   }
 }

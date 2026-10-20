@@ -572,5 +572,7 @@ public static class PayrollErrors
     public static readonly Error GosiTask = Error.Conflict("payroll_gosi_task", "Only an open task can be closed (the reference 100 characters at most).");
     public static readonly Error GosiTaskNotFound = Error.NotFound("payroll_gosi_task", "GOSI task not found.");
     public static readonly Error GosiInvoice = Error.Validation("payroll_gosi_invoice", "Enter the invoice amount (zero or more).");
+    public static readonly Error PayslipNotApproved = Error.Conflict("payroll_payslip_not_approved", "Payslips are emailed only for an approved run.");
+    public static readonly Error EmailNotConfigured = Error.Validation("payroll_email_not_configured", "The server has no email account to send from.");
     public static readonly Error GosiWage = Error.Validation("payroll_gosi_wage", "Enter the contributory wage and the GOSI number the task needs.");
 }

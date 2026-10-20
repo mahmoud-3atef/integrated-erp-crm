@@ -10,6 +10,7 @@ using IntegratedErp.Modules.Payroll.Application;
 using IntegratedErp.Modules.Payroll.Infrastructure;
 using IntegratedErp.Modules.Staff.Application;
 using IntegratedErp.Modules.Staff.Domain;
+using IntegratedErp.Modules.Staff.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -123,6 +124,10 @@ public sealed class StaffPayrollTests(TestDatabase database)
             Assert.Contains(omarSlip.Earnings, e => e.Code == "addition" && e.Amount == 500 && e.Note == "مكافأة إنجاز");
             Assert.Equal(8620m, omarSlip.Net);
             Assert.Contains(draft.Items.Single(x => x.PersonId == sara).Deductions, d => d.Code == "installment" && d.Amount == 1000);
+
+            // Not emailed before approval.
+            var mailer = scope.ServiceProvider.GetRequiredService<PayslipMailer>();
+            Assert.Equal("conflict.payroll_payslip_not_approved", (await mailer.SendAsync(runId, new PayslipEmailInput(null, null, null, null, false), default))!.Error.Code);
             Assert.True((await service.SubmitAsync(runId, default)).IsSuccess);
         }
 
@@ -143,8 +148,32 @@ public sealed class StaffPayrollTests(TestDatabase database)
             Assert.Equal((false, 1, omar), (official.Draft, official.Total, official.Items.Single().PersonId));
             var prints = await scope.ServiceProvider.GetRequiredService<PayrollDbContext>().PayslipPrints.OrderBy(x => x.PrintedAt).ToListAsync();
             Assert.Equal((2, 1, (Guid?)omar, false), (prints.Count, prints[^1].Count, prints[^1].PersonId, prints[^1].Draft));
+
+            // Emailing (4.12b): Sara has an address in her file, Omar has none.
+            var staffDb = scope.ServiceProvider.GetRequiredService<StaffDbContext>();
+            var saraFile = await staffDb.Employees.SingleAsync(e => e.Id == sara);
+            saraFile.SetPersonal(saraFile.NameAr, saraFile.NameEn, saraFile.IdNumber, saraFile.NationalityCode, saraFile.NationalityAr, saraFile.NationalityEn, saraFile.BirthDate, saraFile.Mobile, "sara@example.test", saraFile.GosiNo);
+            await staffDb.SaveChangesAsync();
+        }
+
+        using (var scope = database.Scope(tenantId, user: hr.ToString()))
+        {
+            var mailer = scope.ServiceProvider.GetRequiredService<PayslipMailer>();
+            var all = new PayslipEmailInput(null, null, null, null, false);
+            var preview = (await mailer.PreviewAsync(runId, all, default))!;
+            Assert.Equal((true, true, 2, 1, 1, 0), (preview.Configured, preview.Approved, preview.Total, preview.WithEmail, preview.WithoutEmailCount, preview.AlreadySent));
+            Assert.Equal("عمر الحربي", Assert.Single(preview.WithoutEmail).Name);
+
+            // Sent once; a second send skips her unless it is sent again on purpose.
+            Assert.Equal((1, 1, 0), Tuple((await mailer.SendAsync(runId, all, default))!.Value));
+            Assert.Equal((0, 1, 1), Tuple((await mailer.SendAsync(runId, all, default))!.Value));
+            Assert.Equal((1, 1, 0), Tuple((await mailer.SendAsync(runId, all with { Resend = true }, default))!.Value));
+            var row = Assert.Single(await mailer.StatusAsync(runId, default));
+            Assert.Equal((sara, "sara@example.test", "Pending"), (row.EmployeeId, row.Email, row.Status));
         }
     }
+
+    private static (int Queued, int WithoutEmail, int AlreadySent) Tuple(PayslipEmailResultDto r) => (r.Queued, r.WithoutEmail, r.AlreadySent);
 
     /// <summary>The bulk-update template with the registration and IBAN of rows filled in (an empty string leaves the cell empty).</summary>
     private static async Task<MemoryStream> SheetAsync(StaffBulkUpdate bulk, params (int Row, string LegalEntity, string Iban)[] rows)

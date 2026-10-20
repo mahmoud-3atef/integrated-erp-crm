@@ -79,3 +79,51 @@ export function payslipsPath(kind: PayslipKind, runId: string, params: Record<st
   const q = p.toString();
   return `/payroll/${kind === 'staff' ? 'staff' : 'runs'}/${runId}/payslips${q ? `?${q}` : ''}`;
 }
+
+export interface PayslipEmailPreview {
+  configured: boolean;
+  fromAddress: string | null;
+  approved: boolean;
+  total: number;
+  withEmail: number;
+  withoutEmailCount: number;
+  withoutEmail: { employeeNo: string; name: string }[];
+  alreadySent: number;
+}
+
+export interface PayslipEmailResult {
+  queued: number;
+  withoutEmail: number;
+  alreadySent: number;
+}
+
+export interface PayslipEmailRow {
+  employeeId: string;
+  employeeNo: string;
+  name: string;
+  email: string;
+  status: 'Pending' | 'Sent' | 'Failed';
+  attempts: number;
+  queuedAt: string;
+  queuedByName: string;
+  sentAt: string | null;
+  error: string | null;
+}
+
+export interface PayslipEmailScope {
+  search?: string;
+  department?: string;
+  note?: string;
+}
+
+/** Emailing a staff run's payslips (4.12b), with the run grid's filters. */
+export const payslipEmailApi = {
+  preview: (runId: string, scope: PayslipEmailScope) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(scope)) if (v) p.set(k, v);
+    return request<PayslipEmailPreview>('GET', `/api/v1/payroll/staff/runs/${runId}/payslips/email?${p.toString()}`);
+  },
+  send: (runId: string, scope: PayslipEmailScope, resend: boolean) =>
+    request<PayslipEmailResult>('POST', `/api/v1/payroll/staff/runs/${runId}/payslips/email`, { search: scope.search || null, department: scope.department || null, note: scope.note || null, line: null, resend }),
+  status: (runId: string) => request<PayslipEmailRow[]>('GET', `/api/v1/payroll/staff/runs/${runId}/payslips/emails`),
+};

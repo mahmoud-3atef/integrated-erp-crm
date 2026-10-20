@@ -90,7 +90,11 @@ internal sealed class PayslipService(
     public const int MaxPerRequest = 300;
 
     /// <summary>Null when the run is not found; the batch's <see cref="PayslipBatchDto.Total"/> says how many the scope holds.</summary>
-    public async Task<PayslipBatchDto?> StaffAsync(Guid runId, PayslipQuery q, CancellationToken cancellationToken)
+    public Task<PayslipBatchDto?> StaffAsync(Guid runId, PayslipQuery q, CancellationToken cancellationToken) => StaffAsync(runId, q, MaxPerRequest, true, cancellationToken);
+
+    /// <param name="max">How many payslips at most (the emails take the whole scope).</param>
+    /// <param name="record">Records the printing (the emails record their own sending instead).</param>
+    internal async Task<PayslipBatchDto?> StaffAsync(Guid runId, PayslipQuery q, int max, bool record, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(q);
         if (await staffQueries.ScopeAsync(runId, new StaffLineQuery(q.Search, q.Group, q.Note, null, false, 1, int.MaxValue), cancellationToken).ConfigureAwait(false) is not { } scope)
@@ -100,7 +104,7 @@ internal sealed class PayslipService(
 
         var run = scope.Run;
         var ids = q.Line is { } one ? scope.Lines.Where(l => l.Id == one).Select(l => l.Id).ToList() : scope.Lines.Select(l => l.Id).ToList();
-        var take = ids.Take(MaxPerRequest).ToList();
+        var take = ids.Take(max).ToList();
         var lines = await db.StaffLines.AsNoTracking().Include(l => l.Items).Where(l => take.Contains(l.Id)).ToListAsync(cancellationToken).ConfigureAwait(false);
         var order = take.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
         lines = lines.OrderBy(l => order[l.Id]).ToList();
@@ -149,7 +153,7 @@ internal sealed class PayslipService(
                 balance?.Balance, balance?.TakenThisYear, []);
         }).ToList();
 
-        return await BatchAsync("Staff", run.Id, run.RunNo, run.Status, run.LegalEntityId, run.From, run.To, run.ApprovedAt, run.ApprovedByName, ids.Count, items, q.Line is not null ? lines.FirstOrDefault()?.EmployeeId : null, cancellationToken).ConfigureAwait(false);
+        return await BatchAsync("Staff", run.Id, run.RunNo, run.Status, run.LegalEntityId, run.From, run.To, run.ApprovedAt, run.ApprovedByName, ids.Count, items, q.Line is not null ? lines.FirstOrDefault()?.EmployeeId : null, record, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<PayslipBatchDto?> WorkersAsync(Guid runId, PayslipQuery q, CancellationToken cancellationToken)
@@ -194,17 +198,17 @@ internal sealed class PayslipService(
                 l.Sources.OrderBy(s => s.LineFrom).Select(s => new PayslipSource(s.TimesheetNo, s.ProjectName, s.LineFrom, s.LineTo, s.WorkDays)).ToList());
         }).ToList();
 
-        return await BatchAsync("Workers", run.Id, run.RunNo, run.Status, run.LegalEntityId, run.From, run.To, run.ApprovedAt, run.ApprovedByName, ids.Count, items, q.Line is not null ? lines.FirstOrDefault()?.WorkerId : null, cancellationToken).ConfigureAwait(false);
+        return await BatchAsync("Workers", run.Id, run.RunNo, run.Status, run.LegalEntityId, run.From, run.To, run.ApprovedAt, run.ApprovedByName, ids.Count, items, q.Line is not null ? lines.FirstOrDefault()?.WorkerId : null, true, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<PayslipBatchDto> BatchAsync(
         string kind, Guid runId, string runNo, PayrollStatus status, Guid legalEntityId, DateOnly from, DateOnly to, DateTimeOffset? approvedAt, string? approvedBy,
-        int total, List<PayslipDto> items, Guid? person, CancellationToken cancellationToken)
+        int total, List<PayslipDto> items, Guid? person, bool record, CancellationToken cancellationToken)
     {
         var entity = (await legalEntities.ListAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefault(e => e.Id == legalEntityId);
         var draft = status != PayrollStatus.Approved;
         var now = clock.UtcNow;
-        if (items.Count > 0)
+        if (record && items.Count > 0)
         {
             db.PayslipPrints.Add(PayslipPrint.Of(kind, runId, runNo, items.Count, person, draft, user.DisplayName, now));
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

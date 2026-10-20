@@ -55,6 +55,29 @@ internal static class StaffPayrollEndpoints
                     ? Results.Forbid()
                     : await payslips.StaffAsync(id, new PayslipQuery(line, search, department, note), ct).ConfigureAwait(false) is { } batch ? Results.Ok(batch) : Results.NotFound())
             .RequirePermission(PayrollPermissions.StaffView, companyWide: true);
+        // Emailing the payslips (4.12b): who will get it, sending, and how each went.
+        group.MapGet("/runs/{id:guid}/payslips/email", async (Guid id, Guid? line, string? search, Guid? department, string? note, PayslipMailer mailer, IPermissionService permissions, CancellationToken ct) =>
+                !(await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).Has("staff.salaries.view")
+                    ? Results.Forbid()
+                    : await mailer.PreviewAsync(id, new PayslipEmailInput(search, department, note, line, false), ct).ConfigureAwait(false) is { } preview ? Results.Ok(preview) : Results.NotFound())
+            .RequirePermission(PayrollPermissions.PayslipsSend, companyWide: true);
+        group.MapPost("/runs/{id:guid}/payslips/email", async (Guid id, PayslipEmailInput input, PayslipMailer mailer, IPermissionService permissions, CancellationToken ct) =>
+            {
+                if (!(await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).Has("staff.salaries.view"))
+                {
+                    return Results.Forbid();
+                }
+
+                return await mailer.SendAsync(id, input, ct).ConfigureAwait(false) switch
+                {
+                    null => Results.NotFound(),
+                    { IsSuccess: true } r => Results.Ok(r.Value),
+                    var r => Problem(r.Error),
+                };
+            })
+            .RequirePermission(PayrollPermissions.PayslipsSend, companyWide: true);
+        group.MapGet("/runs/{id:guid}/payslips/emails", async (Guid id, PayslipMailer mailer, CancellationToken ct) => Results.Ok(await mailer.StatusAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(PayrollPermissions.PayslipsSend, companyWide: true);
         group.MapPost("/runs/{id:guid}/recalculate", async (Guid id, StaffPayrollService service, CancellationToken ct) => ToHttp(await service.RecalculateAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(PayrollPermissions.StaffManage, companyWide: true);
         group.MapPost("/runs/{id:guid}/submit", async (Guid id, StaffPayrollService service, CancellationToken ct) => ToHttp(await service.SubmitAsync(id, ct).ConfigureAwait(false)))
