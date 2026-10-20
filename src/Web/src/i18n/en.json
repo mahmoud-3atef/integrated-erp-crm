@@ -521,7 +521,8 @@
     "validation_payroll_gosi_invoice": "Enter the invoice amount (zero or more).",
     "validation_payroll_gosi_wage": "Enter the contributory wage and the GOSI number the task needs.",
     "conflict_payroll_payslip_not_approved": "Payslips are emailed only for an approved run.",
-    "validation_payroll_email_not_configured": "The server has no email account to send from."
+    "validation_payroll_email_not_configured": "The server has no email account to send from.",
+    "validation_approval_reassign_invalid": "The task cannot be given to this person: they hold it now, submitted the request, or already have it."
   },
   "menu": {
     "label": "Main menu",
@@ -736,7 +737,8 @@
       "Reject": "Reject",
       "Return": "Return for changes",
       "Delegate": "Delegate the task",
-      "Cancel": "Cancel the approval"
+      "Cancel": "Cancel the approval",
+      "Reassign": "Reassign the task"
     },
     "by": "By {{name}}",
     "byOnBehalf": "By {{name}} on behalf of {{original}}",
@@ -773,7 +775,8 @@
       "Completed": "Process ended",
       "Canceled": "Approval canceled",
       "Failed": "Stopped with an error",
-      "Retried": "Retried"
+      "Retried": "Retried",
+      "Reassigned": "Reassigned"
     },
     "decided": {
       "Approved": "Approved",
@@ -786,8 +789,14 @@
       "Reject": "Reject",
       "Return": "Return",
       "Delegate": "Delegate",
-      "Cancel": "Cancel approval"
-    }
+      "Cancel": "Cancel approval",
+      "Reassign": "Reassign"
+    },
+    "reassign": "Reassign the task",
+    "reassignTask": "Task (its current holder)",
+    "reassignFrom": "Held now by: {{name}}",
+    "reassignTo": "Assign to",
+    "reassignHint": "The task moves to the person you choose, yourself included. It is never given to the one who submitted. The reason is kept in the approval history, and both the former and the new holder are notified."
   },
   "tasks": {
     "title": "My tasks",

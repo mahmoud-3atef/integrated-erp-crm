@@ -1,5 +1,6 @@
 import BlockIcon from '@mui/icons-material/Block';
 import ForwardIcon from '@mui/icons-material/Forward';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ReplyIcon from '@mui/icons-material/Reply';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
@@ -15,7 +16,7 @@ import { flow, GlobalCompactApprovalBar } from './ApprovalBar';
 import { ApprovalHistoryDrawer } from './ApprovalHistoryDrawer';
 import { alreadyProcessed, newIdempotencyKey } from './approvalModel';
 
-type Action = Decision | 'Delegate' | 'Cancel';
+type Action = Decision | 'Delegate' | 'Reassign' | 'Cancel';
 
 /**
  * The approval of one record, loaded with the actions open to the current user. People who may see the record but
@@ -88,11 +89,12 @@ export function ApprovalBar({
   const shown = detail?.status ?? status;
   const { fieldName, fieldValue } = useFieldText(detail);
 
+  const canReassign = (actions?.reassignable?.length ?? 0) > 0;
   useEffect(() => {
-    if (actions?.canDelegate) {
+    if (actions?.canDelegate || canReassign) {
       workflowApi.people().then(setPeople).catch(() => setPeople([]));
     }
-  }, [actions?.canDelegate]);
+  }, [actions?.canDelegate, canReassign]);
 
   const retry = async () => {
     setError(null);
@@ -117,6 +119,7 @@ export function ApprovalBar({
     more: [
       ...(actions?.canReturn ? [{ key: 'return', label: t('approval.return'), icon: <ReplyIcon />, color: flow.amber, onClick: () => start('Return') }] : []),
       ...(actions?.canDelegate ? [{ key: 'delegate', label: t('approval.delegate'), icon: <ForwardIcon />, onClick: () => start('Delegate') }] : []),
+      ...(canReassign ? [{ key: 'reassign', label: t('approval.reassign'), icon: <SwapHorizIcon />, onClick: () => start('Reassign') }] : []),
       ...(actions?.canCancel ? [{ key: 'cancel', label: t('approval.cancel'), icon: <BlockIcon />, color: tokens.gray600, onClick: () => start('Cancel') }] : []),
     ],
   };
@@ -207,6 +210,9 @@ function DecisionDialog({
   const ar = i18n.language === 'ar';
   const [comment, setComment] = useState('');
   const [delegateTo, setDelegateTo] = useState('');
+  const open = detail.actions.reassignable ?? [];
+  const [task, setTask] = useState(open[0]?.workItemId ?? '');
+  const holder = open.find((o) => o.workItemId === task);
   const [fields, setFields] = useState<Record<string, string>>(() =>
     Object.fromEntries(detail.actions.requiredFields.map((f: FieldValue) => [f.field.key, f.value ?? ''])),
   );
@@ -215,6 +221,7 @@ function DecisionDialog({
   const [key] = useState(newIdempotencyKey);
   const sending = useRef(false);
   const needsReason = action !== 'Approve' && action !== 'Delegate';
+  const pick = action === 'Delegate' || action === 'Reassign';
   const missingField = action === 'Approve' && detail.actions.requiredFields.some((f) => !fields[f.field.key]?.trim());
   const status = detail.status;
   const step = ar ? status.currentStepAr : status.currentStepEn;
@@ -230,8 +237,10 @@ function DecisionDialog({
     setBusy(true);
     setError(null);
     try {
-      const itemId = detail.actions.workItemId!;
-      if (action === 'Delegate') {
+      const itemId = detail.actions.workItemId ?? '';
+      if (action === 'Reassign') {
+        await workflowApi.reassign(task, delegateTo, comment);
+      } else if (action === 'Delegate') {
         await workflowApi.delegate(itemId, delegateTo, comment);
       } else if (action === 'Cancel') {
         await workflowApi.cancel(detail.summary.id, comment);
@@ -284,14 +293,33 @@ function DecisionDialog({
                 helperText={t('approval.requiredFieldHint')}
               />
             ))}
-          {action === 'Delegate' && (
-            <TextField select label={t('approval.delegateTo')} value={delegateTo} onChange={(e) => setDelegateTo(e.target.value)} required>
-              {people.map((p) => (
-                <MenuItem key={p.userAccountId} value={p.userAccountId}>
-                  {p.displayName}
+          {action === 'Reassign' && open.length > 1 && (
+            <TextField select label={t('approval.reassignTask')} value={task} onChange={(e) => (setTask(e.target.value), setDelegateTo(''))} required>
+              {open.map((o) => (
+                <MenuItem key={o.workItemId} value={o.workItemId}>
+                  {o.assigneeName}
                 </MenuItem>
               ))}
             </TextField>
+          )}
+          {action === 'Reassign' && holder && (
+            <Typography sx={{ fontSize: 13, color: flow.textMuted }}>{t('approval.reassignFrom', { name: holder.assigneeName })}</Typography>
+          )}
+          {pick && (
+            <TextField select label={action === 'Reassign' ? t('approval.reassignTo') : t('approval.delegateTo')} value={delegateTo} onChange={(e) => setDelegateTo(e.target.value)} required>
+              {people
+                .filter((p) => action !== 'Reassign' || (p.userAccountId !== holder?.assigneeUserId))
+                .map((p) => (
+                  <MenuItem key={p.userAccountId} value={p.userAccountId}>
+                    {p.displayName}
+                  </MenuItem>
+                ))}
+            </TextField>
+          )}
+          {action === 'Reassign' && (
+            <Alert severity="info" sx={{ py: 0 }}>
+              {t('approval.reassignHint')}
+            </Alert>
           )}
           <TextField
             label={needsReason ? t('approval.reason') : t('approval.comment')}
@@ -310,7 +338,7 @@ function DecisionDialog({
         <Button onClick={onClose} disabled={busy}>
           {t('common.cancel')}
         </Button>
-        <Button variant="contained" color={color} onClick={() => void submit()} disabled={busy || (needsReason && !comment.trim()) || missingField || (action === 'Delegate' && !delegateTo)}>
+        <Button variant="contained" color={color} onClick={() => void submit()} disabled={busy || (needsReason && !comment.trim()) || missingField || (pick && !delegateTo) || (action === 'Reassign' && !task)}>
           {busy ? t('approvalBar.sending') : t(`approval.do.${action}`)}
         </Button>
       </DialogActions>

@@ -59,7 +59,11 @@ public sealed record AvailableActionsDto(
     bool CanDelegate,
     bool CanCancel,
     bool CanRetry,
-    IReadOnlyList<FieldValueDto> RequiredFields);
+    IReadOnlyList<FieldValueDto> RequiredFields,
+    IReadOnlyList<ReassignableTaskDto>? Reassignable = null);
+
+/// <summary>An open task of the current stage that an administrator of the tasks may give to someone else.</summary>
+public sealed record ReassignableTaskDto(Guid WorkItemId, Guid AssigneeUserId, string AssigneeName);
 
 public sealed record InstanceDetailDto(InstanceSummaryDto Summary, ApprovalStatusInfo Status, IReadOnlyList<FieldValueDto> Record, AvailableActionsDto Actions);
 
@@ -153,6 +157,13 @@ internal sealed class ApprovalQueries(WorkflowDbContext db, ApprovalEngine engin
 
         var running = instance.Status is InstanceStatus.InProgress or InstanceStatus.Failed;
         var canManage = mine.LegalEntitiesFor(WorkflowPermissions.ProcessesManage) is null;
+        var reassignable = instance.Status == InstanceStatus.InProgress && mine.LegalEntitiesFor(WorkflowPermissions.TasksReassign) is null
+            ? await db.WorkItems.AsNoTracking()
+                .Where(w => w.InstanceId == instance.Id && w.Status == WorkItemStatus.Pending && w.StepId == instance.WaitingStepId)
+                .OrderBy(w => w.CreatedAt)
+                .Select(w => new ReassignableTaskDto(w.Id, w.AssigneeUserId, w.AssigneeName))
+                .ToListAsync(cancellationToken).ConfigureAwait(false)
+            : [];
         var actions = new AvailableActionsDto(
             item?.Id,
             step is not null,
@@ -164,7 +175,8 @@ internal sealed class ApprovalQueries(WorkflowDbContext db, ApprovalEngine engin
             step is null || adapter is null
                 ? []
                 : step.RequiredFields.Select(key => adapter.Screen.Fields.First(f => f.Key == key))
-                    .Select(f => new FieldValueDto(f, values?.GetValueOrDefault(f.Key))).ToList());
+                    .Select(f => new FieldValueDto(f, values?.GetValueOrDefault(f.Key))).ToList(),
+            reassignable);
 
         return Result.Success(new InstanceDetailDto(Summary(instance), await engine.StatusOfAsync(instance, cancellationToken).ConfigureAwait(false), record, actions));
     }

@@ -10,6 +10,7 @@ internal static class WorkflowPermissions
     public const string RequestsCreate = "workflow.requests.create";
     public const string RequestsViewAll = "workflow.requests.view";
     public const string AlertsManage = "workflow.alerts.manage";
+    public const string TasksReassign = "workflow.tasks.reassign";
 
     private const string GroupAr = "الاعتمادات";
     private const string GroupEn = "Approvals";
@@ -22,5 +23,6 @@ internal static class WorkflowPermissions
         new(RequestsCreate, GroupAr, GroupEn, "إنشاء الطلبات الداخلية", "Create internal requests"),
         new(RequestsViewAll, GroupAr, GroupEn, "عرض جميع الطلبات الداخلية", "View all internal requests"),
         new(AlertsManage, GroupAr, GroupEn, "إعداد التنبيهات (تشغيلها وأيامها)", "Set up alerts (on or off, and their days)"),
+        new(TasksReassign, GroupAr, GroupEn, "إعادة تعيين مهام الاعتماد المفتوحة لشخص آخر (مدير النظام)", "Reassign open approval tasks to someone else (system administrator)"),
     ];
 }

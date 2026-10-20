@@ -521,7 +521,8 @@
     "validation_payroll_gosi_invoice": "أدخل مبلغ الفاتورة (صفر أو أكثر).",
     "validation_payroll_gosi_wage": "أدخل الأجر الخاضع ورقم التأمينات اللذين تحتاجهما المهمة.",
     "conflict_payroll_payslip_not_approved": "لا تُرسل القسائم بالبريد إلا بعد اعتماد المسير.",
-    "validation_payroll_email_not_configured": "لا يوجد بريد إرسال مضبوط على الخادم."
+    "validation_payroll_email_not_configured": "لا يوجد بريد إرسال مضبوط على الخادم.",
+    "validation_approval_reassign_invalid": "لا يمكن تعيين المهمة لهذا الشخص: هو صاحبها الآن، أو من قدّم الطلب، أو لديه المهمة بالفعل."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -736,7 +737,8 @@
       "Reject": "رفض",
       "Return": "إرجاع للتعديل",
       "Delegate": "تفويض المهمة",
-      "Cancel": "إلغاء الاعتماد"
+      "Cancel": "إلغاء الاعتماد",
+      "Reassign": "إعادة تعيين المهمة"
     },
     "by": "بواسطة {{name}}",
     "byOnBehalf": "بواسطة {{name}} نيابة عن {{original}}",
@@ -773,7 +775,8 @@
       "Completed": "انتهت العملية",
       "Canceled": "أُلغي الاعتماد",
       "Failed": "توقف بخطأ",
-      "Retried": "إعادة المحاولة"
+      "Retried": "إعادة المحاولة",
+      "Reassigned": "إعادة تعيين"
     },
     "decided": {
       "Approved": "اعتمدتُ",
@@ -786,8 +789,14 @@
       "Reject": "رفض",
       "Return": "إرجاع",
       "Delegate": "تفويض",
-      "Cancel": "إلغاء الاعتماد"
-    }
+      "Cancel": "إلغاء الاعتماد",
+      "Reassign": "إعادة التعيين"
+    },
+    "reassign": "إعادة تعيين المهمة",
+    "reassignTask": "المهمة (صاحبها الحالي)",
+    "reassignFrom": "صاحب المهمة الآن: {{name}}",
+    "reassignTo": "تعيين إلى",
+    "reassignHint": "تنتقل المهمة إلى من تختاره، ويمكنك اختيار نفسك. لا تُعيَّن لمن قدّم الطلب. يُسجل السبب في سجل الاعتماد، ويُبلَّغ صاحبها السابق والجديد."
   },
   "tasks": {
     "title": "صندوق المهام",

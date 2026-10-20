@@ -309,6 +309,9 @@ public enum WorkItemStatus
 
     /// <summary>Handed to another user (who received a new work item).</summary>
     Delegated,
+
+    /// <summary>Moved to another user by an administrator of the tasks (who received a new work item).</summary>
+    Reassigned,
 }
 
 /// <summary>An approval task of one person (like a CRM approval task owned by a user).</summary>
@@ -412,6 +415,9 @@ public enum HistoryKind
     Canceled,
     Failed,
     Retried,
+
+    /// <summary>An administrator of the tasks moved a task from its holder to someone else, with the reason.</summary>
+    Reassigned,
 }
 
 /// <summary>One entry of an approval's history: written once, never changed or deleted.</summary>

@@ -21,6 +21,8 @@ internal static class WorkflowEndpoints
 
     public sealed record DelegateRequest(Guid UserId, string? Comment);
 
+    public sealed record ReassignRequest(Guid UserId, string? Reason);
+
     public sealed record ReasonRequest(string? Reason);
 
     public static void MapWorkflowEndpoints(this IEndpointRouteBuilder endpoints)
@@ -87,6 +89,11 @@ internal static class WorkflowEndpoints
 
         group.MapPost("/work-items/{id:guid}/delegate", async (Guid id, DelegateRequest r, ApprovalEngine engine, CancellationToken ct) =>
             ToHttp(await engine.DelegateAsync(id, r.UserId, r.Comment, ct).ConfigureAwait(false)));
+
+        // An administrator of the tasks gives an open task to someone else (themself included), with the reason.
+        group.MapPost("/work-items/{id:guid}/reassign", async (Guid id, ReassignRequest r, ApprovalEngine engine, CancellationToken ct) =>
+                ToHttp(await engine.ReassignAsync(id, r.UserId, r.Reason, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.TasksReassign, companyWide: true);
 
         // ---- One approval: participants and monitors.
         group.MapGet("/instances/{id:guid}", async (Guid id, ApprovalQueries queries, CancellationToken ct) =>

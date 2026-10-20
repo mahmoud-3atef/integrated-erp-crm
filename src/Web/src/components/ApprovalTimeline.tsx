@@ -5,6 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ForwardIcon from '@mui/icons-material/Forward';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
@@ -25,6 +26,7 @@ const look: Record<string, { icon: ReactNode; color: string }> = {
   Rejected: { icon: <CloseIcon />, color: tokens.danger },
   Returned: { icon: <ReplyIcon />, color: tokens.warning },
   Delegated: { icon: <ForwardIcon />, color: tokens.teal },
+  Reassigned: { icon: <SwapHorizIcon />, color: tokens.gold },
   ConditionEvaluated: { icon: <AccountTreeOutlinedIcon />, color: tokens.gold },
   RecordUpdated: { icon: <EditNoteOutlinedIcon />, color: tokens.teal },
   Notified: { icon: <NotificationsNoneOutlinedIcon />, color: tokens.info },

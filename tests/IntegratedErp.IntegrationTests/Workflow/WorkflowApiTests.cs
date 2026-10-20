@@ -293,6 +293,48 @@ public sealed class WorkflowApiTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task An_administrator_reassigns_an_open_task_with_a_reason_but_never_to_the_submitter()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var adminId = await MeAsync(_adminClient);
+        var employeeId = await MeAsync(_employeeClient);
+        await PublishAsync(new
+        {
+            steps = new object[]
+            {
+                new { type = "approval", id = "manager", nameAr = "المدير", nameEn = "Manager", assignees = new object[] { new { kind = "User", userId = _managerId } } },
+            },
+        });
+        var id = await NewRequestAsync("شراء شاشات", 1200m, null);
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
+        var managerTask = Assert.Single(await InboxAsync(_managerClient));
+        var taskId = managerTask.GetProperty("id").GetGuid();
+
+        // The administrator sees the manager's open task as one to reassign; the reviewer may not reassign at all.
+        var detail = await Json(await _adminClient.GetAsync($"/api/v1/workflow/instances/{managerTask.GetProperty("instanceId").GetGuid()}"));
+        var open = Assert.Single(detail.GetProperty("actions").GetProperty("reassignable").EnumerateArray());
+        Assert.Equal(_managerId, open.GetProperty("assigneeUserId").GetGuid());
+        Assert.Equal(HttpStatusCode.Forbidden, (await _reviewerClient.PostAsJsonAsync($"/api/v1/workflow/work-items/{taskId}/reassign", new { userId = _reviewerId, reason = "اختبار" })).StatusCode);
+
+        // A reason is required, and the submitter can never get the task.
+        Assert.Equal("validation.approval_comment_required", (await Json(await _adminClient.PostAsJsonAsync($"/api/v1/workflow/work-items/{taskId}/reassign", new { userId = adminId, reason = " " }))).GetProperty("title").GetString());
+        Assert.Equal("validation.approval_reassign_invalid", (await Json(await _adminClient.PostAsJsonAsync($"/api/v1/workflow/work-items/{taskId}/reassign", new { userId = employeeId, reason = "اختبار" }))).GetProperty("title").GetString());
+
+        // To the administrator: the manager's inbox empties, the administrator approves on the manager's behalf.
+        Assert.Equal(HttpStatusCode.NoContent, (await _adminClient.PostAsJsonAsync($"/api/v1/workflow/work-items/{taskId}/reassign", new { userId = adminId, reason = "اختبار المسار" })).StatusCode);
+        Assert.Empty(await InboxAsync(_managerClient));
+        Assert.Equal(HttpStatusCode.Conflict, (await DecideAsync(_managerClient, managerTask, "Approve", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_adminClient, Assert.Single(await InboxAsync(_adminClient)), "Approve", null)).StatusCode);
+
+        var request = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
+        Assert.Equal("Approved", request.GetProperty("status").GetString());
+        var history = request.GetProperty("approval").GetProperty("history").EnumerateArray().ToList();
+        var moved = history.Single(h => h.GetProperty("kind").GetString() == "Reassigned");
+        Assert.Equal("اختبار المسار", moved.GetProperty("comment").GetString());
+        Assert.Equal(_manager, history.Last(h => h.GetProperty("kind").GetString() == "Approved").GetProperty("onBehalfOf").GetString());
+    }
+
+    [SkippableFact]
     public async Task Without_a_matching_process_or_approver_nothing_starts_and_requests_can_be_withdrawn()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");

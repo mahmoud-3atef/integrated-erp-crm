@@ -305,6 +305,8 @@ export interface AvailableActions {
   canCancel: boolean;
   canRetry: boolean;
   requiredFields: FieldValue[];
+  /** Open tasks of the current stage an administrator of the tasks may give to someone else. */
+  reassignable?: { workItemId: string; assigneeUserId: string; assigneeName: string }[] | null;
 }
 
 export interface InstanceDetail {
@@ -381,6 +383,7 @@ export const workflowApi = {
   decide: (workItemId: string, decision: Decision, comment: string, fields: Record<string, string | null>, idempotencyKey?: string) =>
     request<void>('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields }, idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined),
   delegate: (workItemId: string, userId: string, comment: string) => request<void>('POST', `${base}/work-items/${workItemId}/delegate`, { userId, comment }),
+  reassign: (workItemId: string, userId: string, reason: string) => request<void>('POST', `${base}/work-items/${workItemId}/reassign`, { userId, reason }),
   cancel: (instanceId: string, reason: string) => request<void>('POST', `${base}/instances/${instanceId}/cancel`, { reason }),
   retry: (instanceId: string) => request<void>('POST', `${base}/instances/${instanceId}/retry`),
   people: () => request<MemberOption[]>('GET', `${base}/people`),

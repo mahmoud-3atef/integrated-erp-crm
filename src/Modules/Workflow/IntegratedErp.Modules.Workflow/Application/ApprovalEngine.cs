@@ -313,6 +313,63 @@ internal sealed partial class ApprovalEngine(
         return await SaveAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// An administrator of the tasks (<see cref="WorkflowPermissions.TasksReassign"/>) moves an open task of the current
+    /// stage from its holder to another member, themself included, with a reason. The new holder decides as usual, on the
+    /// former holder's behalf in the history; never the submitter, so nobody approves their own request.
+    /// </summary>
+    public async Task<Result> ReassignAsync(Guid workItemId, Guid toUserId, string? reason, CancellationToken cancellationToken)
+    {
+        var item = await db.WorkItems.FirstOrDefaultAsync(w => w.Id == workItemId, cancellationToken).ConfigureAwait(false);
+        if (item is null)
+        {
+            return Result.Failure(WorkItemNotFound);
+        }
+
+        var instance = await db.Instances.FirstAsync(i => i.Id == item.InstanceId, cancellationToken).ConfigureAwait(false);
+        if (!item.IsOpen || instance.Status != InstanceStatus.InProgress || instance.WaitingStepId != item.StepId)
+        {
+            return Result.Failure(WorkItemClosed);
+        }
+
+        reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        if (reason is null)
+        {
+            return Result.Failure(ReasonRequired);
+        }
+
+        if (reason.Length > 1000)
+        {
+            return Result.Failure(Error.Validation("approval_comment_too_long", "The comment is limited to 1000 characters."));
+        }
+
+        var members = await MembersAsync(cancellationToken).ConfigureAwait(false);
+        if (toUserId == item.AssigneeUserId || toUserId == instance.SubmittedBy || !members.TryGetValue(toUserId, out var toName))
+        {
+            return Result.Failure(Error.Validation("approval_reassign_invalid", "The task cannot be given to this person (its holder, or the one who submitted it)."));
+        }
+
+        if (await db.WorkItems.AnyAsync(w => w.InstanceId == instance.Id && w.StepId == item.StepId && w.Round == item.Round && w.AssigneeUserId == toUserId && w.Status == WorkItemStatus.Pending, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(Error.Validation("approval_reassign_invalid", "This person already has the task."));
+        }
+
+        var step = (ApprovalStep)DefinitionRules.Walk((await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false)).Steps).First(s => s.Id == item.StepId);
+        var now = clock.UtcNow;
+        item.Decide(WorkItemStatus.Reassigned, reason, now);
+        db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, item.StepId, item.StepNameAr, item.StepNameEn, item.Round, toUserId, toName, now, item.DueAt, item.AssigneeUserId));
+        History(instance, HistoryKind.Reassigned, step, actor: true, comment: reason, details: JsonSerializer.Serialize(new { from = item.AssigneeName, to = toName }));
+        QueueNotification([toUserId], instance, "workflow.task_assigned",
+            $"بانتظار اعتمادك: {instance.ProcessNameAr}", $"Awaiting your approval: {instance.ProcessNameEn}",
+            $"عيّن إليك {user.DisplayName} مهمة «{step.NameAr}» في «{instance.Title}» بدل {item.AssigneeName}.", $"{user.DisplayName} assigned “{step.NameEn}” on “{instance.Title}” to you in place of {item.AssigneeName}.",
+            "/workflow/inbox");
+        QueueNotification([item.AssigneeUserId], instance, "workflow.task_reassigned",
+            $"أُعيد تعيين مهمة: {instance.ProcessNameAr}", $"Task reassigned: {instance.ProcessNameEn}",
+            $"نقل {user.DisplayName} مهمة «{step.NameAr}» في «{instance.Title}» إلى {toName}: {reason}", $"{user.DisplayName} moved “{step.NameEn}” on “{instance.Title}” to {toName}: {reason}",
+            "/workflow/inbox");
+        return await SaveAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>The submitter withdraws, or an administrator of processes cancels.</summary>
     public async Task<Result> CancelAsync(Guid instanceId, string? reason, bool canManage, CancellationToken cancellationToken)
     {
