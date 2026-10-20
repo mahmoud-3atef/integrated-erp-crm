@@ -3756,7 +3756,7 @@
       "opening": "Opening balance",
       "adjustment": "Adjust the balance",
       "openingReason": "Opening balance",
-      "openingHint": "The employee's balance on a date (once per type). The monthly accrual is added after it.",
+      "openingHint": "The employee's balance on a date (once per type). The monthly accrual is added after it; any accrual recorded before the date is taken back, as the balance includes it.",
       "adjustmentHint": "Add or take days with a reason recorded in the balance entries.",
       "asOf": "As of",
       "date": "Date",
@@ -3769,7 +3769,8 @@
       "Consumption": "Leave",
       "CarryOver": "Carry-over",
       "Adjustment": "Adjustment",
-      "Reversal": "Leave cancelled"
+      "Reversal": "Leave cancelled",
+      "AccrualReversal": "Accrual included in the opening"
     }
   },
   "leaveBalances": {
@@ -3777,7 +3778,7 @@
     "intro": "A balance is entries: opening, monthly accrual, consumption on approval, carry-over and adjustments with a reason. No number is written over.",
     "types": "Leave types and settings",
     "import": "Import opening balances",
-    "importHint": "An Excel file with a column of employee numbers (employee or ID number) and one of balances, as of one date for all. A preview comes first. Enter the opening balances before running the accrual.",
+    "importHint": "An Excel file with a column of employee numbers (employee or ID number) and one of balances, as of one date for all. A preview comes first. Any accrual recorded before the date is taken back.",
     "key": "Number in the file",
     "previewLine": "{{rows}} rows: {{accepted}} accepted, {{rejected}} refused.",
     "apply": "Import ({{count}})",

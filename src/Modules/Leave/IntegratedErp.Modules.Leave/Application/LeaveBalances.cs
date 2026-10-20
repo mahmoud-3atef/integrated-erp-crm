@@ -67,6 +67,11 @@ internal sealed class LeaveBalances(LeaveDbContext db, IStaffDirectory staff, Le
         }
 
         db.Entries.Add(BalanceEntry.Of(employeeId, input.LeaveTypeId, input.Date, kind, input.Days, input.Reason.Trim(), null, null, user.DisplayName, clock.UtcNow));
+        if (kind == EntryKind.Opening)
+        {
+            await ReverseIncludedAccrualsAsync(employeeId, input.LeaveTypeId, input.Date, cancellationToken).ConfigureAwait(false);
+        }
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
@@ -242,6 +247,7 @@ internal sealed class LeaveBalances(LeaveDbContext db, IStaffDirectory staff, Le
             foreach (var (employee, days) in accepted.Where(a => a.Days > 0))
             {
                 db.Entries.Add(BalanceEntry.Of(employee, typeId, asOf, EntryKind.Opening, days, "رصيد افتتاحي (ملف Excel)", null, null, user.DisplayName, clock.UtcNow));
+                await ReverseIncludedAccrualsAsync(employee, typeId, asOf, cancellationToken).ConfigureAwait(false);
             }
 
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -299,6 +305,37 @@ internal sealed class LeaveBalances(LeaveDbContext db, IStaffDirectory staff, Le
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// An opening balance entered after the accrual ran already includes the accrual before its date: those accruals are
+    /// taken back (a whole month before the date, the part before it of the month it falls in), each as its own entry so
+    /// the history shows it. The balance is then right whatever was entered first.
+    /// </summary>
+    private async Task ReverseIncludedAccrualsAsync(Guid employeeId, Guid typeId, DateOnly asOf, CancellationToken cancellationToken)
+    {
+        var accruals = await db.Entries.AsNoTracking()
+            .Where(e => e.EmployeeId == employeeId && e.LeaveTypeId == typeId && e.Kind == EntryKind.Accrual && e.Period != null)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var reversed = (await db.Entries.AsNoTracking()
+            .Where(e => e.EmployeeId == employeeId && e.LeaveTypeId == typeId && e.Kind == EntryKind.AccrualReversal)
+            .Select(e => e.Reason).ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
+        foreach (var a in accruals)
+        {
+            if (!TryPeriod(a.Period!, out var first))
+            {
+                continue;
+            }
+
+            var last = first.AddMonths(1).AddDays(-1);
+            var share = last < asOf ? 1m : first < asOf ? (decimal)(asOf.DayNumber - first.DayNumber) / (last.DayNumber - first.DayNumber + 1) : 0m;
+            var days = decimal.Round(a.Days * share, 2);
+            var reason = $"مشمول في الرصيد الافتتاحي: {a.Reason}";
+            if (days > 0 && !reversed.Contains(reason))
+            {
+                db.Entries.Add(BalanceEntry.Of(employeeId, typeId, a.Date, EntryKind.AccrualReversal, -days, reason, null, null, user.DisplayName, clock.UtcNow));
+            }
+        }
     }
 
     private static readonly string[] Months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];

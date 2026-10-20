@@ -171,6 +171,9 @@ public enum EntryKind
 
     /// <summary>A consumption given back (a cancelled approved leave).</summary>
     Reversal,
+
+    /// <summary>An accrual taken back because an opening balance entered later already includes it.</summary>
+    AccrualReversal,
 }
 
 /// <summary>One movement of an employee's balance of a type; the balance is their sum.</summary>

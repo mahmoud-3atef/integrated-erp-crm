@@ -6,7 +6,7 @@ export type LeavePay = 'Full' | 'SickTiers' | 'Unpaid';
 export const leavePays: LeavePay[] = ['Full', 'SickTiers', 'Unpaid'];
 export type DayCount = 'Calendar' | 'Working';
 export type RequestStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Approved' | 'Cancelled';
-export type EntryKind = 'Opening' | 'Accrual' | 'Consumption' | 'CarryOver' | 'Adjustment' | 'Reversal';
+export type EntryKind = 'Opening' | 'Accrual' | 'Consumption' | 'CarryOver' | 'Adjustment' | 'Reversal' | 'AccrualReversal';
 
 export interface LeaveType {
   id: string;

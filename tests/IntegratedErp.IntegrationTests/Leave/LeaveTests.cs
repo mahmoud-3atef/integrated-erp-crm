@@ -88,6 +88,13 @@ public sealed class LeaveTests(TestDatabase database)
         Assert.True((await balances3.AccrueThroughAsync("2026-10", default)).IsSuccess);
         Assert.Equal(16.5m, (await scope3.ServiceProvider.GetRequiredService<LeaveQueries>().EmployeeAsync(mona, default))!.Balances.Single(b => b.LeaveTypeId == annual.Id).Available);
 
+        // An opening balance entered after the accrual (as of October 1st) already includes January to September:
+        // those accruals are taken back, so the balance is 30 + October's 2.5, not 30 + 25.
+        Assert.True((await balances3.AddAsync(khaled, Modules.Leave.Domain.EntryKind.Opening, new EntryInput(annual.Id, new DateOnly(2026, 10, 1), 30, "رصيد افتتاحي متأخر"), default)).IsSuccess);
+        var khaledLeave = (await scope3.ServiceProvider.GetRequiredService<LeaveQueries>().EmployeeAsync(khaled, default))!;
+        Assert.Equal(32.5m, khaledLeave.Balances.Single(b => b.LeaveTypeId == annual.Id).Available);
+        Assert.Equal(9, khaledLeave.Entries.Count(e => e.Kind == "AccrualReversal"));
+
         // Sick days by the year's tiers.
         Assert.Equal(new SickSplit(5, 5, 0), LeaveRequests.Split(25, 10));
         Assert.Equal(new SickSplit(0, 10, 5), LeaveRequests.Split(80, 15));
