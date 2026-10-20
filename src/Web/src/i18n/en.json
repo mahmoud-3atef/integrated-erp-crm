@@ -175,7 +175,8 @@
     "inactive": "Inactive",
     "empty": "No data.",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "columns": "Columns"
   },
   "errors": {
     "validation_invalid_credentials": "Incorrect user name or password.",
@@ -2198,6 +2199,33 @@
     "trail": {
       "title": "Adjustments trail ({{count}})",
       "none": "No adjustments on the timesheet."
+    },
+    "grid": {
+      "period": "Month",
+      "price": "Monthly price",
+      "salary": "Salaries",
+      "fees": "Fees",
+      "housing": "Of it housing",
+      "transport": "Of it transport",
+      "overtimeAmount": "Overtime",
+      "additions": "Customer additions",
+      "deductions": "Customer deductions",
+      "loans": "Customer loans",
+      "other": "Other costs",
+      "gosi": "GOSI",
+      "vat": "VAT",
+      "total": "With VAT",
+      "totalRow": "Total",
+      "internal": "Internal",
+      "amount": "Before VAT",
+      "net": "Worker's net",
+      "overtimeHours": "Overtime (h)",
+      "groups": {
+        "days": "Days",
+        "invoice": "Invoice",
+        "worker": "Worker"
+      },
+      "lines": "{{count}} lines"
     }
   },
   "invoices": {
@@ -2799,7 +2827,7 @@
       "housing": "Housing",
       "transport": "Transport",
       "food": "Food",
-      "other": "Other and overtime",
+      "other": "Other",
       "allowances": "Total",
       "deductions": "Deductions",
       "actions": "Actions"
@@ -2924,7 +2952,10 @@
       "legalEntity": "Commercial registration",
       "none": "Not linked",
       "saved": "The links were saved."
-    }
+    },
+    "total": "Total",
+    "totalScopeShort": "Filtered · {{count}} workers",
+    "totalAllShort": "Whole run · {{count}} workers"
   },
   "approvalBar": {
     "label": "Approval path",
@@ -4261,11 +4292,11 @@
       "basic": "Basic",
       "allowancesGroup": "Allowances and overtime",
       "housing": "Housing",
-      "other": "Other and additions",
+      "other": "Other",
       "overtime": "Overtime",
       "total": "Total",
       "deductionsGroup": "Deductions",
-      "absence": "Absence and unpaid",
+      "absence": "Absence",
       "penalties": "Penalties",
       "advances": "Advances",
       "otherDeductions": "Other",

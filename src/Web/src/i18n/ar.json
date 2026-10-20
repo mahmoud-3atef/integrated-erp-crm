@@ -175,7 +175,8 @@
     "inactive": "موقوف",
     "empty": "لا توجد بيانات.",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "columns": "الأعمدة"
   },
   "errors": {
     "validation_invalid_credentials": "اسم المستخدم أو كلمة المرور غير صحيحة.",
@@ -2198,6 +2199,33 @@
     "trail": {
       "title": "مسار التعديلات ({{count}})",
       "none": "لا تعديلات على التحضير."
+    },
+    "grid": {
+      "period": "أيام الشهر",
+      "price": "السعر الشهري",
+      "salary": "الرواتب",
+      "fees": "الرسوم",
+      "housing": "منها السكن",
+      "transport": "منها المواصلات",
+      "overtimeAmount": "الإضافي",
+      "additions": "إضافات العميل",
+      "deductions": "خصومات العميل",
+      "loans": "سلف العميل",
+      "other": "تكاليف أخرى",
+      "gosi": "التأمينات",
+      "vat": "الضريبة",
+      "total": "مع الضريبة",
+      "totalRow": "الإجمالي",
+      "internal": "داخلي",
+      "amount": "قبل الضريبة",
+      "net": "صافي العامل",
+      "overtimeHours": "إضافي (س)",
+      "groups": {
+        "days": "الأيام",
+        "invoice": "الفاتورة",
+        "worker": "العامل"
+      },
+      "lines": "{{count}} سطرًا"
     }
   },
   "invoices": {
@@ -2799,7 +2827,7 @@
       "housing": "سكن",
       "transport": "نقل",
       "food": "طعام",
-      "other": "أخرى وإضافي",
+      "other": "أخرى",
       "allowances": "الإجمالي",
       "deductions": "الاستقطاعات",
       "actions": "إجراءات"
@@ -2924,7 +2952,10 @@
       "legalEntity": "السجل التجاري",
       "none": "غير مربوط",
       "saved": "حُفظ الربط."
-    }
+    },
+    "total": "الإجمالي",
+    "totalScopeShort": "المصفّى · {{count}} عاملًا",
+    "totalAllShort": "المسير كله · {{count}} عاملًا"
   },
   "approvalBar": {
     "label": "مسار الاعتماد",
@@ -4261,11 +4292,11 @@
       "basic": "الأساسي",
       "allowancesGroup": "البدلات والإضافي",
       "housing": "سكن",
-      "other": "أخرى وإضافات",
+      "other": "أخرى",
       "overtime": "إضافي",
       "total": "الإجمالي",
       "deductionsGroup": "الاستقطاعات",
-      "absence": "غياب وبدون راتب",
+      "absence": "غياب",
       "penalties": "جزاءات",
       "advances": "سلف",
       "otherDeductions": "أخرى",

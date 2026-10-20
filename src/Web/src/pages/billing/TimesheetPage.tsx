@@ -48,6 +48,7 @@ import { PillTabs } from '../../components/ui';
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
+import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
 import { sar } from '../operations/delivery';
 import { ExcelUploadDialog } from './ExcelUploadDialog';
 import { InvoiceStatusBadge } from './invoices';
@@ -94,7 +95,7 @@ function MonthBar({ from, to, lineFrom, lineTo, absence }: { from: string; to: s
   const absent = Math.min(length, Math.ceil(absence));
   const day = 100 / total;
   return (
-    <Box sx={{ position: 'relative', height: 14, borderRadius: '4px', bgcolor: tokens.gray100, overflow: 'hidden', minWidth: 140 }}>
+    <Box sx={{ position: 'relative', height: 14, borderRadius: '4px', bgcolor: tokens.gray100, overflow: 'hidden', minWidth: 80 }}>
       <Box sx={{ position: 'absolute', insetBlock: 0, insetInlineStart: `${start * day}%`, width: `${length * day}%`, bgcolor: '#2fae73', borderRadius: '3px' }} />
       {Array.from({ length: absent }, (_, n) => (
         <Box
@@ -460,131 +461,214 @@ function Hint({ text }: { text: string }) {
   );
 }
 
+// The register's optional columns (name, days, the invoice amount and the worker's net always show).
+type RegisterColumn = 'period' | 'price' | 'salary' | 'fees' | 'housing' | 'transport' | 'overtimeAmount' | 'additions' | 'deductions' | 'loans' | 'other' | 'gosi' | 'vat' | 'total' | 'internal';
+const registerColumns: { key: RegisterColumn; group: 'days' | 'invoice' | 'worker'; value: (l: TimesheetLine) => number; signed?: boolean }[] = [
+  { key: 'price', group: 'invoice', value: (l) => l.totalPrice },
+  { key: 'salary', group: 'invoice', value: (l) => l.dueSalary - l.absenceAmount },
+  { key: 'fees', group: 'invoice', value: (l) => l.dueFees },
+  { key: 'housing', group: 'invoice', value: (l) => l.dueHousing },
+  { key: 'transport', group: 'invoice', value: (l) => l.dueTransport },
+  { key: 'overtimeAmount', group: 'invoice', value: (l) => l.overtime },
+  { key: 'additions', group: 'invoice', value: (l) => l.clientAdditions },
+  { key: 'deductions', group: 'invoice', value: (l) => -l.clientDeductions, signed: true },
+  { key: 'loans', group: 'invoice', value: (l) => -l.customerLoans, signed: true },
+  { key: 'other', group: 'invoice', value: (l) => l.otherCosts },
+  { key: 'gosi', group: 'invoice', value: (l) => l.gosi },
+];
+const registerAfter: { key: RegisterColumn; group: 'invoice' | 'worker'; value: (l: TimesheetLine) => number; signed?: boolean }[] = [
+  { key: 'vat', group: 'invoice', value: (l) => l.vat },
+  { key: 'total', group: 'invoice', value: (l) => l.invoiceTotal },
+  { key: 'internal', group: 'worker', value: (l) => l.internalAdditions - l.internalDeductions, signed: true },
+];
+const registerOptional: RegisterColumn[] = ['period', 'price', 'salary', 'fees', 'housing', 'transport', 'overtimeAmount', 'additions', 'deductions', 'loans', 'other', 'gosi', 'vat', 'total', 'internal'];
+
+/**
+ * The attendance register as a dense grid (the user's request: as many of the timesheet's columns as the screen holds):
+ * the worker, the month's bar, the days (present, absent, overtime), what the line puts on the invoice element by
+ * element, and the worker's side; the optional columns are chosen from «columns».
+ */
 function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (line: TimesheetLine) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { ar, date } = useCommercialFormat();
   const look = recordTones.timesheet;
+  const { shown, toggle } = useHiddenColumns<RegisterColumn>('timesheets.hiddenColumns', registerOptional, ['price', 'housing', 'transport', 'loans', 'other', 'gosi', 'vat']);
   const adjustments = (workerId: string) => sheet.adjustments.filter((a) => a.workerId === workerId).length;
   const sum = (pick: (l: TimesheetLine) => number) => sheet.lines.reduce((s, l) => s + pick(l), 0);
+  const before = registerColumns.filter((c) => shown(c.key));
+  const after = registerAfter.filter((c) => shown(c.key));
+  const invoiceCols = before.length + 1 + after.filter((c) => c.group === 'invoice').length;
+  const workerCols = after.filter((c) => c.group === 'worker').length + 1;
+  const label = (key: RegisterColumn) => t(`timesheets.grid.${key}`);
+  const money = (v: number, signed?: boolean) => (v === 0 ? <Box component="span" sx={{ color: tokens.gray300 }}>—</Box> : <bdi style={{ color: signed && v < 0 ? '#b8770a' : undefined }}>{sar(v)}</bdi>);
   return (
-    <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px` }}>
-      <Table
-        size="small"
-        sx={{
-          '& .MuiTableCell-root': { px: 1.25 },
-          '& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) .MuiTableCell-body': { bgcolor: '#fafcfb' },
-        }}
-      >
-        <TableHead
+    <>
+      <Stack direction="row" sx={{ justifyContent: 'flex-end', mb: 1 }}>
+        <ColumnsButton
+          columns={registerOptional.map((key) => ({ key, label: label(key), group: t(`timesheets.grid.groups.${key === 'period' ? 'days' : ([...registerColumns, ...registerAfter].find((c) => c.key === key)?.group ?? 'invoice')}`) }))}
+          shown={shown}
+          toggle={toggle}
+        />
+      </Stack>
+      <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px`, maxHeight: 720 }}>
+        <Table
+          size="small"
+          stickyHeader
           sx={{
-            '& .MuiTableRow-root': { background: look.dark },
-            '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: 'transparent', color: '#fff', borderBottom: 0, borderRadius: 0 },
+            '& .MuiTableCell-root': { px: 0.75 },
+            '& .MuiTableCell-body': { fontSize: 12, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', py: 0.6 },
+            '& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) .MuiTableCell-body': { bgcolor: '#fafcfb' },
+            '& .pin': { position: 'sticky', insetInlineStart: 0, zIndex: 2, bgcolor: '#fff', boxShadow: `inset -1px 0 0 ${tokens.gray100}` },
           }}
         >
-          <TableRow>
-            <TableCell>{t('workforce.col.name')}</TableCell>
-            <TableCell>{t('timesheets.register.month')}</TableCell>
-            <TableCell align="center">{t('timesheets.register.present')}</TableCell>
-            <TableCell align="center">{t('timesheets.register.absent')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.overtime')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.price')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.invoice')}</TableCell>
-            <TableCell align="center">{t('timesheets.col.net')}</TableCell>
-            {sheet.canEdit && <TableCell />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {sheet.lines.map((l) => (
-            <TableRow key={l.id} hover>
-              <TableCell sx={{ minWidth: 190, cursor: 'pointer' }} onClick={() => navigate(`/workforce/workers/${l.workerId}?tab=periods`)}>
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800 }}>{l.name}</Typography>
-                <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                  <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
-                    <span dir="ltr">{l.workerNo}</span> · {(ar ? l.professionAr : l.professionEn) ?? '—'}
-                  </Typography>
-                  <SourceBadge source={l.source} supplier={l.supplierName} />
-                </Stack>
+          <TableHead
+            sx={{
+              '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: look.dark, color: '#fff', borderBottom: 0, borderRadius: 0, fontSize: 11.5, lineHeight: 1.3, py: 0.6, verticalAlign: 'bottom' },
+              '& .grp': { textAlign: 'center', verticalAlign: 'middle', borderBottom: '1px solid rgba(255,255,255,.25) !important' },
+              '& tr:nth-of-type(2) th': { top: 28 },
+              '& th.pin': { zIndex: 4 },
+            }}
+          >
+            <TableRow>
+              <TableCell rowSpan={2} className="pin" sx={{ minWidth: 170 }}>
+                {t('workforce.col.name')}
               </TableCell>
-              <TableCell sx={{ minWidth: 170 }}>
-                <MonthBar from={sheet.from} to={sheet.to} lineFrom={l.lineFrom} lineTo={l.lineTo} absence={l.absenceDays} />
-                <Typography sx={{ fontSize: 11, color: tokens.gray500, mt: 0.4, whiteSpace: 'nowrap' }}>
-                  {date(l.lineFrom)} – {date(l.lineTo)} · <span dir="ltr">{l.sourceNo}</span>
-                  {l.fromOldSystem && ` · ${t('workforce.periods.oldSystem')}`}
-                </Typography>
+              <TableCell colSpan={shown('period') ? 4 : 3} className="grp">
+                {t('timesheets.grid.groups.days')}
               </TableCell>
-              <TableCell align="center">
-                <Typography sx={{ fontSize: 15, fontWeight: 800, color: look.main }}>{sar(l.workDays - l.absenceDays)}</Typography>
-                <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('timesheets.register.ofDays', { days: sar(l.workDays) })}</Typography>
+              <TableCell colSpan={invoiceCols} className="grp">
+                {t('timesheets.grid.groups.invoice')}
               </TableCell>
-              <TableCell align="center">
-                {l.absenceDays > 0 ? (
-                  <>
-                    <Typography sx={{ fontSize: 15, fontWeight: 800, color: '#e03434' }}>{sar(l.absenceDays)}</Typography>
-                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>−{sar(l.absenceAmount)}</Typography>
-                  </>
-                ) : (
-                  <Typography sx={{ color: tokens.gray300 }}>—</Typography>
-                )}
+              <TableCell colSpan={workerCols} className="grp">
+                {t('timesheets.grid.groups.worker')}
               </TableCell>
-              <TableCell align="center">
-                {l.overtimeHours > 0 ? (
-                  <>
-                    <Typography sx={{ fontSize: 13.5, fontWeight: 800, color: '#1f6fd1' }}>{t('timesheets.register.hours', { hours: sar(l.overtimeHours) })}</Typography>
-                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>+{sar(l.overtime)}</Typography>
-                  </>
-                ) : (
-                  <Typography sx={{ color: tokens.gray300 }}>—</Typography>
-                )}
-              </TableCell>
-              <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
-                {l.totalPrice > 0 ? sar(l.totalPrice) : <Typography sx={{ color: tokens.danger, fontSize: 12.5, fontWeight: 700 }}>{t('timesheets.noPriceShort')}</Typography>}
-                <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('operations.delivery.breakdown', { salary: sar(l.billSalary), fee: sar(Math.max(0, l.totalPrice - l.billSalary)) })}</Typography>
-              </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 800, color: tokens.navy800 }}>
-                {sar(l.invoiceAmount)}
-              </TableCell>
-              <TableCell align="center">{sar(l.workerNet)}</TableCell>
-              {sheet.canEdit && (
-                <TableCell>
-                  <Tooltip title={t('timesheets.adjust')}>
-                    <IconButton size="small" onClick={() => onAdjust(l)} sx={{ color: look.main }}>
-                      <EditNoteOutlinedIcon fontSize="small" />
-                      {adjustments(l.workerId) > 0 && (
-                        <Box component="span" sx={{ fontSize: 10.5, fontWeight: 800, marginInlineStart: '2px' }}>
-                          {adjustments(l.workerId)}
-                        </Box>
-                      )}
-                    </IconButton>
-                  </Tooltip>
+              {sheet.canEdit && <TableCell rowSpan={2} />}
+            </TableRow>
+            <TableRow>
+              {shown('period') && <TableCell>{label('period')}</TableCell>}
+              <TableCell align="center">{t('timesheets.register.present')}</TableCell>
+              <TableCell align="center">{t('timesheets.register.absent')}</TableCell>
+              <TableCell align="center">{t('timesheets.grid.overtimeHours')}</TableCell>
+              {before.map((c) => (
+                <TableCell key={c.key} align="right">
+                  {label(c.key)}
                 </TableCell>
-              )}
+              ))}
+              <TableCell align="right">{t('timesheets.grid.amount')}</TableCell>
+              {after.filter((c) => c.group === 'invoice').map((c) => (
+                <TableCell key={c.key} align="right">
+                  {label(c.key)}
+                </TableCell>
+              ))}
+              {after.filter((c) => c.group === 'worker').map((c) => (
+                <TableCell key={c.key} align="right">
+                  {label(c.key)}
+                </TableCell>
+              ))}
+              <TableCell align="right">{t('timesheets.grid.net')}</TableCell>
             </TableRow>
-          ))}
-          {sheet.lines.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={9} align="center" sx={{ py: 5, color: tokens.gray500 }}>
-                {t('timesheets.noLines')}
-              </TableCell>
-            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sheet.lines.map((l) => (
+              <TableRow key={l.id} hover>
+                <TableCell className="pin" sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workforce/workers/${l.workerId}?tab=periods`)}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: tokens.navy800, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.name}>
+                    {l.name}
+                  </Typography>
+                  <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span dir="ltr">{l.workerNo}</span> · {(ar ? l.professionAr : l.professionEn) ?? '—'}
+                    </Typography>
+                    {l.source !== 'Company' && <SourceBadge source={l.source} supplier={l.supplierName} />}
+                  </Stack>
+                </TableCell>
+                {shown('period') && (
+                  <TableCell sx={{ minWidth: 96 }} title={`${date(l.lineFrom)} – ${date(l.lineTo)} · ${l.sourceNo}${l.fromOldSystem ? ` · ${t('workforce.periods.oldSystem')}` : ''}`}>
+                    <MonthBar from={sheet.from} to={sheet.to} lineFrom={l.lineFrom} lineTo={l.lineTo} absence={l.absenceDays} />
+                  </TableCell>
+                )}
+                <TableCell align="center" sx={{ fontWeight: 800, color: `${look.main} !important` }}>
+                  {sar(l.workDays - l.absenceDays)}
+                </TableCell>
+                <TableCell align="center" title={l.absenceDays > 0 ? `−${sar(l.absenceAmount)}` : undefined} sx={{ fontWeight: 800, color: l.absenceDays > 0 ? '#e03434 !important' : undefined }}>
+                  {l.absenceDays > 0 ? sar(l.absenceDays) : <Box component="span" sx={{ color: tokens.gray300 }}>—</Box>}
+                </TableCell>
+                <TableCell align="center" sx={{ color: l.overtimeHours > 0 ? '#1f6fd1 !important' : undefined, fontWeight: 700 }}>
+                  {l.overtimeHours > 0 ? sar(l.overtimeHours) : <Box component="span" sx={{ color: tokens.gray300 }}>—</Box>}
+                </TableCell>
+                {before.map((c) => (
+                  <TableCell key={c.key} align="right">
+                    {c.key === 'price' && l.totalPrice <= 0 ? <Box component="span" sx={{ color: tokens.danger, fontWeight: 700 }}>{t('timesheets.noPriceShort')}</Box> : money(c.value(l), c.signed)}
+                  </TableCell>
+                ))}
+                <TableCell align="right" sx={{ fontWeight: 800, color: `${tokens.navy800} !important` }}>
+                  {sar(l.invoiceAmount)}
+                </TableCell>
+                {after.map((c) => (
+                  <TableCell key={c.key} align="right" sx={c.key === 'total' ? { fontWeight: 700 } : undefined}>
+                    {money(c.value(l), c.signed)}
+                  </TableCell>
+                ))}
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  {sar(l.workerNet)}
+                </TableCell>
+                {sheet.canEdit && (
+                  <TableCell sx={{ px: '2px !important' }}>
+                    <Tooltip title={t('timesheets.adjust')}>
+                      <IconButton size="small" onClick={() => onAdjust(l)} sx={{ color: look.main, p: 0.5 }}>
+                        <EditNoteOutlinedIcon fontSize="small" />
+                        {adjustments(l.workerId) > 0 && (
+                          <Box component="span" sx={{ fontSize: 10.5, fontWeight: 800, marginInlineStart: '2px' }}>
+                            {adjustments(l.workerId)}
+                          </Box>
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+            {sheet.lines.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={30} align="center" sx={{ py: 5, color: tokens.gray500 }}>
+                  {t('timesheets.noLines')}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+          {sheet.lines.length > 0 && (
+            <TableFooter sx={{ '& .MuiTableCell-footer': { fontSize: 12, fontWeight: 800, color: tokens.navy800, borderTop: `2px solid ${look.main}`, bgcolor: '#f6faf8', position: 'sticky', bottom: 0, px: 0.75, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' } }}>
+              <TableRow>
+                <TableCell className="pin" sx={{ bgcolor: '#f6faf8 !important' }}>
+                  {t('timesheets.grid.totalRow')}
+                  <Typography component="span" sx={{ display: 'block', fontSize: 10.5, color: tokens.gray500 }}>
+                    {t('timesheets.grid.lines', { count: sheet.lines.length })}
+                  </Typography>
+                </TableCell>
+                {shown('period') && <TableCell />}
+                <TableCell align="center" sx={{ color: `${look.main} !important` }}>{sar(sum((l) => l.workDays - l.absenceDays))}</TableCell>
+                <TableCell align="center" sx={{ color: '#e03434 !important' }}>{sar(sum((l) => l.absenceDays))}</TableCell>
+                <TableCell align="center" sx={{ color: '#1f6fd1 !important' }}>{sar(sum((l) => l.overtimeHours))}</TableCell>
+                {before.map((c) => (
+                  <TableCell key={c.key} align="right">
+                    {c.key === 'price' ? '' : sar(sum(c.value))}
+                  </TableCell>
+                ))}
+                <TableCell align="right">{sar(sum((l) => l.invoiceAmount))}</TableCell>
+                {after.map((c) => (
+                  <TableCell key={c.key} align="right">
+                    {sar(sum(c.value))}
+                  </TableCell>
+                ))}
+                <TableCell align="right">{sar(sum((l) => l.workerNet))}</TableCell>
+                {sheet.canEdit && <TableCell />}
+              </TableRow>
+            </TableFooter>
           )}
-        </TableBody>
-        {sheet.lines.length > 0 && (
-          <TableFooter sx={{ '& .MuiTableCell-footer': { fontSize: 13, fontWeight: 800, color: tokens.navy800, borderTop: `2px solid ${look.main}`, bgcolor: '#f6faf8' } }}>
-            <TableRow>
-              <TableCell colSpan={2}>{t('timesheets.register.total', { count: sheet.lines.length })}</TableCell>
-              <TableCell align="center" sx={{ color: `${look.main} !important` }}>{sar(sum((l) => l.workDays - l.absenceDays))}</TableCell>
-              <TableCell align="center" sx={{ color: '#e03434 !important' }}>{sar(sum((l) => l.absenceDays))}</TableCell>
-              <TableCell align="center" sx={{ color: '#1f6fd1 !important' }}>{sar(sum((l) => l.overtimeHours))}</TableCell>
-              <TableCell />
-              <TableCell align="center">{sar(sum((l) => l.invoiceAmount))}</TableCell>
-              <TableCell align="center">{sar(sum((l) => l.workerNet))}</TableCell>
-              {sheet.canEdit && <TableCell />}
-            </TableRow>
-          </TableFooter>
-        )}
-      </Table>
-    </TableContainer>
+        </Table>
+      </TableContainer>
+    </>
   );
 }
 

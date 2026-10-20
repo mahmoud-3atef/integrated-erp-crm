@@ -61,8 +61,19 @@ import { ApprovalBar, useRecordApproval } from '../../components/workflow/Record
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { exclusionLook, money, noteLook, RunStatusBadge, useMonthName } from './payroll';
 import { SponsorsDialog } from './RunDialogs';
+import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
 
 type TabKey = 'workers' | 'summary' | 'exclusions';
+
+// The grid's optional columns (the name, days, basic, totals and net always show).
+type WorkerColumn = 'project' | 'status' | 'housing' | 'transport' | 'food' | 'other';
+const workerOptional: WorkerColumn[] = ['project', 'status', 'housing', 'transport', 'food', 'other'];
+const workerAllowanceColumns: { key: WorkerColumn; value: (l: PayrollLine) => number; sum: (s: PayrollLinePage['sums']) => number }[] = [
+  { key: 'housing', value: (l) => l.housing, sum: (s) => s.housing },
+  { key: 'transport', value: (l) => l.transport, sum: (s) => s.transport },
+  { key: 'food', value: (l) => l.food, sum: (s) => s.food },
+  { key: 'other', value: (l) => l.otherAllowances + l.overtime + l.additions, sum: (s) => s.otherAllowances + s.overtime + s.additions },
+];
 
 /**
  * A payroll run (docs/02-target-architecture/15 §6): the header with the period and the actions, the approval bar,
@@ -299,6 +310,7 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [dense, setDense] = useState(true);
+  const { shown, toggle } = useHiddenColumns<WorkerColumn>('payroll.workers.hiddenColumns', workerOptional);
   const [data, setData] = useState<PayrollLinePage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<PayrollLine | null>(null);
@@ -339,6 +351,7 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
     </TableCell>
   );
   const rowHeight = dense ? 40 : 50;
+  const allowanceCols = workerAllowanceColumns.filter((c) => shown(c.key));
   const from = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0;
   const to = data ? Math.min(data.total, data.page * data.pageSize) : 0;
 
@@ -377,6 +390,11 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
           </Button>
         )}
         <Box sx={{ flex: 1 }} />
+        <ColumnsButton
+          columns={workerOptional.map((key) => ({ key, label: t(`payroll.cols.${key === 'status' ? 'workerStatus' : key}`), group: ['housing', 'transport', 'food', 'other'].includes(key) ? t('payroll.cols.allowancesGroup') : undefined }))}
+          shown={shown}
+          toggle={toggle}
+        />
         <ToggleButtonGroup size="small" exclusive value={dense ? 'compact' : 'comfortable'} onChange={(_, v: string | null) => v && setDense(v === 'compact')} aria-label={t('payroll.filters.density')}>
           <ToggleButton value="compact">{t('payroll.filters.compact')}</ToggleButton>
           <ToggleButton value="comfortable">{t('payroll.filters.comfortable')}</ToggleButton>
@@ -398,41 +416,41 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
               stickyHeader
               size="small"
               sx={{
-                '& th': { bgcolor: hr.muted, color: '#475569', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', py: 0.75 },
-                '& thead tr:nth-of-type(2) th': { top: 33 },
-                '& td': { height: rowHeight, whiteSpace: 'nowrap', fontSize: 12.5, borderBottomColor: '#EEF2F7' },
+                '& th, & td': { px: 0.75 },
+                '& th': { bgcolor: hr.muted, color: '#475569', fontWeight: 600, fontSize: 11.5, lineHeight: 1.3, py: 0.6, verticalAlign: 'bottom' },
+                '& th.grp': { textAlign: 'center', borderBottom: '1px solid #DBE3EE', verticalAlign: 'middle' },
+                '& thead tr:nth-of-type(2) th': { top: 30 },
+                '& td': { height: rowHeight, whiteSpace: 'nowrap', fontSize: 12, borderBottomColor: '#EEF2F7' },
                 '& .num': { fontVariantNumeric: 'tabular-nums' },
                 '& .pin': { position: 'sticky', insetInlineStart: 0, zIndex: 2, bgcolor: '#fff', boxShadow: `inset -1px 0 0 ${hr.border}` },
                 '& th.pin': { zIndex: 4, bgcolor: hr.muted },
                 '& tfoot td': { position: 'sticky', bottom: 0, bgcolor: '#F8FAFC', fontWeight: 700, borderTop: `1px solid ${hr.border}`, zIndex: 1 },
+                '& tbody tr': { cursor: 'pointer' },
               }}
             >
               <TableHead>
                 <TableRow>
-                  <TableCell rowSpan={2}>#</TableCell>
-                  <TableCell rowSpan={2} className="pin">
+                  <TableCell rowSpan={2} className="pin" sx={{ minWidth: 170 }}>
                     <ButtonBase onClick={() => sortBy('name')} sx={{ font: 'inherit', fontWeight: 600, color: 'inherit' }}>
                       {t('payroll.cols.worker')} {sort.key === 'name' && (sort.desc ? '↓' : '↑')}
                     </ButtonBase>
                   </TableCell>
-                  <TableCell rowSpan={2}>{t('payroll.cols.number')}</TableCell>
-                  {head('project', t('payroll.cols.project'))}
-                  <TableCell rowSpan={2}>{t('payroll.cols.profession')}</TableCell>
-                  <TableCell rowSpan={2}>{t('payroll.cols.workerStatus')}</TableCell>
+                  {shown('project') && head('project', t('payroll.cols.project'))}
+                  {shown('status') && <TableCell rowSpan={2}>{t('payroll.cols.workerStatus')}</TableCell>}
                   {head('days', t('payroll.cols.days'), 'right')}
                   {head('base', t('payroll.cols.base'), 'right')}
-                  <TableCell colSpan={5} align="center" sx={{ borderBottom: '1px solid #DBE3EE' }}>
+                  <TableCell colSpan={allowanceCols.length + 1} className="grp">
                     {t('payroll.cols.allowancesGroup')}
                   </TableCell>
                   {head('deductions', t('payroll.cols.deductions'), 'right')}
                   {head('net', t('payroll.cols.net'), 'right')}
-                  <TableCell rowSpan={2}>{t('payroll.cols.actions')}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell align="right">{t('payroll.cols.housing')}</TableCell>
-                  <TableCell align="right">{t('payroll.cols.transport')}</TableCell>
-                  <TableCell align="right">{t('payroll.cols.food')}</TableCell>
-                  <TableCell align="right">{t('payroll.cols.other')}</TableCell>
+                  {allowanceCols.map((c) => (
+                    <TableCell key={c.key} align="right">
+                      {t(`payroll.cols.${c.key}`)}
+                    </TableCell>
+                  ))}
                   <TableCell align="right" sortDirection={sort.key === 'allowances' ? (sort.desc ? 'desc' : 'asc') : false}>
                     <ButtonBase onClick={() => sortBy('allowances')} sx={{ font: 'inherit', fontWeight: 600, color: 'inherit' }}>
                       {t('payroll.cols.allowances')} {sort.key === 'allowances' && (sort.desc ? '↓' : '↑')}
@@ -441,58 +459,48 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.items.map((l, i) => (
-                  <TableRow key={l.id} hover>
-                    <TableCell sx={{ color: hr.textMuted }}>{from + i}</TableCell>
+                {data.items.map((l) => (
+                  <TableRow key={l.id} hover onClick={() => setOpen(l)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setOpen(l)}>
                     <TableCell className="pin">
-                      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                        <HrAvatar name={l.name} size={28} />
-                        <Typography component="span" sx={{ fontWeight: 700, fontSize: 12.5, maxWidth: 230, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.name}>
-                          {l.name}
-                        </Typography>
+                      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
+                        <HrAvatar name={l.name} size={26} />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: 12, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.name}>
+                              {l.name}
+                            </Typography>
+                            {l.notes.length > 0 && (
+                              <Tooltip title={l.notes.map((n) => t(`payroll.notes.${n}`)).join('، ')}>
+                                <Box component="span" aria-label={l.notes.map((n) => t(`payroll.notes.${n}`)).join('، ')} sx={{ flex: '0 0 auto', width: 8, height: 8, borderRadius: '50%', bgcolor: noteLook[l.notes[0]!].color }} />
+                              </Tooltip>
+                            )}
+                          </Stack>
+                          <Typography sx={{ fontSize: 10.5, color: hr.textMuted, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <bdi>{l.workerNo}</bdi> · {(i18n.language === 'ar' ? l.professionAr : l.professionEn) ?? l.professionCode ?? '—'}
+                          </Typography>
+                        </Box>
                       </Stack>
                     </TableCell>
-                    <TableCell className="num">
-                      <bdi>{l.workerNo}</bdi>
-                    </TableCell>
-                    <TableCell sx={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.projectName}>
-                      {l.projectName}
-                      {l.projects > 1 && <Box component="span" sx={{ color: hr.textMuted }}> +{l.projects - 1}</Box>}
-                    </TableCell>
-                    <TableCell>{(i18n.language === 'ar' ? l.professionAr : l.professionEn) ?? l.professionCode ?? '—'}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" sx={{ gap: 0.5 }}>
-                        {(i18n.language === 'ar' ? l.statusAr : l.statusEn) && <HrStatusBadge label={(i18n.language === 'ar' ? l.statusAr : l.statusEn)!} color={hr.success} tint="#D1FAE5" />}
-                        {l.notes.slice(0, 2).map((n) => (
-                          <HrStatusBadge key={n} label={t(`payroll.notes.${n}`)} {...noteLook[n]} />
-                        ))}
-                        {l.notes.length > 2 && (
-                          <Tooltip title={l.notes.slice(2).map((n) => t(`payroll.notes.${n}`)).join('، ')}>
-                            <Box component="span" sx={{ fontSize: 12, color: hr.textMuted }}>
-                              +{l.notes.length - 2}
-                            </Box>
-                          </Tooltip>
-                        )}
-                      </Stack>
-                    </TableCell>
+                    {shown('project') && (
+                      <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.projectName}>
+                        {l.projectName}
+                        {l.projects > 1 && <Box component="span" sx={{ color: hr.textMuted }}> +{l.projects - 1}</Box>}
+                      </TableCell>
+                    )}
+                    {shown('status') && (
+                      <TableCell>{(i18n.language === 'ar' ? l.statusAr : l.statusEn) && <HrStatusBadge label={(i18n.language === 'ar' ? l.statusAr : l.statusEn)!} color={hr.success} tint="#D1FAE5" />}</TableCell>
+                    )}
                     <TableCell align="right" className="num">
                       {money(l.paidDays)}
                     </TableCell>
                     <TableCell align="right" className="num">
                       {money(l.base)}
                     </TableCell>
-                    <TableCell align="right" className="num">
-                      {money(l.housing)}
-                    </TableCell>
-                    <TableCell align="right" className="num">
-                      {money(l.transport)}
-                    </TableCell>
-                    <TableCell align="right" className="num">
-                      {money(l.food)}
-                    </TableCell>
-                    <TableCell align="right" className="num">
-                      {money(l.otherAllowances + l.overtime + l.additions)}
-                    </TableCell>
+                    {allowanceCols.map((c) => (
+                      <TableCell key={c.key} align="right" className="num">
+                        {money(c.value(l))}
+                      </TableCell>
+                    ))}
                     <TableCell align="right" className="num" sx={{ fontWeight: 600 }}>
                       {money(l.allowances)}
                     </TableCell>
@@ -502,30 +510,28 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
                     <TableCell align="right" className="num" sx={{ fontWeight: 700, color: l.net <= 0 ? hr.danger : hr.text }}>
                       {money(l.net)}
                     </TableCell>
-                    <TableCell>
-                      <Button size="small" onClick={() => setOpen(l)} sx={{ minWidth: 0, fontWeight: 600 }}>
-                        {t('payroll.details')}
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={2} className="pin">
-                    {filtered ? t('payroll.totalScope', { count: data.sums.workers }) : t('payroll.totalAll', { count: data.sums.workers })}
+                  <TableCell className="pin">
+                    {t('payroll.total')}
+                    <Typography component="span" sx={{ display: 'block', fontSize: 10.5, color: hr.textMuted, fontWeight: 500 }}>
+                      {filtered ? t('payroll.totalScopeShort', { count: data.sums.workers }) : t('payroll.totalAllShort', { count: data.sums.workers })}
+                    </Typography>
                   </TableCell>
-                  <TableCell colSpan={4} />
+                  {(shown('project') || shown('status')) && <TableCell colSpan={(shown('project') ? 1 : 0) + (shown('status') ? 1 : 0)} />}
                   <TableCell align="right" className="num">{money(data.sums.paidDays)}</TableCell>
                   <TableCell align="right" className="num" sx={{ color: hr.primary }}>{money(data.sums.base)}</TableCell>
-                  <TableCell align="right" className="num">{money(data.sums.housing)}</TableCell>
-                  <TableCell align="right" className="num">{money(data.sums.transport)}</TableCell>
-                  <TableCell align="right" className="num">{money(data.sums.food)}</TableCell>
-                  <TableCell align="right" className="num">{money(data.sums.otherAllowances + data.sums.overtime + data.sums.additions)}</TableCell>
+                  {allowanceCols.map((c) => (
+                    <TableCell key={c.key} align="right" className="num">
+                      {money(c.sum(data.sums))}
+                    </TableCell>
+                  ))}
                   <TableCell align="right" className="num">{money(data.sums.allowances)}</TableCell>
                   <TableCell align="right" className="num" sx={{ color: '#B45309' }}>{money(data.sums.deductions)}</TableCell>
                   <TableCell align="right" className="num" sx={{ color: hr.success }}>{money(data.sums.net)}</TableCell>
-                  <TableCell />
                 </TableRow>
               </TableFooter>
             </Table>
