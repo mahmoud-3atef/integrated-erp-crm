@@ -35,6 +35,35 @@ internal sealed class StaffService(
     ICurrentUser user,
     IClock clock)
 {
+    /// <summary>Links a sign-in account to an employee (or unlinks it): one account, one employee.</summary>
+    public async Task<Result> LinkUserAsync(Guid userId, Guid? employeeId, CancellationToken cancellationToken)
+    {
+        var current = await db.Employees.Where(e => e.UserId == userId).ToListAsync(cancellationToken).ConfigureAwait(false);
+        StaffEmployee? target = null;
+        if (employeeId is { } id)
+        {
+            target = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
+            if (target is null)
+            {
+                return Result.Failure(StaffErrors.NotFound);
+            }
+
+            if (target.UserId is { } other && other != userId)
+            {
+                return Result.Failure(StaffErrors.UserTaken);
+            }
+        }
+
+        foreach (var e in current.Where(e => e.Id != employeeId))
+        {
+            e.LinkUser(null);
+        }
+
+        target?.LinkUser(userId);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     public async Task<ImportResult> ImportAsync(CancellationToken cancellationToken)
     {
         var records = await oldSystem.StaffAsync(cancellationToken).ConfigureAwait(false);

@@ -421,6 +421,11 @@ public sealed class StaffEmployee : ITenantOwned
     /// <summary>The day the employment ended (end of probation, contract not renewed, …).</summary>
     public DateOnly? EndedOn { get; private set; }
 
+    /// <summary>The employee's sign-in account (set from the users screen): who approves as their manager, and later self-service.</summary>
+    public Guid? UserId { get; private set; }
+
+    public void LinkUser(Guid? userId) => UserId = userId;
+
     /// <summary>Acting in another position until a date, with a monthly allowance (paid by the payroll).</summary>
     public Guid? ActingPositionId { get; private set; }
 
@@ -611,6 +616,7 @@ public static class StaffErrors
     public static readonly Error Contract = Error.Validation("staff_contract", "The contract's end is before its start, or its months are not valid.");
     public static readonly Error Reason = Error.Validation("staff_reason", "A salary change needs a reason.");
     public static readonly Error PositionFull = Error.Conflict("staff_position_full", "Every seat of this position is taken.");
+    public static readonly Error UserTaken = Error.Conflict("staff_user_taken", "This account is linked to another employee.");
     public static readonly Error PositionElsewhere = Error.Validation("staff_position_department", "The position belongs to another department.");
     public static readonly Error InUse = Error.Conflict("staff_in_use", "It is in use: move what uses it first.");
     public static readonly Error ActionNotFound = Error.NotFound("staff_action", "Action not found.");

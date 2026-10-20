@@ -31,3 +31,16 @@ public interface IAttendanceMonths
     /// <summary>The month's frozen figures once it is closed; null while it is open or in approval.</summary>
     Task<ClosedAttendanceMonth?> ClosedAsync(string period, CancellationToken cancellationToken);
 }
+
+/// <summary>The attendance calendar for other modules (leave): working days, and the months that can no longer change.</summary>
+public interface IAttendanceCalendar
+{
+    /// <summary>The employee's working days in a period: without their shift's rest days and the official holidays.</summary>
+    Task<int> WorkingDaysAsync(Guid employeeId, DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>The employee's first working day after a date (their return from a leave).</summary>
+    Task<DateOnly> NextWorkingDayAsync(Guid employeeId, DateOnly after, CancellationToken cancellationToken);
+
+    /// <summary>Whether any day of the period is in a month that is closing or closed.</summary>
+    Task<bool> LockedAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+}

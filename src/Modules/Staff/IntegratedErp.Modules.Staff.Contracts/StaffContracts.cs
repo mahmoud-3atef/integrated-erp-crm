@@ -24,7 +24,8 @@ public sealed record StaffMember(
     string? JobTitleEn,
     string Status,
     DateOnly? HireDate,
-    DateOnly? EndedOn);
+    DateOnly? EndedOn,
+    Guid? UserId = null);
 
 /// <summary>A department, for filters and shift assignments.</summary>
 public sealed record StaffDepartment(Guid Id, string NameAr, string NameEn, Guid? ParentId);
@@ -36,4 +37,12 @@ public interface IStaffDirectory
     Task<IReadOnlyList<StaffMember>> MembersAsync(CancellationToken cancellationToken);
 
     Task<IReadOnlyList<StaffDepartment>> DepartmentsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The employee's direct manager (whoever holds the position theirs reports to; else their department's manager, or
+    /// a parent department's), with the manager's sign-in account when linked.
+    /// </summary>
+    Task<StaffManager?> ManagerAsync(Guid employeeId, CancellationToken cancellationToken);
 }
+
+public sealed record StaffManager(Guid EmployeeId, string Name, Guid? UserId);

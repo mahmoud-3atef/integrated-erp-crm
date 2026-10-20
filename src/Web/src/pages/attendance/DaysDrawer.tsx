@@ -2,6 +2,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { Alert, Box, Button, Checkbox, Collapse, FormControlLabel, LinearProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { attendanceApi, hhmm, hm, manualStatuses, type Day, type DayStatus, type EmployeeMonth, type ManualStatus } from '../../api/attendance';
 import { ErrorMessage } from '../../auth/AuthLayout';
@@ -241,6 +242,12 @@ function DayCard({ employeeId, day, canManage, onSaved }: { employeeId: string; 
           {(day.deviceLateMinutes !== null || day.deviceEarlyMinutes !== null) && ` · ${t('attendance.drawer.deviceMinutes', { late: hm(day.deviceLateMinutes ?? 0), early: hm(day.deviceEarlyMinutes ?? 0) })}`}
         </Typography>
       )}
+      {day.leaveRequestNo && (
+        <Typography sx={{ fontSize: 12.5 }}>
+          {t('attendance.drawer.leave', { type: ar ? day.leaveTypeAr : day.leaveTypeEn })} · <RouterLink to={`/hr/leave`}><bdi>{day.leaveRequestNo}</bdi></RouterLink>
+        </Typography>
+      )}
+      {day.deviceLeaveWithoutRequest && <Alert severity="warning" sx={{ py: 0 }}>{t('attendance.drawer.deviceLeave')}</Alert>}
       {day.editedByName && <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{t('attendance.drawer.edited', { by: day.editedByName, date: date(day.editedAt) })}</Typography>}
       {editable && (
         <Box sx={{ borderTop: `1px dashed ${hr.border}`, pt: 1, display: 'grid', gap: 1 }}>

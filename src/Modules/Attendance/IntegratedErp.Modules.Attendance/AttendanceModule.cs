@@ -34,6 +34,7 @@ public sealed class AttendanceModule : IModule
         services.AddScoped<MonthClosing>();
         services.AddScoped<OvertimeService>();
         services.AddScoped<IAttendanceMonths, AttendanceMonths>();
+        services.AddScoped<IAttendanceCalendar, AttendanceCalendar>();
         services.AddScoped<IApprovalRecordAdapter, MonthAdapter>();
         services.AddScoped<IApprovalRecordAdapter, OvertimeAdapter>();
         services.AddAlertProvider<AttendanceAlerts>();

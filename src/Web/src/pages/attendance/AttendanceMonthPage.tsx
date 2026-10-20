@@ -426,7 +426,7 @@ export function AttendanceMonthPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <HrStatusBadge label={t(`attendance.status.${e.status}`)} {...(e.status === 'Absent' ? { color: '#BE123C', tint: '#FFF1F2' } : { color: hr.primary, tint: '#EFF6FF' })} />
+                        <HrStatusBadge label={t(`attendance.status.${e.status}`)} {...(e.status === 'Absent' ? { color: '#BE123C', tint: '#FFF1F2' } : e.status === 'DeviceLeave' ? { color: '#B45309', tint: '#FEF3C7' } : { color: hr.primary, tint: '#EFF6FF' })} />
                       </TableCell>
                       <TableCell><bdi>{hhmm(e.in) ?? '—'}</bdi></TableCell>
                       <TableCell><bdi>{hhmm(e.out) ?? '—'}</bdi></TableCell>

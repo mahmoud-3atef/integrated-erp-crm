@@ -42,6 +42,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { ActionDialog, ActionStatusBadge, actionIcon } from './StaffActions';
 import { ContractDialog, JobDialog, PersonalDialog, SalaryDialog } from './StaffDialogs';
+import { EmployeeLeavePanel } from '../leave/leave';
 import { useService } from './staff';
 
 // The employee's file after the old system's latest employee screen (content/css/pages/hr-employee-details.css,
@@ -233,7 +234,12 @@ export function StaffProfilePage() {
             </Box>
           </Box>
         )}
-        {tab === 'leave' && <LeaveBox p={p} />}
+        {tab === 'leave' && (
+          <Box sx={{ mt: 2.25 }}>
+            <EmployeeLeavePanel employee={{ id: p.id, nameAr: p.nameAr ?? p.nameEn, nameEn: p.nameEn }} />
+            <LeaveBox p={p} />
+          </Box>
+        )}
         {tab === 'contract' && (
           <Box sx={{ display: 'grid', gap: 2.25, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, alignItems: 'start' }}>
             <ContractBox p={p} onEdit={p.canEdit ? () => setEdit('contract') : undefined} />
@@ -399,7 +405,7 @@ function LeaveBox({ p }: { p: StaffProfile }) {
   const days = t('staff.profile.fields.days');
   return (
     <Box sx={{ maxWidth: 760 }}>
-      <Section title={t('staff.profile.boxes.leave')} icon={<BeachAccessOutlinedIcon />} boxTone="green">
+      <Section title={t('staff.profile.boxes.leaveOld')} icon={<BeachAccessOutlinedIcon />} boxTone="green">
         <Field icon={<BeachAccessOutlinedIcon />} label={t('staff.profile.fields.annualLeave')} value={fmt(p.annualLeaveDays)} unit={days} />
         <Field icon={<CalendarMonthOutlinedIcon />} label={t('staff.profile.fields.leaveBalance')} value={fmt(p.leaveBalance)} unit={days} />
         <Field icon={<HistoryOutlinedIcon />} label={t('staff.profile.fields.oldConsumed')} value={fmt(p.leaveOldConsumed)} unit={days} />

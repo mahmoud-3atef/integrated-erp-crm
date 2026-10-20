@@ -294,6 +294,8 @@ const qs = (q: StaffQuery) => {
 export const staffApi = {
   employees: (q: StaffQuery) => request<StaffPage>('GET', `${base}/employees?${qs(q)}`),
   kpis: () => request<StaffKpis>('GET', `${base}/employees/kpis`),
+  userLinks: () => request<{ userId: string; employeeId: string; nameAr: string; nameEn: string }[]>('GET', `${base}/user-links`),
+  linkUser: (userId: string, employeeId: string | null) => request<void>('PUT', `${base}/user-links/${userId}`, { employeeId }),
   pick: (search: string) => request<NamedRef[]>('GET', `${base}/employees/pick?search=${encodeURIComponent(search)}`),
   profile: (id: string) => request<StaffProfile>('GET', `${base}/employees/${id}`),
   history: (id: string) => request<StaffEvent[]>('GET', `${base}/employees/${id}/history`),

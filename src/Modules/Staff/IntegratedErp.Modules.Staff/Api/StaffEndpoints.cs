@@ -56,6 +56,13 @@ internal static class StaffEndpoints
                 ToHttp(await service.ChangeSalaryAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(StaffPermissions.SalariesManage, companyWide: true);
 
+        group.MapGet("/user-links", async (StaffQueries queries, CancellationToken ct) => Results.Ok(await queries.UserLinksAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.View, companyWide: true);
+
+        group.MapPut("/user-links/{userId:guid}", async (Guid userId, UserLinkInput input, StaffService service, CancellationToken ct) =>
+                ToHttp(await service.LinkUserAsync(userId, input.EmployeeId, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+
         group.MapGet("/nationalities", async (IReferenceData reference, CancellationToken ct) =>
                 Results.Ok((await reference.ListAsync(ReferenceListCodes.Nationalities, ct).ConfigureAwait(false)).Select(n => new { n.Code, n.NameAr, n.NameEn })))
             .RequirePermission(StaffPermissions.View, companyWide: true);

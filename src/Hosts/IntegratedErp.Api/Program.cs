@@ -11,6 +11,7 @@ using IntegratedErp.Modules.Billing;
 using IntegratedErp.Modules.Payroll;
 using IntegratedErp.Modules.Staff;
 using IntegratedErp.Modules.Attendance;
+using IntegratedErp.Modules.Leave;
 using IntegratedErp.Modules.Housing;
 using IntegratedErp.Modules.Operations;
 using IntegratedErp.Modules.CrmSync;
@@ -57,7 +58,7 @@ builder.Services.AddModules(
     new OperationsModule(),
     new HousingModule(),
     new BillingModule(),
-    new PayrollModule(), new StaffModule(), new AttendanceModule());
+    new PayrollModule(), new StaffModule(), new AttendanceModule(), new LeaveModule());
 
 // Development only: local test accounts (dev.*) for exercising the sign-in UI without real passwords.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Identity:DevDirectory:Enabled", false))

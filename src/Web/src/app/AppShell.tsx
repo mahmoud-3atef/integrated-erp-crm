@@ -1,3 +1,5 @@
+import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
+import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import WorkHistoryOutlinedIcon from '@mui/icons-material/WorkHistoryOutlined';
@@ -128,6 +130,8 @@ const menu: MenuSection[] = [
       { path: '/hr/employees', labelKey: 'menu.hrEmployees', icon: <BadgeOutlinedIcon />, permission: 'staff.view', companyWide: true },
       { path: '/hr/actions', labelKey: 'menu.hrActions', icon: <WorkHistoryOutlinedIcon />, permission: 'staff.view', companyWide: true },
       { path: '/hr/attendance', labelKey: 'menu.hrAttendance', icon: <AccessTimeOutlinedIcon />, permission: 'attendance.view', companyWide: true },
+      { path: '/hr/leave', labelKey: 'menu.hrLeave', icon: <BeachAccessOutlinedIcon />, permission: 'leave.view', companyWide: true },
+      { path: '/hr/leave-balances', labelKey: 'menu.hrLeaveBalances', icon: <BalanceOutlinedIcon />, permission: 'leave.view', companyWide: true },
       { path: '/hr/shifts', labelKey: 'menu.hrShifts', icon: <EventNoteOutlinedIcon />, permission: 'attendance.view', companyWide: true },
       { path: '/hr/structure', labelKey: 'menu.hrStructure', icon: <AccountTreeOutlinedIcon />, permission: 'staff.view', companyWide: true },
       { path: '/hr/catalog', labelKey: 'menu.hrCatalog', icon: <CategoryOutlinedIcon />, permission: 'staff.view', companyWide: true },

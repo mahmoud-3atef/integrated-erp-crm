@@ -78,7 +78,9 @@ public sealed class AttendanceTests(TestDatabase database)
         Assert.True((await importer.ApplyAsync(File(), null, "sep.xlsx", default)).IsSuccess);
         monaRow = (await queries.EmployeesAsync("2026-09", new MonthQuery(null, "منى", null, null, null, null, false, 1, 25), default))!.Rows.Single();
         Assert.Equal((0, 0, 0m, "Complete"), (monaRow.Absent, monaRow.MissingPunches, monaRow.Deduction, monaRow.State));
-        Assert.Empty((await queries.ExceptionsAsync("2026-09", null, default))!);
+        // Raed's leave is only in the fingerprint system: an exception until a leave request covers it.
+        var left = Assert.Single((await queries.ExceptionsAsync("2026-09", null, default))!);
+        Assert.Equal((raed, "DeviceLeave"), (left.EmployeeId, left.Status));
 
         // Two hours of overtime for Mona, approved: counted in the month.
         var overtime = scope2.ServiceProvider.GetRequiredService<OvertimeService>();

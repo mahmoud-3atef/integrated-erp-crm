@@ -48,6 +48,10 @@ public sealed record SalaryDto(Guid Id, DateOnly EffectiveFrom, decimal Basic, d
 
 public sealed record NamedRef(Guid Id, string NameAr, string NameEn);
 
+public sealed record UserLinkDto(Guid UserId, Guid EmployeeId, string NameAr, string NameEn);
+
+public sealed record UserLinkInput(Guid? EmployeeId);
+
 public sealed record StaffProfileDto(
     Guid Id,
     string EmployeeNo,
@@ -285,6 +289,12 @@ internal sealed class StaffQueries(StaffDbContext db, ILegalEntityDirectory lega
             titles.Select(j => new JobTitleDto(j.Id, j.NameAr, j.NameEn, j.OccupationCode, j.IsActive, positions.Count(p => p.JobTitleId == j.Id))).ToList(),
             grades.Select(g => new GradeDto(g.Id, g.Code, g.NameAr, g.MinBasic, g.MaxBasic, g.IsActive, positions.Count(p => p.GradeId == g.Id))).ToList());
     }
+
+    /// <summary>The employee linked to each sign-in account.</summary>
+    public async Task<IReadOnlyList<UserLinkDto>> UserLinksAsync(CancellationToken cancellationToken) =>
+        await db.Employees.AsNoTracking().Where(e => e.UserId != null)
+            .Select(e => new UserLinkDto(e.UserId!.Value, e.Id, (e.NameAr ?? e.NameEn) + " · " + e.EmployeeNo, e.NameEn))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <summary>Employees for a picker (a department's manager): number and name.</summary>
     public async Task<IReadOnlyList<NamedRef>> PeopleAsync(string? search, CancellationToken cancellationToken)

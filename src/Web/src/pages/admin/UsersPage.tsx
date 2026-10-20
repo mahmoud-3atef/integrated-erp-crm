@@ -5,6 +5,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import {
   Box,
   Button,
+  Autocomplete,
   Dialog,
   DialogActions,
   DialogContent,
@@ -28,6 +29,7 @@ import {
 } from '@mui/material';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { staffApi } from '../../api/staff';
 import { accessApi, localName, type Assignment, type LegalEntity, type Member, type Role } from '../../api/access';
 import { errorKey } from '../../api/auth';
 import { useSession } from '../../app/session';
@@ -233,6 +235,28 @@ function MemberDialog({ member, roles, entities, onClose, onSaved }: MemberDialo
   const theme = useTheme();
   const phone = useMediaQuery(theme.breakpoints.down('sm'));
   const [rows, setRows] = useState<Assignment[]>(member.roles);
+  const { can } = useSession();
+  const canLink = can('staff.manage', true);
+  const [employee, setEmployee] = useState<{ id: string; nameAr: string; nameEn: string } | null>(null);
+  const [linked, setLinked] = useState<string | null>(null);
+  const [people, setPeople] = useState<{ id: string; nameAr: string; nameEn: string }[]>([]);
+  const [search, setSearch] = useState('');
+  useEffect(() => {
+    if (!can('staff.view', true)) return;
+    staffApi
+      .userLinks()
+      .then((links) => {
+        const mine = links.find((l) => l.userId === member.userAccountId);
+        setEmployee(mine ? { id: mine.employeeId, nameAr: mine.nameAr, nameEn: mine.nameEn } : null);
+        setLinked(mine?.employeeId ?? null);
+      })
+      .catch(() => undefined);
+  }, [member.userAccountId, can]);
+  useEffect(() => {
+    if (!canLink) return;
+    const timer = setTimeout(() => staffApi.pick(search).then(setPeople).catch(() => setPeople([])), 250);
+    return () => clearTimeout(timer);
+  }, [search, canLink]);
   const [active, setActive] = useState(member.isActive);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -247,6 +271,9 @@ function MemberDialog({ member, roles, entities, onClose, onSaved }: MemberDialo
         await accessApi.setActive(member.membershipId, active);
       }
       await accessApi.setRoles(member.membershipId, rows.filter((r) => r.roleId));
+      if (canLink && (employee?.id ?? null) !== linked) {
+        await staffApi.linkUser(member.userAccountId, employee?.id ?? null);
+      }
       onSaved();
     } catch (failure) {
       setError(errorKey(failure));
@@ -261,6 +288,26 @@ function MemberDialog({ member, roles, entities, onClose, onSaved }: MemberDialo
       <DialogContent dividers>
         <ErrorMessage messageKey={error} />
         <FormControlLabel control={<Switch checked={active} onChange={(e) => setActive(e.target.checked)} />} label={t('users.active')} sx={{ mb: 2 }} />
+        {can('staff.view', true) && (
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="subtitle1">{t('users.employee')}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {t('users.employeeIntro')}
+            </Typography>
+            <Autocomplete
+              size="small"
+              disabled={!canLink}
+              options={people}
+              value={employee}
+              onChange={(_, v) => setEmployee(v)}
+              onInputChange={(_, v) => setSearch(v)}
+              getOptionLabel={(o) => (i18n.language === 'ar' ? o.nameAr : o.nameEn)}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              filterOptions={(x) => x}
+              renderInput={(params) => <TextField {...params} label={t('users.employeePick')} />}
+            />
+          </Box>
+        )}
         <Typography variant="subtitle1">{t('users.roles')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t('users.rolesIntro')}

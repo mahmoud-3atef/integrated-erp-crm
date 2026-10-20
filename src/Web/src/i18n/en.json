@@ -462,7 +462,26 @@
     "validation_attendance_month_empty": "There is no attendance in this month to close.",
     "validation_attendance_reason": "Give the reason (500 characters at most).",
     "validation_attendance_overtime_fields": "Overtime is 15 minutes to 12 hours, with its reason, on a day within the employee's employment.",
-    "conflict_attendance_overtime_not_returned": "Only a returned request can be sent again."
+    "conflict_attendance_overtime_not_returned": "Only a returned request can be sent again.",
+    "not_found_leave_type": "The leave type was not found.",
+    "not_found_leave_request": "The leave request was not found.",
+    "not_found_leave_employee": "The employee was not found.",
+    "validation_leave_name": "Enter the Arabic name (100 characters at most).",
+    "validation_leave_type_rules": "The type's days are not valid (a balance type needs its days a year).",
+    "validation_leave_setting": "A setting is out of range.",
+    "validation_leave_dates": "The end is before the start, the period has no days, or the reason is too long.",
+    "validation_leave_not_employed": "The period is outside the employee's employment.",
+    "conflict_leave_overlap": "The employee has another leave in this period.",
+    "conflict_leave_balance": "The balance does not cover these days.",
+    "validation_leave_too_long": "The type allows fewer days in one request.",
+    "conflict_leave_once": "This leave is given once in the service and was taken.",
+    "conflict_leave_year_limit": "This type's days for the year are used up.",
+    "conflict_leave_month_locked": "A day of the period is in an attendance month that is closing or closed.",
+    "conflict_leave_not_returned": "Only a returned request can be sent again.",
+    "validation_leave_entry": "Give the days (not zero), the date and the reason.",
+    "conflict_leave_opening_exists": "The employee already has an opening balance for this type: correct it with an adjustment.",
+    "conflict_leave_not_cancellable": "Only an approved leave that has not started can be cancelled, with its reason.",
+    "conflict_staff_user_taken": "This account is linked to another employee."
   },
   "menu": {
     "label": "Main menu",
@@ -517,7 +536,9 @@
     "hrCatalog": "Job titles and grades",
     "hrActions": "Employment actions",
     "hrAttendance": "Attendance",
-    "hrShifts": "Shifts and calendar"
+    "hrShifts": "Shifts and calendar",
+    "hrLeave": "Leave",
+    "hrLeaveBalances": "Leave balances"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -552,7 +573,10 @@
     "addRole": "Add role",
     "removeRole": "Remove role",
     "name": "Name",
-    "userName": "User name"
+    "userName": "User name",
+    "employee": "Linked employee",
+    "employeeIntro": "The employee file of this account: as it, the direct manager approves their team's requests (and later self-service).",
+    "employeePick": "Choose the employee"
   },
   "fields": {
     "Code": "Code",
@@ -2995,7 +3019,8 @@
         "job": "Job and department",
         "salary": "Salary",
         "contract": "Contract",
-        "leave": "Leave balance"
+        "leave": "Leave balance",
+        "leaveOld": "The old system's leave figures (for reference)"
       },
       "fields": {
         "employeeNo": "Employee number",
@@ -3352,7 +3377,8 @@
       "Mission": "Work mission",
       "Excused": "Excused absence",
       "Exempt": "Exempt from fingerprint",
-      "Late": "Late"
+      "Late": "Late",
+      "DeviceLeave": "Device leave without a request"
     },
     "manual": {
       "Present": "Present",
@@ -3385,7 +3411,9 @@
       "exempt": "Exempt from the fingerprint (counted present on working days)",
       "idNumber": "ID number:",
       "grace": "{{minutes}} minutes of grace",
-      "deviceMinutes": "Device: late {{late}} · early {{early}}"
+      "deviceMinutes": "Device: late {{late}} · early {{early}}",
+      "leave": "Approved leave: {{type}}",
+      "deviceLeave": "The fingerprint system shows a leave on this day with no approved leave request in the system: record the request."
     },
     "dialog": {
       "title": "Import the fingerprint file",
@@ -3621,6 +3649,193 @@
       "no": "Number",
       "status": "Status",
       "by": "Requested by"
+    }
+  },
+  "leave": {
+    "title": "Leave",
+    "intro": "Leave requests through approval: the direct manager, then HR (and senior management above 15 days or unpaid). The balance is taken on approval, and the days show in the attendance as leave, not absence.",
+    "new": "Request leave",
+    "resubmitTitle": "Change the request and send it again",
+    "requestTitle": "{{type}} leave",
+    "employee": "Employee",
+    "type": "Leave type",
+    "allTypes": "All types",
+    "from": "From",
+    "to": "To",
+    "period": "Period",
+    "reason": "Reason / notes",
+    "substitute": "Substitute during the leave",
+    "ticket": "Travel ticket",
+    "requested": "Requested",
+    "yes": "Yes",
+    "no": "No",
+    "send": "Send for approval",
+    "resubmit": "Change and send again",
+    "cancel": "Cancel the leave",
+    "cancelHint": "An approved leave is cancelled before it starts, and its days go back to the balance. The reason is recorded.",
+    "search": "Search by name or request number…",
+    "daysCount": "{{days}} days",
+    "daysAvailable": "days available",
+    "balanceLine": "Entitlement {{perYear}} days/year · accrued this year {{accrued}} · used {{used}} · held {{reserved}}",
+    "limitLine": "Limit {{limit}} days a year · used {{used}}",
+    "requestsTitle": "Requests",
+    "entriesTitle": "Balance entries",
+    "noEntries": "No entries yet: add the opening balance; the accrual is added every month.",
+    "none": "No leave requests",
+    "noneHint": "Request leave for an employee from the button above or from the employee's file.",
+    "attachmentNote": "This type needs a document (medical report…): keep it with HR until attachments come to the request.",
+    "calendarEmpty": "No leave this month",
+    "calendarHint": "A solid bar is approved leave, a dashed one a request in approval. Click a bar to open the request.",
+    "status": {
+      "InApproval": "In approval",
+      "Returned": "Returned",
+      "Rejected": "Rejected",
+      "Approved": "Approved",
+      "Cancelled": "Cancelled"
+    },
+    "pay": {
+      "Full": "Full pay",
+      "SickTiers": "Sick tiers",
+      "Unpaid": "Unpaid"
+    },
+    "tabs": {
+      "all": "All requests",
+      "pending": "Awaiting approval ({{count}})",
+      "current": "Current and upcoming",
+      "calendar": "Leave calendar"
+    },
+    "kpi": {
+      "today": "On leave today",
+      "employees": "employees",
+      "annual": "Annual",
+      "sick": "Sick",
+      "other": "Other",
+      "pending": "Awaiting approval",
+      "requests": "requests",
+      "returned": "Returned",
+      "upcoming": "Upcoming leave (30 days)",
+      "days": "Days"
+    },
+    "cols": {
+      "no": "Number",
+      "days": "Days",
+      "status": "Status",
+      "date": "Date",
+      "entry": "Entry",
+      "balance": "Balance",
+      "by": "By"
+    },
+    "preview": {
+      "days": "Leave days",
+      "available": "Available",
+      "after": "After approval",
+      "returns": "Back at work",
+      "counted": {
+        "Calendar": "In calendar days: {{days}} days from the start to the end.",
+        "Working": "In working days: of {{days}} calendar days, rest days and official holidays are left out."
+      },
+      "sick": "Sick leave this year: {{full}} full pay · {{part}} at three quarters · {{unpaid}} unpaid",
+      "pick": "Choose the employee, the type and the period to see the days and the balance."
+    },
+    "problems": {
+      "no_days": "No leave days in this period.",
+      "not_employed": "The period is outside the employee's employment.",
+      "too_long": "The type allows fewer days in one request.",
+      "overlap": "The employee has another leave in this period.",
+      "once": "This leave is given once in the service and was taken.",
+      "year_limit": "This type's days for the year are used up.",
+      "balance": "The balance does not cover these days.",
+      "month_locked": "A day of the period is in an attendance month that is closing or closed."
+    },
+    "route": {
+      "manager": "Goes to the direct manager ({{name}}), then HR.",
+      "notLinked": "The direct manager ({{name}}) has no linked account: the approval starts with HR. Link it from the users screen.",
+      "hr": "The employee has no direct manager in the organisation: the approval starts with HR."
+    },
+    "entry": {
+      "opening": "Opening balance",
+      "adjustment": "Adjust the balance",
+      "openingReason": "Opening balance",
+      "openingHint": "The employee's balance on a date (once per type). The monthly accrual is added after it.",
+      "adjustmentHint": "Add or take days with a reason recorded in the balance entries.",
+      "asOf": "As of",
+      "date": "Date",
+      "days": "Days",
+      "signHint": "Positive to add, negative to take"
+    },
+    "entryKind": {
+      "Opening": "Opening balance",
+      "Accrual": "Accrual",
+      "Consumption": "Leave",
+      "CarryOver": "Carry-over",
+      "Adjustment": "Adjustment",
+      "Reversal": "Leave cancelled"
+    }
+  },
+  "leaveBalances": {
+    "title": "Leave balances",
+    "intro": "A balance is entries: opening, monthly accrual, consumption on approval, carry-over and adjustments with a reason. No number is written over.",
+    "types": "Leave types and settings",
+    "import": "Import opening balances",
+    "importHint": "An Excel file with a column of employee numbers (employee or ID number) and one of balances, as of one date for all. A preview comes first. Enter the opening balances before running the accrual.",
+    "key": "Number in the file",
+    "previewLine": "{{rows}} rows: {{accepted}} accepted, {{rejected}} refused.",
+    "apply": "Import ({{count}})",
+    "imported": "Opening balances imported for {{count}} employees.",
+    "problems": {
+      "unknown_employee": "Number matching no employee",
+      "bad_days": "Balance not valid",
+      "opening_exists": "Already has an opening balance"
+    },
+    "accrue": "Run the accrual through this month",
+    "accrued": "Accrual through {{period}}: {{days}} days for {{employees}} employees. Missed months were caught up; nothing is repeated.",
+    "carryOver": "Carry-over {{year}}",
+    "carried": "Carry-over {{year}}: {{days}} days above the limit taken from {{employees}} employees.",
+    "noLimit": "No carry-over limit in the settings: the whole balance carries over.",
+    "none": "No employees",
+    "cols": {
+      "perYear": "Yearly entitlement",
+      "opening": "Opening",
+      "accrued": "Accrued this year",
+      "used": "Used this year",
+      "reserved": "Held",
+      "available": "Available",
+      "sick": "Sick this year"
+    }
+  },
+  "leaveTypes": {
+    "title": "Leave types",
+    "intro": "For each type: the pay, the entitlement, how days are counted and the document needed. The defaults follow the Saudi labour law; all of it can be changed.",
+    "new": "Type",
+    "settings": "Leave settings",
+    "carryOver": "Carry-over limit to the next year (days)",
+    "carryOverHint": "Empty = no limit",
+    "permission": "Monthly permission allowance (hours)",
+    "permissionHint": "Above it counts as lateness (used with permissions in 4.6b)",
+    "processNote": "The approval process (direct manager, then HR, then senior management above 15 days or unpaid) is changed in the approval processes screen › «Leave requests».",
+    "required": "Required",
+    "balanceRule": "{{days}} days, {{senior}} after {{years}} years · monthly accrual",
+    "perYear": "{{days}} days a year",
+    "perRequest": "up to {{days}} days a request",
+    "once": "Once in the service",
+    "dayCount": {
+      "Calendar": "Calendar days",
+      "Working": "Working days"
+    },
+    "cols": {
+      "name": "Type",
+      "pay": "Pay",
+      "entitlement": "Entitlement",
+      "dayCount": "Days counted",
+      "attachment": "Document"
+    },
+    "form": {
+      "hasBalance": "Has a balance accrued monthly (like annual leave)",
+      "daysPerYear": "Days a year",
+      "maxPerRequest": "Most days a request",
+      "seniorDays": "Days after the years of service",
+      "seniorAfter": "After how many years",
+      "attachment": "Needs a document"
     }
   }
 }

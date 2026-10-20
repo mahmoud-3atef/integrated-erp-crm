@@ -5,6 +5,7 @@ using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Attendance.Domain;
 using IntegratedErp.Modules.Attendance.Infrastructure;
+using IntegratedErp.Modules.Leave.Contracts;
 using IntegratedErp.Modules.Staff.Contracts;
 using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.SharedKernel;
@@ -28,7 +29,7 @@ internal static class MonthLock
 }
 
 /// <summary>Sending the month for closing with its figures frozen, and reopening a closed month.</summary>
-internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff, AttendanceQueries queries, IApprovalService approvals, ICurrentUser user, IClock clock)
+internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff, AttendanceQueries queries, IApprovalService approvals, ICurrentUser user, IClock clock, IEnumerable<IApprovedLeaves> leaveSources)
 {
     public async Task<Result<Guid>> SubmitAsync(string period, CancellationToken cancellationToken)
     {
@@ -48,7 +49,7 @@ internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff
             return Result.Failure<Guid>(AttendanceErrors.MonthNotOpen);
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
         var lines = AttendanceQueries.Rows(book, null)
             .Select(x =>
             {

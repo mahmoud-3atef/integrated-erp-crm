@@ -103,7 +103,7 @@ public sealed class TestDatabase : IAsyncLifetime
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
         services.AddPlatformCore();
-        services.AddModules(configuration, new OrganizationModule(), new IdentityModule(), new DocumentsModule(), new WorkflowModule(), new CrmSyncModule(), new WorkforceModule(), new CommercialModule(), new OperationsModule(), new HousingModule(), new BillingModule(), new PayrollModule(), new StaffModule(), new IntegratedErp.Modules.Attendance.AttendanceModule());
+        services.AddModules(configuration, new OrganizationModule(), new IdentityModule(), new DocumentsModule(), new WorkflowModule(), new CrmSyncModule(), new WorkforceModule(), new CommercialModule(), new OperationsModule(), new HousingModule(), new BillingModule(), new PayrollModule(), new StaffModule(), new IntegratedErp.Modules.Attendance.AttendanceModule(), new IntegratedErp.Modules.Leave.LeaveModule());
         _services = services.BuildServiceProvider();
 
         await _services.GetRequiredService<DatabaseMigrator>().MigrateAsync(CancellationToken.None);

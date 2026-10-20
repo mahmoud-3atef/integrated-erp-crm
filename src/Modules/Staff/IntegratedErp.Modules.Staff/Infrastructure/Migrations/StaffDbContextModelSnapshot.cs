@@ -776,6 +776,10 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("tenant_id");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("user_id");
+
                     b.Property<Guid?>("WorkerId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("worker_id");
@@ -795,6 +799,11 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "PositionId")
                         .HasDatabaseName("ix_employee_tenant_id_position_id");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_employee_tenant_id_user_id")
+                        .HasFilter("[user_id] IS NOT NULL");
 
                     b.HasIndex("TenantId", "WorkerId")
                         .IsUnique()

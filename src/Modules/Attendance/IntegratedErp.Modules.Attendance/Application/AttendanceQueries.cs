@@ -2,6 +2,7 @@ using IntegratedErp.Modules.Attendance.Domain;
 using IntegratedErp.Modules.Attendance.Infrastructure;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Staff.Contracts;
+using IntegratedErp.Modules.Leave.Contracts;
 using IntegratedErp.Modules.Workflow.Contracts;
 using Microsoft.EntityFrameworkCore;
 
@@ -97,7 +98,11 @@ public sealed record DayDto(
     int EarlyMinutes,
     decimal Deduction,
     string? EditedByName,
-    DateTimeOffset? EditedAt);
+    DateTimeOffset? EditedAt,
+    string? LeaveTypeAr = null,
+    string? LeaveTypeEn = null,
+    string? LeaveRequestNo = null,
+    bool DeviceLeaveWithoutRequest = false);
 
 public sealed record EmployeeMonthDto(
     Guid EmployeeId,
@@ -136,7 +141,7 @@ public sealed record OvertimeDto(
 public sealed record ExceptionDto(Guid EmployeeId, string EmployeeNo, string? NameAr, string NameEn, string? DepartmentAr, string? DepartmentEn, DateOnly Date, string Status, TimeOnly? In, TimeOnly? Out, string? DeviceStatus);
 
 /// <summary>The attendance month (per commercial registration or all), its employees, an employee's days, and the exceptions.</summary>
-internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals)
+internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals, IEnumerable<IApprovedLeaves> leaveSources)
 {
     public async Task<(DateOnly From, DateOnly To)?> PeriodAsync(string period, CancellationToken cancellationToken)
     {
@@ -157,7 +162,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
         }
 
         var setting = await setup.SettingAsync(cancellationToken).ConfigureAwait(false);
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
         var rows = Rows(book, legalEntityId).ToList();
         int absence = 0, excused = 0, late = 0, early = 0, missing = 0, open = 0, lateEmployees = 0, full = 0, none = 0, allLeave = 0;
         decimal deduction = 0;
@@ -167,7 +172,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             absence += working.Count(r => r.Result.Status == DayStatus.Absent);
             excused += working.Count(r => r.Result.Status == DayStatus.Excused);
             missing += working.Count(r => r.Result.Status == DayStatus.MissingPunch);
-            open += working.Count(r => r.Result.Status == DayStatus.MissingPunch || (r.Result.Status == DayStatus.Absent && r.Stored?.ManualStatus is null && r.Stored?.Deduction is null));
+            open += working.Count(r => Open(book, m, r));
             var l = working.Sum(r => r.Result.LateMinutes);
             late += l;
             lateEmployees += l > 0 ? 1 : 0;
@@ -217,7 +222,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return null;
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
         var record = await db.Months.AsNoTracking().Include(m => m.Lines).FirstOrDefaultAsync(m => m.Period == period, cancellationToken).ConfigureAwait(false);
         var rows = record is { Status: not MonthStatus.Open }
             ? record.Lines.Where(l => q.LegalEntityId is null || l.LegalEntityId == q.LegalEntityId)
@@ -275,7 +280,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return null;
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, employeeId, cancellationToken).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, employeeId, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
         if (book.Members.Count == 0 || book.Members[0] is not { } m)
         {
             return null;
@@ -293,7 +298,8 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return new DayDto(
                 x.Date, x.Result.Status.ToString(), x.Result.IsWorkingDay, holiday?.NameAr, holiday?.NameEn, ramadan, hours.StartsAt, hours.EndsAt,
                 s?.In, s?.Out, s?.DeviceIn, s?.DeviceOut, s?.DeviceStatus, s?.DevicePermissionMinutes ?? 0, s?.DeviceLateMinutes, s?.DeviceEarlyMinutes, s?.ManualStatus?.ToString(), s?.Note, s?.Deduction,
-                x.Result.WorkedMinutes, x.Result.LateMinutes, x.Result.EarlyMinutes, x.Result.Deduction, s?.EditedByName, s?.EditedAt);
+                x.Result.WorkedMinutes, x.Result.LateMinutes, x.Result.EarlyMinutes, x.Result.Deduction, s?.EditedByName, s?.EditedAt,
+                book.LeaveOn(m.Id, x.Date)?.TypeAr, book.LeaveOn(m.Id, x.Date)?.TypeEn, book.LeaveOn(m.Id, x.Date)?.RequestNo, book.DeviceLeaveWithoutRequest(m.Id, x.Date));
         }).ToList();
         return new EmployeeMonthDto(
             m.Id, m.EmployeeNo, m.NameAr, m.NameEn, m.IdNumber, m.DepartmentAr, m.DepartmentEn, shift?.NameAr, shift?.NameEn, shift?.StartsAt, shift?.EndsAt, shift?.GraceMinutes,
@@ -307,11 +313,13 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return null;
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
         return Rows(book, legalEntityId)
             .SelectMany(x => x.Days
-                .Where(d => d.Result.Status == DayStatus.MissingPunch || (d.Result.Status == DayStatus.Absent && d.Stored?.ManualStatus is null && d.Stored?.Deduction is null))
-                .Select(d => new ExceptionDto(x.Member.Id, x.Member.EmployeeNo, x.Member.NameAr, x.Member.NameEn, x.Member.DepartmentAr, x.Member.DepartmentEn, d.Date, d.Result.Status.ToString(), d.Stored?.In, d.Stored?.Out, d.Stored?.DeviceStatus)))
+                .Where(d => Open(book, x.Member, d))
+                .Select(d => new ExceptionDto(
+                    x.Member.Id, x.Member.EmployeeNo, x.Member.NameAr, x.Member.NameEn, x.Member.DepartmentAr, x.Member.DepartmentEn, d.Date,
+                    book.DeviceLeaveWithoutRequest(x.Member.Id, d.Date) && d.Result.Status == DayStatus.Leave ? "DeviceLeave" : d.Result.Status.ToString(), d.Stored?.In, d.Stored?.Out, d.Stored?.DeviceStatus)))
             .OrderBy(e => e.Date).ThenBy(e => e.NameAr ?? e.NameEn)
             .Take(1000)
             .ToList();
@@ -365,7 +373,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
         var shift = book.ShiftFor(m, book.To);
         var absent = working.Count(d => d.Result.Status == DayStatus.Absent);
         var missing = working.Count(d => d.Result.Status == DayStatus.MissingPunch);
-        var open = missing + working.Count(d => d.Result.Status == DayStatus.Absent && d.Stored?.ManualStatus is null && d.Stored?.Deduction is null);
+        var open = working.Count(d => Open(book, m, d));
         var punched = working.Any(d => d.Stored?.In is not null || d.Stored?.Out is not null);
         var exempt = book.Settings.GetValueOrDefault(m.Id)?.Exempt ?? false;
         var state = working.Count == 0 ? "NoWorkDays"
@@ -385,6 +393,12 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             book.Overtime.GetValueOrDefault(m.Id),
             state);
     }
+
+    /// <summary>An open exception: a missing punch, an absence not yet reviewed, or a device leave without a request.</summary>
+    internal static bool Open(AttendanceBook book, StaffMember m, CalculatedDay d) =>
+        d.Result.Status == DayStatus.MissingPunch
+        || (d.Result.Status == DayStatus.Absent && d.Stored?.ManualStatus is null && d.Stored?.Deduction is null)
+        || (d.Result.Status == DayStatus.Leave && book.DeviceLeaveWithoutRequest(m.Id, d.Date));
 
     internal static bool TryParse(string period, out int year, out int month)
     {

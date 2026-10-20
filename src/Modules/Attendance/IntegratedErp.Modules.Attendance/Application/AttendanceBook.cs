@@ -1,5 +1,6 @@
 using IntegratedErp.Modules.Attendance.Domain;
 using IntegratedErp.Modules.Attendance.Infrastructure;
+using IntegratedErp.Modules.Leave.Contracts;
 using IntegratedErp.Modules.Staff.Contracts;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,10 +59,19 @@ internal sealed class AttendanceBook
 
     public Shift? DefaultShift { get; }
 
+    /// <summary>The approved leave on each employee's day.</summary>
+    public Dictionary<(Guid, DateOnly), ApprovedLeave> Leaves { get; init; } = [];
+
+    public ApprovedLeave? LeaveOn(Guid employeeId, DateOnly date) => Leaves.GetValueOrDefault((employeeId, date));
+
+    /// <summary>The fingerprint system shows a leave the system has no approved request for: an exception to review.</summary>
+    public bool DeviceLeaveWithoutRequest(Guid employeeId, DateOnly date) =>
+        Stored(employeeId, date) is { DeviceMark: DeviceMark.Leave, ManualStatus: null } && LeaveOn(employeeId, date) is null;
+
     /// <summary>Approved overtime in the period, in minutes, per employee.</summary>
     public Dictionary<Guid, int> Overtime { get; init; } = [];
 
-    public static async Task<AttendanceBook> LoadAsync(AttendanceDbContext db, IStaffDirectory staff, DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken)
+    public static async Task<AttendanceBook> LoadAsync(AttendanceDbContext db, IStaffDirectory staff, DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken, IApprovedLeaves? leaveSource = null)
     {
         var members = await staff.MembersAsync(cancellationToken).ConfigureAwait(false);
         if (employeeId is { } only)
@@ -93,8 +103,20 @@ internal sealed class AttendanceBook
         var days = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
         var overtime = await db.Overtime.AsNoTracking().Where(o => o.Status == OvertimeStatus.Approved && o.Date >= from && o.Date <= to)
             .GroupBy(o => o.EmployeeId).Select(g => new { g.Key, Minutes = g.Sum(o => o.Minutes) }).ToDictionaryAsync(x => x.Key, x => x.Minutes, cancellationToken).ConfigureAwait(false);
+        var leaves = new Dictionary<(Guid, DateOnly), ApprovedLeave>();
+        if (leaveSource is not null)
+        {
+            foreach (var l in await leaveSource.InAsync(from, to, employeeId, cancellationToken).ConfigureAwait(false))
+            {
+                for (var d = l.From < from ? from : l.From; d <= l.To && d <= to; d = d.AddDays(1))
+                {
+                    leaves[(l.EmployeeId, d)] = l;
+                }
+            }
+        }
+
         var useDevice = await db.Settings.AsNoTracking().Select(s => (bool?)s.UseDeviceMinutes).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? true;
-        return new AttendanceBook(from, to, members, settings, shifts, assignments, holidays, departments, covered, imports.ToDictionary(i => i.Id, i => (i.From, i.To)), days) { UseDeviceMinutes = useDevice, Overtime = overtime };
+        return new AttendanceBook(from, to, members, settings, shifts, assignments, holidays, departments, covered, imports.ToDictionary(i => i.Id, i => (i.From, i.To)), days) { UseDeviceMinutes = useDevice, Overtime = overtime, Leaves = leaves };
     }
 
     public IEnumerable<DateOnly> Dates()
@@ -165,7 +187,7 @@ internal sealed class AttendanceBook
         return new DayFacts(
             date,
             Employed(m, date),
-            Covered(m.Id, date, setting?.Exempt ?? false) || stored is not null,
+            Covered(m.Id, date, setting?.Exempt ?? false) || stored is not null || LeaveOn(m.Id, date) is not null,
             setting?.Exempt ?? false,
             HolidayOn(date) is not null,
             Hours(shift, date.DayOfWeek, IsRamadan(date)),
@@ -176,7 +198,8 @@ internal sealed class AttendanceBook
             stored?.ManualStatus,
             stored?.Deduction,
             device ? stored!.DeviceLateMinutes : null,
-            device ? stored!.DeviceEarlyMinutes : null);
+            device ? stored!.DeviceEarlyMinutes : null,
+            LeaveOn(m.Id, date) is not null);
     }
 
     public DayResult Calculate(StaffMember m, DateOnly date) => DayCalculator.Calculate(Facts(m, date));

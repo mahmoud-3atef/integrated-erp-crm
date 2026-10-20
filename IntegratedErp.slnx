@@ -33,6 +33,10 @@
     <Project Path="src/Modules/Identity/IntegratedErp.Modules.Identity.Contracts/IntegratedErp.Modules.Identity.Contracts.csproj" />
     <Project Path="src/Modules/Identity/IntegratedErp.Modules.Identity/IntegratedErp.Modules.Identity.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Leave/">
+    <Project Path="src/Modules/Leave/IntegratedErp.Modules.Leave.Contracts/IntegratedErp.Modules.Leave.Contracts.csproj" />
+    <Project Path="src/Modules/Leave/IntegratedErp.Modules.Leave/IntegratedErp.Modules.Leave.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Organization/">
     <Project Path="src/Modules/Organization/IntegratedErp.Modules.Organization.Contracts/IntegratedErp.Modules.Organization.Contracts.csproj" />
     <Project Path="src/Modules/Organization/IntegratedErp.Modules.Organization/IntegratedErp.Modules.Organization.csproj" />

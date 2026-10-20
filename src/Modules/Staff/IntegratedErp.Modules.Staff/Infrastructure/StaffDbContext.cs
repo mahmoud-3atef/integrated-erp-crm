@@ -155,6 +155,7 @@ internal sealed class StaffEmployeeConfiguration : IEntityTypeConfiguration<Staf
         builder.Ignore(e => e.DisplayName);
         builder.HasIndex(e => new { e.TenantId, e.EmployeeNo }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.WorkerId }).IsUnique().HasFilter("[worker_id] IS NOT NULL");
+        builder.HasIndex(e => new { e.TenantId, e.UserId }).IsUnique().HasFilter("[user_id] IS NOT NULL");
         builder.HasIndex(e => new { e.TenantId, e.DepartmentId });
         builder.HasIndex(e => new { e.TenantId, e.PositionId });
     }

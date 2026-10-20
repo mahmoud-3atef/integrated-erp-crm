@@ -133,6 +133,10 @@ export interface Day {
   deduction: number;
   editedByName: string | null;
   editedAt: string | null;
+  leaveTypeAr: string | null;
+  leaveTypeEn: string | null;
+  leaveRequestNo: string | null;
+  deviceLeaveWithoutRequest: boolean;
 }
 
 export interface EmployeeMonth {
@@ -162,7 +166,7 @@ export interface AttendanceException {
   departmentAr: string | null;
   departmentEn: string | null;
   date: string;
-  status: DayStatus;
+  status: DayStatus | 'DeviceLeave';
   in: string | null;
   out: string | null;
   deviceStatus: string | null;

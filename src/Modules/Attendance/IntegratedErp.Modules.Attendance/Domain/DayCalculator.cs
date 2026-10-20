@@ -46,7 +46,8 @@ public sealed record DayFacts(
     ManualStatus? Manual,
     decimal? Deduction,
     int? DeviceLate = null,
-    int? DeviceEarly = null);
+    int? DeviceEarly = null,
+    bool ApprovedLeave = false);
 
 public sealed record DayResult(DayStatus Status, int WorkedMinutes, int LateMinutes, int EarlyMinutes, decimal Deduction)
 {
@@ -109,6 +110,12 @@ public static class DayCalculator
         if (f.Shift.IsRestDay)
         {
             return DayStatus.Rest;
+        }
+
+        // An approved leave request: leave, whatever the punches say.
+        if (f.ApprovedLeave)
+        {
+            return DayStatus.Leave;
         }
 
         if (f.Exempt)
