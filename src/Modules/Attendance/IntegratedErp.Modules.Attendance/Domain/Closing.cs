@@ -171,6 +171,22 @@ public sealed class AttendanceMonthLine : ITenantOwned
     /// <summary>Approved overtime in the month.</summary>
     public int OvertimeMinutes { get; private set; }
 
+    /// <summary>Approved leave days in the month paid in full.</summary>
+    public decimal PaidLeaveDays { get; private set; }
+
+    /// <summary>Sick days at three quarters of the pay (the year's tiers).</summary>
+    public decimal SickPartDays { get; private set; }
+
+    /// <summary>Leave days without pay (unpaid leave and sick days past the tiers).</summary>
+    public decimal UnpaidLeaveDays { get; private set; }
+
+    public void SetLeave(decimal paid, decimal sickPart, decimal unpaid)
+    {
+        PaidLeaveDays = paid;
+        SickPartDays = sickPart;
+        UnpaidLeaveDays = unpaid;
+    }
+
     public string State { get; private set; }
 
     public static AttendanceMonthLine Of(

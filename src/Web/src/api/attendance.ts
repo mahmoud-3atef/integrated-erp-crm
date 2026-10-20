@@ -137,6 +137,8 @@ export interface Day {
   leaveTypeEn: string | null;
   leaveRequestNo: string | null;
   deviceLeaveWithoutRequest: boolean;
+  approvedPermissionMinutes: number;
+  permissionRequestNo: string | null;
 }
 
 export interface EmployeeMonth {

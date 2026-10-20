@@ -38,6 +38,23 @@ internal static class LeaveEndpoints
         group.MapPost("/requests/{id:guid}/cancel", async (Guid id, CancelInput input, LeaveRequests requests, CancellationToken ct) => ToHttp(await requests.CancelAsync(id, input.Reason, ct).ConfigureAwait(false)))
             .RequirePermission(LeavePermissions.Manage, companyWide: true);
 
+        group.MapPost("/requests/{id:guid}/return", async (Guid id, ReturnInput input, LeaveRequests requests, CancellationToken ct) => ToHttp(await requests.ConfirmReturnAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.Manage, companyWide: true);
+
+        group.MapGet("/permissions", async (Guid? employeeId, string? period, string? tab, LeaveQueries queries, CancellationToken ct) =>
+                Results.Ok(await queries.PermissionsAsync(employeeId, period, tab, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.View, companyWide: true);
+        group.MapGet("/permissions/{id:guid}", async (Guid id, LeaveQueries queries, CancellationToken ct) =>
+                await queries.PermissionAsync(id, ct).ConfigureAwait(false) is { } p ? Results.Ok(p) : Results.NotFound())
+            .RequirePermission(LeavePermissions.View, companyWide: true);
+        group.MapPost("/permissions/preview", async (PermissionInput input, Guid? requestId, LeavePermissionService service, CancellationToken ct) =>
+                await service.PreviewAsync(input, requestId, ct).ConfigureAwait(false) is var r && r.IsSuccess ? Results.Ok(r.Value) : Problem(r.Error))
+            .RequirePermission(LeavePermissions.Manage, companyWide: true);
+        group.MapPost("/permissions", async (PermissionInput input, LeavePermissionService service, CancellationToken ct) => Saved(await service.RequestAsync(input, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.Manage, companyWide: true);
+        group.MapPost("/permissions/{id:guid}/resubmit", async (Guid id, PermissionInput input, LeavePermissionService service, CancellationToken ct) => Saved(await service.ResubmitAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.Manage, companyWide: true);
+
         group.MapGet("/employees/{id:guid}", async (Guid id, LeaveQueries queries, CancellationToken ct) =>
                 await queries.EmployeeAsync(id, ct).ConfigureAwait(false) is { } e ? Results.Ok(e) : Results.NotFound())
             .RequirePermission(LeavePermissions.View, companyWide: true);

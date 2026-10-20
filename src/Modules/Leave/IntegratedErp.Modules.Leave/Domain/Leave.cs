@@ -288,7 +288,24 @@ public sealed class LeaveRequest : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The day the employee was back at work (HR confirms it after the leave).</summary>
+    public DateOnly? ReturnedOn { get; private set; }
+
+    public string? ReturnNote { get; private set; }
+
     public bool Holds => Status is RequestStatus.InApproval or RequestStatus.Approved;
+
+    /// <summary>The return is confirmed; back early, the leave ends the day before and its days are recounted.</summary>
+    public void Returned(DateOnly on, string? note, decimal? days)
+    {
+        ReturnedOn = on;
+        ReturnNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim()[..Math.Min(note.Trim().Length, 500)];
+        if (on <= To && on > From && days is { } d)
+        {
+            To = on.AddDays(-1);
+            Days = d;
+        }
+    }
 
     public static LeaveRequest Create(string requestNo, Guid employeeId, string employeeName, string by, DateTimeOffset at) => new()
     {
@@ -332,8 +349,114 @@ public sealed class LeaveRequest : ITenantOwned
     }
 }
 
+public enum PermissionKind
+{
+    /// <summary>Arriving late.</summary>
+    LateArrival,
+
+    /// <summary>Leaving early.</summary>
+    EarlyLeave,
+
+    /// <summary>Out during the day.</summary>
+    During,
+
+    /// <summary>A work mission: not taken from the monthly allowance.</summary>
+    Mission,
+}
+
+/// <summary>A permission of some hours on a day, through approval: its minutes are not counted as late or early.</summary>
+public sealed class PermissionRequest : ITenantOwned
+{
+    private PermissionRequest()
+    {
+        RequestNo = string.Empty;
+        EmployeeName = string.Empty;
+        CreatedByName = string.Empty;
+    }
+
+    public Guid Id { get; private set; }
+
+    public Guid TenantId { get; private set; }
+
+    public string RequestNo { get; private set; }
+
+    public Guid EmployeeId { get; private set; }
+
+    public string EmployeeName { get; private set; }
+
+    public DateOnly Date { get; private set; }
+
+    public TimeOnly FromTime { get; private set; }
+
+    public TimeOnly ToTime { get; private set; }
+
+    public int Minutes { get; private set; }
+
+    public PermissionKind Kind { get; private set; }
+
+    public string? Reason { get; private set; }
+
+    public Guid? ManagerUserId { get; private set; }
+
+    public RequestStatus Status { get; private set; }
+
+    public bool AwaitingApproval { get; private set; }
+
+    public string CreatedByName { get; private set; }
+
+    public DateTimeOffset CreatedAt { get; private set; }
+
+    public DateTimeOffset? DecidedAt { get; private set; }
+
+    public string? LastComment { get; private set; }
+
+    public static PermissionRequest Create(string requestNo, Guid employeeId, string employeeName, string by, DateTimeOffset at) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        RequestNo = requestNo,
+        EmployeeId = employeeId,
+        EmployeeName = employeeName.Length > 300 ? employeeName[..300] : employeeName,
+        CreatedByName = by,
+        CreatedAt = at,
+    };
+
+    public Result Set(DateOnly date, TimeOnly from, TimeOnly to, PermissionKind kind, string? reason, Guid? managerUserId)
+    {
+        var minutes = (int)(to - from).TotalMinutes;
+        if (to <= from || minutes is < 15 or > 480 || (reason?.Length ?? 0) > 500)
+        {
+            return Result.Failure(LeaveErrors.PermissionTimes);
+        }
+
+        Date = date;
+        FromTime = from;
+        ToTime = to;
+        Minutes = minutes;
+        Kind = kind;
+        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        ManagerUserId = managerUserId;
+        Status = RequestStatus.InApproval;
+        AwaitingApproval = true;
+        return Result.Success();
+    }
+
+    public void Started() => AwaitingApproval = false;
+
+    public void Ended(RequestStatus status, string? comment, DateTimeOffset at)
+    {
+        Status = status;
+        AwaitingApproval = false;
+        LastComment = comment;
+        DecidedAt = at;
+    }
+}
+
 public static class LeaveErrors
 {
+    public static readonly Error PermissionNotFound = Error.NotFound("leave_permission", "Permission request not found.");
+    public static readonly Error PermissionTimes = Error.Validation("leave_permission_times", "A permission is 15 minutes to 8 hours, its end after its start, with a reason of 500 characters at most.");
+    public static readonly Error OnLeave = Error.Conflict("leave_permission_on_leave", "The employee is on leave that day.");
+    public static readonly Error NotReturnable = Error.Conflict("leave_not_returnable", "Only an approved leave that has started can have its return confirmed, on a day after its start.");
     public static readonly Error TypeNotFound = Error.NotFound("leave_type", "Leave type not found.");
     public static readonly Error RequestNotFound = Error.NotFound("leave_request", "Leave request not found.");
     public static readonly Error EmployeeNotFound = Error.NotFound("leave_employee", "Employee not found.");

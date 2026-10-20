@@ -21,7 +21,10 @@ public sealed record ClosedAttendanceLine(
     int LateMinutes,
     int EarlyMinutes,
     decimal DeductionDays,
-    int OvertimeMinutes);
+    int OvertimeMinutes,
+    decimal PaidLeaveDays = 0,
+    decimal SickPartDays = 0,
+    decimal UnpaidLeaveDays = 0);
 
 public sealed record ClosedAttendanceMonth(string Period, DateOnly From, DateOnly To, DateTimeOffset ClosedAt, IReadOnlyList<ClosedAttendanceLine> Lines);
 

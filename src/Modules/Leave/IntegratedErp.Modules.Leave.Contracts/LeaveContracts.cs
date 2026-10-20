@@ -16,3 +16,23 @@ public interface IApprovedLeaves
     /// <summary>The approved leaves overlapping a period (one employee's, or everyone's).</summary>
     Task<IReadOnlyList<ApprovedLeave>> InAsync(DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// An approved permission's minutes on a day that the attendance does not count as late or early: within the monthly
+/// allowance (in date order), a work mission whatever the allowance.
+/// </summary>
+public sealed record ApprovedTimeOff(Guid EmployeeId, DateOnly Date, int Minutes, int Waived, string Kind, string RequestNo);
+
+public interface IApprovedTimeOff
+{
+    Task<IReadOnlyList<ApprovedTimeOff>> InAsync(DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken);
+}
+
+/// <summary>An employee's leave days in a period, by how they are paid (the sick tiers counted over the year).</summary>
+public sealed record LeavePayDays(Guid EmployeeId, decimal FullPay, decimal ThreeQuarters, decimal Unpaid);
+
+public interface ILeavePayroll
+{
+    Task<IReadOnlyList<LeavePayDays>> DaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+}
+

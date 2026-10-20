@@ -22,6 +22,27 @@ internal sealed class LeaveDbContext(DbContextOptions<LeaveDbContext> options, M
     public DbSet<BalanceEntry> Entries => Set<BalanceEntry>();
 
     public DbSet<LeaveRequest> Requests => Set<LeaveRequest>();
+
+    public DbSet<PermissionRequest> Permissions => Set<PermissionRequest>();
+}
+
+internal sealed class PermissionRequestConfiguration : IEntityTypeConfiguration<PermissionRequest>
+{
+    public void Configure(EntityTypeBuilder<PermissionRequest> builder)
+    {
+        builder.ToTable("permission");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.RequestNo).HasMaxLength(40).IsRequired();
+        builder.Property(p => p.EmployeeName).HasMaxLength(300).IsRequired();
+        builder.Property(p => p.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.Reason).HasMaxLength(500);
+        builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.LastComment).HasMaxLength(2000);
+        builder.HasIndex(p => new { p.TenantId, p.RequestNo }).IsUnique();
+        builder.HasIndex(p => new { p.TenantId, p.EmployeeId, p.Date });
+    }
 }
 
 internal sealed class LeaveSettingConfiguration : IEntityTypeConfiguration<LeaveSetting>
@@ -86,6 +107,7 @@ internal sealed class LeaveRequestConfiguration : IEntityTypeConfiguration<Leave
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(r => r.LastComment).HasMaxLength(2000);
+        builder.Property(r => r.ReturnNote).HasMaxLength(500);
         builder.Ignore(r => r.Holds);
         builder.HasIndex(r => new { r.TenantId, r.RequestNo }).IsUnique();
         builder.HasIndex(r => new { r.TenantId, r.EmployeeId, r.From });

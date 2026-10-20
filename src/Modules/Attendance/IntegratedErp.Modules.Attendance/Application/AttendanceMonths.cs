@@ -16,7 +16,7 @@ internal sealed class AttendanceMonths(AttendanceDbContext db) : IAttendanceMont
             ? null
             : new ClosedAttendanceMonth(
                 month.Period, month.From, month.To, month.ClosedAt ?? DateTimeOffset.MinValue,
-                month.Lines.Select(l => new ClosedAttendanceLine(l.EmployeeId, l.EmployeeNo, l.LegalEntityId, l.WorkDays, l.Present, l.Absent, l.Leave, l.LateMinutes, l.EarlyMinutes, l.DeductionDays, l.OvertimeMinutes)).ToList());
+                month.Lines.Select(l => new ClosedAttendanceLine(l.EmployeeId, l.EmployeeNo, l.LegalEntityId, l.WorkDays, l.Present, l.Absent, l.Leave, l.LateMinutes, l.EarlyMinutes, l.DeductionDays, l.OvertimeMinutes, l.PaidLeaveDays, l.SickPartDays, l.UnpaidLeaveDays)).ToList());
     }
 }
 

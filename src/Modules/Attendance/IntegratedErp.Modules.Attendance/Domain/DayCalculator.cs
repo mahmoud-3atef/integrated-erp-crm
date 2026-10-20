@@ -47,7 +47,8 @@ public sealed record DayFacts(
     decimal? Deduction,
     int? DeviceLate = null,
     int? DeviceEarly = null,
-    bool ApprovedLeave = false);
+    bool ApprovedLeave = false,
+    int ApprovedPermissionMinutes = 0);
 
 public sealed record DayResult(DayStatus Status, int WorkedMinutes, int LateMinutes, int EarlyMinutes, decimal Deduction)
 {
@@ -84,13 +85,19 @@ public static class DayCalculator
         if (status is DayStatus.Present or DayStatus.MissingPunch)
         {
             (worked, late, early) = Minutes(f);
+            var permission = f.ApprovedPermissionMinutes;
             if (f.DeviceLate is not null || f.DeviceEarly is not null)
             {
-                // The fingerprint system's own figures (its permissions already counted).
-                return new(status, worked, f.DeviceLate ?? late, f.DeviceEarly ?? early, f.Deduction ?? 0m);
+                // The fingerprint system's own figures (its permissions already counted), less the approved permissions.
+                late = f.DeviceLate ?? late;
+                early = f.DeviceEarly ?? early;
+            }
+            else
+            {
+                permission += f.PermissionMinutes;
             }
 
-            var waived = Math.Min(f.PermissionMinutes, late + early);
+            var waived = Math.Min(permission, late + early);
             var fromLate = Math.Min(waived, late);
             late -= fromLate;
             early -= waived - fromLate;

@@ -29,7 +29,7 @@ internal static class MonthLock
 }
 
 /// <summary>Sending the month for closing with its figures frozen, and reopening a closed month.</summary>
-internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff, AttendanceQueries queries, IApprovalService approvals, ICurrentUser user, IClock clock, IEnumerable<IApprovedLeaves> leaveSources)
+internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff, AttendanceQueries queries, IApprovalService approvals, ICurrentUser user, IClock clock, IEnumerable<IApprovedLeaves> leaveSources, IEnumerable<IApprovedTimeOff> timeOffSources, IEnumerable<ILeavePayroll> leavePayroll)
 {
     public async Task<Result<Guid>> SubmitAsync(string period, CancellationToken cancellationToken)
     {
@@ -49,7 +49,7 @@ internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff
             return Result.Failure<Guid>(AttendanceErrors.MonthNotOpen);
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault(), timeOffSources.FirstOrDefault()).ConfigureAwait(false);
         var lines = AttendanceQueries.Rows(book, null)
             .Select(x =>
             {
@@ -63,6 +63,19 @@ internal sealed class MonthClosing(AttendanceDbContext db, IStaffDirectory staff
         if (lines.Count == 0)
         {
             return Result.Failure<Guid>(AttendanceErrors.MonthEmpty);
+        }
+
+        // The leave days by pay, for the payroll.
+        if (leavePayroll.FirstOrDefault() is { } payroll)
+        {
+            var leave = (await payroll.DaysAsync(p.From, p.To, cancellationToken).ConfigureAwait(false)).ToDictionary(l => l.EmployeeId);
+            foreach (var line in lines)
+            {
+                if (leave.TryGetValue(line.EmployeeId, out var l))
+                {
+                    line.SetLeave(l.FullPay, l.ThreeQuarters, l.Unpaid);
+                }
+            }
         }
 
         if (db.Entry(month).State != EntityState.Added)

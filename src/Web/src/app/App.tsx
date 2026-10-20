@@ -36,6 +36,7 @@ import { ShiftsPage } from '../pages/attendance/ShiftsPage';
 import { AttendanceMonthLink, OvertimePage } from '../pages/attendance/Overtime';
 import { LeavePage, LeaveRequestPage } from '../pages/leave/LeavePages';
 import { LeaveBalancesPage, LeaveTypesPage } from '../pages/leave/LeaveSetupPages';
+import { PermissionPage } from '../pages/leave/permissions';
 import { BuildingPage } from '../pages/housing/BuildingPage';
 import { HousingPage } from '../pages/housing/HousingPage';
 import { InvoiceCheckPage } from '../pages/workforce/InvoiceCheckPage';
@@ -136,6 +137,7 @@ export function App() {
                 <Route path="/hr/leave/:id" element={<LeaveRequestPage />} />
                 <Route path="/hr/leave-balances" element={<LeaveBalancesPage />} />
                 <Route path="/hr/leave-types" element={<LeaveTypesPage />} />
+                <Route path="/hr/permissions/:id" element={<PermissionPage />} />
                 <Route path="/housing/buildings/:id" element={<BuildingPage />} />
                 <Route path="/workforce/invoice-check" element={<InvoiceCheckPage />} />
                 <Route path="/operations/return-orders/new" element={<ReturnOrdersPage key="new" creating />} />

@@ -95,6 +95,37 @@ public sealed class LeaveTests(TestDatabase database)
         Assert.Equal(32.5m, khaledLeave.Balances.Single(b => b.LeaveTypeId == annual.Id).Available);
         Assert.Equal(9, khaledLeave.Entries.Count(e => e.Kind == "AccrualReversal"));
 
+        // Permissions (4 hours a month): the direct manager approves; past the allowance the minutes are not waived.
+        var permits = scope3.ServiceProvider.GetRequiredService<LeavePermissionService>();
+        var first = (await permits.PreviewAsync(new PermissionInput(mona, new DateOnly(2026, 11, 16), new TimeOnly(9, 0), new TimeOnly(10, 30), "LateArrival", "موعد"), null, default)).Value;
+        Assert.Equal((90, 240, 240, 0), (first.Minutes, first.Allowance, first.Remaining, first.OverAllowance));
+        Assert.True((await permits.RequestAsync(new PermissionInput(mona, new DateOnly(2026, 11, 16), new TimeOnly(9, 0), new TimeOnly(10, 30), "LateArrival", "موعد"), default)).IsSuccess);
+        await ApproveAsync(tenantId, managerUser);
+        var second = (await permits.PreviewAsync(new PermissionInput(mona, new DateOnly(2026, 11, 17), new TimeOnly(14, 0), new TimeOnly(17, 0), "EarlyLeave", "مراجعة"), null, default)).Value;
+        Assert.Equal((150, 30), (second.Remaining, second.OverAllowance));
+        Assert.True((await permits.RequestAsync(new PermissionInput(mona, new DateOnly(2026, 11, 17), new TimeOnly(14, 0), new TimeOnly(17, 0), "EarlyLeave", "مراجعة"), default)).IsSuccess);
+        await ApproveAsync(tenantId, managerUser);
+        Assert.Equal("conflict.leave_permission_on_leave", (await permits.RequestAsync(new PermissionInput(mona, new DateOnly(2026, 11, 3), new TimeOnly(9, 0), new TimeOnly(10, 0), "During", null), default)).Error.Code);
+        using (var scope4 = database.Scope(tenantId, user: hr.ToString()))
+        {
+            var off = await scope4.ServiceProvider.GetRequiredService<IApprovedTimeOff>().InAsync(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30), mona, default);
+            Assert.Equal([90, 150], off.OrderBy(o => o.Date).Select(o => o.Waived));
+        }
+
+        // A past sick leave for Khaled (no manager above him: HR approves), back a day early: the leave ends the day before.
+        var sickId = (await requests.RequestAsync(new LeaveInput(khaled, sick.Id, new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 9), "مرض", null, false), default)).Value;
+        await ApproveAsync(tenantId, approver);
+        using (var scope5 = database.Scope(tenantId, user: hr.ToString()))
+        {
+            var leave5 = scope5.ServiceProvider.GetRequiredService<LeaveRequests>();
+            Assert.Equal("conflict.leave_not_returnable", (await leave5.ConfirmReturnAsync(id, new ReturnInput(new DateOnly(2026, 11, 8), null), default)).Error.Code);
+            Assert.True((await leave5.ConfirmReturnAsync(sickId, new ReturnInput(new DateOnly(2026, 10, 8), "عاد مبكرًا"), default)).IsSuccess);
+            var back = (await scope5.ServiceProvider.GetRequiredService<LeaveQueries>().RequestAsync(sickId, default))!;
+            Assert.Equal((new DateOnly(2026, 10, 7), 3m, new DateOnly(2026, 10, 8)), (back.Request.To, back.Request.Days, back.ReturnedOn!.Value));
+            var pay = await scope5.ServiceProvider.GetRequiredService<ILeavePayroll>().DaysAsync(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), default);
+            Assert.Equal(3m, pay.Single(p => p.EmployeeId == khaled).FullPay);
+        }
+
         // Sick days by the year's tiers.
         Assert.Equal(new SickSplit(5, 5, 0), LeaveRequests.Split(25, 10));
         Assert.Equal(new SickSplit(0, 10, 5), LeaveRequests.Split(80, 15));

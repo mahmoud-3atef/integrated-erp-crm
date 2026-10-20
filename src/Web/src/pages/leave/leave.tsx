@@ -30,6 +30,8 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { daysText, leaveApi, type EmployeeLeave, type LeaveInput, type LeavePreview, type LeaveRow, type LeaveType, type RequestStatus } from '../../api/leave';
 import { staffApi } from '../../api/staff';
+import { hm } from '../../api/attendance';
+import { PermissionDialog, PermissionsTable } from './permissions';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrScope, HrStatusBadge, hr } from '../../components/hr/Hr';
@@ -313,7 +315,7 @@ export function EmployeeLeavePanel({ employee, onChanged }: { employee: Person; 
   const [data, setData] = useState<EmployeeLeave | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
-  const [dialog, setDialog] = useState<'request' | 'opening' | 'adjustment' | null>(null);
+  const [dialog, setDialog] = useState<'request' | 'permission' | 'opening' | 'adjustment' | null>(null);
   const canManage = can('leave.manage', true);
   useEffect(() => {
     leaveApi
@@ -337,6 +339,9 @@ export function EmployeeLeavePanel({ employee, onChanged }: { employee: Person; 
             <Button variant="contained" startIcon={<Add />} onClick={() => setDialog('request')}>
               {t('leave.new')}
             </Button>
+            <Button variant="outlined" onClick={() => setDialog('permission')}>
+              {t('permissions.new')}
+            </Button>
             <Button variant="outlined" onClick={() => setDialog('opening')} disabled={balanceTypes.length === 0}>
               {t('leave.entry.opening')}
             </Button>
@@ -359,9 +364,18 @@ export function EmployeeLeavePanel({ employee, onChanged }: { employee: Person; 
               </Typography>
             </Box>
           ))}
+          <Box sx={{ border: `1px solid ${hr.border}`, borderRadius: '12px', p: 1.5, bgcolor: '#FFFBEB' }}>
+            <Typography sx={{ fontWeight: 700 }}>{t('permissions.monthTitle')}</Typography>
+            <Typography sx={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+              <bdi>{hm(Math.max(0, data.permissionAllowance - data.permissionUsedThisMonth))}</bdi> <Box component="span" sx={{ fontSize: 12, color: hr.textMuted, fontWeight: 500 }}>{t('permissions.left')}</Box>
+            </Typography>
+            <Typography sx={{ fontSize: 11.5, color: hr.textMuted }}>{t('permissions.monthLine', { used: hm(data.permissionUsedThisMonth), allowance: hm(data.permissionAllowance) })}</Typography>
+          </Box>
         </Box>
         <Typography sx={{ fontWeight: 700 }}>{t('leave.requestsTitle')}</Typography>
         <RequestsTable rows={data.requests} showEmployee={false} onOpen={(id) => navigate(`/hr/leave/${id}`)} />
+        <Typography sx={{ fontWeight: 700 }}>{t('permissions.listTitle')}</Typography>
+        <PermissionsTable rows={data.permissions ?? []} showEmployee={false} onOpen={(id) => navigate(`/hr/permissions/${id}`)} />
         <Typography sx={{ fontWeight: 700 }}>{t('leave.entriesTitle')}</Typography>
         {data.entries.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: hr.textMuted }}>{t('leave.noEntries')}</Typography>
@@ -398,6 +412,7 @@ export function EmployeeLeavePanel({ employee, onChanged }: { employee: Person; 
           </TableContainer>
         )}
       </Stack>
+      {dialog === 'permission' && <PermissionDialog employee={employee} onClose={() => setDialog(null)} onSent={(id) => navigate(`/hr/permissions/${id}`)} />}
       {dialog === 'request' && <LeaveRequestDialog employee={employee} onClose={() => setDialog(null)} onSent={(id) => navigate(`/hr/leave/${id}`)} />}
       {(dialog === 'opening' || dialog === 'adjustment') && <EntryDialog employeeId={employee.id} kind={dialog} types={balanceTypes} onClose={() => setDialog(null)} onSaved={changed} />}
     </HrScope>

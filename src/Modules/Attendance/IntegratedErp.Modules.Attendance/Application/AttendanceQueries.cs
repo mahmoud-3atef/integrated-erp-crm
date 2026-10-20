@@ -102,7 +102,9 @@ public sealed record DayDto(
     string? LeaveTypeAr = null,
     string? LeaveTypeEn = null,
     string? LeaveRequestNo = null,
-    bool DeviceLeaveWithoutRequest = false);
+    bool DeviceLeaveWithoutRequest = false,
+    int ApprovedPermissionMinutes = 0,
+    string? PermissionRequestNo = null);
 
 public sealed record EmployeeMonthDto(
     Guid EmployeeId,
@@ -141,7 +143,7 @@ public sealed record OvertimeDto(
 public sealed record ExceptionDto(Guid EmployeeId, string EmployeeNo, string? NameAr, string NameEn, string? DepartmentAr, string? DepartmentEn, DateOnly Date, string Status, TimeOnly? In, TimeOnly? Out, string? DeviceStatus);
 
 /// <summary>The attendance month (per commercial registration or all), its employees, an employee's days, and the exceptions.</summary>
-internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals, IEnumerable<IApprovedLeaves> leaveSources)
+internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals, IEnumerable<IApprovedLeaves> leaveSources, IEnumerable<IApprovedTimeOff> timeOffSources)
 {
     public async Task<(DateOnly From, DateOnly To)?> PeriodAsync(string period, CancellationToken cancellationToken)
     {
@@ -162,7 +164,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
         }
 
         var setting = await setup.SettingAsync(cancellationToken).ConfigureAwait(false);
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault(), timeOffSources.FirstOrDefault()).ConfigureAwait(false);
         var rows = Rows(book, legalEntityId).ToList();
         int absence = 0, excused = 0, late = 0, early = 0, missing = 0, open = 0, lateEmployees = 0, full = 0, none = 0, allLeave = 0;
         decimal deduction = 0;
@@ -222,7 +224,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return null;
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault(), timeOffSources.FirstOrDefault()).ConfigureAwait(false);
         var record = await db.Months.AsNoTracking().Include(m => m.Lines).FirstOrDefaultAsync(m => m.Period == period, cancellationToken).ConfigureAwait(false);
         var rows = record is { Status: not MonthStatus.Open }
             ? record.Lines.Where(l => q.LegalEntityId is null || l.LegalEntityId == q.LegalEntityId)
@@ -280,7 +282,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return null;
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, employeeId, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, employeeId, cancellationToken, leaveSources.FirstOrDefault(), timeOffSources.FirstOrDefault()).ConfigureAwait(false);
         if (book.Members.Count == 0 || book.Members[0] is not { } m)
         {
             return null;
@@ -299,7 +301,8 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
                 x.Date, x.Result.Status.ToString(), x.Result.IsWorkingDay, holiday?.NameAr, holiday?.NameEn, ramadan, hours.StartsAt, hours.EndsAt,
                 s?.In, s?.Out, s?.DeviceIn, s?.DeviceOut, s?.DeviceStatus, s?.DevicePermissionMinutes ?? 0, s?.DeviceLateMinutes, s?.DeviceEarlyMinutes, s?.ManualStatus?.ToString(), s?.Note, s?.Deduction,
                 x.Result.WorkedMinutes, x.Result.LateMinutes, x.Result.EarlyMinutes, x.Result.Deduction, s?.EditedByName, s?.EditedAt,
-                book.LeaveOn(m.Id, x.Date)?.TypeAr, book.LeaveOn(m.Id, x.Date)?.TypeEn, book.LeaveOn(m.Id, x.Date)?.RequestNo, book.DeviceLeaveWithoutRequest(m.Id, x.Date));
+                book.LeaveOn(m.Id, x.Date)?.TypeAr, book.LeaveOn(m.Id, x.Date)?.TypeEn, book.LeaveOn(m.Id, x.Date)?.RequestNo, book.DeviceLeaveWithoutRequest(m.Id, x.Date),
+                book.TimeOff.TryGetValue((m.Id, x.Date), out var off) ? off.Minutes : 0, book.TimeOff.TryGetValue((m.Id, x.Date), out var off2) ? off2.Numbers : null);
         }).ToList();
         return new EmployeeMonthDto(
             m.Id, m.EmployeeNo, m.NameAr, m.NameEn, m.IdNumber, m.DepartmentAr, m.DepartmentEn, shift?.NameAr, shift?.NameEn, shift?.StartsAt, shift?.EndsAt, shift?.GraceMinutes,
@@ -313,7 +316,7 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
             return null;
         }
 
-        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault()).ConfigureAwait(false);
+        var book = await AttendanceBook.LoadAsync(db, staff, p.From, p.To, null, cancellationToken, leaveSources.FirstOrDefault(), timeOffSources.FirstOrDefault()).ConfigureAwait(false);
         return Rows(book, legalEntityId)
             .SelectMany(x => x.Days
                 .Where(d => Open(book, x.Member, d))

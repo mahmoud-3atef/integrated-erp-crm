@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
@@ -20,6 +21,7 @@ namespace IntegratedErp.Modules.Leave;
 public sealed class LeaveModule : IModule
 {
     public const string RequestSequence = "leave_request";
+    public const string PermissionSequence = "leave_permission";
 
     public string Name => LeaveContracts.ModuleName;
 
@@ -30,11 +32,17 @@ public sealed class LeaveModule : IModule
         services.AddScoped<LeaveBalances>();
         services.AddScoped<LeaveRequests>();
         services.AddScoped<LeaveQueries>();
+        services.AddScoped<LeavePermissionService>();
         services.AddScoped<IApprovedLeaves, ApprovedLeaves>();
+        services.AddScoped<IApprovedTimeOff, ApprovedTimeOffs>();
+        services.AddScoped<ILeavePayroll, LeavePayroll>();
         services.AddScoped<IApprovalRecordAdapter, LeaveAdapter>();
+        services.AddScoped<IApprovalRecordAdapter, PermissionAdapter>();
+        services.AddAlertProvider<LeaveAlerts>();
         services.AddPermissions(LeavePermissions.All);
         services.AddNumberSequences(
-            new NumberSequenceDefinition(RequestSequence, LeaveDbContext.SchemaName, "الإجازات", "Leave", "طلبات الإجازة", "Leave requests", "LV-{YYYY}-{N:5}", NumberReset.Yearly));
+            new NumberSequenceDefinition(RequestSequence, LeaveDbContext.SchemaName, "الإجازات", "Leave", "طلبات الإجازة", "Leave requests", "LV-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition(PermissionSequence, LeaveDbContext.SchemaName, "الإجازات", "Leave", "الاستئذانات", "Permissions", "PM-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints) => endpoints.MapLeaveEndpoints();

@@ -481,7 +481,11 @@
     "validation_leave_entry": "Give the days (not zero), the date and the reason.",
     "conflict_leave_opening_exists": "The employee already has an opening balance for this type: correct it with an adjustment.",
     "conflict_leave_not_cancellable": "Only an approved leave that has not started can be cancelled, with its reason.",
-    "conflict_staff_user_taken": "This account is linked to another employee."
+    "conflict_staff_user_taken": "This account is linked to another employee.",
+    "not_found_leave_permission": "The permission request was not found.",
+    "validation_leave_permission_times": "A permission is 15 minutes to 8 hours, its end after its start, with a reason of 500 characters at most.",
+    "conflict_leave_permission_on_leave": "The employee is on leave that day.",
+    "conflict_leave_not_returnable": "Only an approved leave that has started can have its return confirmed, on a day after its start."
   },
   "menu": {
     "label": "Main menu",
@@ -3413,7 +3417,8 @@
       "grace": "{{minutes}} minutes of grace",
       "deviceMinutes": "Device: late {{late}} · early {{early}}",
       "leave": "Approved leave: {{type}}",
-      "deviceLeave": "The fingerprint system shows a leave on this day with no approved leave request in the system: record the request."
+      "deviceLeave": "The fingerprint system shows a leave on this day with no approved leave request in the system: record the request.",
+      "permissionApproved": "Approved permission: {{minutes}} minutes not counted as late"
     },
     "dialog": {
       "title": "Import the fingerprint file",
@@ -3702,7 +3707,8 @@
       "all": "All requests",
       "pending": "Awaiting approval ({{count}})",
       "current": "Current and upcoming",
-      "calendar": "Leave calendar"
+      "calendar": "Leave calendar",
+      "permissions": "Permissions"
     },
     "kpi": {
       "today": "On leave today",
@@ -3714,7 +3720,11 @@
       "requests": "requests",
       "returned": "Returned",
       "upcoming": "Upcoming leave (30 days)",
-      "days": "Days"
+      "days": "Days",
+      "returns": "Returns to confirm",
+      "permissions": "Permissions this month",
+      "permissionsUnit": "permissions",
+      "hours": "Hours"
     },
     "cols": {
       "no": "Number",
@@ -3771,6 +3781,15 @@
       "Adjustment": "Adjustment",
       "Reversal": "Leave cancelled",
       "AccrualReversal": "Accrual included in the opening"
+    },
+    "return": {
+      "confirm": "Confirm the return",
+      "on": "Back at work on",
+      "hint": "Expected back on {{expected}}. Confirm the day the employee actually came back.",
+      "earlyNote": "Back early: the leave ends the day before, and the days not taken go back to the balance.",
+      "lateNote": "Back late: the days after the expected return count in the attendance (absence unless excused).",
+      "done": "Back at work on {{date}}.",
+      "late": "Back at work on {{date}}, after the expected {{expected}}."
     }
   },
   "leaveBalances": {
@@ -3838,5 +3857,42 @@
       "seniorAfter": "After how many years",
       "attachment": "Needs a document"
     }
+  },
+  "permissions": {
+    "new": "Permission",
+    "title": "Permission · {{kind}}",
+    "kind": "Kind",
+    "kinds": {
+      "LateArrival": "Late arrival",
+      "EarlyLeave": "Early leave",
+      "During": "Out during the day",
+      "Mission": "Work mission"
+    },
+    "date": "Date",
+    "from": "From",
+    "to": "To",
+    "time": "Time",
+    "duration": "Duration",
+    "usedThisMonth": "Used this month",
+    "remaining": "Remaining",
+    "pick": "Choose the employee, the day and the time to see the duration and the monthly allowance.",
+    "missionNote": "A work mission is not taken from the monthly allowance.",
+    "over": "Above the monthly allowance by {{minutes}}: the excess counts as late or early.",
+    "problems": {
+      "times": "A permission is 15 minutes to 8 hours, its end after its start.",
+      "not_employed": "The day is outside the employee's employment.",
+      "on_leave": "The employee is on leave that day.",
+      "month_locked": "The day's month is closing or closed."
+    },
+    "route": {
+      "manager": "Goes to the direct manager ({{name}}) for approval.",
+      "hr": "No direct manager linked to an account: HR approves it."
+    },
+    "none": "No permissions",
+    "effect": "Once approved, its minutes are not counted as late or early in the attendance, within the monthly allowance (a work mission without limit).",
+    "monthTitle": "Permission this month",
+    "left": "left",
+    "monthLine": "Used {{used}} of {{allowance}}",
+    "listTitle": "Permissions"
   }
 }

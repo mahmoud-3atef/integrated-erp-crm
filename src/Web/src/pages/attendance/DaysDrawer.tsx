@@ -247,6 +247,11 @@ function DayCard({ employeeId, day, canManage, onSaved }: { employeeId: string; 
           {t('attendance.drawer.leave', { type: ar ? day.leaveTypeAr : day.leaveTypeEn })} · <RouterLink to={`/hr/leave`}><bdi>{day.leaveRequestNo}</bdi></RouterLink>
         </Typography>
       )}
+      {day.approvedPermissionMinutes > 0 && (
+        <Typography sx={{ fontSize: 12.5 }}>
+          {t('attendance.drawer.permissionApproved', { minutes: day.approvedPermissionMinutes })} · <bdi>{day.permissionRequestNo}</bdi>
+        </Typography>
+      )}
       {day.deviceLeaveWithoutRequest && <Alert severity="warning" sx={{ py: 0 }}>{t('attendance.drawer.deviceLeave')}</Alert>}
       {day.editedByName && <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{t('attendance.drawer.edited', { by: day.editedByName, date: date(day.editedAt) })}</Typography>}
       {editable && (

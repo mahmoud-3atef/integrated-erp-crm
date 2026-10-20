@@ -47,6 +47,53 @@ export interface LeaveKpis {
   upcoming: number;
   upcomingDays: number;
   returned: number;
+  permissionsThisMonth: number;
+  permissionMinutesThisMonth: number;
+  permissionsPending: number;
+  returnsToConfirm: number;
+}
+
+export type PermissionKind = 'LateArrival' | 'EarlyLeave' | 'During' | 'Mission';
+export const permissionKinds: PermissionKind[] = ['LateArrival', 'EarlyLeave', 'During', 'Mission'];
+
+export interface Permission {
+  id: string;
+  requestNo: string;
+  employeeId: string;
+  employeeName: string;
+  date: string;
+  from: string;
+  to: string;
+  minutes: number;
+  kind: PermissionKind;
+  reason: string | null;
+  status: RequestStatus;
+  createdByName: string;
+  createdAt: string;
+  decidedAt: string | null;
+  lastComment: string | null;
+  approval: ApprovalStatus | null;
+}
+
+export interface PermissionInput {
+  employeeId: string;
+  date: string;
+  from: string;
+  to: string;
+  kind: PermissionKind;
+  reason: string | null;
+}
+
+export interface PermissionPreview {
+  minutes: number;
+  allowance: number;
+  usedThisMonth: number;
+  remaining: number;
+  overAllowance: number;
+  mission: boolean;
+  managerName: string | null;
+  managerLinked: boolean;
+  problems: ('times' | 'not_employed' | 'on_leave' | 'month_locked')[];
 }
 
 export interface LeaveRow {
@@ -79,6 +126,10 @@ export interface LeaveDetail {
   available: number | null;
   canCancel: boolean;
   approval: ApprovalStatus | null;
+  returnedOn: string | null;
+  returnNote: string | null;
+  expectedReturn: string | null;
+  canConfirmReturn: boolean;
 }
 
 export interface LeaveInput {
@@ -140,6 +191,9 @@ export interface EmployeeLeave {
   balances: TypeBalance[];
   entries: Entry[];
   requests: LeaveRow[];
+  permissionAllowance: number;
+  permissionUsedThisMonth: number;
+  permissions: Permission[] | null;
 }
 
 export interface BalanceRow {
@@ -182,6 +236,12 @@ export const leaveApi = {
   send: (input: LeaveInput) => request<{ id: string }>('POST', `${base}/requests`, input),
   resubmit: (id: string, input: LeaveInput) => request<{ id: string }>('POST', `${base}/requests/${id}/resubmit`, input),
   cancel: (id: string, reason: string) => request<void>('POST', `${base}/requests/${id}/cancel`, { reason }),
+  confirmReturn: (id: string, returnedOn: string, note: string | null) => request<void>('POST', `${base}/requests/${id}/return`, { returnedOn, note }),
+  permissions: (q: { employeeId?: string; period?: string; tab?: string }) => request<Permission[]>('GET', `${base}/permissions${qs(q)}`),
+  permission: (id: string) => request<Permission>('GET', `${base}/permissions/${id}`),
+  previewPermission: (input: PermissionInput, requestId?: string) => request<PermissionPreview>('POST', `${base}/permissions/preview${qs({ requestId })}`, input),
+  sendPermission: (input: PermissionInput) => request<{ id: string }>('POST', `${base}/permissions`, input),
+  resubmitPermission: (id: string, input: PermissionInput) => request<{ id: string }>('POST', `${base}/permissions/${id}/resubmit`, input),
   employee: (id: string) => request<EmployeeLeave>('GET', `${base}/employees/${id}`),
   opening: (id: string, input: { leaveTypeId: string; date: string; days: number; reason: string }) => request<void>('POST', `${base}/employees/${id}/opening`, input),
   adjustment: (id: string, input: { leaveTypeId: string; date: string; days: number; reason: string }) => request<void>('POST', `${base}/employees/${id}/adjustment`, input),

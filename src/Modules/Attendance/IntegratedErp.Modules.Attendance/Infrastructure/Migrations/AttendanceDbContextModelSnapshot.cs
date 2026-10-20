@@ -479,6 +479,11 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("overtime_minutes");
 
+                    b.Property<decimal>("PaidLeaveDays")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("paid_leave_days");
+
                     b.Property<int>("Present")
                         .HasColumnType("int")
                         .HasColumnName("present");
@@ -493,6 +498,11 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("shift_en");
 
+                    b.Property<decimal>("SickPartDays")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("sick_part_days");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -502,6 +512,11 @@ namespace IntegratedErp.Modules.Attendance.Infrastructure.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("UnpaidLeaveDays")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("unpaid_leave_days");
 
                     b.Property<int>("WorkDays")
                         .HasColumnType("int")

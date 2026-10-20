@@ -63,6 +63,15 @@ public sealed class DayCalculatorTests
     }
 
     [Fact]
+    public void An_approved_permission_waives_late_minutes_even_on_the_devices_figures()
+    {
+        var day = DayCalculator.Calculate(Facts(Regular, T(10, 45), T(17, 0)) with { DeviceLate = 90, DeviceEarly = 0, ApprovedPermissionMinutes = 60 });
+        Assert.Equal((30, 0), (day.LateMinutes, day.EarlyMinutes));
+        var shift = DayCalculator.Calculate(Facts(Regular, T(10, 45), T(16, 0)) with { ApprovedPermissionMinutes = 120 });
+        Assert.Equal((0, 30), (shift.LateMinutes, shift.EarlyMinutes));
+    }
+
+    [Fact]
     public void An_overnight_shift_ends_the_next_day()
     {
         var night = new ShiftDay(new TimeOnly(20, 0), new TimeOnly(4, 0), 60, 15, LateFrom.GraceEnd, false);

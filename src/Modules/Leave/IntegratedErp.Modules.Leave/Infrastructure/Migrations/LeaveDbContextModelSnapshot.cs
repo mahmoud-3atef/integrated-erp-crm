@@ -310,6 +310,15 @@ namespace IntegratedErp.Modules.Leave.Infrastructure.Migrations
                         .HasColumnType("nvarchar(40)")
                         .HasColumnName("request_no");
 
+                    b.Property<string>("ReturnNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("return_note");
+
+                    b.Property<DateOnly?>("ReturnedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("returned_on");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -470,6 +479,108 @@ namespace IntegratedErp.Modules.Leave.Infrastructure.Migrations
                         .HasDatabaseName("ix_leave_type_tenant_id_code");
 
                     b.ToTable("leave_type", "leave");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Leave.Domain.PermissionRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("EmployeeName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("employee_name");
+
+                    b.Property<TimeOnly>("FromTime")
+                        .HasColumnType("time")
+                        .HasColumnName("from_time");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<Guid?>("ManagerUserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("manager_user_id");
+
+                    b.Property<int>("Minutes")
+                        .HasColumnType("int")
+                        .HasColumnName("minutes");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RequestNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("request_no");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<TimeOnly>("ToTime")
+                        .HasColumnType("time")
+                        .HasColumnName("to_time");
+
+                    b.HasKey("Id")
+                        .HasName("pk_permission");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_permission_tenant_id");
+
+                    b.HasIndex("TenantId", "RequestNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_permission_tenant_id_request_no");
+
+                    b.HasIndex("TenantId", "EmployeeId", "Date")
+                        .HasDatabaseName("ix_permission_tenant_id_employee_id_date");
+
+                    b.ToTable("permission", "leave");
                 });
 #pragma warning restore 612, 618
         }

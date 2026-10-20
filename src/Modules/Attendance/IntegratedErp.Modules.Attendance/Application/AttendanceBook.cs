@@ -64,6 +64,9 @@ internal sealed class AttendanceBook
 
     public ApprovedLeave? LeaveOn(Guid employeeId, DateOnly date) => Leaves.GetValueOrDefault((employeeId, date));
 
+    /// <summary>The approved permissions' minutes waived on each employee's day, and their numbers.</summary>
+    public Dictionary<(Guid, DateOnly), (int Minutes, string Numbers)> TimeOff { get; init; } = [];
+
     /// <summary>The fingerprint system shows a leave the system has no approved request for: an exception to review.</summary>
     public bool DeviceLeaveWithoutRequest(Guid employeeId, DateOnly date) =>
         Stored(employeeId, date) is { DeviceMark: DeviceMark.Leave, ManualStatus: null } && LeaveOn(employeeId, date) is null;
@@ -71,7 +74,7 @@ internal sealed class AttendanceBook
     /// <summary>Approved overtime in the period, in minutes, per employee.</summary>
     public Dictionary<Guid, int> Overtime { get; init; } = [];
 
-    public static async Task<AttendanceBook> LoadAsync(AttendanceDbContext db, IStaffDirectory staff, DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken, IApprovedLeaves? leaveSource = null)
+    public static async Task<AttendanceBook> LoadAsync(AttendanceDbContext db, IStaffDirectory staff, DateOnly from, DateOnly to, Guid? employeeId, CancellationToken cancellationToken, IApprovedLeaves? leaveSource = null, IApprovedTimeOff? timeOffSource = null)
     {
         var members = await staff.MembersAsync(cancellationToken).ConfigureAwait(false);
         if (employeeId is { } only)
@@ -115,8 +118,18 @@ internal sealed class AttendanceBook
             }
         }
 
+        var timeOff = new Dictionary<(Guid, DateOnly), (int, string)>();
+        if (timeOffSource is not null)
+        {
+            foreach (var p in await timeOffSource.InAsync(from, to, employeeId, cancellationToken).ConfigureAwait(false))
+            {
+                var key = (p.EmployeeId, p.Date);
+                timeOff[key] = timeOff.TryGetValue(key, out var v) ? (v.Item1 + p.Waived, v.Item2 + "، " + p.RequestNo) : (p.Waived, p.RequestNo);
+            }
+        }
+
         var useDevice = await db.Settings.AsNoTracking().Select(s => (bool?)s.UseDeviceMinutes).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? true;
-        return new AttendanceBook(from, to, members, settings, shifts, assignments, holidays, departments, covered, imports.ToDictionary(i => i.Id, i => (i.From, i.To)), days) { UseDeviceMinutes = useDevice, Overtime = overtime, Leaves = leaves };
+        return new AttendanceBook(from, to, members, settings, shifts, assignments, holidays, departments, covered, imports.ToDictionary(i => i.Id, i => (i.From, i.To)), days) { UseDeviceMinutes = useDevice, Overtime = overtime, Leaves = leaves, TimeOff = timeOff };
     }
 
     public IEnumerable<DateOnly> Dates()
@@ -199,7 +212,8 @@ internal sealed class AttendanceBook
             stored?.Deduction,
             device ? stored!.DeviceLateMinutes : null,
             device ? stored!.DeviceEarlyMinutes : null,
-            LeaveOn(m.Id, date) is not null);
+            LeaveOn(m.Id, date) is not null,
+            TimeOff.TryGetValue((m.Id, date), out var off) ? off.Minutes : 0);
     }
 
     public DayResult Calculate(StaffMember m, DateOnly date) => DayCalculator.Calculate(Facts(m, date));

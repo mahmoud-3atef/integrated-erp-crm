@@ -68,6 +68,9 @@ internal sealed class AttendanceMonthLineConfiguration : IEntityTypeConfiguratio
         builder.Property(l => l.ShiftAr).HasMaxLength(100);
         builder.Property(l => l.ShiftEn).HasMaxLength(100);
         builder.Property(l => l.DeductionDays).HasPrecision(7, 2);
+        builder.Property(l => l.PaidLeaveDays).HasPrecision(7, 2);
+        builder.Property(l => l.SickPartDays).HasPrecision(7, 2);
+        builder.Property(l => l.UnpaidLeaveDays).HasPrecision(7, 2);
         builder.Property(l => l.State).HasMaxLength(20).IsRequired();
         builder.HasIndex(l => new { l.TenantId, l.MonthId, l.EmployeeId }).IsUnique();
     }

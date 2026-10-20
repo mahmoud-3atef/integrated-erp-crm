@@ -28,7 +28,7 @@ public sealed record RequestRowDto(
 
 public sealed record RequestPageDto(IReadOnlyList<RequestRowDto> Rows, int Total);
 
-public sealed record LeaveKpis(int OnLeaveToday, int TodayAnnual, int TodaySick, int TodayOther, int Pending, int Upcoming, decimal UpcomingDays, int Returned);
+public sealed record LeaveKpis(int OnLeaveToday, int TodayAnnual, int TodaySick, int TodayOther, int Pending, int Upcoming, decimal UpcomingDays, int Returned, int PermissionsThisMonth, int PermissionMinutesThisMonth, int PermissionsPending, int ReturnsToConfirm);
 
 public sealed record RequestDetailDto(
     RequestRowDto Request,
@@ -39,18 +39,22 @@ public sealed record RequestDetailDto(
     DateTimeOffset? DecidedAt,
     decimal? Available,
     bool CanCancel,
-    ApprovalStatusInfo? Approval);
+    ApprovalStatusInfo? Approval,
+    DateOnly? ReturnedOn = null,
+    string? ReturnNote = null,
+    DateOnly? ExpectedReturn = null,
+    bool CanConfirmReturn = false);
 
 public sealed record EntryDto(Guid Id, Guid LeaveTypeId, DateOnly Date, string Kind, decimal Days, string Reason, string? RequestNo, string CreatedByName, decimal Running);
 
 public sealed record TypeBalanceDto(Guid LeaveTypeId, string TypeAr, string TypeEn, bool HasBalance, decimal PerYear, decimal Opening, decimal AccruedThisYear, decimal UsedThisYear, decimal Reserved, decimal Available, decimal? YearLimit);
 
-public sealed record EmployeeLeaveDto(Guid EmployeeId, string Name, DateOnly? HireDate, double YearsOfService, IReadOnlyList<TypeBalanceDto> Balances, IReadOnlyList<EntryDto> Entries, IReadOnlyList<RequestRowDto> Requests);
+public sealed record EmployeeLeaveDto(Guid EmployeeId, string Name, DateOnly? HireDate, double YearsOfService, IReadOnlyList<TypeBalanceDto> Balances, IReadOnlyList<EntryDto> Entries, IReadOnlyList<RequestRowDto> Requests, int PermissionAllowance = 0, int PermissionUsedThisMonth = 0, IReadOnlyList<PermissionDto>? Permissions = null);
 
 public sealed record BalanceRowDto(Guid EmployeeId, string EmployeeNo, string Name, string? DepartmentAr, string? DepartmentEn, decimal PerYear, decimal Opening, decimal AccruedThisYear, decimal UsedThisYear, decimal Reserved, decimal Available, decimal SickUsedThisYear);
 
 /// <summary>The leave screens: the requests and their cards, the calendar, a request, an employee's leave, the balances.</summary>
-internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, LeaveSetup setup, LeaveBalances balances, IApprovalService approvals, IClock clock)
+internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, LeaveSetup setup, LeaveBalances balances, IApprovalService approvals, IClock clock, Attendance.Contracts.IAttendanceCalendar calendar)
 {
     public async Task<LeaveKpis> KpisAsync(CancellationToken cancellationToken)
     {
@@ -63,9 +67,15 @@ internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, Lea
                           select new { r.Status, r.From, r.To, r.Days, t.Code }).ToListAsync(cancellationToken).ConfigureAwait(false);
         var todays = rows.Where(r => r.Status == RequestStatus.Approved && r.From <= today && r.To >= today).ToList();
         var upcoming = rows.Where(r => r.Status == RequestStatus.Approved && r.From > today && r.From <= until).ToList();
+        var first = new DateOnly(today.Year, today.Month, 1);
+        var permissions = await db.Permissions.AsNoTracking().Where(p => p.Date >= first && p.Date <= first.AddMonths(1).AddDays(-1) || p.Status == RequestStatus.InApproval)
+            .Select(p => new { p.Date, p.Status, p.Minutes }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var monthApproved = permissions.Where(p => p.Status == RequestStatus.Approved && p.Date >= first).ToList();
+        var returns = await db.Requests.AsNoTracking().CountAsync(r => r.Status == RequestStatus.Approved && r.To < today && r.ReturnedOn == null, cancellationToken).ConfigureAwait(false);
         return new LeaveKpis(
             todays.Count, todays.Count(r => r.Code == LeaveSetup.Annual), todays.Count(r => r.Code == LeaveSetup.Sick), todays.Count(r => r.Code is not (LeaveSetup.Annual or LeaveSetup.Sick)),
-            rows.Count(r => r.Status == RequestStatus.InApproval), upcoming.Count, upcoming.Sum(r => r.Days), rows.Count(r => r.Status == RequestStatus.Returned));
+            rows.Count(r => r.Status == RequestStatus.InApproval), upcoming.Count, upcoming.Sum(r => r.Days), rows.Count(r => r.Status == RequestStatus.Returned),
+            monthApproved.Count, monthApproved.Sum(p => p.Minutes), permissions.Count(p => p.Status == RequestStatus.InApproval), returns);
     }
 
     public async Task<RequestPageDto> RequestsAsync(string? tab, Guid? typeId, Guid? employeeId, string? search, int page, int pageSize, CancellationToken cancellationToken)
@@ -120,7 +130,10 @@ internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, Lea
         var row = (await RowsAsync(r.EmployeeId, cancellationToken).ConfigureAwait(false)).First(x => x.Id == id);
         var available = row.HasBalance ? (await balances.BalanceAsync(r.EmployeeId, r.LeaveTypeId, null, cancellationToken).ConfigureAwait(false)).Available : (decimal?)null;
         var approval = await approvals.StatusAsync(LeaveAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        return new RequestDetailDto(row, r.Reason, r.SubstituteName, r.Ticket, r.LastComment, r.DecidedAt, available, r.Status == RequestStatus.Approved && r.From > clock.Today, approval);
+        var expected = r.Status == RequestStatus.Approved ? await calendar.NextWorkingDayAsync(r.EmployeeId, r.To, cancellationToken).ConfigureAwait(false) : (DateOnly?)null;
+        return new RequestDetailDto(
+            row, r.Reason, r.SubstituteName, r.Ticket, r.LastComment, r.DecidedAt, available, r.Status == RequestStatus.Approved && r.From > clock.Today, approval,
+            r.ReturnedOn, r.ReturnNote, expected, r.Status == RequestStatus.Approved && r.From <= clock.Today && r.ReturnedOn == null);
     }
 
     public async Task<EmployeeLeaveDto?> EmployeeAsync(Guid employeeId, CancellationToken cancellationToken)
@@ -157,7 +170,11 @@ internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, Lea
             running = byType[e.LeaveTypeId] = byType.GetValueOrDefault(e.LeaveTypeId) + e.Days;
             return new EntryDto(e.Id, e.LeaveTypeId, e.Date, e.Kind.ToString(), e.Days, e.Reason, e.RequestId is { } rid ? numbers.GetValueOrDefault(rid) : null, e.CreatedByName, running);
         }).Reverse().ToList();
-        return new EmployeeLeaveDto(member.Id, member.NameAr ?? member.NameEn, member.HireDate, Math.Round(years, 1), list, dtos, requests);
+        var setting = await setup.SettingAsync(cancellationToken).ConfigureAwait(false);
+        var first = new DateOnly(today.Year, today.Month, 1);
+        var permissions = await PermissionsAsync(employeeId, null, null, cancellationToken).ConfigureAwait(false);
+        var used = permissions.Where(p => p.Kind != nameof(PermissionKind.Mission) && p.Date >= first && p.Date <= first.AddMonths(1).AddDays(-1) && p.Status is nameof(RequestStatus.Approved) or nameof(RequestStatus.InApproval)).Sum(p => p.Minutes);
+        return new EmployeeLeaveDto(member.Id, member.NameAr ?? member.NameEn, member.HireDate, Math.Round(years, 1), list, dtos, requests, setting.PermissionMinutesPerMonth, used, permissions.Take(50).ToList());
     }
 
     public async Task<IReadOnlyList<BalanceRowDto>> BalancesAsync(Guid? typeId, string? search, Guid? departmentId, CancellationToken cancellationToken)
@@ -200,6 +217,42 @@ internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, Lea
                 r.Where(x => x.LeaveTypeId == type.Id && x.Status == RequestStatus.Approved && x.From.Year == today.Year).Sum(x => x.Days), reserved, e.Sum(x => x.Days) - reserved,
                 r.Where(x => x.LeaveTypeId == sick && x.Status == RequestStatus.Approved && x.From.Year == today.Year).Sum(x => x.Days));
         }).OrderBy(b => b.Name).ToList();
+    }
+
+    /// <summary>Permissions (one employee's or all), newest first; a period ("2026-10") narrows them to its month.</summary>
+    public async Task<IReadOnlyList<PermissionDto>> PermissionsAsync(Guid? employeeId, string? period, string? tab, CancellationToken cancellationToken)
+    {
+        var q = db.Permissions.AsNoTracking();
+        if (employeeId is { } e)
+        {
+            q = q.Where(p => p.EmployeeId == e);
+        }
+
+        if (period is not null && LeaveBalances.TryPeriod(period, out var first))
+        {
+            var last = first.AddMonths(1).AddDays(-1);
+            q = q.Where(p => p.Date >= first && p.Date <= last);
+        }
+
+        if (tab == "pending")
+        {
+            q = q.Where(p => p.Status == RequestStatus.InApproval || p.Status == RequestStatus.Returned);
+        }
+
+        return await q.OrderByDescending(p => p.Date).ThenByDescending(p => p.CreatedAt).Take(1000)
+            .Select(p => new PermissionDto(p.Id, p.RequestNo, p.EmployeeId, p.EmployeeName, p.Date, p.FromTime, p.ToTime, p.Minutes, p.Kind.ToString(), p.Reason, p.Status.ToString(), p.CreatedByName, p.CreatedAt, p.DecidedAt, p.LastComment, null))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<PermissionDto?> PermissionAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (await db.Permissions.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false) is not { } p)
+        {
+            return null;
+        }
+
+        var approval = await approvals.StatusAsync(PermissionAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
+        return new PermissionDto(p.Id, p.RequestNo, p.EmployeeId, p.EmployeeName, p.Date, p.FromTime, p.ToTime, p.Minutes, p.Kind.ToString(), p.Reason, p.Status.ToString(), p.CreatedByName, p.CreatedAt, p.DecidedAt, p.LastComment, approval);
     }
 
     private async Task<List<RequestRowDto>> RowsAsync(Guid? employeeId, CancellationToken cancellationToken)

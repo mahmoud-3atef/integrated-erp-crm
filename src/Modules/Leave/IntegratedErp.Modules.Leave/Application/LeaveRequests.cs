@@ -233,6 +233,46 @@ internal sealed class LeaveRequests(
         return Result.Success();
     }
 
+    /// <summary>
+    /// HR confirms the day the employee was back at work. Back early, the leave ends the day before and the days not taken
+    /// go back to the balance; back late, the days after the expected return are absences in the attendance.
+    /// </summary>
+    public async Task<Result> ConfirmReturnAsync(Guid id, ReturnInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Requests.FirstOrDefaultAsync(r => r.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(LeaveErrors.RequestNotFound);
+        }
+
+        if (request.Status != RequestStatus.Approved || request.From > clock.Today || input.ReturnedOn <= request.From || input.ReturnedOn > clock.Today.AddDays(1))
+        {
+            return Result.Failure(LeaveErrors.NotReturnable);
+        }
+
+        var type = await db.Types.AsNoTracking().FirstAsync(t => t.Id == request.LeaveTypeId, cancellationToken).ConfigureAwait(false);
+        decimal? days = null;
+        if (input.ReturnedOn <= request.To)
+        {
+            if (await calendar.LockedAsync(input.ReturnedOn, request.To, cancellationToken).ConfigureAwait(false))
+            {
+                return Result.Failure(LeaveErrors.Locked);
+            }
+
+            var end = input.ReturnedOn.AddDays(-1);
+            days = type.DayCount == DayCount.Working ? await calendar.WorkingDaysAsync(request.EmployeeId, request.From, end, cancellationToken).ConfigureAwait(false) : end.DayNumber - request.From.DayNumber + 1;
+            var back = request.Days - days.Value;
+            if (type.HasBalance && back > 0)
+            {
+                db.Entries.Add(BalanceEntry.Of(request.EmployeeId, request.LeaveTypeId, input.ReturnedOn, EntryKind.Reversal, back, $"عودة مبكرة {request.RequestNo}", null, request.Id, user.DisplayName, clock.UtcNow));
+            }
+        }
+
+        request.Returned(input.ReturnedOn, input.Note, days);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     private static Error? Refusal(LeavePreview p) => (p.Problems.Count > 0 ? p.Problems[0] : null) switch
     {
         null => null,

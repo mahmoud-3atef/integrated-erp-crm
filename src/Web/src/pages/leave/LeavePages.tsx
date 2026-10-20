@@ -34,7 +34,8 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { periodOf, shiftPeriod } from '../../api/attendance';
 import { errorKey } from '../../api/auth';
-import { daysText, leaveApi, type LeaveDetail, type LeaveKpis, type LeaveRow, type LeaveType } from '../../api/leave';
+import { daysText, leaveApi, type LeaveDetail, type LeaveKpis, type LeaveRow, type LeaveType, type Permission } from '../../api/leave';
+import { hm } from '../../api/attendance';
 import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
@@ -43,8 +44,11 @@ import { ApprovalBar, useRecordApproval } from '../../components/workflow/Record
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { LeaveRequestDialog, LeaveStatusBadge, RequestsTable, leaveLook, typeName } from './leave';
+import { PermissionDialog, PermissionsTable } from './permissions';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined';
 
-type View = 'all' | 'pending' | 'current' | 'calendar';
+type View = 'all' | 'pending' | 'current' | 'permissions' | 'calendar';
 
 function Kpi({ accent, icon, label, value, unit, parts }: { accent: HrAccent; icon: ReactNode; label: string; value: number; unit: string; parts: [string, string | number][] }) {
   const a = hrAccents[accent];
@@ -87,6 +91,8 @@ export function LeavePage() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  const [permitting, setPermitting] = useState(false);
+  const [permissions, setPermissions] = useState<Permission[] | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setQuery(search), 300);
     return () => clearTimeout(timer);
@@ -100,6 +106,11 @@ export function LeavePage() {
       .catch(() => setTypes([]));
   }, []);
   useEffect(() => {
+    if (view === 'permissions') {
+      setPermissions(null);
+      leaveApi.permissions({}).then(setPermissions).catch((f) => setError(errorKey(f)));
+      return;
+    }
     if (view === 'calendar') return;
     setRows(null);
     leaveApi
@@ -116,9 +127,14 @@ export function LeavePage() {
         subtitle={t('leave.intro')}
         actions={
           can('leave.manage', true) && (
-            <Button variant="contained" startIcon={<Add />} onClick={() => setAsking(true)}>
-              {t('leave.new')}
-            </Button>
+            <>
+              <Button variant="outlined" startIcon={<TimerOutlinedIcon />} onClick={() => setPermitting(true)}>
+                {t('permissions.new')}
+              </Button>
+              <Button variant="contained" startIcon={<Add />} onClick={() => setAsking(true)}>
+                {t('leave.new')}
+              </Button>
+            </>
           )
         }
       />
@@ -128,10 +144,11 @@ export function LeavePage() {
           <>
             <Kpi accent="green" icon={<BeachAccessOutlinedIcon />} label={t('leave.kpi.today')} value={kpis.onLeaveToday} unit={t('leave.kpi.employees')} parts={[[t('leave.kpi.annual'), kpis.todayAnnual], [t('leave.kpi.sick'), kpis.todaySick], [t('leave.kpi.other'), kpis.todayOther]]} />
             <Kpi accent="blue" icon={<HourglassEmptyOutlinedIcon />} label={t('leave.kpi.pending')} value={kpis.pending} unit={t('leave.kpi.requests')} parts={[[t('leave.kpi.returned'), kpis.returned]]} />
-            <Kpi accent="violet" icon={<EventAvailableOutlinedIcon />} label={t('leave.kpi.upcoming')} value={kpis.upcoming} unit={t('leave.kpi.requests')} parts={[[t('leave.kpi.days'), daysText(kpis.upcomingDays)]]} />
+            <Kpi accent="violet" icon={<EventAvailableOutlinedIcon />} label={t('leave.kpi.upcoming')} value={kpis.upcoming} unit={t('leave.kpi.requests')} parts={[[t('leave.kpi.days'), daysText(kpis.upcomingDays)], [t('leave.kpi.returns'), kpis.returnsToConfirm]]} />
+            <Kpi accent="amber" icon={<TimerOutlinedIcon />} label={t('leave.kpi.permissions')} value={kpis.permissionsThisMonth} unit={t('leave.kpi.permissionsUnit')} parts={[[t('leave.kpi.hours'), hm(kpis.permissionMinutesThisMonth)], [t('leave.kpi.pending'), kpis.permissionsPending]]} />
           </>
         ) : (
-          Array.from({ length: 3 }, (_, i) => <Skeleton key={i} variant="rounded" height={118} />)
+          Array.from({ length: 4 }, (_, i) => <Skeleton key={i} variant="rounded" height={118} />)
         )}
       </Box>
       <Box sx={{ ...(hrCard as object), px: 2, pb: 2 }}>
@@ -139,9 +156,12 @@ export function LeavePage() {
           <Tab value="all" label={t('leave.tabs.all')} />
           <Tab value="pending" label={t('leave.tabs.pending', { count: kpis?.pending ?? 0 })} />
           <Tab value="current" label={t('leave.tabs.current')} />
+          <Tab value="permissions" label={t('leave.tabs.permissions')} />
           <Tab value="calendar" label={t('leave.tabs.calendar')} />
         </Tabs>
-        {view === 'calendar' ? (
+        {view === 'permissions' ? (
+          !permissions ? <LinearProgress /> : <PermissionsTable rows={permissions} onOpen={(id) => navigate(`/hr/permissions/${id}`)} />
+        ) : view === 'calendar' ? (
           <LeaveCalendar onOpen={(id) => navigate(`/hr/leave/${id}`)} />
         ) : (
           <>
@@ -181,6 +201,7 @@ export function LeavePage() {
         )}
       </Box>
       {asking && <LeaveRequestDialog onClose={() => setAsking(false)} onSent={(id) => navigate(`/hr/leave/${id}`)} />}
+      {permitting && <PermissionDialog onClose={() => setPermitting(false)} onSent={(id) => navigate(`/hr/permissions/${id}`)} />}
     </HrScope>
   );
 }
@@ -266,6 +287,7 @@ export function LeaveRequestPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [returning, setReturning] = useState(false);
   const approval = useRecordApproval(d?.approval?.instanceId);
   useCrumb(d?.request.requestNo, `/hr/leave/${id}`);
   const reload = useCallback(async () => {
@@ -308,6 +330,11 @@ export function LeaveRequestPage() {
                 {t('leave.resubmit')}
               </Button>
             )}
+            {d.canConfirmReturn && manage && (
+              <Button variant="contained" startIcon={<LoginOutlinedIcon />} onClick={() => setReturning(true)}>
+                {t('leave.return.confirm')}
+              </Button>
+            )}
             {d.canCancel && manage && (
               <Button variant="outlined" color="error" startIcon={<ReplayOutlinedIcon />} onClick={() => setCancelling(true)}>
                 {t('leave.cancel')}
@@ -333,6 +360,12 @@ export function LeaveRequestPage() {
       {d.lastComment && r.status !== 'Approved' && (
         <Alert severity={r.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: 1.5 }}>
           {d.lastComment}
+        </Alert>
+      )}
+      {d.returnedOn && (
+        <Alert severity={d.expectedReturn && d.returnedOn > d.expectedReturn ? 'warning' : 'success'} sx={{ mb: 1.5 }}>
+          {t(d.expectedReturn && d.returnedOn > d.expectedReturn ? 'leave.return.late' : 'leave.return.done', { date: date(d.returnedOn), expected: date(d.expectedReturn) })}
+          {d.returnNote ? ` · ${d.returnNote}` : ''}
         </Alert>
       )}
       <Box sx={{ ...(hrCard as object), p: 2, display: 'grid', gap: 1.25, maxWidth: 820 }}>
@@ -366,6 +399,17 @@ export function LeaveRequestPage() {
           }}
         />
       )}
+      {returning && (
+        <ReturnDialog
+          expected={d.expectedReturn}
+          onClose={() => setReturning(false)}
+          onConfirm={async (on, note) => {
+            await leaveApi.confirmReturn(r.id, on, note);
+            setReturning(false);
+            await reload();
+          }}
+        />
+      )}
       {cancelling && (
         <CancelDialog
           onClose={() => setCancelling(false)}
@@ -377,6 +421,35 @@ export function LeaveRequestPage() {
         />
       )}
     </HrScope>
+  );
+}
+
+function ReturnDialog({ expected, onClose, onConfirm }: { expected: string | null; onClose: () => void; onConfirm: (on: string, note: string | null) => Promise<void> }) {
+  const { t } = useTranslation();
+  const { date } = useCommercialFormat();
+  const [on, setOn] = useState(expected ?? new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <HrScope>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('leave.return.confirm')}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          <Typography sx={{ fontSize: 13 }}>{t('leave.return.hint', { expected: date(expected) })}</Typography>
+          <TextField size="small" type="date" label={t('leave.return.on')} value={on} onChange={(e) => setOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          {expected && on < expected && <Alert severity="info" sx={{ py: 0 }}>{t('leave.return.earlyNote')}</Alert>}
+          {expected && on > expected && <Alert severity="warning" sx={{ py: 0 }}>{t('leave.return.lateNote')}</Alert>}
+          <TextField size="small" label={t('leave.reason')} value={note} onChange={(e) => setNote(e.target.value)} />
+          <ErrorMessage messageKey={error} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+          <Button variant="contained" disabled={!on} onClick={() => void onConfirm(on, note.trim() || null).catch((f) => setError(errorKey(f)))}>
+            {t('leave.return.confirm')}
+          </Button>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+        </DialogActions>
+      </HrScope>
+    </Dialog>
   );
 }
 
