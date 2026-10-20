@@ -11,7 +11,7 @@ namespace IntegratedErp.Modules.Reports;
 
 /// <summary>
 /// Reports module (docs/03-migration-plan/14): the executive report for senior management, from the other modules'
-/// numbers and, in the parallel phase, the old system's invoices; it owns no tables.
+/// numbers and, in the parallel phase, the old system's invoices; then the workforce movement report. It owns no tables.
 /// </summary>
 public sealed class ReportsModule : IModule
 {
@@ -23,6 +23,7 @@ public sealed class ReportsModule : IModule
         services.AddOptions<ReportsOptions>().Bind(configuration.GetSection(ReportsOptions.Section));
         services.AddScoped<LegacyInvoices>();
         services.AddScoped<ExecutiveReport>();
+        services.AddScoped<MovementReport>();
         services.AddPermissions(ReportsPermissions.All);
     }
 
@@ -32,9 +33,11 @@ public sealed class ReportsModule : IModule
 internal static class ReportsPermissions
 {
     public const string ExecutiveView = "reports.executive.view";
+    public const string MovementView = "reports.movement.view";
 
     public static readonly PermissionDefinition[] All =
     [
         new(ExecutiveView, "التقارير", "Reports", "عرض تقرير الإدارة العليا", "View the executive report"),
+        new(MovementView, "التقارير", "Reports", "عرض تقرير حركة العمالة", "View the workforce movement report"),
     ];
 }

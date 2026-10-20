@@ -11,6 +11,25 @@ internal static class ReportWorkbook
     public static byte[] Moves(IReadOnlyList<MoveRowDto> rows) => Build("الحركة", ["رقم العامل", "العامل", "الحركة", "التاريخ", "المشروع", "مدير المشروع"],
         rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Kind == "Work" ? "مباشرة مشروع" : "رجوع للسكن", r.On.ToDateTime(TimeOnly.MinValue), r.Project, r.Manager }).ToList());
 
+    public static byte[] Arrivals(IReadOnlyList<ArrivalRowDto> rows) => Build("العمالة الجديدة", ["رقم العامل", "العامل", "الكفيل", "الوصول", "أول مباشرة", "المشروع", "المدة (يوم)", "أيام العمل", "أيام السكن"],
+        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Sponsor, r.ArrivedOn.ToDateTime(TimeOnly.MinValue), r.FirstWorkOn?.ToDateTime(TimeOnly.MinValue), r.FirstProject ?? "في السكن", r.Days, r.WorkDays, r.HousingDays }).ToList());
+
+    public static byte[] Returns(IReadOnlyList<ReturnRowDto> rows) => Build("الرجوع للسكن", ["رقم العامل", "العامل", "دخول السكن", "السبب", "المشروع", "مدير المشروع", "السكن"],
+        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.On.ToDateTime(TimeOnly.MinValue), Reason(r.Reason), r.Project, r.Manager, r.Housing }).ToList());
+
+    public static byte[] Waiting(IReadOnlyList<WaitingRowDto> rows) => Build("بانتظار التسليم", ["رقم العامل", "العامل", "في السكن منذ", "الأيام", "السكن", "آخر مشروع", "مدير المشروع"],
+        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Since.ToDateTime(TimeOnly.MinValue), r.Days, r.Housing, r.FromProject, r.Manager }).ToList());
+
+    private static string Reason(string reason) => reason switch
+    {
+        "ClientNoReason" => "العميل أرجع العامل بدون سبب",
+        "WorkerRefuses" => "العامل رافض للعمل",
+        "Sick" => "مريض",
+        "WorkerAbused" => "إساءة إلى العامل",
+        "ContractCanceled" => "إلغاء التعاقد مع العميل",
+        _ => "أخرى",
+    };
+
     private static byte[] Build(string sheet, string[] headers, List<object?[]> rows)
     {
         using var book = new XLWorkbook();

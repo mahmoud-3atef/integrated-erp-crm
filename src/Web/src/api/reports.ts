@@ -183,3 +183,82 @@ export const reportsApi = {
   invoicesExcel: (from: string, to: string, drill: Drill) => `${base}/invoices?${query(from, to, { ...drill, excel: true })}`,
   movesExcel: (from: string, to: string, drill: Drill) => `${base}/moves?${query(from, to, { ...drill, excel: true })}`,
 };
+
+// The workforce movement report (the same endpoints file, /api/v1/reports/movement).
+const movementBase = '/api/v1/reports/movement';
+
+export interface MonthMovement {
+  month: string;
+  starts: number;
+  returns: number;
+  arrivals: number;
+  averageStint: number | null;
+}
+
+export interface ArrivalRow {
+  workerNo: string;
+  name: string;
+  sponsor: string | null;
+  arrivedOn: string;
+  placement: string;
+  firstWorkOn: string | null;
+  firstProject: string | null;
+  /** To the first work, or to today while not delivered. */
+  days: number;
+  workDays: number;
+  housingDays: number;
+}
+
+export interface ReturnRow {
+  workerNo: string;
+  name: string;
+  on: string;
+  reason: string;
+  projectCrmId: string | null;
+  project: string | null;
+  manager: string | null;
+  housing: string | null;
+}
+
+export interface WaitingRow {
+  workerNo: string;
+  name: string;
+  since: string;
+  days: number;
+  housing: string | null;
+  fromProjectCrmId: string | null;
+  fromProject: string | null;
+  manager: string | null;
+}
+
+export interface Movement {
+  period: Period;
+  starts: Figure;
+  returns: Figure;
+  arrivals: Figure;
+  arrivalsDelivered: number;
+  net: Figure;
+  averageStint: Figure;
+  waiting: number;
+  oldestWaitingDays: number | null;
+  months: MonthMovement[];
+  startsByManager: Rank[];
+  startsByProject: Rank[];
+  reasons: Rank[];
+  newWorkers: ArrivalRow[];
+  newWorkersTotal: number;
+}
+
+/** What a movement list narrows to. */
+export interface MovementDrill extends Drill {
+  reason?: string | null;
+  delivered?: boolean | null;
+}
+
+export type MovementList = 'moves' | 'arrivals' | 'returns' | 'waiting';
+
+export const movementApi = {
+  overview: (from: string, to: string) => request<Movement>('GET', `${movementBase}?${query(from, to)}`),
+  list: <T,>(list: MovementList, from: string, to: string, drill: MovementDrill) => request<T[]>('GET', `${movementBase}/${list}?${query(from, to, { ...drill })}`),
+  excel: (list: MovementList, from: string, to: string, drill: MovementDrill) => `${movementBase}/${list}?${query(from, to, { ...drill, excel: true })}`,
+};

@@ -589,7 +589,8 @@
     "unpin": "Unpin the menu",
     "sections": "Sections",
     "reportsSection": "Reports",
-    "executive": "Executive report"
+    "executive": "Executive report",
+    "movement": "Workforce movement"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -4909,5 +4910,57 @@
     },
     "points": "{{value}} pts",
     "sameDays": "movements to {{to}}"
+  },
+  "movement": {
+    "title": "Workforce movement",
+    "noAccess": "You do not have permission to view the workforce movement report.",
+    "tab": "Movement",
+    "daysUnit": "days",
+    "showAll": "Show all",
+    "kpi": {
+      "starts": "Starts",
+      "returns": "Back to housing",
+      "arrivals": "New workers",
+      "arrivalsNote": "{{delivered}} delivered · {{housing}} in housing",
+      "net": "Net movement",
+      "stint": "Average stint",
+      "stintNote": "Of the workers who came back",
+      "waiting": "Waiting for delivery",
+      "oldest": "Longest: {{days}} days"
+    },
+    "months": {
+      "title": "Starts and returns by month"
+    },
+    "arrivals": {
+      "title": "New workers",
+      "hint": "Arrived in the period ({{count}}) and their first delivery",
+      "arrived": "Arrived",
+      "firstWork": "First delivery",
+      "days": "Days",
+      "workDays": "Work days",
+      "housingDays": "Housing days",
+      "inHousing": "In housing"
+    },
+    "reasons": {
+      "title": "Reasons for returning",
+      "hint": "From the approved return orders · click a reason for its workers"
+    },
+    "drill": {
+      "reason": "Back to housing: {{reason}}",
+      "enteredOn": "Entered housing",
+      "reasonCol": "Reason",
+      "housing": "Housing",
+      "since": "In housing since",
+      "days": "Days",
+      "lastProject": "Last project"
+    },
+    "ins": {
+      "topProject": "Most starts at {{name}} ({{count}}).",
+      "returns": "{{count}} workers came back to housing.",
+      "returnsReason": "{{count}} workers came back to housing, {{top}} of them for «{{reason}}».",
+      "stint": "The returning workers had stayed {{days}} days on their projects on average.",
+      "arrivals": "{{count}} new workers arrived: {{delivered}} delivered and {{waiting}} not yet.",
+      "waiting": "{{count}} workers wait in housing for delivery, the longest for {{days}} days."
+    }
   }
 }

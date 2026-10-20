@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace IntegratedErp.Modules.Reports.Api;
 
-/// <summary>The executive report: its overview and finance, and the lists behind any clicked figure (also as Excel).</summary>
+/// <summary>The executive and the movement reports: their figures, and the lists behind any clicked figure (also as Excel).</summary>
 internal static class ReportsEndpoints
 {
     // The finance figures also need the right to see the invoices.
@@ -62,6 +62,62 @@ internal static class ReportsEndpoints
                     : Results.Ok(rows);
             })
             .RequirePermission(ReportsPermissions.ExecutiveView, companyWide: true);
+
+        MapMovement(endpoints);
+    }
+
+    private const string Xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    private static void MapMovement(IEndpointRouteBuilder endpoints)
+    {
+        var group = endpoints.MapGroup("/api/v1/reports/movement").WithTags("Workforce movement report").RequireAuthorization(PlatformPolicies.CompanyUser);
+
+        group.MapGet("", async (DateOnly? from, DateOnly? to, MovementReport report, IClock clock, CancellationToken ct) =>
+                Range(from, to, clock) is { } range ? Results.Ok(await report.OverviewAsync(range.From, range.To, ct).ConfigureAwait(false)) : BadPeriod())
+            .RequirePermission(ReportsPermissions.MovementView, companyWide: true);
+
+        group.MapGet("/moves", async (DateOnly? from, DateOnly? to, Guid? project, string? manager, string? month, string? kind, bool? excel, ExecutiveReport report, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var rows = await report.MovesAsync(new ReportFilter(range.From, range.To, project, manager, null, null, month, kind), ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Moves(rows), Xlsx, "moves.xlsx") : Results.Ok(rows);
+            })
+            .RequirePermission(ReportsPermissions.MovementView, companyWide: true);
+
+        group.MapGet("/arrivals", async (DateOnly? from, DateOnly? to, string? month, bool? delivered, bool? excel, MovementReport report, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var rows = await report.ArrivalsAsync(range.From, range.To, month, delivered, ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Arrivals(rows), Xlsx, "arrivals.xlsx") : Results.Ok(rows);
+            })
+            .RequirePermission(ReportsPermissions.MovementView, companyWide: true);
+
+        group.MapGet("/returns", async (DateOnly? from, DateOnly? to, string? month, string? reason, bool? excel, MovementReport report, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var rows = await report.ReturnsAsync(range.From, range.To, month, reason, ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Returns(rows), Xlsx, "returns.xlsx") : Results.Ok(rows);
+            })
+            .RequirePermission(ReportsPermissions.MovementView, companyWide: true);
+
+        group.MapGet("/waiting", async (bool? excel, MovementReport report, CancellationToken ct) =>
+            {
+                var rows = await report.WaitingAsync(ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Waiting(rows), Xlsx, "waiting.xlsx") : Results.Ok(rows);
+            })
+            .RequirePermission(ReportsPermissions.MovementView, companyWide: true);
     }
 
     /// <summary>The period asked for (this month by default), at most two years and never before 2025.</summary>

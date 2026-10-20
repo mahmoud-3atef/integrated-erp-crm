@@ -31,6 +31,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
+import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
@@ -92,7 +93,10 @@ const menu: MenuSection[] = [
   {
     titleKey: 'menu.reportsSection',
     icon: <QueryStatsOutlinedIcon />,
-    items: [{ path: '/reports/executive', labelKey: 'menu.executive', icon: <QueryStatsOutlinedIcon />, permission: 'reports.executive.view', companyWide: true }],
+    items: [
+      { path: '/reports/executive', labelKey: 'menu.executive', icon: <QueryStatsOutlinedIcon />, permission: 'reports.executive.view', companyWide: true },
+      { path: '/reports/movement', labelKey: 'menu.movement', icon: <SyncAltOutlinedIcon />, permission: 'reports.movement.view', companyWide: true },
+    ],
   },
   {
     titleKey: 'menu.commercial',

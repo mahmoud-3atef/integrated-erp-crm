@@ -377,7 +377,7 @@ internal sealed class ExecutiveReport(LegacyInvoices legacy, IWorkforceReport wo
 
     private static bool Same(DateOnly day, DateOnly month) => day.Year == month.Year && day.Month == month.Month;
 
-    private static string Key(DateOnly month) => month.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+    internal static string Key(DateOnly month) => month.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
 
     private static DateOnly Min(DateOnly a, DateOnly b) => a < b ? a : b;
 }

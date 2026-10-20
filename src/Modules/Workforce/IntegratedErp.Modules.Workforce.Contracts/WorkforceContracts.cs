@@ -154,6 +154,7 @@ public sealed record WorkforceNow(int OnJob, int InHousing, int ProjectsWithWork
 
 /// <param name="Kind"><c>Work</c> (a work start: delivery or transfer) or <c>Housing</c> (a return to housing).</param>
 /// <param name="FromProjectCrmId">For a return: the project the worker came back from (the work just before).</param>
+/// <param name="FromStartedOn">For a return: when that work began (how long the worker stayed on the project).</param>
 public sealed record WorkforceMove(
     Guid WorkerId,
     string WorkerNo,
@@ -163,7 +164,14 @@ public sealed record WorkforceMove(
     Guid? ProjectCrmId,
     string? Place,
     Guid? FromProjectCrmId,
-    string? FromPlace);
+    string? FromPlace,
+    DateOnly? FromStartedOn = null);
+
+/// <summary>A worker who joined the company in a period (the old system's «date of joining»), and how they have fared since.</summary>
+public sealed record WorkforceArrival(Guid WorkerId, string WorkerNo, string Name, string? Sponsor, DateOnly ArrivedOn, string Placement, DateOnly? FirstWorkOn, string? FirstProject, int WorkDays, int HousingDays);
+
+/// <summary>A worker in housing now: since when, and where from.</summary>
+public sealed record WorkforceInHousing(Guid WorkerId, string WorkerNo, string Name, DateOnly Since, string? Place, Guid? FromProjectCrmId, string? FromPlace, decimal MonthlySalary);
 
 /// <summary>The workforce's numbers for the reports (read only).</summary>
 public interface IWorkforceReport
@@ -176,4 +184,10 @@ public interface IWorkforceReport
     /// inactive project.
     /// </summary>
     Task<IReadOnlyList<WorkforceMove>> MovesAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>The workers who joined the company in a period, with their first work and their days at work and in housing to today.</summary>
+    Task<IReadOnlyList<WorkforceArrival>> ArrivalsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>The active workers in housing now, the longest there first.</summary>
+    Task<IReadOnlyList<WorkforceInHousing>> InHousingAsync(CancellationToken cancellationToken);
 }

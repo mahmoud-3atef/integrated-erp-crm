@@ -27,6 +27,7 @@ public sealed class OperationsModule : IModule
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddModuleDbContext<OperationsDbContext>(configuration, OperationsDbContext.SchemaName);
+        services.AddScoped<IHousingEntries, HousingEntries>();
         services.AddScoped<DeliveryOrderService>();
         services.AddScoped<DeliveryOrderQueries>();
         services.AddScoped<IApprovalRecordAdapter, DeliveryOrderAdapter>();

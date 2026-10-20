@@ -14,13 +14,11 @@ import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlin
 import DonutLargeOutlinedIcon from '@mui/icons-material/DonutLargeOutlined';
 import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
-import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import {
   Alert,
@@ -28,10 +26,8 @@ import {
   Button,
   ButtonBase,
   Drawer,
-  GlobalStyles,
   IconButton,
   LinearProgress,
-  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -39,151 +35,20 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../api/auth';
-import { reportsApi, type Drill, type Figure, type Finance, type InvoiceRow, type MoveRow, type Overview } from '../../api/reports';
+import { reportsApi, type Drill, type Finance, type InvoiceRow, type MoveRow, type Overview } from '../../api/reports';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { Columns, RankedBars, Ring, useCountUp } from '../../components/charts';
-import { keyframes } from '@mui/material/styles';
+import { Columns, RankedBars, Ring } from '../../components/charts';
+import { accents, appear, card, CardTitle, Dot, Empty, filling, Hero, Kpi, Legend, Loading, PrintStyles, ReportBar, Ticker, useFormat, useMark, usePeriodChoice } from './reportKit';
 
 type Tab = 'overview' | 'finance';
-
-// As on the home page: cards rise in one after the other, numbers count up, bars grow (from the reading start:
-// «left» becomes «right» in Arabic through the RTL style plugin).
-const rise = keyframes`from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; }`;
-const grow = keyframes`from { transform: scaleY(0); } to { transform: scaleY(1); }`;
-const fill = keyframes`from { transform: scaleX(0); } to { transform: scaleX(1); }`;
-const appear = (delay: number) => ({ animation: `${rise} .55s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
-const float = keyframes`0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); }`;
-// The summary's ticker: the sentences enter at the reading end and run towards its start (to the right in Arabic: the RTL
-// style plugin turns this leftward run around), two copies so it never jumps.
-const ticker = keyframes`from { transform: translateX(0); } to { transform: translateX(-50%); }`;
-
-/** The figures' banner, as the home page's: the navy gradient with its floating lights. */
-function Hero({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: `${tokens.radiusLg}px`,
-        p: { xs: 2, md: 2.5 },
-        mb: 1.75,
-        color: '#fff',
-        background: `linear-gradient(125deg, ${tokens.navy900} 0%, ${tokens.navy700} 45%, ${tokens.teal} 100%)`,
-        boxShadow: tokens.shadowMd,
-        animation: `${rise} .5s cubic-bezier(.2,.8,.2,1) both`,
-      }}
-    >
-      <Box aria-hidden sx={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -160, insetInlineEnd: -80, background: 'radial-gradient(circle, rgba(43,195,225,.35), transparent 70%)', animation: `${float} 9s ease-in-out infinite` }} />
-      <Box aria-hidden sx={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', bottom: -120, insetInlineStart: '30%', background: 'radial-gradient(circle, rgba(255,255,255,.12), transparent 70%)', animation: `${float} 11s ease-in-out infinite reverse` }} />
-      <Box sx={{ position: 'relative', display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' } }}>{children}</Box>
-    </Box>
-  );
-}
-const filling = (delay = 0) => ({ transformOrigin: 'left center', animation: `${fill} .9s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
-
-/**
- * A ticker sentence with its data in a colour of its own: the marked values (figures, names, months) and any other
- * number of the sentence, with the % that follows it.
- */
-function Marked({ text }: { text: string }) {
-  const parts = text.split(/(⟦[^⟧]*⟧%?|\d[\d,.]*%?)/);
-  return (
-    <>
-      {parts.map((part, i) =>
-        i % 2 === 1 ? (
-          <Box key={i} component="bdi" sx={{ color: '#C2410C', fontWeight: 800 }}>
-            {part.replace(/[⟦⟧]/g, '')}
-          </Box>
-        ) : (
-          part
-        ),
-      )}
-    </>
-  );
-}
-
-/** Whether the device asks for less motion (then the ticker shows one sentence at a time). */
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const change = () => setReduced(query.matches);
-    query.addEventListener('change', change);
-    return () => query.removeEventListener('change', change);
-  }, []);
-  return reduced;
-}
-
-/** A number counting up from zero when it shows (to two decimals for the millions and the rates). */
-function Count({ value, decimals = 0, format }: { value: number; decimals?: number; format: (n: number) => string }) {
-  const scale = 10 ** decimals;
-  const shown = useCountUp(Math.round(value * scale)) / scale;
-  return <>{decimals ? shown.toFixed(decimals) : format(shown)}</>;
-}
-type Preset = 'month' | 'last' | 'quarter' | 'ytd' | 'custom';
-type Good = 'up' | 'down' | 'none';
-
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-/** The presets' periods, from today. */
-function presetRange(preset: Exclude<Preset, 'custom'>): [string, string] {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  switch (preset) {
-    case 'last':
-      return [iso(new Date(y, m - 1, 1)), iso(new Date(y, m, 0))];
-    case 'quarter': {
-      const q = Math.floor(m / 3) * 3;
-      return [iso(new Date(y, q, 1)), iso(new Date(y, q + 3, 0))];
-    }
-    case 'ytd':
-      return [iso(new Date(y, 0, 1)), iso(new Date(y, m + 1, 0))];
-    default:
-      return [iso(new Date(y, m, 1)), iso(new Date(y, m + 1, 0))];
-  }
-}
-
-const accents = {
-  navy: tokens.navy700,
-  teal: '#0e7c86',
-  amber: '#d98a06',
-  green: '#23a455',
-  violet: '#7b5cd6',
-  rose: '#e0607e',
-} as const;
-
-const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, minWidth: 0, transition: 'box-shadow .2s', '&:hover': { boxShadow: tokens.shadowMd } } as const;
-
-function useFormat() {
-  const { i18n } = useTranslation();
-  const ar = i18n.language === 'ar';
-  return useMemo(() => {
-    const whole = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-    const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-    const locale = ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB';
-    const month = new Intl.DateTimeFormat(locale, { month: 'short', year: '2-digit', timeZone: 'UTC' });
-    const monthOnly = new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' });
-    const monthLong = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
-    return {
-      n: (v: number) => whole.format(v),
-      c: (v: number) => compact.format(v),
-      month: (key: string) => month.format(new Date(`${key}-01T00:00:00Z`)),
-      monthName: (key: string) => monthOnly.format(new Date(`${key}-01T00:00:00Z`)),
-      monthLong: (key: string) => monthLong.format(new Date(`${key}-01T00:00:00Z`)),
-      day: (v: string) => v.slice(0, 10).replaceAll('-', '/'),
-    };
-  }, [ar]);
-}
 
 /**
  * The executive report (docs/03-migration-plan/14, phase A): the period and its comparison, the summary written from the
@@ -194,8 +59,8 @@ export function ExecutiveReportPage() {
   const { t } = useTranslation();
   const { can } = useSession();
   const [tab, setTab] = useState<Tab>('overview');
-  const [preset, setPreset] = useState<Preset>('month');
-  const [[from, to], setRange] = useState<[string, string]>(() => presetRange('month'));
+  const choice = usePeriodChoice();
+  const { from, to } = choice;
   const [overview, setOverview] = useState<Overview | null>(null);
   const [finance, setFinance] = useState<Finance | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -216,68 +81,19 @@ export function ExecutiveReportPage() {
     return <Alert severity="warning">{t('exec.noAccess')}</Alert>;
   }
 
-  const choose = (p: Preset) => {
-    setPreset(p);
-    if (p !== 'custom') setRange(presetRange(p));
-  };
-  const presets: Preset[] = ['month', 'last', 'quarter', 'ytd', 'custom'];
   return (
     <Box>
-      <GlobalStyles styles={{ '@media print': { aside: { display: 'none !important' }, header: { display: 'none !important' }, '.no-print': { display: 'none !important' }, body: { background: '#fff' } } }} />
-      <Stack direction="row" className="no-print" sx={{ ...card, p: 0.75, gap: 0.5, mb: 1.75, flexWrap: 'wrap' }} role="tablist">
-        {(['overview', 'finance'] as Tab[])
-          .filter((k) => k !== 'finance' || overview?.financeVisible !== false)
-          .map((k) => (
-            <ButtonBase
-              key={k}
-              role="tab"
-              aria-selected={tab === k}
-              onClick={() => setTab(k)}
-              sx={{ gap: 1, px: 2, py: 1.1, borderRadius: '10px', fontWeight: 700, fontSize: 13.5, color: tab === k ? '#fff' : tokens.gray600, bgcolor: tab === k ? tokens.navy700 : 'transparent', '& svg': { fontSize: 19 } }}
-            >
-              {k === 'overview' ? <QueryStatsOutlinedIcon /> : <PaymentsOutlinedIcon />}
-              {t(`exec.tabs.${k}`)}
-            </ButtonBase>
-          ))}
-        <Box sx={{ flex: 1 }} />
-        <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap', alignItems: 'center', px: 0.5 }}>
-          {presets.map((p) => (
-            <Tooltip
-              key={p}
-              title={
-                preset === p && overview ? (
-                  <bdi>
-                    {t('exec.comparing', { from: overview.period.from.replaceAll('-', '/'), to: overview.period.to.replaceAll('-', '/'), pfrom: overview.period.previousFrom.replaceAll('-', '/'), pto: overview.period.previousTo.replaceAll('-', '/') })}
-                    {overview.period.movesPreviousTo !== overview.period.previousTo && ` · ${t('exec.sameDays', { to: overview.period.movesPreviousTo.replaceAll('-', '/') })}`}
-                  </bdi>
-                ) : (
-                  ''
-                )
-              }
-            >
-              <Button
-                size="small"
-                variant={preset === p ? 'contained' : 'outlined'}
-                onClick={() => choose(p)}
-                sx={{ borderRadius: 999, px: 1.5, height: 32, ...(preset === p ? { bgcolor: tokens.navy800 } : { bgcolor: '#fff', borderColor: tokens.border, color: tokens.navy800 }) }}
-              >
-                {t(`exec.preset.${p}`)}
-              </Button>
-            </Tooltip>
-          ))}
-          {preset === 'custom' && (
-            <>
-              <TextField size="small" type="date" label={t('exec.from')} value={from} onChange={(e) => e.target.value && setRange([e.target.value, to])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
-              <TextField size="small" type="date" label={t('exec.to')} value={to} onChange={(e) => e.target.value && setRange([from, e.target.value])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
-            </>
-          )}
-          <Tooltip title={t('exec.print')}>
-            <IconButton size="small" onClick={() => window.print()} aria-label={t('exec.print')} sx={{ border: `1px solid ${tokens.border}`, width: 32, height: 32 }}>
-              <PrintOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Stack>
+      <PrintStyles />
+      <ReportBar
+        tabs={[
+          { key: 'overview' as Tab, label: t('exec.tabs.overview'), icon: <QueryStatsOutlinedIcon /> },
+          ...(overview?.financeVisible !== false ? [{ key: 'finance' as Tab, label: t('exec.tabs.finance'), icon: <PaymentsOutlinedIcon /> }] : []),
+        ]}
+        tab={tab}
+        onTab={setTab}
+        choice={choice}
+        period={overview?.period}
+      />
 
       <ErrorMessage messageKey={error} />
       {tab === 'overview' ? (
@@ -290,107 +106,10 @@ export function ExecutiveReportPage() {
   );
 }
 
-/** A figure's card: its value, the comparison with the period before (the colour follows the meaning), six months. */
-function Kpi({ label, icon, figure, value, unit, good = 'none', spark, note, money, index = 0 }: { label: string; icon: ReactNode; figure?: Figure; value?: number | null; unit?: string; good?: Good; accent?: string; spark?: (number | null)[]; note?: ReactNode; money?: boolean; index?: number }) {
-  const { t } = useTranslation();
-  const f = useFormat();
-  const v = figure ? figure.value : (value ?? null);
-  const p = figure?.previous ?? null;
-  const diff = v !== null && p !== null ? v - p : null;
-  const pct = diff !== null && p ? (diff / Math.abs(p)) * 100 : null;
-  const tone = diff === null || diff === 0 || good === 'none' ? 'rgba(255,255,255,.8)' : (diff > 0) === (good === 'up') ? '#86EFAC' : '#FCA5A5';
-  const shown = (n: number) => (money && Math.abs(n) >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}` : f.n(n));
-  const points = unit === '%';
-  const unitShown = money && v !== null && Math.abs(v) >= 1_000_000 ? t('exec.millionSar') : unit;
-  const max = Math.max(1, ...(spark ?? []).map((x) => Math.abs(x ?? 0)));
-  return (
-    <Box
-      sx={{
-        ...appear(0.1 + index * 0.06),
-        minWidth: 0,
-        p: 1.75,
-        borderRadius: '16px',
-        bgcolor: 'rgba(255,255,255,.1)',
-        border: '1px solid rgba(255,255,255,.16)',
-        backdropFilter: 'blur(8px)',
-        transition: 'background-color .2s, transform .2s',
-        '&:hover': { bgcolor: 'rgba(255,255,255,.18)', transform: 'translateY(-2px)' },
-      }}
-    >
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.5, opacity: 0.85, '& svg': { fontSize: 18 } }}>
-        {icon}
-        <Typography noWrap sx={{ fontSize: 12.5 }}>
-          {label}
-        </Typography>
-      </Stack>
-      <Typography sx={{ fontSize: 27, fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
-        {v === null ? (
-          <Tooltip title={t('exec.unknown')}>
-            <span>—</span>
-          </Tooltip>
-        ) : (
-          <bdi>
-            <Count value={money && Math.abs(v) >= 1_000_000 ? v / 1_000_000 : v} decimals={money && Math.abs(v) >= 1_000_000 ? 2 : points && !Number.isInteger(v) ? 1 : 0} format={f.n} />
-          </bdi>
-        )}{' '}
-        {unitShown && <Box component="span" sx={{ fontSize: 12, fontWeight: 500, opacity: 0.75 }}>{unitShown}</Box>}
-      </Typography>
-      <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: tone, minHeight: 17 }}>
-        {diff !== null ? (
-          <bdi>
-            {diff > 0 ? '▲' : diff < 0 ? '▼' : '='} {points ? t('exec.points', { value: Math.abs(diff).toFixed(1) }) : pct !== null ? `${Math.abs(pct).toFixed(1)}%` : shown(Math.abs(diff))} ·{' '}
-            {t('exec.previous', { value: points ? `${p}%` : money ? f.c(p!) : f.n(p!) })}
-          </bdi>
-        ) : (
-          note
-        )}
-      </Typography>
-      {diff !== null && note && <Typography sx={{ fontSize: 11.5, opacity: 0.75 }}>{note}</Typography>}
-      {spark && spark.length > 0 && (
-        <Box aria-hidden sx={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: 24, mt: 0.75 }}>
-          {spark.map((x, i) => (
-            <Box key={i} sx={{ width: 9, height: `${Math.max(8, (Math.abs(x ?? 0) / max) * 100)}%`, borderRadius: '2px 2px 0 0', bgcolor: '#fff', opacity: i === spark.length - 1 ? 0.95 : 0.35, transformOrigin: 'bottom', animation: `${grow} .7s ${index * 0.06 + 0.25 + i * 0.05}s cubic-bezier(.2,.8,.2,1) both` }} />
-          ))}
-        </Box>
-      )}
-    </Box>
-  );
-}
-
-function CardTitle({ title, hint, icon, action }: { title: string; hint?: string; icon?: ReactNode; action?: ReactNode }) {
-  return (
-    <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center', mb: 1.75 }}>
-      {icon && <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 36, height: 36, borderRadius: '11px', bgcolor: tokens.navy50, color: tokens.navy700, '& svg': { fontSize: 20 } }}>{icon}</Box>}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 15, color: tokens.navy800 }}>{title}</Typography>
-        {hint && <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{hint}</Typography>}
-      </Box>
-      {action}
-    </Stack>
-  );
-}
-
-function Loading() {
-  return (
-    <Stack sx={{ gap: 1.5 }}>
-      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(6, 1fr)' } }}>
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} variant="rounded" height={118} />
-        ))}
-      </Box>
-      <Skeleton variant="rounded" height={110} />
-      <Skeleton variant="rounded" height={300} />
-    </Stack>
-  );
-}
-
 /** The summary for senior management, written from the figures (nothing typed by hand). */
 function Insights({ data }: { data: Overview }) {
-  const { t } = useTranslation();
   const f = useFormat();
-  // Each value put in a sentence is marked, so the ticker shows it in its own colour.
-  const mark = (key: string, values: Record<string, string | number>) =>
-    t(key, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, `⟦${v}⟧`])));
+  const mark = useMark();
   const lines: string[] = [];
   const s = data.starts.value ?? 0;
   const ps = data.starts.previous;
@@ -408,63 +127,8 @@ function Insights({ data }: { data: Overview }) {
   if (data.financeVisible && data.coverage.month && data.coverage.missing + data.coverage.partial > 0) {
     lines.push(mark('exec.ins.coverage', { month: f.monthLong(data.coverage.month), count: data.coverage.missing + data.coverage.partial, workers: f.n(data.coverage.workersNotInvoiced) }));
   }
-  const seconds = Math.max(28, lines.join(' ').length * 0.16);
-  const calm = useReducedMotion();
-  const [shown, setShown] = useState(0);
-  useEffect(() => {
-    if (!calm) return;
-    const timer = window.setInterval(() => setShown((n) => n + 1), 5000);
-    return () => window.clearInterval(timer);
-  }, [calm]);
-  const run = (copy: number) => (
-    <Stack direction="row" aria-hidden={copy === 1 ? true : undefined} sx={{ flex: '0 0 auto', alignItems: 'center' }}>
-      {lines.map((l) => (
-        <Stack key={`${copy}-${l}`} direction="row" sx={{ alignItems: 'center', flex: '0 0 auto' }}>
-          <Typography component="span" sx={{ fontSize: 13.5, whiteSpace: 'nowrap', px: 2 }}>
-            <Marked text={l} />
-          </Typography>
-          <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#FCD34D', flex: '0 0 auto' }} />
-        </Stack>
-      ))}
-    </Stack>
-  );
-  return (
-    <Box
-      role="region"
-      aria-label={t('exec.ins.title')}
-      sx={{ ...appear(0.3), display: 'flex', alignItems: 'stretch', overflow: 'hidden', bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, mb: 1.75, height: 48 }}
-    >
-      <Stack direction="row" sx={{ flex: '0 0 auto', alignItems: 'center', gap: 1, px: 2, bgcolor: '#d98a06', color: '#fff', fontWeight: 800, fontSize: 13.5, '& svg': { fontSize: 20 } }}>
-        <CampaignOutlinedIcon />
-        {t('exec.ins.title')}
-      </Stack>
-      <Box
-        sx={{
-          position: 'relative',
-          flex: 1,
-          minWidth: 0,
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          color: tokens.navy800,
-          maskImage: 'linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)',
-          '&:hover .ticker': { animationPlayState: 'paused' },
-        }}
-      >
-        {calm ? (
-          // Less motion asked by the device: one sentence at a time, changing every few seconds.
-          <Typography key={shown} sx={{ ...appear(0), fontSize: 13.5, px: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <Marked text={lines[shown % lines.length]!} />
-          </Typography>
-        ) : (
-          <Box className="ticker" sx={{ display: 'flex', width: 'max-content', animation: `${ticker} ${seconds}s linear infinite` }}>
-            {run(0)}
-            {run(1)}
-          </Box>
-        )}
-      </Box>
-    </Box>
-  );
+  return <Ticker lines={lines} />;
+
 }
 
 function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind: 'moves' | 'invoices', title: string, drill: Drill) => void }) {
@@ -738,30 +402,6 @@ function rateColor(rate: number) {
 function RatePill({ rate }: { rate: number }) {
   const bg = rate >= 75 ? '#D1FAE5' : rate >= 40 ? '#FEF3C7' : '#FEE2E2';
   return <Box component="span" sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 11.5, fontWeight: 700, bgcolor: bg, color: rateColor(rate) }}>{`${rate}%`}</Box>;
-}
-
-function Dot({ color, text }: { color: string; text: string }) {
-  return (
-    <Stack direction="row" sx={{ gap: 0.75, alignItems: 'center' }}>
-      <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: color, flex: '0 0 auto' }} />
-      <Typography sx={{ fontSize: 12.5 }}>{text}</Typography>
-    </Stack>
-  );
-}
-
-function Legend({ items }: { items: [string, string][] }) {
-  return (
-    <Stack direction="row" sx={{ gap: 2, mt: 1, flexWrap: 'wrap' }}>
-      {items.map(([label, color]) => (
-        <Dot key={label} color={color} text={label} />
-      ))}
-    </Stack>
-  );
-}
-
-function Empty() {
-  const { t } = useTranslation();
-  return <Typography sx={{ fontSize: 13, color: tokens.gray500, py: 3, textAlign: 'center' }}>{t('exec.empty')}</Typography>;
 }
 
 function InvoiceTable({ rows }: { rows: InvoiceRow[] }) {

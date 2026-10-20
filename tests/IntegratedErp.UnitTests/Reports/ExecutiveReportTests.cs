@@ -44,3 +44,15 @@ public sealed class ExecutiveReportTests
     [InlineData(null, false)]
     public void The_head_office_and_inactive_projects_are_left_out(string? code, bool excluded) => Assert.Equal(excluded, new ReportsOptions().IsExcluded(code));
 }
+
+public sealed class MovementReportTests
+{
+    [Fact]
+    public void The_average_stint_counts_the_returns_from_the_start_of_their_work()
+    {
+        var on = new DateOnly(2026, 10, 10);
+        IntegratedErp.Modules.Workforce.Contracts.WorkforceMove Move(string kind, DateOnly? fromStarted) => new(Guid.NewGuid(), "BSS1", "A", kind, on, null, null, null, null, fromStarted);
+        Assert.Equal(25m, MovementReport.Stint([Move("Housing", on.AddDays(-20)), Move("Housing", on.AddDays(-30)), Move("Housing", null), Move("Work", on.AddDays(-99))]));
+        Assert.Null(MovementReport.Stint([Move("Work", on.AddDays(-5))]));
+    }
+}

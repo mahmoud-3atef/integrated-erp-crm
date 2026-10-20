@@ -60,7 +60,6 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 };
             })
             .ToList();
-        var inactive = now.Where(w => w.Placement == Placement.Inactive).Select(w => w.Id).ToHashSet();
         now = now.Where(w => w.Placement != Placement.Inactive).ToList();
         var active = now.Where(w => !Gone.Contains(w.Placement)).ToList();
         var placements = now.GroupBy(w => w.Placement.ToString()).ToDictionary(g => g.Key, g => g.Count());
@@ -95,7 +94,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
 
         return new WorkforceDashboardDto(
             active.Count, placements, projects.Take(8).ToList(), projects.Count, nationalities, professions,
-            await MovesAsync(today, inactive, cancellationToken).ConfigureAwait(false),
+            await MovesAsync(today, cancellationToken).ConfigureAwait(false),
             activeIqamas.Count,
             activeIqamas.Count(i => i.ExpiresOn >= today && i.ExpiresOn <= today.AddDays(30)),
             activeIqamas.Count(i => i.ExpiresOn < today),
@@ -106,7 +105,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
     /// The work starts and returns to housing of the last twelve months, from the timeline: the old system's history up
     /// to each worker's first period recorded here, then the recorded periods.
     /// </summary>
-    private async Task<IReadOnlyList<MonthMovesDto>> MovesAsync(DateOnly today, HashSet<Guid> inactive, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<MonthMovesDto>> MovesAsync(DateOnly today, CancellationToken cancellationToken)
     {
         var from = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
         var firstRecorded = await db.Periods.AsNoTracking().GroupBy(p => p.WorkerId).Select(g => new { g.Key, First = g.Min(p => p.StartsOn) })
@@ -116,10 +115,10 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
         var history = await db.HistoryPeriods.AsNoTracking().Where(p => p.StartsOn >= from && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
             .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.Place }).ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        // Neither the inactive workers' movements nor anyone's work starts on an inactive project.
+        // No work starts on an inactive project; a worker parked there later still moved before (as the old report counts).
         var moves = recorded
             .Concat(history.Where(h => !firstRecorded.TryGetValue(h.WorkerId, out var first) || h.StartsOn < first))
-            .Where(m => !inactive.Contains(m.WorkerId) && !(m.Kind == PeriodKind.Work && options.Value.IsInactiveProject(m.Place)))
+            .Where(m => !(m.Kind == PeriodKind.Work && options.Value.IsInactiveProject(m.Place)))
             .ToLookup(m => new DateOnly(m.StartsOn.Year, m.StartsOn.Month, 1));
         return Enumerable.Range(0, 12).Select(i => from.AddMonths(i))
             .Select(m => new MonthMovesDto(m, moves[m].Count(x => x.Kind == PeriodKind.Work), moves[m].Count(x => x.Kind == PeriodKind.Housing)))
@@ -148,7 +147,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
             .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.ProjectCrmId, p.Place }).ToListAsync(cancellationToken).ConfigureAwait(false);
         var timeline = recorded
             .Concat(history.Where(h => !firstRecorded.TryGetValue(h.WorkerId, out var first) || h.StartsOn < first))
-            .Where(m => workers.TryGetValue(m.WorkerId, out var w) && w.Placement != Placement.Inactive)
+            .Where(m => workers.ContainsKey(m.WorkerId))
             .ToLookup(m => m.WorkerId);
 
         var moves = new List<WorkforceMove>();
@@ -167,11 +166,68 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 var before = m.Kind == PeriodKind.Housing ? ordered.Take(i).LastOrDefault(x => x.Kind == PeriodKind.Work) : null;
                 moves.Add(new WorkforceMove(
                     w.Id, w.WorkerNo, w.NameAr ?? w.NameEn, m.Kind == PeriodKind.Work ? "Work" : "Housing", m.StartsOn,
-                    m.Kind == PeriodKind.Work ? m.ProjectCrmId : null, m.Place, before?.ProjectCrmId, before?.Place));
+                    m.Kind == PeriodKind.Work ? m.ProjectCrmId : null, m.Place, before?.ProjectCrmId, before?.Place, before?.StartsOn));
             }
         }
 
         return moves.OrderBy(m => m.StartsOn).ToList();
+    }
+
+    public async Task<IReadOnlyList<WorkforceArrival>> ArrivalsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var today = clock.Today;
+        var arrived = await db.Workers.AsNoTracking()
+            .Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.ArrivedOn != null && w.ArrivedOn >= from && w.ArrivedOn <= to)
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.WorkerNo, w.Sponsor, w.ArrivedOn, w.Placement, p.NameAr, p.NameEn })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var timelines = await TimelinesAsync(arrived.Select(a => a.Id).ToHashSet(), cancellationToken).ConfigureAwait(false);
+        return arrived.Select(a =>
+            {
+                var since = a.ArrivedOn!.Value;
+                var spans = timelines[a.Id].Where(p => (p.EndsOn ?? today.AddDays(1)) > since).ToList();
+                int Days(PeriodKind kind) => spans.Where(p => p.Kind == kind).Sum(p => Math.Max(0, Math.Min((p.EndsOn ?? today.AddDays(1)).DayNumber, today.AddDays(1).DayNumber) - Math.Max(p.StartsOn.DayNumber, since.DayNumber)));
+                var first = spans.Where(p => p.Kind == PeriodKind.Work && p.StartsOn >= since).OrderBy(p => p.StartsOn).FirstOrDefault();
+                return new WorkforceArrival(a.Id, a.WorkerNo, a.NameAr ?? a.NameEn, a.Sponsor, since, a.Placement.ToString(), first?.StartsOn, first?.Place, Days(PeriodKind.Work), Days(PeriodKind.Housing));
+            })
+            .OrderByDescending(a => a.ArrivedOn).ThenBy(a => a.WorkerNo, StringComparer.Ordinal).ToList();
+    }
+
+    public async Task<IReadOnlyList<WorkforceInHousing>> InHousingAsync(CancellationToken cancellationToken)
+    {
+        var today = clock.Today;
+        var workers = await db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Placement != Placement.Inactive)
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.WorkerNo, w.Placement, w.Salary, p.NameAr, p.NameEn })
+            .ToDictionaryAsync(w => w.Id, cancellationToken).ConfigureAwait(false);
+        var open = await db.Periods.AsNoTracking().Where(p => p.EndsOn == null).Select(p => new { p.WorkerId, p.Kind }).ToDictionaryAsync(p => p.WorkerId, p => p.Kind, cancellationToken).ConfigureAwait(false);
+
+        // Where each worker is now: an open period recorded here, then the old system's status (as the dashboard counts).
+        var housed = workers.Values.Where(w => open.TryGetValue(w.Id, out var kind) ? kind == PeriodKind.Housing : w.Placement == Placement.Housing).ToList();
+        var timelines = await TimelinesAsync(housed.Select(w => w.Id).ToHashSet(), cancellationToken).ConfigureAwait(false);
+        return housed.Select(w =>
+            {
+                var line = timelines[w.Id].OrderBy(p => p.StartsOn).ToList();
+                var stay = line.LastOrDefault(p => p.Kind == PeriodKind.Housing);
+                var before = stay is null ? null : line.LastOrDefault(p => p.Kind == PeriodKind.Work && p.StartsOn <= stay.StartsOn);
+                return new WorkforceInHousing(w.Id, w.WorkerNo, w.NameAr ?? w.NameEn, stay?.StartsOn ?? today, stay?.Place, before?.ProjectCrmId, before?.Place, w.Salary.Total);
+            })
+            .OrderBy(h => h.Since).ToList();
+    }
+
+    private sealed record Span(PeriodKind Kind, DateOnly StartsOn, DateOnly? EndsOn, Guid? ProjectCrmId, string? Place);
+
+    /// <summary>The timeline of some workers: the old system's history up to the first period recorded here, then the recorded ones.</summary>
+    private async Task<ILookup<Guid, Span>> TimelinesAsync(HashSet<Guid> ids, CancellationToken cancellationToken)
+    {
+        var list = ids.ToList();
+        var recorded = await db.Periods.AsNoTracking().Where(p => list.Contains(p.WorkerId) && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
+            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.EndsOn, p.ProjectCrmId, Place = p.ProjectName }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var first = recorded.GroupBy(p => p.WorkerId).ToDictionary(g => g.Key, g => g.Min(p => p.StartsOn));
+        var history = await db.HistoryPeriods.AsNoTracking().Where(p => list.Contains(p.WorkerId) && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
+            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.EndsOn, p.ProjectCrmId, p.Place }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return recorded.Select(p => (p.WorkerId, Span: new Span(p.Kind, p.StartsOn, p.EndsOn, p.ProjectCrmId, p.Place)))
+            .Concat(history.Where(h => !first.TryGetValue(h.WorkerId, out var f) || h.StartsOn < f)
+                .Select(h => (h.WorkerId, Span: new Span(h.Kind, h.StartsOn, first.TryGetValue(h.WorkerId, out var f) && (h.EndsOn is null || h.EndsOn > f) ? f : h.EndsOn, h.ProjectCrmId, h.Place))))
+            .ToLookup(x => x.WorkerId, x => x.Span);
     }
 
     /// <summary>The six largest groups, then "others".</summary>
