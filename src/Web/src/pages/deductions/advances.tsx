@@ -585,7 +585,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** An advance: its approval bar, the deduction schedule, the payment, and the postponement or the early settlement. */
+/** An advance: its approval bar, its data, then (once approved) the deduction schedule, the payment, and the postponement or the early settlement. */
 export function AdvancePage() {
   const { id = '' } = useParams();
   const { t, i18n } = useTranslation();
@@ -668,75 +668,98 @@ export function AdvancePage() {
           {t('deductions.aboveCap.approved')}
         </Alert>
       )}
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1.4fr 1fr' }, alignItems: 'start' }}>
-        <Box sx={{ ...(hrCard as object), p: 2 }}>
-          <Typography sx={{ fontWeight: 700, mb: 1.25 }}>{t('deductions.schedule.title')}</Typography>
-          {d.installments.length === 0 ? (
-            <Typography sx={{ fontSize: 13, color: hr.textMuted }}>{t('deductions.schedule.afterApproval', { amount: sar(a.amount / a.months) })}</Typography>
-          ) : (
-            <TableContainer sx={{ border: `1px solid ${hr.border}`, borderRadius: '10px' }}>
-              <Table size="small" sx={{ '& td': { height: 44, fontVariantNumeric: 'tabular-nums' }, '& th': { bgcolor: '#F8FAFC', fontWeight: 700 } }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t('deductions.schedule.period')}</TableCell>
-                    <TableCell>{t('deductions.schedule.amount')}</TableCell>
-                    <TableCell>{t('deductions.schedule.deducted')}</TableCell>
-                    <TableCell>{t('deductions.cols.status')}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {d.installments.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell sx={{ fontWeight: 600 }}>{monthName(i.period)}</TableCell>
-                      <TableCell>
-                        <Money value={i.amount} />
-                      </TableCell>
-                      <TableCell>{i.deducted > 0 ? <Money value={i.deducted} /> : '—'}</TableCell>
-                      <TableCell>
-                        <HrStatusBadge label={t(`deductions.installmentStatus.${i.status}`)} {...installmentLook[i.status]} />
-                        {i.note && <Typography sx={{ fontSize: 11, color: hr.textMuted, mt: 0.25 }}>{i.note}</Typography>}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: 'end' }}>
-                        {open && i.status === 'Scheduled' && i.deducted === 0 && can('deductions.manage', true) && (
-                          <Button size="small" startIcon={<EventRepeatOutlinedIcon />} onClick={() => setDialog(i)}>
-                            {t('deductions.schedule.postpone')}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-          <Typography sx={{ fontSize: 12, color: hr.textMuted, mt: 1 }}>{t('deductions.monthCapNote')}</Typography>
-        </Box>
-        <Box sx={{ ...(hrCard as object), p: 2 }}>
-          <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('deductions.payment.title')}</Typography>
-          <Row label={t('deductions.payment.paidOn')}>{d.paidOn ? <bdi>{date(d.paidOn)}</bdi> : '—'}</Row>
-          <Row label={t('deductions.payment.method')}>{d.paymentMethod ? t(`deductions.disburse.methods.${d.paymentMethod}`, { defaultValue: d.paymentMethod }) : '—'}</Row>
-          <Row label={t('deductions.payment.reference')}>{d.paymentReference ? <bdi dir="ltr">{d.paymentReference}</bdi> : '—'}</Row>
-          <Row label={t('deductions.payment.paidBy')}>{d.paidBy ?? '—'}</Row>
-          <Row label={t('deductions.advance.remaining')}>
-            <Money value={a.status === 'Rejected' ? null : a.remaining} strong />
+      <Box sx={{ ...(hrCard as object), p: 2, mb: 2 }}>
+        <Typography sx={{ fontWeight: 700, mb: 1 }}>{t('deductions.advance.dataTitle')}</Typography>
+        <Box sx={{ display: 'grid', columnGap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', xl: '1fr 1fr 1fr' } }}>
+          <Row label={t('deductions.employee')}>
+            <RouterLink to={`/hr/employees/${a.employeeId}`}>{a.employeeName}</RouterLink>
           </Row>
-          <Row label={t('deductions.advance.reason')}>{d.reason}</Row>
+          <Row label={t('deductions.advance.department')}>{(ar ? a.departmentAr : a.departmentEn) ?? '—'}</Row>
+          <Row label={t('deductions.advance.amount')}>
+            <Money value={a.amount} strong />
+          </Row>
+          <Row label={t('deductions.advance.months')}>{a.months}</Row>
+          <Row label={t('deductions.advance.firstPeriod')}>{monthName(a.firstPeriod)}</Row>
+          <Row label={t('deductions.advance.installment')}>
+            <Money value={Math.floor((a.amount / a.months) * 100) / 100} />
+          </Row>
           {d.salaryAtRequest !== null && (
             <Row label={t('deductions.advance.salaryAtRequest')}>
               <Money value={d.salaryAtRequest} />
             </Row>
           )}
+          <Row label={t('deductions.aboveCap.badge')}>{a.aboveCap ? t('common.yes') : t('deductions.advance.withinCap')}</Row>
           <Row label={t('deductions.requested')}>
             {d.createdByName} · <bdi>{date(a.createdAt)}</bdi>
           </Row>
-          {a.status === 'Disbursed' && can('deductions.disburse', true) && (
-            <Button sx={{ mt: 1.5 }} variant="outlined" startIcon={<TaskAltOutlinedIcon />} onClick={() => setDialog('settle')}>
-              {t('deductions.settle.action')}
-            </Button>
-          )}
         </Box>
+        <Row label={t('deductions.advance.reason')}>{d.reason}</Row>
       </Box>
+      {d.installments.length === 0 ? (
+        <Box sx={{ ...(hrCard as object), p: 2 }}>
+          <Typography sx={{ fontWeight: 700, mb: 0.75 }}>{t('deductions.schedule.title')}</Typography>
+          <Typography sx={{ fontSize: 13, color: hr.textMuted }}>
+            {a.status === 'Rejected' ? t('deductions.schedule.rejected') : t('deductions.schedule.afterApproval', { amount: sar(Math.floor((a.amount / a.months) * 100) / 100) })}
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1.4fr 1fr' }, alignItems: 'start' }}>
+          <Box sx={{ ...(hrCard as object), p: 2 }}>
+            <Typography sx={{ fontWeight: 700, mb: 1.25 }}>{t('deductions.schedule.title')}</Typography>
+              <TableContainer sx={{ border: `1px solid ${hr.border}`, borderRadius: '10px' }}>
+                <Table size="small" sx={{ '& td': { height: 44, fontVariantNumeric: 'tabular-nums' }, '& th': { bgcolor: '#F8FAFC', fontWeight: 700 } }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('deductions.schedule.period')}</TableCell>
+                      <TableCell>{t('deductions.schedule.amount')}</TableCell>
+                      <TableCell>{t('deductions.schedule.deducted')}</TableCell>
+                      <TableCell>{t('deductions.cols.status')}</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {d.installments.map((i) => (
+                      <TableRow key={i.id}>
+                        <TableCell sx={{ fontWeight: 600 }}>{monthName(i.period)}</TableCell>
+                        <TableCell>
+                          <Money value={i.amount} />
+                        </TableCell>
+                        <TableCell>{i.deducted > 0 ? <Money value={i.deducted} /> : '—'}</TableCell>
+                        <TableCell>
+                          <HrStatusBadge label={t(`deductions.installmentStatus.${i.status}`)} {...installmentLook[i.status]} />
+                          {i.note && <Typography sx={{ fontSize: 11, color: hr.textMuted, mt: 0.25 }}>{i.note}</Typography>}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: 'end' }}>
+                          {open && i.status === 'Scheduled' && i.deducted === 0 && can('deductions.manage', true) && (
+                            <Button size="small" startIcon={<EventRepeatOutlinedIcon />} onClick={() => setDialog(i)}>
+                              {t('deductions.schedule.postpone')}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            <Typography sx={{ fontSize: 12, color: hr.textMuted, mt: 1 }}>{t('deductions.monthCapNote')}</Typography>
+          </Box>
+          <Box sx={{ ...(hrCard as object), p: 2 }}>
+            <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('deductions.payment.title')}</Typography>
+            <Row label={t('deductions.payment.paidOn')}>{d.paidOn ? <bdi>{date(d.paidOn)}</bdi> : t('deductions.payment.notYet')}</Row>
+            <Row label={t('deductions.payment.method')}>{d.paymentMethod ? t(`deductions.disburse.methods.${d.paymentMethod}`, { defaultValue: d.paymentMethod }) : '—'}</Row>
+            <Row label={t('deductions.payment.reference')}>{d.paymentReference ? <bdi dir="ltr">{d.paymentReference}</bdi> : '—'}</Row>
+            <Row label={t('deductions.payment.paidBy')}>{d.paidBy ?? '—'}</Row>
+            <Row label={t('deductions.advance.remaining')}>
+              <Money value={a.remaining} strong />
+            </Row>
+            {a.status === 'Disbursed' && can('deductions.disburse', true) && (
+              <Button sx={{ mt: 1.5 }} variant="outlined" startIcon={<TaskAltOutlinedIcon />} onClick={() => setDialog('settle')}>
+                {t('deductions.settle.action')}
+              </Button>
+            )}
+          </Box>
+        </Box>
+      )}
       {dialog === 'edit' && <AdvanceDialog advance={d} onClose={() => setDialog(null)} onSent={done} />}
       {dialog === 'disburse' && <DisburseDialog advance={a} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog === 'settle' && (

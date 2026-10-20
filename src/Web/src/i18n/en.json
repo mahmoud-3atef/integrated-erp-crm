@@ -4025,7 +4025,10 @@
         "pending": "Awaiting approval ({{count}})",
         "disburse": "Awaiting payment ({{count}})",
         "open": "Being deducted"
-      }
+      },
+      "dataTitle": "Advance details",
+      "department": "Department",
+      "withinCap": "No, within the cap"
     },
     "schedule": {
       "title": "Deduction schedule",
@@ -4035,14 +4038,16 @@
       "postpone": "Postpone",
       "postponeTitle": "Postpone the {{month}} installment",
       "postponeHint": "The installment moves to the month after the last one; the remaining stays the same. Give the reason.",
-      "afterApproval": "The schedule is made on approval: equal installments of about SAR {{amount}}, the cents on the last one."
+      "afterApproval": "The schedule is made on approval: equal installments of about SAR {{amount}}, the cents on the last one.",
+      "rejected": "The advance was rejected, so it has no deduction schedule."
     },
     "payment": {
       "title": "Payment",
       "paidOn": "Paid on",
       "method": "Method",
       "reference": "Reference",
-      "paidBy": "Paid by"
+      "paidBy": "Paid by",
+      "notYet": "Not paid yet"
     },
     "disburse": {
       "action": "Record the payment",
