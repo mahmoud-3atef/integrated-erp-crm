@@ -213,10 +213,10 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
             .OrderBy(h => h.Since).ToList();
     }
 
-    private sealed record Span(PeriodKind Kind, DateOnly StartsOn, DateOnly? EndsOn, Guid? ProjectCrmId, string? Place);
+    internal sealed record Span(PeriodKind Kind, DateOnly StartsOn, DateOnly? EndsOn, Guid? ProjectCrmId, string? Place);
 
     /// <summary>The timeline of some workers: the old system's history up to the first period recorded here, then the recorded ones.</summary>
-    private async Task<ILookup<Guid, Span>> TimelinesAsync(HashSet<Guid> ids, CancellationToken cancellationToken)
+    internal async Task<ILookup<Guid, Span>> TimelinesAsync(HashSet<Guid> ids, CancellationToken cancellationToken)
     {
         var list = ids.ToList();
         var recorded = await db.Periods.AsNoTracking().Where(p => list.Contains(p.WorkerId) && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))

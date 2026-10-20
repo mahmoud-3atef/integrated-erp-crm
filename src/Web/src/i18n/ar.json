@@ -523,7 +523,14 @@
     "conflict_payroll_payslip_not_approved": "لا تُرسل القسائم بالبريد إلا بعد اعتماد المسير.",
     "validation_payroll_email_not_configured": "لا يوجد بريد إرسال مضبوط على الخادم.",
     "validation_approval_reassign_invalid": "لا يمكن تعيين المهمة لهذا الشخص: هو صاحبها الآن، أو من قدّم الطلب، أو لديه المهمة بالفعل.",
-    "validation_report_period": "اختر فترة لا تزيد على سنتين، ومن 2025 فصاعدًا."
+    "validation_report_period": "اختر فترة لا تزيد على سنتين، ومن 2025 فصاعدًا.",
+    "validation_photo_too_large": "حجم الصورة يتجاوز 6 ميجابايت.",
+    "validation_photo_not_image": "تُقبل الصور بصيغة JPEG أو PNG أو WebP فقط.",
+    "validation_photos_too_many": "للعامل 8 صور على الأكثر.",
+    "validation_profile_code_unknown": "أحد الاختيارات غير موجود في قائمته.",
+    "validation_profile_value": "إحدى القيم غير مقبولة.",
+    "validation_profile_birth_date": "تاريخ الميلاد يجب أن يجعل عمر العامل بين 16 و75 سنة.",
+    "validation_profile_bio_too_long": "النبذة لا تتجاوز 600 حرف."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -554,6 +561,7 @@
     "projects": "المشاريع",
     "prices": "الباقات السعرية",
     "operations": "العمليات",
+    "showroom": "صالة العرض",
     "deliveryOrders": "أوامر التسليم",
     "returnOrders": "أوامر الرجيع",
     "historyIssues": "استثناءات سجل الفترات",
@@ -1262,7 +1270,8 @@
     "tabs": {
       "info": "بيانات الموظف",
       "ids": "الهويات والوثائق ({{count}})",
-      "periods": "سجل الفترات"
+      "periods": "سجل الفترات",
+      "profile": "الملف التسويقي"
     },
     "sections": {
       "basic": "البيانات الأساسية",
@@ -4962,5 +4971,164 @@
       "arrivals": "وصل {{count}} عاملًا جديدًا: سُلّم منهم {{delivered}}، و{{waiting}} لم يُسلَّموا بعد.",
       "waiting": "{{count}} عاملًا في السكن بانتظار التسليم، أقدمهم منذ {{days}} يومًا."
     }
+  },
+  "showroom": {
+    "noAccess": "ليست لديك صلاحية عرض صالة العرض.",
+    "present": "وضع العرض للعميل",
+    "presentTitle": "عمالة متاحة للتسليم الفوري",
+    "fullscreen": "ملء الشاشة",
+    "exitPresent": "الخروج من وضع العرض",
+    "bySpecialty": "التصنيف حسب التخصص",
+    "bySpecialtyHint": "اضغط تخصصًا لعرض عماله",
+    "byNationality": "حسب الجنسية",
+    "all": "الكل",
+    "noSpecialty": "دون تصنيف",
+    "noNationality": "جنسية غير محددة",
+    "search": "ابحث بالاسم أو الرقم أو المهارة أو اللغة…",
+    "searchCustomer": "ما الذي تحتاجه؟ نادل، تدبير فندقي، الإنجليزية…",
+    "experience": "الخبرة",
+    "experienceOptions": {
+      "all": "الكل",
+      "experienced": "بخبرة معنا",
+      "hotel": "بخبرة فندقية",
+      "new": "وصل حديثًا"
+    },
+    "sort": "الترتيب",
+    "sortOptions": {
+      "experience": "الأكثر خبرة",
+      "waiting": "الأطول انتظارًا",
+      "newest": "الأحدث في السكن"
+    },
+    "showing": "يُعرض {{count}} من {{total}} عاملًا",
+    "empty": "لا توجد عمالة متاحة في السكن الآن.",
+    "noResults": "لا يوجد عمال يطابقون هذا الاختيار.",
+    "clear": "مسح الاختيار",
+    "gender": {
+      "M": "ذكر",
+      "F": "أنثى"
+    },
+    "hero": {
+      "title1": "عمالة جاهزة",
+      "title2": "للتسليم الآن",
+      "subtitle": "{{specialties}} وغيرها، من {{count}} جنسيات، في سكن الشركة وجاهزون للانضمام إلى فريقك.",
+      "subtitleNone": "عمالة في سكن الشركة جاهزة للانضمام إلى فريقك.",
+      "fast": "تسليم خلال 24 ساعة",
+      "ready": "إقامات سارية وجاهزون للعمل",
+      "oldest": "أقدمهم منذ {{count}} يومًا",
+      "reserved": "{{count}} محجوزون لأوامر تسليم",
+      "available": "متاح الآن",
+      "nationalities": "جنسيات",
+      "hotel": "بخبرة فندقية"
+    },
+    "card": {
+      "available": "متاح الآن",
+      "reserved": "محجوز",
+      "reservedBy": "محجوز لأمر {{no}}",
+      "noPhoto": "لا توجد صورة بعد",
+      "previousPhoto": "الصورة السابقة",
+      "nextPhoto": "الصورة التالية",
+      "open": "ملف {{name}}",
+      "suggested": "(مقترح)",
+      "suggestedHint": "مقترح من اسم آخر مشروع عمل فيه، ولم يُؤكَّد بعد في ملفه.",
+      "hotel": "خبرة فندقية",
+      "age": "{{count}} سنة",
+      "withUs": "الخبرة معنا",
+      "projects": "المشاريع",
+      "before": "خبرة سابقة",
+      "years": "{{count}} سنوات",
+      "months": "{{count}} شهرًا",
+      "newArrival": "جديد",
+      "noLanguages": "اللغات غير مسجلة",
+      "noSkills": "المهارات غير مسجلة",
+      "waiting": "في السكن منذ {{count}} يومًا",
+      "inHousing": "في السكن",
+      "profile": "الملف",
+      "select": "اختر",
+      "selected": "مختار"
+    },
+    "file": {
+      "photo": "الصورة {{n}}",
+      "experience": "الخبرة معنا",
+      "workDays": "أيام العمل",
+      "longest": "أطول مباشرة",
+      "prior": "{{count}} سنوات خبرة قبل الانضمام",
+      "about": "نبذة",
+      "skills": "المهارات واللغات",
+      "mother": "اللغة الأم",
+      "noSkills": "لم تُسجَّل مهارات ولا لغات بعد.",
+      "history": "أين عمل",
+      "noHistory": "وصل حديثًا: لم يعمل في مشروع بعد.",
+      "project": "مشروع",
+      "now": "الآن",
+      "internal": "للاستخدام الداخلي",
+      "internalHint": "لا يظهر هذا القسم في وضع العرض ولا في القائمة المرسلة للعميل.",
+      "waiting": "في السكن منذ",
+      "days": "{{count}} يومًا",
+      "lastReturn": "سبب آخر رجوع",
+      "cv": "السيرة للعميل",
+      "open": "ملف العامل",
+      "select": "اختر للطلب"
+    },
+    "basket": {
+      "count": "اخترت {{count}} عمال",
+      "clear": "إفراغ",
+      "pdf": "قائمة للعميل (PDF)",
+      "order": "إنشاء أمر تسليم"
+    },
+    "print": {
+      "print": "طباعة / حفظ PDF",
+      "title": "عمالة مقترحة لكم",
+      "subtitle": "{{count}} عمال متاحون للتسليم الفوري",
+      "projects": "{{count}} مشاريع",
+      "languages": "اللغات",
+      "skills": "المهارات",
+      "missing": "بعض العمال المختارين لم يعودوا متاحين فلم يُدرجوا."
+    }
+  },
+  "workerProfile": {
+    "toShowroom": "صالة العرض",
+    "edit": "تعديل الملف التسويقي",
+    "editTitle": "الملف التسويقي للعامل",
+    "photos": "الصور ({{count}}/8)",
+    "noPhotos": "لا توجد صور بعد. الصورة الجيدة تجعل العرض للعميل أقوى بكثير.",
+    "main": "الصورة الرئيسية",
+    "makeMain": "اجعلها الرئيسية",
+    "deletePhoto": "حذف الصورة",
+    "deleteConfirm": "حذف هذه الصورة؟",
+    "addPhotos": "إضافة صور",
+    "view": "عرض الصورة {{n}}",
+    "photoHint": "حتى 8 صور بصيغة JPEG أو PNG أو WebP، وحجم كل صورة حتى 6 ميجابايت. الأولى هي التي تظهر في البطاقة.",
+    "marketing": "ما يُعرض للعميل",
+    "personal": "بيانات شخصية",
+    "specialty": "التخصص",
+    "suggested": "(مقترح من آخر مشروع)",
+    "suggestedHelp": "مقترح من اسم آخر مشروع؛ يُثبَّت عند الحفظ.",
+    "skills": "المهارات",
+    "languages": "اللغات",
+    "languagesHelp": "الأولى هي اللغة الأم.",
+    "prior": "سنوات الخبرة قبل الانضمام",
+    "priorHelp": "من 0 إلى 40 سنة.",
+    "education": "المؤهل الدراسي",
+    "bio": "نبذة",
+    "bioAr": "نبذة بالعربية",
+    "bioEn": "نبذة بالإنجليزية",
+    "gender": "الجنس",
+    "birthDate": "تاريخ الميلاد",
+    "religion": "الديانة",
+    "religions": {
+      "MUSLIM": "مسلم",
+      "CHRISTIAN": "مسيحي",
+      "HINDU": "هندوسي",
+      "BUDDHIST": "بوذي",
+      "OTHER": "أخرى"
+    },
+    "educations": {
+      "NONE": "بدون مؤهل",
+      "PRIMARY": "ابتدائي",
+      "SECONDARY": "ثانوي",
+      "DIPLOMA": "دبلوم",
+      "BACHELOR": "بكالوريوس"
+    },
+    "updated": "آخر تعديل: {{by}}، {{on}}"
   }
 }

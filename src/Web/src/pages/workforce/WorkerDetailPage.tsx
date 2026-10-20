@@ -39,6 +39,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { WorkerPeriods } from './WorkerPeriods';
+import { WorkerProfileTab } from './WorkerProfileTab';
 import { placementLook } from '../../components/workforce/placement';
 import { useCrumb } from '../../app/breadcrumbs';
 
@@ -54,7 +55,10 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const { id } = useParams();
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
   useCrumb(worker?.summary.name);
-  const [tab, setTab] = useState<'info' | 'ids' | 'periods'>(() => (new URLSearchParams(window.location.search).get('tab') === 'periods' ? 'periods' : 'info'));
+  const [tab, setTab] = useState<'info' | 'ids' | 'periods' | 'profile'>(() => {
+    const asked = new URLSearchParams(window.location.search).get('tab');
+    return asked === 'periods' || (asked === 'profile' && kind === 'Worker') ? asked : 'info';
+  });
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [sent, setSent] = useState(0);
@@ -218,10 +222,13 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
             { value: 'info', label: t('workforce.tabs.info') },
             { value: 'ids', label: t('workforce.tabs.ids', { count: worker.identifiers.length }) },
             { value: 'periods' as const, label: t('workforce.tabs.periods') },
+            ...(staff ? [] : [{ value: 'profile' as const, label: t('workforce.tabs.profile') }]),
           ]}
         />
 
-        {tab === 'periods' ? (
+        {tab === 'profile' ? (
+          <WorkerProfileTab workerId={id!} />
+        ) : tab === 'periods' ? (
           <WorkerPeriods key={sent} kind={kind} workerId={id!} />
         ) : tab === 'info' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5, alignItems: 'start' }}>

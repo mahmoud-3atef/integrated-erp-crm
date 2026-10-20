@@ -1006,6 +1006,148 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                     b.ToTable("worker_period", "workforce");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("uploaded_at");
+
+                    b.Property<string>("UploadedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("uploaded_by");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_worker_photo");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_worker_photo_tenant_id");
+
+                    b.HasIndex("TenantId", "WorkerId", "SortOrder")
+                        .HasDatabaseName("ix_worker_photo_tenant_id_worker_id_sort_order");
+
+                    b.ToTable("worker_photo", "workforce");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerProfile", b =>
+                {
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("BioAr")
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)")
+                        .HasColumnName("bio_ar");
+
+                    b.Property<string>("BioEn")
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)")
+                        .HasColumnName("bio_en");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date")
+                        .HasColumnName("birth_date");
+
+                    b.Property<string>("Education")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("education");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("gender");
+
+                    b.Property<string>("Languages")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)")
+                        .HasColumnName("languages");
+
+                    b.Property<int?>("PriorExperienceYears")
+                        .HasColumnType("int")
+                        .HasColumnName("prior_experience_years");
+
+                    b.Property<string>("Religion")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("religion");
+
+                    b.Property<string>("Skills")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)")
+                        .HasColumnName("skills");
+
+                    b.Property<string>("Specialty")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("specialty");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("WorkerId")
+                        .HasName("pk_worker_profile");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_worker_profile_tenant_id");
+
+                    b.HasIndex("TenantId", "Specialty")
+                        .HasDatabaseName("ix_worker_profile_tenant_id_specialty");
+
+                    b.ToTable("worker_profile", "workforce");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkforceImport", b =>
                 {
                     b.Property<Guid>("Id")

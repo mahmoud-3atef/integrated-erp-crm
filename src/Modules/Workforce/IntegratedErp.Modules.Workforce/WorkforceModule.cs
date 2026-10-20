@@ -2,6 +2,7 @@ using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
+using IntegratedErp.BuildingBlocks.Reference;
 using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.Workforce.Api;
@@ -42,6 +43,9 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<InvoiceCheckQueries>();
         services.AddScoped<WorkforceDashboard>();
         services.AddScoped<IWorkforceReport>(sp => sp.GetRequiredService<WorkforceDashboard>());
+        services.AddScoped<WorkerShowcaseService>();
+        services.AddScoped<IWorkerShowcase>(sp => sp.GetRequiredService<WorkerShowcaseService>());
+        services.AddReferenceLists(WorkforceReferenceLists.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("worker", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للعمالة", "Worker numbers", "BSS{N:6}", NumberReset.Never, InUse: false));
         services.AddOptions<WorkforceOptions>().Bind(configuration.GetSection(WorkforceOptions.Section));
@@ -58,6 +62,10 @@ internal static class WorkforcePermissions
     public const string WorkersSalary = "workforce.workers.salary";
     public const string StaffView = "workforce.staff.view";
     public const string StaffSalary = "workforce.staff.salary";
+    public const string ProfileEdit = "workforce.workers.profile";
+
+    // The showroom (Operations module) shows the workers' photos too.
+    public const string ShowroomView = "operations.showroom.view";
 
     private const string WorkersAr = "شؤون العمالة";
     private const string WorkersEn = "Workers";
@@ -68,6 +76,7 @@ internal static class WorkforcePermissions
     [
         new(WorkersView, WorkersAr, WorkersEn, "عرض العمالة", "View workers"),
         new(WorkersSalary, WorkersAr, WorkersEn, "عرض رواتب العمالة وبدلاتها", "View workers' salaries and allowances"),
+        new(ProfileEdit, WorkersAr, WorkersEn, "تعديل الملف التسويقي للعامل وصوره", "Edit a worker's marketing profile and photos"),
         new(StaffView, StaffAr, StaffEn, "عرض موظفي الشركة", "View company staff"),
         new(StaffSalary, StaffAr, StaffEn, "عرض رواتب الموظفين وبدلاتهم", "View staff salaries and allowances"),
     ];

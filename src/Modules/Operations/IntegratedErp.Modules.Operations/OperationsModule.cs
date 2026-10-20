@@ -28,6 +28,7 @@ public sealed class OperationsModule : IModule
     {
         services.AddModuleDbContext<OperationsDbContext>(configuration, OperationsDbContext.SchemaName);
         services.AddScoped<IHousingEntries, HousingEntries>();
+        services.AddScoped<Showroom>();
         services.AddScoped<DeliveryOrderService>();
         services.AddScoped<DeliveryOrderQueries>();
         services.AddScoped<IApprovalRecordAdapter, DeliveryOrderAdapter>();
@@ -67,6 +68,7 @@ public sealed class OperationsModule : IModule
         endpoints.MapReturnOrderEndpoints();
         endpoints.MapTransferOrderEndpoints();
         endpoints.MapMovementEndpoints();
+        endpoints.MapShowroomEndpoints();
     }
 }
 
@@ -85,6 +87,7 @@ internal static class OperationsPermissions
     public const string MovementsView = "operations.movements.view";
     public const string MovementsManage = "operations.movements.manage";
     public const string MovementsApprove = "operations.movements.approve";
+    public const string ShowroomView = "operations.showroom.view";
 
     private const string GroupAr = "العمليات";
     private const string GroupEn = "Operations";
@@ -101,6 +104,7 @@ internal static class OperationsPermissions
         new(TransferView, GroupAr, GroupEn, "عرض أوامر النقل بين المشاريع", "View project transfer orders"),
         new(TransferCreate, GroupAr, GroupEn, "إنشاء أوامر النقل وتعديلها", "Create and edit project transfer orders"),
         new(TransferApprove, GroupAr, GroupEn, "اعتماد أوامر النقل (مدير العمليات)", "Approve project transfer orders (operations manager)"),
+        new(ShowroomView, GroupAr, GroupEn, "عرض صالة العرض (العمالة المتاحة في السكن)", "View the showroom (workers available in housing)"),
         new(MovementsView, GroupAr, GroupEn, "عرض حركات العمال (الوصول والإجازات والانقطاع والإيقاف والخروج)", "View worker movements (arrival, vacation, absconding, suspension, exit)"),
         new(MovementsManage, GroupAr, GroupEn, "إنشاء حركات العمال وتعديلها وإلغاؤها", "Create, edit and cancel worker movements"),
         new(MovementsApprove, GroupAr, GroupEn, "اعتماد حركات العمال (مدير العمليات)", "Approve worker movements (operations manager)"),

@@ -523,7 +523,14 @@
     "conflict_payroll_payslip_not_approved": "Payslips are emailed only for an approved run.",
     "validation_payroll_email_not_configured": "The server has no email account to send from.",
     "validation_approval_reassign_invalid": "The task cannot be given to this person: they hold it now, submitted the request, or already have it.",
-    "validation_report_period": "Choose a period of two years at most, from 2025."
+    "validation_report_period": "Choose a period of two years at most, from 2025.",
+    "validation_photo_too_large": "The photo is larger than 6 MB.",
+    "validation_photo_not_image": "Only JPEG, PNG or WebP photos are accepted.",
+    "validation_photos_too_many": "A worker has at most 8 photos.",
+    "validation_profile_code_unknown": "A chosen item is not in its list.",
+    "validation_profile_value": "A value is not accepted.",
+    "validation_profile_birth_date": "The date of birth must make the worker 16 to 75 years old.",
+    "validation_profile_bio_too_long": "The introduction is limited to 600 characters."
   },
   "menu": {
     "label": "Main menu",
@@ -554,6 +561,7 @@
     "projects": "Projects",
     "prices": "Price packages",
     "operations": "Operations",
+    "showroom": "Showroom",
     "deliveryOrders": "Delivery orders",
     "returnOrders": "Return orders",
     "historyIssues": "Period ledger exceptions",
@@ -1262,7 +1270,8 @@
     "tabs": {
       "info": "Employee data",
       "ids": "IDs and documents ({{count}})",
-      "periods": "Period ledger"
+      "periods": "Period ledger",
+      "profile": "Marketing profile"
     },
     "sections": {
       "basic": "Basic data",
@@ -4962,5 +4971,164 @@
       "arrivals": "{{count}} new workers arrived: {{delivered}} delivered and {{waiting}} not yet.",
       "waiting": "{{count}} workers wait in housing for delivery, the longest for {{days}} days."
     }
+  },
+  "showroom": {
+    "noAccess": "You do not have permission to view the showroom.",
+    "present": "Presentation for a customer",
+    "presentTitle": "Workers available for immediate delivery",
+    "fullscreen": "Full screen",
+    "exitPresent": "Leave the presentation",
+    "bySpecialty": "By specialty",
+    "bySpecialtyHint": "Click a specialty to see its workers",
+    "byNationality": "By nationality",
+    "all": "All",
+    "noSpecialty": "Not classified",
+    "noNationality": "Nationality not set",
+    "search": "Search by name, number, skill or language…",
+    "searchCustomer": "What do you need? Waiter, housekeeping, English…",
+    "experience": "Experience",
+    "experienceOptions": {
+      "all": "All",
+      "experienced": "Experienced with us",
+      "hotel": "Hotel experience",
+      "new": "Newly arrived"
+    },
+    "sort": "Sort",
+    "sortOptions": {
+      "experience": "Most experienced",
+      "waiting": "Longest waiting",
+      "newest": "Newest in housing"
+    },
+    "showing": "Showing {{count}} of {{total}} workers",
+    "empty": "No workers are available in housing now.",
+    "noResults": "No workers match this choice.",
+    "clear": "Clear the choice",
+    "gender": {
+      "M": "Male",
+      "F": "Female"
+    },
+    "hero": {
+      "title1": "Workers ready",
+      "title2": "for delivery now",
+      "subtitle": "{{specialties}} and more, from {{count}} nationalities, in the company's housing and ready to join your team.",
+      "subtitleNone": "Workers in the company's housing, ready to join your team.",
+      "fast": "Delivery within 24 hours",
+      "ready": "Valid residence permits, ready to work",
+      "oldest": "Longest waiting: {{count}} days",
+      "reserved": "{{count}} reserved by delivery orders",
+      "available": "Available now",
+      "nationalities": "Nationalities",
+      "hotel": "Hotel experience"
+    },
+    "card": {
+      "available": "Available",
+      "reserved": "Reserved",
+      "reservedBy": "Reserved by {{no}}",
+      "noPhoto": "No photo yet",
+      "previousPhoto": "Previous photo",
+      "nextPhoto": "Next photo",
+      "open": "{{name}}'s profile",
+      "suggested": "(suggested)",
+      "suggestedHint": "Suggested from the name of the last project the worker worked on; not yet confirmed on their profile.",
+      "hotel": "Hotel experience",
+      "age": "{{count}} years old",
+      "withUs": "With us",
+      "projects": "Projects",
+      "before": "Before",
+      "years": "{{count}} years",
+      "months": "{{count}} months",
+      "newArrival": "New",
+      "noLanguages": "Languages not recorded",
+      "noSkills": "Skills not recorded",
+      "waiting": "In housing for {{count}} days",
+      "inHousing": "In housing",
+      "profile": "Profile",
+      "select": "Select",
+      "selected": "Selected"
+    },
+    "file": {
+      "photo": "Photo {{n}}",
+      "experience": "Experience with us",
+      "workDays": "Work days",
+      "longest": "Longest stint",
+      "prior": "{{count}} years of experience before joining",
+      "about": "About",
+      "skills": "Skills and languages",
+      "mother": "mother tongue",
+      "noSkills": "No skills or languages recorded yet.",
+      "history": "Where they worked",
+      "noHistory": "Newly arrived: has not worked on a project yet.",
+      "project": "Project",
+      "now": "now",
+      "internal": "Internal",
+      "internalHint": "This section is not shown in the presentation or on the list sent to a customer.",
+      "waiting": "In housing for",
+      "days": "{{count}} days",
+      "lastReturn": "Last return reason",
+      "cv": "Profile for the customer",
+      "open": "Worker file",
+      "select": "Select for the order"
+    },
+    "basket": {
+      "count": "{{count}} workers selected",
+      "clear": "Clear",
+      "pdf": "List for the customer (PDF)",
+      "order": "Create a delivery order"
+    },
+    "print": {
+      "print": "Print / save as PDF",
+      "title": "Workers proposed for you",
+      "subtitle": "{{count}} workers available for immediate delivery",
+      "projects": "{{count}} projects",
+      "languages": "Languages",
+      "skills": "Skills",
+      "missing": "Some selected workers are no longer available and were left out."
+    }
+  },
+  "workerProfile": {
+    "toShowroom": "Showroom",
+    "edit": "Edit the marketing profile",
+    "editTitle": "Worker's marketing profile",
+    "photos": "Photos ({{count}}/8)",
+    "noPhotos": "No photos yet. A good photo makes the presentation to a customer much stronger.",
+    "main": "Main photo",
+    "makeMain": "Make it the main photo",
+    "deletePhoto": "Delete the photo",
+    "deleteConfirm": "Delete this photo?",
+    "addPhotos": "Add photos",
+    "view": "Show photo {{n}}",
+    "photoHint": "Up to 8 JPEG, PNG or WebP photos of up to 6 MB each. The first is the one on the card.",
+    "marketing": "What a customer sees",
+    "personal": "Personal details",
+    "specialty": "Specialty",
+    "suggested": "(suggested from the last project)",
+    "suggestedHelp": "Suggested from the last project's name; saving confirms it.",
+    "skills": "Skills",
+    "languages": "Languages",
+    "languagesHelp": "The first is the mother tongue.",
+    "prior": "Years of experience before joining",
+    "priorHelp": "From 0 to 40 years.",
+    "education": "Education",
+    "bio": "About",
+    "bioAr": "About (Arabic)",
+    "bioEn": "About (English)",
+    "gender": "Gender",
+    "birthDate": "Date of birth",
+    "religion": "Religion",
+    "religions": {
+      "MUSLIM": "Muslim",
+      "CHRISTIAN": "Christian",
+      "HINDU": "Hindu",
+      "BUDDHIST": "Buddhist",
+      "OTHER": "Other"
+    },
+    "educations": {
+      "NONE": "None",
+      "PRIMARY": "Primary",
+      "SECONDARY": "Secondary",
+      "DIPLOMA": "Diploma",
+      "BACHELOR": "Bachelor's degree"
+    },
+    "updated": "Last edited by {{by}} on {{on}}"
   }
 }

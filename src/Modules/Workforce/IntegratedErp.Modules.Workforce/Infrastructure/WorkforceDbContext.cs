@@ -34,6 +34,44 @@ internal sealed class WorkforceDbContext(DbContextOptions<WorkforceDbContext> op
     public DbSet<InvoiceCheckLine> InvoiceCheckLines => Set<InvoiceCheckLine>();
 
     public DbSet<InvoiceCheckImport> InvoiceCheckImports => Set<InvoiceCheckImport>();
+
+    public DbSet<WorkerProfile> WorkerProfiles => Set<WorkerProfile>();
+
+    public DbSet<WorkerPhoto> WorkerPhotos => Set<WorkerPhoto>();
+}
+
+internal sealed class WorkerProfileConfiguration : IEntityTypeConfiguration<WorkerProfile>
+{
+    public void Configure(EntityTypeBuilder<WorkerProfile> builder)
+    {
+        builder.ToTable("worker_profile");
+        builder.HasKey(p => p.WorkerId);
+        builder.Property(p => p.WorkerId).ValueGeneratedNever();
+        builder.Property(p => p.Specialty).HasMaxLength(30);
+        builder.Property(p => p.Skills).HasMaxLength(WorkerProfile.CodesMaxLength).IsRequired();
+        builder.Property(p => p.Languages).HasMaxLength(WorkerProfile.CodesMaxLength).IsRequired();
+        builder.Property(p => p.Gender).HasMaxLength(1);
+        builder.Property(p => p.Religion).HasMaxLength(20);
+        builder.Property(p => p.Education).HasMaxLength(20);
+        builder.Property(p => p.BioAr).HasMaxLength(WorkerProfile.BioMaxLength);
+        builder.Property(p => p.BioEn).HasMaxLength(WorkerProfile.BioMaxLength);
+        builder.Property(p => p.UpdatedBy).HasMaxLength(200).IsRequired();
+        builder.HasIndex(p => new { p.TenantId, p.Specialty });
+    }
+}
+
+internal sealed class WorkerPhotoConfiguration : IEntityTypeConfiguration<WorkerPhoto>
+{
+    public void Configure(EntityTypeBuilder<WorkerPhoto> builder)
+    {
+        builder.ToTable("worker_photo");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.ContentType).HasMaxLength(50).IsRequired();
+        builder.Property(p => p.StorageKey).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.UploadedBy).HasMaxLength(200).IsRequired();
+        builder.HasIndex(p => new { p.TenantId, p.WorkerId, p.SortOrder });
+    }
 }
 
 internal sealed class InvoiceCheckLineConfiguration : IEntityTypeConfiguration<InvoiceCheckLine>

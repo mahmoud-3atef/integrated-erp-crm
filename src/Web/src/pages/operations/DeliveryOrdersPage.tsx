@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { operationsApi, type DeliveryList } from '../../api/operations';
 import { useSession } from '../../app/session';
@@ -43,6 +43,7 @@ import { toneColors } from '../../app/theme';
 export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [wizard, setWizard] = useState(creating);
   const { can } = useSession();
   const { date } = useCommercialFormat();
@@ -218,6 +219,7 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
       </Box>
       {wizard && (
         <DeliveryOrderWizard
+          initialWorkerIds={creating ? (location.state as { workerIds?: string[] } | null)?.workerIds : undefined}
           onClose={() => (creating ? navigate('/operations/delivery-orders') : setWizard(false))}
           onSaved={(saved, failed) => navigate(`/operations/delivery-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
         />

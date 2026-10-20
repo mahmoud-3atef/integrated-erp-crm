@@ -2,6 +2,7 @@ using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Workforce.Application;
 using IntegratedErp.Modules.Workforce.Contracts;
 using IntegratedErp.Modules.Workforce.Domain;
+using IntegratedErp.SharedKernel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -27,10 +28,81 @@ internal static class WorkforceEndpoints
                 Results.Ok(await queries.ListAsync(month, result, search, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
 
+        MapShowcase(group);
+
         group.MapGet("/history/issues", async (string? code, string? search, Guid? workerId, int? page, int? pageSize, HistoryQueries queries, CancellationToken ct) =>
                 Results.Ok(await queries.IssuesAsync(code, search, workerId, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
     }
+
+    /// <summary>The workers' marketing profile and photos (docs/03-migration-plan/15).</summary>
+    private static void MapShowcase(RouteGroupBuilder group)
+    {
+        group.MapGet("/profile-lists", async (WorkerShowcaseService service, CancellationToken ct) => Results.Ok(await service.ListsAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+
+        group.MapGet("/workers/{id:guid}/profile", async (Guid id, WorkerShowcaseService service, CancellationToken ct) =>
+                await service.GetAsync(id, ct).ConfigureAwait(false) is { } profile ? Results.Ok(profile) : Results.NotFound())
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+
+        group.MapPut("/workers/{id:guid}/profile", async (Guid id, WorkerProfileInput input, WorkerShowcaseService service, CancellationToken ct) =>
+                Http(await service.UpdateAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.ProfileEdit, companyWide: true);
+
+        group.MapPost("/workers/{id:guid}/photos", async (Guid id, HttpRequest request, WorkerShowcaseService service, CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType)
+                {
+                    return Results.Problem("Send the photo as a form file.", statusCode: StatusCodes.Status400BadRequest, title: "validation.photo_not_image");
+                }
+
+                var form = await request.ReadFormAsync(ct).ConfigureAwait(false);
+                if (form.Files.Count == 0)
+                {
+                    return Results.Problem("Send the photo as a form file.", statusCode: StatusCodes.Status400BadRequest, title: "validation.photo_not_image");
+                }
+
+                var file = form.Files[0];
+                await using var stream = file.OpenReadStream();
+                var result = await service.AddPhotoAsync(id, stream, file.Length, ct).ConfigureAwait(false);
+                return result.IsSuccess ? Results.Ok(new { id = result.Value }) : Http(result);
+            })
+            .DisableAntiforgery()
+            .RequirePermission(WorkforcePermissions.ProfileEdit, companyWide: true);
+
+        // A photo: for whoever sees the workers or the showroom (never cached by shared proxies).
+        group.MapGet("/workers/{id:guid}/photos/{photoId:guid}", async (Guid id, Guid photoId, WorkerShowcaseService service, IPermissionService permissions, HttpContext http, CancellationToken ct) =>
+            {
+                var mine = await permissions.GetCurrentAsync(ct).ConfigureAwait(false);
+                if (!mine.Has(WorkforcePermissions.WorkersView) && !mine.Has(WorkforcePermissions.ShowroomView))
+                {
+                    return Results.Forbid();
+                }
+
+                if (await service.PhotoAsync(id, photoId, ct).ConfigureAwait(false) is not { } photo)
+                {
+                    return Results.NotFound();
+                }
+
+                http.Response.Headers.CacheControl = "private, max-age=86400";
+                return Results.File(photo.Content, photo.ContentType);
+            });
+
+        group.MapDelete("/workers/{id:guid}/photos/{photoId:guid}", async (Guid id, Guid photoId, WorkerShowcaseService service, CancellationToken ct) =>
+                Http(await service.DeletePhotoAsync(id, photoId, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.ProfileEdit, companyWide: true);
+
+        group.MapPost("/workers/{id:guid}/photos/{photoId:guid}/main", async (Guid id, Guid photoId, WorkerShowcaseService service, CancellationToken ct) =>
+                Http(await service.MakeMainAsync(id, photoId, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.ProfileEdit, companyWide: true);
+    }
+
+    private static IResult Http(Result result) =>
+        result.IsSuccess ? Results.NoContent()
+        : Results.Problem(
+            result.Error.Message,
+            statusCode: result.Error.Code.StartsWith("not_found.", StringComparison.Ordinal) ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest,
+            title: result.Error.Code);
 
     private static void Map(RouteGroupBuilder group, string path, WorkerKind kind, string view, string salary)
     {

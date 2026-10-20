@@ -60,6 +60,8 @@ import { PricesPage } from '../pages/commercial/PricesPage';
 import { ProjectDetailPage } from '../pages/commercial/ProjectDetailPage';
 import { ProjectsPage } from '../pages/commercial/ProjectsPage';
 import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
+import { ShowroomPage } from '../pages/operations/showroom/ShowroomPage';
+import { ShowroomPrintPage } from '../pages/operations/showroom/ShowroomPrintPage';
 import { WorkersPage } from '../pages/workforce/WorkersPage';
 import { RolesPage } from '../pages/admin/RolesPage';
 import { UsersPage } from '../pages/admin/UsersPage';
@@ -112,6 +114,8 @@ export function App() {
                 <Route path="/commercial/prices" element={<PricesPage />} />
                 <Route path="/operations/delivery-orders" element={<DeliveryOrdersPage />} />
                 <Route path="/operations/delivery-orders/new" element={<DeliveryOrdersPage key="new" creating />} />
+                <Route path="/operations/showroom" element={<ShowroomPage />} />
+                <Route path="/operations/showroom/print" element={<ShowroomPrintPage />} />
                 <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />
                 <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderDetailPage key="edit" editing />} />
                 <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />

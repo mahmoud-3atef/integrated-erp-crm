@@ -56,3 +56,38 @@ public sealed class MovementReportTests
         Assert.Null(MovementReport.Stint([Move("Work", on.AddDays(-5))]));
     }
 }
+
+public sealed class ShowroomRulesTests
+{
+    [Theory]
+    [InlineData("فندق ريكسوس ابحر - Waiter", "WAITER")]
+    [InlineData("شركة برج اصيلة للخدمات الفندقية - Service - Banquet", "WAITER")]
+    [InlineData("فندق ريكسوس ابحر - HK", "HOUSEKEEPING")]
+    [InlineData("قسم الضيافة", "HOSPITALITY")]
+    [InlineData("EXACT", null)]
+    [InlineData("شركة الاتصال الميداني - CONNECT SERVICES", null)]
+    [InlineData(null, null)]
+    public void A_specialty_is_suggested_from_the_work_places_name(string? place, string? specialty) =>
+        Assert.Equal(specialty, IntegratedErp.Modules.Workforce.Application.WorkerShowcaseService.Suggest(place));
+
+    [Theory]
+    [InlineData("فندق جبل عمر دبل تري باي هيلتون", true)]
+    [InlineData("REXOS KAEC", true)]
+    [InlineData("شركة الحدود الزرقاء", false)]
+    public void Hotel_experience_is_read_from_the_places(string place, bool hotel) =>
+        Assert.Equal(hotel, IntegratedErp.Modules.Operations.Application.Showroom.IsHotel(place));
+
+    [Fact]
+    public void The_presentation_shows_the_first_name() => Assert.Equal("MARIA", IntegratedErp.Modules.Operations.Application.Showroom.FirstName("  MARIA SANTOS CRUZ"));
+}
+
+public sealed class WorkerPhotoTests
+{
+    [Fact]
+    public void Only_jpeg_png_and_webp_are_photos()
+    {
+        Assert.Equal("image/jpeg", IntegratedErp.Modules.Workforce.Domain.WorkerPhoto.ImageType([0xFF, 0xD8, 0xFF, 0xE0]));
+        Assert.Equal("image/webp", IntegratedErp.Modules.Workforce.Domain.WorkerPhoto.ImageType("RIFF0000WEBPVP8 "u8));
+        Assert.Null(IntegratedErp.Modules.Workforce.Domain.WorkerPhoto.ImageType("%PDF-1.7"u8));
+    }
+}

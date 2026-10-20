@@ -191,3 +191,33 @@ public interface IWorkforceReport
     /// <summary>The active workers in housing now, the longest there first.</summary>
     Task<IReadOnlyList<WorkforceInHousing>> InHousingAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>A work period on a worker's record, for their showroom file.</summary>
+public sealed record WorkerStint(string? Place, Guid? ProjectCrmId, DateOnly StartsOn, DateOnly? EndsOn);
+
+/// <summary>
+/// What the showroom shows of a worker (docs/03-migration-plan/15): the marketing profile written here, the photos (the
+/// main one first), and the work with the company.
+/// </summary>
+/// <param name="SuggestedSpecialty">From the last work place's name while no specialty is set (e.g. «- Waiter»).</param>
+public sealed record WorkerShowcaseInfo(
+    Guid WorkerId,
+    string? Specialty,
+    string? SuggestedSpecialty,
+    IReadOnlyList<string> Skills,
+    IReadOnlyList<string> Languages,
+    string? Gender,
+    DateOnly? BirthDate,
+    string? Religion,
+    string? Education,
+    int? PriorExperienceYears,
+    string? BioAr,
+    string? BioEn,
+    IReadOnlyList<Guid> Photos,
+    int WorkDays,
+    IReadOnlyList<WorkerStint> Stints);
+
+public interface IWorkerShowcase
+{
+    Task<IReadOnlyList<WorkerShowcaseInfo>> ForAsync(IReadOnlyCollection<Guid> workerIds, CancellationToken cancellationToken);
+}

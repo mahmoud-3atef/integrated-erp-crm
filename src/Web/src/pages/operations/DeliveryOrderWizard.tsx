@@ -45,7 +45,7 @@ function initials(name: string) {
  * A new or returned delivery order, in four steps: the order (project, dates, receiver), the workers, their prices and
  * start dates, then a review before it goes for approval. Saving starts the approval (the creator confirms first).
  */
-export function DeliveryOrderWizard({ id, onClose, onSaved }: { id?: string; onClose: () => void; onSaved: (id: string, approvalError: string | null) => void }) {
+export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: { id?: string; initialWorkerIds?: string[]; onClose: () => void; onSaved: (id: string, approvalError: string | null) => void }) {
   const { t } = useTranslation();
   const { date } = useCommercialFormat();
   const [step, setStep] = useState(0);
@@ -104,6 +104,19 @@ export function DeliveryOrderWizard({ id, onClose, onSaved }: { id?: string; onC
       cancelled = true;
     };
   }, [projectId, workerKey, startOn, deliverOn, id]);
+
+  // Workers chosen in the showroom start the new order.
+  const initial = (initialWorkerIds ?? []).join(',');
+  useEffect(() => {
+    if (id || !initial) return;
+    operationsApi
+      .availableWorkers()
+      .then((list) => {
+        const ids = initial.split(',');
+        add(list.filter((a) => ids.includes(a.worker.id) && !a.busyOrderNo).map((a) => a.worker));
+      })
+      .catch((failure: unknown) => setError(errorKey(failure)));
+  }, [id, initial]);
 
   const project = projects.find((p) => p.id === projectId) ?? null;
   const late = !!deliverOn && daysAgo(deliverOn) > 2;

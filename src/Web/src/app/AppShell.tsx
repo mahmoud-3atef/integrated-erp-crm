@@ -32,6 +32,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
@@ -111,6 +112,7 @@ const menu: MenuSection[] = [
     titleKey: 'menu.operations',
     icon: <LocalShippingOutlinedIcon />,
     items: [
+      { path: '/operations/showroom', labelKey: 'menu.showroom', icon: <StorefrontOutlinedIcon />, permission: 'operations.showroom.view', companyWide: true },
       { path: '/operations/delivery-orders', labelKey: 'menu.deliveryOrders', icon: <LocalShippingOutlinedIcon />, permission: 'operations.delivery.view', companyWide: true },
       { path: '/operations/return-orders', labelKey: 'menu.returnOrders', icon: <KeyboardReturnOutlinedIcon />, permission: 'operations.return.view', companyWide: true },
       { path: '/operations/transfer-orders', labelKey: 'menu.transferOrders', icon: <SwapHorizIcon />, permission: 'operations.transfer.view', companyWide: true },
