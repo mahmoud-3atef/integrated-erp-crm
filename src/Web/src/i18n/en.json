@@ -485,7 +485,28 @@
     "not_found_leave_permission": "The permission request was not found.",
     "validation_leave_permission_times": "A permission is 15 minutes to 8 hours, its end after its start, with a reason of 500 characters at most.",
     "conflict_leave_permission_on_leave": "The employee is on leave that day.",
-    "conflict_leave_not_returnable": "Only an approved leave that has started can have its return confirmed, on a day after its start."
+    "conflict_leave_not_returnable": "Only an approved leave that has started can have its return confirmed, on a day after its start.",
+    "not_found_deduction_advance": "Advance not found.",
+    "not_found_deduction_penalty": "Penalty not found.",
+    "not_found_deduction_penalty_type": "The penalty type was not found or is stopped.",
+    "not_found_deduction_employee": "Employee not found.",
+    "validation_deduction_setting": "A setting is out of range.",
+    "validation_deduction_name": "Enter the Arabic name (100 characters at most).",
+    "validation_deduction_advance_fields": "Enter the amount, the months, the first payroll month and the reason.",
+    "validation_deduction_penalty_fields": "Enter the violation and the payroll month, and the days or the amount the penalty needs.",
+    "validation_deduction_too_many_months": "More months than the settings allow.",
+    "validation_deduction_not_employed": "The employee is not employed on that date.",
+    "conflict_deduction_above_cap": "The request is above the cap: choose «Ask to go above the cap» for the approvers to decide.",
+    "conflict_deduction_on_probation": "The employee is still on probation.",
+    "conflict_deduction_short_service": "The employee has not served the months the settings require.",
+    "conflict_deduction_open_advance": "The employee has an advance not yet settled.",
+    "conflict_deduction_no_salary": "The employee has no salary recorded to measure the advance against.",
+    "conflict_deduction_per_violation": "The penalty is above the days allowed for one violation.",
+    "conflict_deduction_per_month": "The month's penalties would pass the days allowed in a month.",
+    "conflict_deduction_not_disbursable": "Only an approved advance can be paid, with its payment method.",
+    "conflict_deduction_not_open": "Only a paid advance not yet settled can be settled early, with a note.",
+    "conflict_deduction_not_postponable": "Only a due installment with nothing deducted can be postponed, with a note.",
+    "conflict_deduction_not_returned": "Only a returned request can be sent again."
   },
   "menu": {
     "label": "Main menu",
@@ -542,7 +563,9 @@
     "hrAttendance": "Attendance",
     "hrShifts": "Shifts and calendar",
     "hrLeave": "Leave",
-    "hrLeaveBalances": "Leave balances"
+    "hrLeaveBalances": "Leave balances",
+    "hrAdvances": "Salary advances",
+    "hrPenalties": "Penalties and deductions"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -3015,7 +3038,8 @@
         "data": "Employee data",
         "leave": "Leave",
         "contract": "Contract",
-        "history": "Actions log"
+        "history": "Actions log",
+        "deductions": "Advances and penalties"
       },
       "edit": "Edit",
       "boxes": {
@@ -3894,5 +3918,237 @@
     "left": "left",
     "monthLine": "Used {{used}} of {{allowance}}",
     "listTitle": "Permissions"
+  },
+  "deductions": {
+    "sar": "SAR",
+    "employee": "Employee",
+    "search": "Search by employee or number…",
+    "send": "Send for approval",
+    "resubmit": "Edit and send again",
+    "retry": "Try again",
+    "noResults": "Nothing matches the search.",
+    "noAccess": "You do not have permission to view advances and penalties.",
+    "note": "Note",
+    "requested": "Requested",
+    "monthCapNote": "If the month's deductions pass the monthly cap (half the wage, article 92), the payroll defers the excess to the next month, unless going above it was approved.",
+    "cols": {
+      "no": "Number",
+      "status": "Status",
+      "date": "Date"
+    },
+    "advanceStatus": {
+      "InApproval": "In approval",
+      "Returned": "Returned",
+      "Rejected": "Rejected",
+      "Approved": "Awaiting payment",
+      "Disbursed": "Being deducted",
+      "Settled": "Settled"
+    },
+    "installmentStatus": {
+      "Scheduled": "Due",
+      "Deferred": "Deferred (month's cap)",
+      "Deducted": "Deducted",
+      "Postponed": "Postponed",
+      "Settled": "Settled early"
+    },
+    "penaltyStatus": {
+      "InApproval": "In approval",
+      "Returned": "Returned",
+      "Rejected": "Rejected",
+      "Applied": "Applied"
+    },
+    "effects": {
+      "Warning": "Warning",
+      "DeductDays": "Days of wage deducted",
+      "DeductAmount": "An amount deducted",
+      "Suspension": "Suspension without pay"
+    },
+    "aboveCap": {
+      "advance_cap": "The amount is above the advance cap.",
+      "month_cap": "The month's deductions after this request are above the monthly cap.",
+      "ask": "Ask to go above the cap: the approvers decide",
+      "badge": "Above the cap",
+      "approved": "This request asked to go above the cap; approving it approves going above it."
+    },
+    "kpi": {
+      "open": "Open balances",
+      "employees": "Employees",
+      "pending": "Awaiting approval",
+      "amount": "Amount",
+      "toDisburse": "Awaiting payment",
+      "paid": "Paid this month",
+      "count": "Advances",
+      "due": "Deducted in the {{month}} payroll",
+      "dueNote": "Before the month's cap"
+    },
+    "advance": {
+      "title": "Salary advances",
+      "intro": "An advance on the salary by request and approval (direct manager, then HR, then finance), paid and then deducted from the payroll over one month or a few.",
+      "new": "Request an advance",
+      "pageTitle": "Advance of SAR {{amount}}",
+      "over": "Deduction months: {{months}} · from the {{month}} payroll",
+      "amount": "Amount",
+      "months": "Deduction months",
+      "firstPeriod": "First payroll month",
+      "reason": "Reason",
+      "remaining": "Remaining",
+      "salary": "Monthly salary",
+      "salaryAtRequest": "Salary at request",
+      "cap": "Advance cap ({{percent}}%)",
+      "installment": "Monthly installment",
+      "monthShare": "Month's deductions after it",
+      "hidden": "Shown to those who may view salaries",
+      "pick": "Choose the employee and enter the amount to see the preview.",
+      "none": "No advances.",
+      "noneHint": "Request an advance for an employee with the button above or from their file.",
+      "checks": {
+        "probation": "Past probation",
+        "service": "Length of service",
+        "open": "No open advance",
+        "months": "Months up to {{max}}"
+      },
+      "problems": {
+        "fields": "Enter the amount, the months, the first payroll month and the reason.",
+        "too_many_months": "More months than the settings allow.",
+        "not_employed": "The employee is not employed.",
+        "on_probation": "The employee is still on probation.",
+        "short_service": "The employee has not served the months the settings require.",
+        "open_advance": "The employee has an advance not yet settled.",
+        "no_salary": "The employee has no salary recorded to measure the advance against."
+      },
+      "route": {
+        "manager": "Sent for approval: the direct manager ({{name}}), then HR, then finance.",
+        "hr": "Sent for approval: HR, then finance (no direct manager linked to an account)."
+      },
+      "tabs": {
+        "all": "All advances",
+        "pending": "Awaiting approval ({{count}})",
+        "disburse": "Awaiting payment ({{count}})",
+        "open": "Being deducted"
+      }
+    },
+    "schedule": {
+      "title": "Deduction schedule",
+      "period": "Payroll month",
+      "amount": "Installment",
+      "deducted": "Deducted",
+      "postpone": "Postpone",
+      "postponeTitle": "Postpone the {{month}} installment",
+      "postponeHint": "The installment moves to the month after the last one; the remaining stays the same. Give the reason.",
+      "afterApproval": "The schedule is made on approval: equal installments of about SAR {{amount}}, the cents on the last one."
+    },
+    "payment": {
+      "title": "Payment",
+      "paidOn": "Paid on",
+      "method": "Method",
+      "reference": "Reference",
+      "paidBy": "Paid by"
+    },
+    "disburse": {
+      "action": "Record the payment",
+      "title": "Pay advance {{no}}",
+      "amount": "Amount:",
+      "paidOn": "Paid on",
+      "method": "Payment method",
+      "reference": "Reference (transfer or cheque number)",
+      "note": "The deduction starts from the payroll month in the request. The accounting entry comes with the finance module.",
+      "save": "Record the payment",
+      "methods": {
+        "Transfer": "Bank transfer",
+        "Cash": "Cash",
+        "Cheque": "Cheque"
+      }
+    },
+    "settle": {
+      "action": "Settle early",
+      "title": "Settle the advance early",
+      "hint": "The remaining installments (SAR {{amount}}) are closed and not deducted from the payroll. Give how it was paid and its reference."
+    },
+    "penalty": {
+      "title": "Penalties and deductions",
+      "intro": "Penalties for violations by decision and approval (HR, then senior management), and other deductions such as damage or custody (HR, then finance), deducted in the chosen month's payroll.",
+      "new": "Violation and penalty",
+      "date": "Violation date",
+      "description": "Violation",
+      "statement": "Employee's statement (investigation)",
+      "type": "Penalty",
+      "kind": "Type",
+      "value": "Effect",
+      "daysLabel": "Days deducted",
+      "suspensionDays": "Suspension days",
+      "daysValue": "Days deducted: {{days}}",
+      "suspensionValue": "Suspension days: {{days}}",
+      "amount": "Amount",
+      "period": "Payroll month",
+      "noDeduction": "Warning, no deduction",
+      "limits": "Limits: one violation deducts {{perViolation}} days at most, and the month's penalties {{perMonth}} days at most (used this month: {{used}}). Deducted in the {{month}} payroll.",
+      "inMonth": "Deducted in the {{month}} payroll.",
+      "monthTotal": "Month's deductions after it:",
+      "warningNote": "A warning deducts nothing from the wage; it is kept in the employee's file after approval.",
+      "effectNote": "The employee is notified of the decision, and the deduction enters the chosen month's payroll after approval.",
+      "route": "Sent for approval: HR, then senior management; the employee is notified and it is kept in their file after approval.",
+      "none": "No penalties or deductions.",
+      "noneHint": "Record a violation and penalty or another deduction with the buttons above or from the employee's file.",
+      "problems": {
+        "fields": "Enter the violation and the payroll month, and the days or the amount the penalty needs.",
+        "not_employed": "The employee was not employed on the violation date.",
+        "per_violation": "More days than one violation allows.",
+        "per_month": "The month's penalties would pass the month's limit."
+      },
+      "tabs": {
+        "all": "All",
+        "pending": "Awaiting approval ({{count}})",
+        "warnings": "Warnings",
+        "deductions": "Deductions"
+      }
+    },
+    "other": {
+      "new": "Other deduction",
+      "kind": "Other deduction",
+      "date": "Date",
+      "description": "Reason for the deduction (damage, lost custody…)",
+      "route": "Sent for approval: HR, then finance."
+    },
+    "settings": {
+      "title": "Settings",
+      "titleLimits": "Settings and limits",
+      "pageTitle": "Advance and penalty settings",
+      "intro": "The advance conditions and caps, the legal penalty limits, the monthly deduction cap, and the penalty types of the company's policy.",
+      "saved": "Saved",
+      "advances": "Advances",
+      "advanceCap": "Advance cap of the monthly salary",
+      "maxMonths": "Most deduction months",
+      "minService": "Least length of service",
+      "afterProbation": "Only after probation",
+      "oneOpen": "No new advance before the last one is settled",
+      "limits": "Penalty and deduction limits",
+      "perViolation": "Days for one violation",
+      "perMonth": "Penalty days in a month",
+      "suspension": "Suspension days in a month",
+      "monthlyCap": "Monthly deduction cap of the wage",
+      "capNote": "A violation above its limits is refused. Going above the monthly cap is asked in the request for the approvers to decide; otherwise the payroll defers it.",
+      "daysUnit": "days",
+      "monthsUnit": "months"
+    },
+    "types": {
+      "title": "Penalty types",
+      "new": "Penalty type",
+      "edit": "Edit the penalty type",
+      "name": "Type",
+      "nameAr": "Arabic name",
+      "nameEn": "English name",
+      "effect": "Effect",
+      "order": "Order",
+      "active": "Active",
+      "activeBadge": "Active",
+      "stopped": "Stopped"
+    },
+    "profile": {
+      "open": "Open advances",
+      "warnings": "Warnings",
+      "days": "Penalty days this year",
+      "advances": "Advances",
+      "penalties": "Penalties and deductions"
+    }
   }
 }

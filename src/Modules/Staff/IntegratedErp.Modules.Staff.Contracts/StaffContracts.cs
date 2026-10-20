@@ -43,6 +43,11 @@ public interface IStaffDirectory
     /// a parent department's), with the manager's sign-in account when linked.
     /// </summary>
     Task<StaffManager?> ManagerAsync(Guid employeeId, CancellationToken cancellationToken);
+
+    /// <summary>The employee's monthly salary (basic and allowances) in effect on a date; null when none is recorded.</summary>
+    Task<StaffPay?> SalaryAsync(Guid employeeId, DateOnly on, CancellationToken cancellationToken);
 }
+
+public sealed record StaffPay(decimal Basic, decimal Total);
 
 public sealed record StaffManager(Guid EmployeeId, string Name, Guid? UserId);

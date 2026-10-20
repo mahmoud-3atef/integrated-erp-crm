@@ -43,6 +43,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { ActionDialog, ActionStatusBadge, actionIcon } from './StaffActions';
 import { ContractDialog, JobDialog, PersonalDialog, SalaryDialog } from './StaffDialogs';
 import { EmployeeLeavePanel } from '../leave/leave';
+import { EmployeeDeductionsPanel } from '../deductions/settings';
 import { useService } from './staff';
 
 // The employee's file after the old system's latest employee screen (content/css/pages/hr-employee-details.css,
@@ -51,7 +52,7 @@ import { useService } from './staff';
 
 const tone = { navy: '#0a3c58', navySoft: '#eaf3f8', green: '#1f9d55', greenSoft: '#e9f7ef', sky: '#1b6a92', skySoft: '#eaf4fa' } as const;
 type BoxTone = 'navy' | 'green' | 'sky';
-type TabKey = 'data' | 'leave' | 'contract' | 'history';
+type TabKey = 'data' | 'leave' | 'deductions' | 'contract' | 'history';
 type Edit = 'personal' | 'job' | 'contract' | 'salary' | 'action' | null;
 
 /** The file's fields a change shows, by the stored property's name. */
@@ -186,8 +187,8 @@ export function StaffProfilePage() {
       {/* The tabs and their boxes */}
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 2.5 } }}>
         <Stack direction="row" sx={{ display: 'inline-flex', bgcolor: tokens.gray100, borderRadius: 99, p: 0.6, gap: 0.5, flexWrap: 'wrap' }} role="tablist">
-          {(['data', 'leave', 'contract', 'history'] as TabKey[]).map((k) => {
-            const icons = { data: <BadgeOutlinedIcon />, leave: <BeachAccessOutlinedIcon />, contract: <DescriptionOutlinedIcon />, history: <HistoryOutlinedIcon /> };
+          {(['data', 'leave', 'deductions', 'contract', 'history'] as TabKey[]).map((k) => {
+            const icons = { data: <BadgeOutlinedIcon />, leave: <BeachAccessOutlinedIcon />, deductions: <CreditCardOutlinedIcon />, contract: <DescriptionOutlinedIcon />, history: <HistoryOutlinedIcon /> };
             return (
               <ButtonBase
                 key={k}
@@ -238,6 +239,11 @@ export function StaffProfilePage() {
           <Box sx={{ mt: 2.25 }}>
             <EmployeeLeavePanel employee={{ id: p.id, nameAr: p.nameAr ?? p.nameEn, nameEn: p.nameEn }} />
             <LeaveBox p={p} />
+          </Box>
+        )}
+        {tab === 'deductions' && (
+          <Box sx={{ mt: 2.25 }}>
+            <EmployeeDeductionsPanel employee={{ id: p.id, nameAr: p.nameAr ?? p.nameEn, nameEn: p.nameEn }} />
           </Box>
         )}
         {tab === 'contract' && (

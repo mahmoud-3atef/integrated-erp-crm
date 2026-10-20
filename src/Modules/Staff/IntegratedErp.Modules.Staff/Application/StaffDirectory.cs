@@ -60,6 +60,10 @@ internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory
         return manager is null ? null : new StaffManager(id, manager.NameAr ?? manager.NameEn, manager.UserId);
     }
 
+    public async Task<StaffPay?> SalaryAsync(Guid employeeId, DateOnly on, CancellationToken cancellationToken) =>
+        await db.Salaries.AsNoTracking().Where(s => s.EmployeeId == employeeId && s.EffectiveFrom <= on).OrderByDescending(s => s.EffectiveFrom)
+            .Select(s => new StaffPay(s.Basic, s.Total)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
     public async Task<IReadOnlyList<StaffDepartment>> DepartmentsAsync(CancellationToken cancellationToken) =>
         await db.Departments.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.SortOrder).ThenBy(d => d.NameAr)
             .Select(d => new StaffDepartment(d.Id, d.NameAr, d.NameEn, d.ParentId)).ToListAsync(cancellationToken).ConfigureAwait(false);
