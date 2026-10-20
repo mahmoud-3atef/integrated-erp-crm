@@ -1,9 +1,24 @@
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
+import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
+import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import DonutLargeOutlinedIcon from '@mui/icons-material/DonutLargeOutlined';
+import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
@@ -46,7 +61,46 @@ const rise = keyframes`from { opacity: 0; transform: translateY(12px); } to { op
 const grow = keyframes`from { transform: scaleY(0); } to { transform: scaleY(1); }`;
 const fill = keyframes`from { transform: scaleX(0); } to { transform: scaleX(1); }`;
 const appear = (delay: number) => ({ animation: `${rise} .55s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
+const float = keyframes`0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); }`;
+// The summary's ticker: the sentences enter at the reading end and run towards its start (to the right in Arabic: the RTL
+// style plugin turns this leftward run around), two copies so it never jumps.
+const ticker = keyframes`from { transform: translateX(0); } to { transform: translateX(-50%); }`;
+
+/** The figures' banner, as the home page's: the navy gradient with its floating lights. */
+function Hero({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: `${tokens.radiusLg}px`,
+        p: { xs: 2, md: 2.5 },
+        mb: 1.75,
+        color: '#fff',
+        background: `linear-gradient(125deg, ${tokens.navy900} 0%, ${tokens.navy700} 45%, ${tokens.teal} 100%)`,
+        boxShadow: tokens.shadowMd,
+        animation: `${rise} .5s cubic-bezier(.2,.8,.2,1) both`,
+      }}
+    >
+      <Box aria-hidden sx={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -160, insetInlineEnd: -80, background: 'radial-gradient(circle, rgba(43,195,225,.35), transparent 70%)', animation: `${float} 9s ease-in-out infinite` }} />
+      <Box aria-hidden sx={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', bottom: -120, insetInlineStart: '30%', background: 'radial-gradient(circle, rgba(255,255,255,.12), transparent 70%)', animation: `${float} 11s ease-in-out infinite reverse` }} />
+      <Box sx={{ position: 'relative', display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' } }}>{children}</Box>
+    </Box>
+  );
+}
 const filling = (delay = 0) => ({ transformOrigin: 'left center', animation: `${fill} .9s ${delay}s cubic-bezier(.2,.8,.2,1) both` });
+
+/** Whether the device asks for less motion (then the ticker shows one sentence at a time). */
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const change = () => setReduced(query.matches);
+    query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, []);
+  return reduced;
+}
 
 /** A number counting up from zero when it shows (to two decimals for the millions and the rates). */
 function Count({ value, decimals = 0, format }: { value: number; decimals?: number; format: (n: number) => string }) {
@@ -87,7 +141,7 @@ const accents = {
   rose: '#e0607e',
 } as const;
 
-const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2, minWidth: 0 } as const;
+const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, minWidth: 0, transition: 'box-shadow .2s', '&:hover': { boxShadow: tokens.shadowMd } } as const;
 
 function useFormat() {
   const { i18n } = useTranslation();
@@ -216,22 +270,39 @@ export function ExecutiveReportPage() {
 }
 
 /** A figure's card: its value, the comparison with the period before (the colour follows the meaning), six months. */
-function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, money, index = 0 }: { label: string; figure?: Figure; value?: number | null; unit?: string; good?: Good; accent: string; spark?: (number | null)[]; note?: ReactNode; money?: boolean; index?: number }) {
+function Kpi({ label, icon, figure, value, unit, good = 'none', spark, note, money, index = 0 }: { label: string; icon: ReactNode; figure?: Figure; value?: number | null; unit?: string; good?: Good; accent?: string; spark?: (number | null)[]; note?: ReactNode; money?: boolean; index?: number }) {
   const { t } = useTranslation();
   const f = useFormat();
   const v = figure ? figure.value : (value ?? null);
   const p = figure?.previous ?? null;
   const diff = v !== null && p !== null ? v - p : null;
   const pct = diff !== null && p ? (diff / Math.abs(p)) * 100 : null;
-  const tone = diff === null || diff === 0 || good === 'none' ? tokens.gray600 : (diff > 0) === (good === 'up') ? '#047857' : '#B91C1C';
+  const tone = diff === null || diff === 0 || good === 'none' ? 'rgba(255,255,255,.8)' : (diff > 0) === (good === 'up') ? '#86EFAC' : '#FCA5A5';
   const shown = (n: number) => (money && Math.abs(n) >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}` : f.n(n));
   const points = unit === '%';
   const unitShown = money && v !== null && Math.abs(v) >= 1_000_000 ? t('exec.millionSar') : unit;
   const max = Math.max(1, ...(spark ?? []).map((x) => Math.abs(x ?? 0)));
   return (
-    <Box sx={{ ...card, ...appear(index * 0.06), position: 'relative', overflow: 'hidden', transition: 'box-shadow .2s, transform .2s', '&:hover': { boxShadow: tokens.shadowMd, transform: 'translateY(-2px)' }, '&::before': { content: '""', position: 'absolute', insetBlock: 0, insetInlineStart: 0, width: 4, bgcolor: accent } }}>
-      <Typography sx={{ fontSize: 12, fontWeight: 600, color: tokens.gray600 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 24, fontWeight: 800, color: tokens.navy800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>
+    <Box
+      sx={{
+        ...appear(0.1 + index * 0.06),
+        minWidth: 0,
+        p: 1.75,
+        borderRadius: '16px',
+        bgcolor: 'rgba(255,255,255,.1)',
+        border: '1px solid rgba(255,255,255,.16)',
+        backdropFilter: 'blur(8px)',
+        transition: 'background-color .2s, transform .2s',
+        '&:hover': { bgcolor: 'rgba(255,255,255,.18)', transform: 'translateY(-2px)' },
+      }}
+    >
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.5, opacity: 0.85, '& svg': { fontSize: 18 } }}>
+        {icon}
+        <Typography noWrap sx={{ fontSize: 12.5 }}>
+          {label}
+        </Typography>
+      </Stack>
+      <Typography sx={{ fontSize: 27, fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
         {v === null ? (
           <Tooltip title={t('exec.unknown')}>
             <span>—</span>
@@ -241,7 +312,7 @@ function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, m
             <Count value={money && Math.abs(v) >= 1_000_000 ? v / 1_000_000 : v} decimals={money && Math.abs(v) >= 1_000_000 ? 2 : points && !Number.isInteger(v) ? 1 : 0} format={f.n} />
           </bdi>
         )}{' '}
-        {unitShown && <Box component="span" sx={{ fontSize: 12, fontWeight: 500, color: tokens.gray500 }}>{unitShown}</Box>}
+        {unitShown && <Box component="span" sx={{ fontSize: 12, fontWeight: 500, opacity: 0.75 }}>{unitShown}</Box>}
       </Typography>
       <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: tone, minHeight: 17 }}>
         {diff !== null ? (
@@ -253,11 +324,11 @@ function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, m
           note
         )}
       </Typography>
-      {diff !== null && note && <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>{note}</Typography>}
+      {diff !== null && note && <Typography sx={{ fontSize: 11.5, opacity: 0.75 }}>{note}</Typography>}
       {spark && spark.length > 0 && (
         <Box aria-hidden sx={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: 24, mt: 0.75 }}>
           {spark.map((x, i) => (
-            <Box key={i} sx={{ width: 9, height: `${Math.max(8, (Math.abs(x ?? 0) / max) * 100)}%`, borderRadius: '2px 2px 0 0', bgcolor: accent, opacity: i === spark.length - 1 ? 1 : 0.35, transformOrigin: 'bottom', animation: `${grow} .7s ${index * 0.06 + 0.25 + i * 0.05}s cubic-bezier(.2,.8,.2,1) both` }} />
+            <Box key={i} sx={{ width: 9, height: `${Math.max(8, (Math.abs(x ?? 0) / max) * 100)}%`, borderRadius: '2px 2px 0 0', bgcolor: '#fff', opacity: i === spark.length - 1 ? 0.95 : 0.35, transformOrigin: 'bottom', animation: `${grow} .7s ${index * 0.06 + 0.25 + i * 0.05}s cubic-bezier(.2,.8,.2,1) both` }} />
           ))}
         </Box>
       )}
@@ -265,11 +336,12 @@ function Kpi({ label, figure, value, unit, good = 'none', accent, spark, note, m
   );
 }
 
-function CardTitle({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
+function CardTitle({ title, hint, icon, action }: { title: string; hint?: string; icon?: ReactNode; action?: ReactNode }) {
   return (
-    <Stack direction="row" sx={{ gap: 1, alignItems: 'flex-start', mb: 1.25 }}>
+    <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center', mb: 1.75 }}>
+      {icon && <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 36, height: 36, borderRadius: '11px', bgcolor: tokens.navy50, color: tokens.navy700, '& svg': { fontSize: 20 } }}>{icon}</Box>}
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: 14.5, color: tokens.navy800 }}>{title}</Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: 15, color: tokens.navy800 }}>{title}</Typography>
         {hint && <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{hint}</Typography>}
       </Box>
       {action}
@@ -312,18 +384,60 @@ function Insights({ data }: { data: Overview }) {
   if (data.financeVisible && data.coverage.month && data.coverage.missing + data.coverage.partial > 0) {
     lines.push(t('exec.ins.coverage', { month: f.monthLong(data.coverage.month), count: data.coverage.missing + data.coverage.partial, workers: f.n(data.coverage.workersNotInvoiced) }));
   }
+  const seconds = Math.max(28, lines.join(' ').length * 0.16);
+  const calm = useReducedMotion();
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (!calm) return;
+    const timer = window.setInterval(() => setShown((n) => n + 1), 5000);
+    return () => window.clearInterval(timer);
+  }, [calm]);
+  const run = (copy: number) => (
+    <Stack direction="row" aria-hidden={copy === 1 ? true : undefined} sx={{ flex: '0 0 auto', alignItems: 'center' }}>
+      {lines.map((l) => (
+        <Stack key={`${copy}-${l}`} direction="row" sx={{ alignItems: 'center', flex: '0 0 auto' }}>
+          <Typography component="span" dir="rtl" sx={{ fontSize: 13.5, whiteSpace: 'nowrap', px: 2 }}>
+            {l}
+          </Typography>
+          <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#FCD34D', flex: '0 0 auto' }} />
+        </Stack>
+      ))}
+    </Stack>
+  );
   return (
-    <Box sx={{ ...appear(0.3), display: 'flex', gap: 1.5, alignItems: 'flex-start', background: `linear-gradient(90deg, ${tokens.navy700}, #12597f)`, color: '#fff', borderRadius: `${tokens.radiusLg}px`, p: 2, mb: 1.75 }}>
-      <LightbulbOutlinedIcon sx={{ color: '#FCD34D', mt: 0.25 }} />
-      <Box sx={{ flex: 1 }}>
-        <Typography sx={{ fontWeight: 700, mb: 0.75 }}>{t('exec.ins.title')}</Typography>
-        <Box component="ul" sx={{ m: 0, paddingInlineStart: 2.25, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 3, rowGap: 0.5, fontSize: 13 }}>
-          {lines.map((l, i) => (
-            <Box component="li" key={l} sx={appear(0.45 + i * 0.08)}>
-              {l}
-            </Box>
-          ))}
-        </Box>
+    <Box
+      role="region"
+      aria-label={t('exec.ins.title')}
+      sx={{ ...appear(0.3), display: 'flex', alignItems: 'stretch', overflow: 'hidden', bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, mb: 1.75, height: 48 }}
+    >
+      <Stack direction="row" sx={{ flex: '0 0 auto', alignItems: 'center', gap: 1, px: 2, bgcolor: '#d98a06', color: '#fff', fontWeight: 800, fontSize: 13.5, '& svg': { fontSize: 20 } }}>
+        <CampaignOutlinedIcon />
+        {t('exec.ins.title')}
+      </Stack>
+      <Box
+        sx={{
+          position: 'relative',
+          flex: 1,
+          minWidth: 0,
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          color: tokens.navy800,
+          maskImage: 'linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)',
+          '&:hover .ticker': { animationPlayState: 'paused' },
+        }}
+      >
+        {calm ? (
+          // Less motion asked by the device: one sentence at a time, changing every few seconds.
+          <Typography key={shown} sx={{ ...appear(0), fontSize: 13.5, px: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {lines[shown % lines.length]}
+          </Typography>
+        ) : (
+          <Box className="ticker" sx={{ display: 'flex', width: 'max-content', animation: `${ticker} ${seconds}s linear infinite` }}>
+            {run(0)}
+            {run(1)}
+          </Box>
+        )}
       </Box>
     </Box>
   );
@@ -338,18 +452,18 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
   const covTotal = c.full + c.partial + c.missing;
   return (
     <Box>
-      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' }, mb: 1.75 }}>
-        <Kpi index={0} label={t('exec.kpi.onJob')} value={data.onJob} unit={t('exec.worker')} accent={accents.navy} note={t('exec.kpi.activeProjects', { count: f.n(data.activeProjects) })} />
-        <Kpi index={1} label={t('exec.kpi.starts')} figure={data.starts} unit={t('exec.worker')} good="up" accent={accents.teal} spark={data.moves.map((m) => m.starts)} />
-        <Kpi index={2} label={t('exec.kpi.net')} figure={data.net} good="up" accent={accents.green} spark={data.moves.map((m) => m.starts - m.returns)} note={t('exec.kpi.netNote', { starts: f.n(data.starts.value ?? 0), returns: f.n(data.returns.value ?? 0) })} />
-        <Kpi index={3} label={t('exec.kpi.inHousing')} value={data.inHousing} unit={t('exec.worker')} accent={accents.amber} note={t('exec.kpi.inHousingNote')} />
-        <Kpi index={4} label={t('exec.kpi.invoiced')} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.invoiced)} note={data.invoiceCount.value !== null ? t('exec.kpi.invoiceCount', { count: f.n(data.invoiceCount.value) }) : undefined} />
-        <Kpi index={5} label={t('exec.kpi.rate')} figure={data.collectionRate} unit="%" good="up" accent={accents.rose} spark={data.money.map((m) => m.rate)} note={data.financeVisible ? t('exec.kpi.overdue', { amount: f.n(data.overdue60) }) : undefined} />
-      </Box>
+      <Hero>
+        <Kpi index={0} label={t('exec.kpi.onJob')} icon={<GroupsOutlinedIcon />} value={data.onJob} unit={t('exec.worker')} accent={accents.navy} note={t('exec.kpi.activeProjects', { count: f.n(data.activeProjects) })} />
+        <Kpi index={1} label={t('exec.kpi.starts')} icon={<TrendingUpOutlinedIcon />} figure={data.starts} unit={t('exec.worker')} good="up" accent={accents.teal} spark={data.moves.map((m) => m.starts)} />
+        <Kpi index={2} label={t('exec.kpi.net')} icon={<SyncAltOutlinedIcon />} figure={data.net} good="up" accent={accents.green} spark={data.moves.map((m) => m.starts - m.returns)} note={t('exec.kpi.netNote', { starts: f.n(data.starts.value ?? 0), returns: f.n(data.returns.value ?? 0) })} />
+        <Kpi index={3} label={t('exec.kpi.inHousing')} icon={<HotelOutlinedIcon />} value={data.inHousing} unit={t('exec.worker')} accent={accents.amber} note={t('exec.kpi.inHousingNote')} />
+        <Kpi index={4} label={t('exec.kpi.invoiced')} icon={<ReceiptLongOutlinedIcon />} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.invoiced)} note={data.invoiceCount.value !== null ? t('exec.kpi.invoiceCount', { count: f.n(data.invoiceCount.value) }) : undefined} />
+        <Kpi index={5} label={t('exec.kpi.rate')} icon={<PercentOutlinedIcon />} figure={data.collectionRate} unit="%" good="up" accent={accents.rose} spark={data.money.map((m) => m.rate)} note={data.financeVisible ? t('exec.kpi.overdue', { amount: f.n(data.overdue60) }) : undefined} />
+      </Hero>
       <Insights data={data} />
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
         <Box sx={{ ...card, ...appear(0.35) }}>
-          <CardTitle title={t('exec.moves.title')} hint={t('exec.moves.hint')} />
+          <CardTitle icon={<HistoryOutlinedIcon />} title={t('exec.moves.title')} hint={t('exec.moves.hint')} />
           <Columns
             categories={months}
             series={[
@@ -362,7 +476,7 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
           <Legend items={[[t('exec.moves.starts'), tokens.navy700], [t('exec.moves.returns'), accents.amber]]} />
         </Box>
         <Box sx={{ ...card, ...appear(0.43) }}>
-          <CardTitle title={t('exec.managers.title')} hint={t('exec.managers.hint')} />
+          <CardTitle icon={<ManageAccountsOutlinedIcon />} title={t('exec.managers.title')} hint={t('exec.managers.hint')} />
           {data.startsByManager.length === 0 ? (
             <Empty />
           ) : (
@@ -372,7 +486,7 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
       </Box>
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' } }}>
         <Box sx={{ ...card, ...appear(0.51) }}>
-          <CardTitle title={t('exec.projects.title')} hint={t('exec.projects.hint')} />
+          <CardTitle icon={<BusinessCenterOutlinedIcon />} title={t('exec.projects.title')} hint={t('exec.projects.hint')} />
           {data.projects.length === 0 ? (
             <Empty />
           ) : (
@@ -406,7 +520,7 @@ function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind:
         </Box>
         {data.financeVisible && (
           <Box sx={{ ...card, ...appear(0.59) }}>
-            <CardTitle title={c.month ? t('exec.coverage.title', { month: f.monthLong(c.month) }) : t('exec.coverage.titleNone')} hint={t('exec.coverage.hint')} />
+            <CardTitle icon={<DonutLargeOutlinedIcon />} title={c.month ? t('exec.coverage.title', { month: f.monthLong(c.month) }) : t('exec.coverage.titleNone')} hint={t('exec.coverage.hint')} />
             {covTotal === 0 ? (
               <Empty />
             ) : (
@@ -452,17 +566,17 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
   const agingColors = [accents.green, accents.teal, accents.amber, accents.rose, '#9F1239'];
   return (
     <Box>
-      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' }, mb: 1.75 }}>
-        <Kpi index={0} label={t('exec.fin.invoiced')} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.green} spark={data.money.map((m) => m.invoiced)} note={t('exec.fin.invoicedNote', { count: f.n(data.invoiceCount.value ?? 0), vat: f.n(data.vat.value ?? 0) })} />
-        <Kpi index={1} label={t('exec.fin.collected')} figure={data.collected} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.collected)} />
-        <Kpi index={2} label={t('exec.fin.rate')} figure={data.collectionRate} unit="%" good="up" accent={accents.teal} spark={data.money.map((m) => m.rate)} />
-        <Kpi index={3} label={t('exec.fin.debt')} value={data.totalDebt} unit={t('exec.sar')} money accent={accents.navy} note={t('exec.fin.debtNote', { count: f.n(data.openInvoices) })} />
-        <Kpi index={4} label={t('exec.fin.overdue')} value={data.overdue60} unit={t('exec.sar')} money accent={accents.rose} note={t('exec.fin.overdueNote', { count: f.n(data.overdue60Invoices), share: data.overdue60Share ?? 0 })} />
-        <Kpi index={5} label={t('exec.fin.dso')} value={data.dso} unit={t('exec.days')} accent={accents.amber} note={t('exec.fin.dsoNote')} />
-      </Box>
+      <Hero>
+        <Kpi index={0} label={t('exec.fin.invoiced')} icon={<ReceiptLongOutlinedIcon />} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.green} spark={data.money.map((m) => m.invoiced)} note={t('exec.fin.invoicedNote', { count: f.n(data.invoiceCount.value ?? 0), vat: f.n(data.vat.value ?? 0) })} />
+        <Kpi index={1} label={t('exec.fin.collected')} icon={<PaymentsOutlinedIcon />} figure={data.collected} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.collected)} />
+        <Kpi index={2} label={t('exec.fin.rate')} icon={<PercentOutlinedIcon />} figure={data.collectionRate} unit="%" good="up" accent={accents.teal} spark={data.money.map((m) => m.rate)} />
+        <Kpi index={3} label={t('exec.fin.debt')} icon={<AccountBalanceWalletOutlinedIcon />} value={data.totalDebt} unit={t('exec.sar')} money accent={accents.navy} note={t('exec.fin.debtNote', { count: f.n(data.openInvoices) })} />
+        <Kpi index={4} label={t('exec.fin.overdue')} icon={<WarningAmberOutlinedIcon />} value={data.overdue60} unit={t('exec.sar')} money accent={accents.rose} note={t('exec.fin.overdueNote', { count: f.n(data.overdue60Invoices), share: data.overdue60Share ?? 0 })} />
+        <Kpi index={5} label={t('exec.fin.dso')} icon={<TimerOutlinedIcon />} value={data.dso} unit={t('exec.days')} accent={accents.amber} note={t('exec.fin.dsoNote')} />
+      </Hero>
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
         <Box sx={{ ...card, ...appear(0.35) }}>
-          <CardTitle title={t('exec.fin.trend')} hint={t('exec.fin.trendHint')} />
+          <CardTitle icon={<QueryStatsOutlinedIcon />} title={t('exec.fin.trend')} hint={t('exec.fin.trendHint')} />
           <Columns
             categories={months}
             series={[
@@ -477,7 +591,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
           <Legend items={[[t('exec.fin.invoicedShort'), accents.green], [t('exec.fin.collectedShort'), accents.violet], [t('exec.fin.rateLine'), tokens.navy800]]} />
         </Box>
         <Box sx={{ ...card, ...appear(0.43) }}>
-          <CardTitle title={t('exec.fin.aging')} hint={t('exec.fin.agingHint')} />
+          <CardTitle icon={<HourglassBottomOutlinedIcon />} title={t('exec.fin.aging')} hint={t('exec.fin.agingHint')} />
           <Box sx={{ display: 'flex', height: 22, borderRadius: '7px', overflow: 'hidden', mb: 1.25, bgcolor: tokens.gray100, '& > *': filling(0.5) }}>
             {data.aging.map((a) => (
               <Tooltip key={a.bucket} title={`${t(`exec.bucket.${a.bucket}`)}: ${f.n(a.amount)}`}>
@@ -511,7 +625,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
       </Box>
       <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
         <Box sx={{ ...card, ...appear(0.51) }}>
-          <CardTitle title={t('exec.fin.debtors')} hint={t('exec.fin.debtorsHint')} />
+          <CardTitle icon={<ApartmentOutlinedIcon />} title={t('exec.fin.debtors')} hint={t('exec.fin.debtorsHint')} />
           <TableContainer>
             <Table size="small">
               <TableHead>
@@ -542,7 +656,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
           </TableContainer>
         </Box>
         <Box sx={{ ...card, ...appear(0.59) }}>
-          <CardTitle title={t('exec.fin.managers')} hint={t('exec.fin.managersHint')} />
+          <CardTitle icon={<ManageAccountsOutlinedIcon />} title={t('exec.fin.managers')} hint={t('exec.fin.managersHint')} />
           {data.managers.length === 0 ? (
             <Empty />
           ) : (
@@ -578,7 +692,7 @@ function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: 
         </Box>
       </Box>
       <Box sx={{ ...card, ...appear(0.67) }}>
-        <CardTitle
+        <CardTitle icon={<TableChartOutlinedIcon />}
           title={t('exec.fin.list')}
           hint={t('exec.fin.listHint', { shown: data.invoices.length, total: data.invoicesTotal })}
           action={
