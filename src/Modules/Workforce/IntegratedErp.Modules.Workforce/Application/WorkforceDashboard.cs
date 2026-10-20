@@ -1,5 +1,6 @@
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Organization.Contracts;
+using IntegratedErp.Modules.Workforce.Contracts;
 using IntegratedErp.Modules.Workforce.Domain;
 using IntegratedErp.Modules.Workforce.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +35,7 @@ public sealed record WorkforceDashboardDto(
 /// which projects, their nationalities and professions, the movements of the last twelve months, the iqamas to renew,
 /// and the data checks (history exceptions, the invoice match).
 /// </summary>
-internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData reference, IOptions<WorkforceOptions> options, IClock clock)
+internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData reference, IOptions<WorkforceOptions> options, IClock clock) : IWorkforceReport
 {
     private static readonly Placement[] Gone = [Placement.Exited, Placement.Absconded];
 
@@ -123,6 +124,54 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
         return Enumerable.Range(0, 12).Select(i => from.AddMonths(i))
             .Select(m => new MonthMovesDto(m, moves[m].Count(x => x.Kind == PeriodKind.Work), moves[m].Count(x => x.Kind == PeriodKind.Housing)))
             .ToList();
+    }
+
+    public async Task<WorkforceNow> NowAsync(CancellationToken cancellationToken)
+    {
+        var now = await GetAsync(cancellationToken).ConfigureAwait(false);
+        return new WorkforceNow(now.Placements.GetValueOrDefault(nameof(Placement.Working)), now.Placements.GetValueOrDefault(nameof(Placement.Housing)), now.ProjectsWithWorkers);
+    }
+
+    public async Task<IReadOnlyList<WorkforceMove>> MovesAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var after = to.AddDays(1);
+        var workers = await db.Workers.AsNoTracking().Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm)
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.WorkerNo, w.Placement, p.NameAr, p.NameEn })
+            .ToDictionaryAsync(w => w.Id, cancellationToken).ConfigureAwait(false);
+        var firstRecorded = await db.Periods.AsNoTracking().GroupBy(p => p.WorkerId).Select(g => new { g.Key, First = g.Min(p => p.StartsOn) })
+            .ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken).ConfigureAwait(false);
+
+        // The timeline of the workers who moved (and the work just before a return, to know where they came back from).
+        var recorded = await db.Periods.AsNoTracking().Where(p => p.StartsOn < after && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
+            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.ProjectCrmId, Place = p.ProjectName }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var history = await db.HistoryPeriods.AsNoTracking().Where(p => p.StartsOn < after && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
+            .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.ProjectCrmId, p.Place }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var timeline = recorded
+            .Concat(history.Where(h => !firstRecorded.TryGetValue(h.WorkerId, out var first) || h.StartsOn < first))
+            .Where(m => workers.TryGetValue(m.WorkerId, out var w) && w.Placement != Placement.Inactive)
+            .ToLookup(m => m.WorkerId);
+
+        var moves = new List<WorkforceMove>();
+        foreach (var group in timeline)
+        {
+            var w = workers[group.Key];
+            var ordered = group.OrderBy(m => m.StartsOn).ToList();
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                var m = ordered[i];
+                if (m.StartsOn < from || (m.Kind == PeriodKind.Work && options.Value.IsInactiveProject(m.Place)))
+                {
+                    continue;
+                }
+
+                var before = m.Kind == PeriodKind.Housing ? ordered.Take(i).LastOrDefault(x => x.Kind == PeriodKind.Work) : null;
+                moves.Add(new WorkforceMove(
+                    w.Id, w.WorkerNo, w.NameAr ?? w.NameEn, m.Kind == PeriodKind.Work ? "Work" : "Housing", m.StartsOn,
+                    m.Kind == PeriodKind.Work ? m.ProjectCrmId : null, m.Place, before?.ProjectCrmId, before?.Place));
+            }
+        }
+
+        return moves.OrderBy(m => m.StartsOn).ToList();
     }
 
     /// <summary>The six largest groups, then "others".</summary>

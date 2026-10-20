@@ -41,6 +41,7 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<ICrmStagingConsumer>(sp => sp.GetRequiredService<InvoiceCheckBuilder>());
         services.AddScoped<InvoiceCheckQueries>();
         services.AddScoped<WorkforceDashboard>();
+        services.AddScoped<IWorkforceReport>(sp => sp.GetRequiredService<WorkforceDashboard>());
         services.AddNumberSequences(
             new NumberSequenceDefinition("worker", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للعمالة", "Worker numbers", "BSS{N:6}", NumberReset.Never, InUse: false));
         services.AddOptions<WorkforceOptions>().Bind(configuration.GetSection(WorkforceOptions.Section));

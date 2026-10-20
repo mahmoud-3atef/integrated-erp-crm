@@ -1,5 +1,5 @@
 import { Box, Stack, Typography } from '@mui/material';
-import { keyframes } from '@mui/material/styles';
+import { keyframes, useTheme } from '@mui/material/styles';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { tokens } from '../app/theme';
 
@@ -174,10 +174,34 @@ export interface Series {
  * Grouped columns over categories (e.g. months), with horizontal grid lines; hovering a group shows its values.
  * The categories follow the page direction (right to left in Arabic), with the axis where they start.
  */
-export function Columns({ categories, series, values, height = 220 }: { categories: string[]; series: Series[]; values: number[][]; height?: number }) {
+export function Columns({
+  categories,
+  series,
+  values,
+  height = 220,
+  format = (n: number) => n.toLocaleString('en-US'),
+  onPick,
+  line,
+}: {
+  categories: string[];
+  series: Series[];
+  values: number[][];
+  height?: number;
+  /** How the axis and the tooltip write a value (e.g. in thousands of riyals). */
+  format?: (n: number) => string;
+  /** A click on a category (e.g. a month) opens what is behind it. */
+  onPick?: (index: number) => void;
+  /** A line over the columns on its own 0–100 scale (e.g. the collection rate). */
+  line?: { label: string; values: (number | null)[]; color: string };
+}) {
   const [hover, setHover] = useState<number | null>(null);
+  const rtl = useTheme().direction === 'rtl';
   const max = Math.max(1, ...values.flat());
   const nice = niceMax(max);
+  const n = categories.length;
+  const points = line
+    ? line.values.map((v, i) => (v === null ? null : { x: ((rtl ? n - i - 0.5 : i + 0.5) / n) * 100, y: 100 - Math.max(0, Math.min(100, v)) }))
+    : [];
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(nice * f));
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -185,7 +209,7 @@ export function Columns({ categories, series, values, height = 220 }: { categori
       <Stack sx={{ justifyContent: 'space-between', height, flexShrink: 0 }}>
         {[...ticks].reverse().map((tick, n) => (
           <Typography key={tick} sx={{ fontSize: 10.5, color: tokens.gray500, lineHeight: 1, transform: n === 0 ? 'none' : n === ticks.length - 1 ? 'translateY(0)' : 'translateY(-50%)' }}>
-            {tick.toLocaleString('en-US')}
+            {format(tick)}
           </Typography>
         ))}
       </Stack>
@@ -194,13 +218,35 @@ export function Columns({ categories, series, values, height = 220 }: { categori
           {ticks.map((tick) => (
             <Box key={tick} sx={{ position: 'absolute', insetInline: 0, bottom: `${(tick / nice) * 100}%`, borderTop: `1px dashed ${tokens.gray200}` }} />
           ))}
+          {line && (
+            <Box component="svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 1 }}>
+              <polyline
+                fill="none"
+                stroke={line.color}
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+                points={points.filter((p): p is { x: number; y: number } => p !== null).map((p) => `${p.x},${p.y}`).join(' ')}
+              />
+            </Box>
+          )}
+          {line &&
+            points.map((p, i) =>
+              p === null ? null : (
+                <Box key={i} aria-hidden sx={{ position: 'absolute', insetInlineStart: `calc(${((i + 0.5) / n) * 100}% - 4px)`, top: `calc(${p.y}% - 4px)`, width: 8, height: 8, borderRadius: '50%', bgcolor: '#fff', border: `2px solid ${line.color}`, zIndex: 1, pointerEvents: 'none' }} />
+              ),
+            )}
           <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end' }}>
             {categories.map((_, i) => (
               <Box
                 key={categories[i]}
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
-                sx={{ flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '3px', px: '3px', borderRadius: '8px', bgcolor: hover === i ? 'rgba(13,74,108,.05)' : 'transparent', position: 'relative' }}
+                onClick={onPick ? () => onPick(i) : undefined}
+                role={onPick ? 'button' : undefined}
+                tabIndex={onPick ? 0 : undefined}
+                onKeyDown={onPick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onPick(i)) : undefined}
+                aria-label={onPick ? categories[i] : undefined}
+                sx={{ flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '3px', px: '3px', borderRadius: '8px', cursor: onPick ? 'pointer' : 'default', bgcolor: hover === i ? 'rgba(13,74,108,.05)' : 'transparent', position: 'relative', '&:focus-visible': { outline: `2px solid ${tokens.navy600}` } }}
               >
                 {series.map((s, k) => (
                   <Box
@@ -226,10 +272,15 @@ export function Columns({ categories, series, values, height = 220 }: { categori
                         <Stack key={s.key} direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
                           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: s.color }} />
                           <Typography sx={{ fontSize: 11.5 }}>
-                            {s.label}: <b>{(values[k]?.[i] ?? 0).toLocaleString('en-US')}</b>
+                            {s.label}: <b>{format(values[k]?.[i] ?? 0)}</b>
                           </Typography>
                         </Stack>
                       ))}
+                      {line && line.values[i] !== null && (
+                        <Typography sx={{ fontSize: 11.5 }}>
+                          {line.label}: <b>{`${line.values[i]}%`}</b>
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                 )}

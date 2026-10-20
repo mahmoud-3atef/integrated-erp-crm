@@ -30,6 +30,7 @@ import NotificationImportantOutlinedIcon from '@mui/icons-material/NotificationI
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
@@ -87,6 +88,11 @@ const menu: MenuSection[] = [
       { path: '/', labelKey: 'menu.home', icon: <HomeOutlinedIcon /> },
       { path: '/alerts', labelKey: 'menu.alerts', icon: <NotificationImportantOutlinedIcon /> },
     ],
+  },
+  {
+    titleKey: 'menu.reportsSection',
+    icon: <QueryStatsOutlinedIcon />,
+    items: [{ path: '/reports/executive', labelKey: 'menu.executive', icon: <QueryStatsOutlinedIcon />, permission: 'reports.executive.view', companyWide: true }],
   },
   {
     titleKey: 'menu.commercial',

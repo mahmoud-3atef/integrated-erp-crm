@@ -37,6 +37,10 @@
     <Project Path="src/Modules/Deductions/IntegratedErp.Modules.Deductions.Contracts/IntegratedErp.Modules.Deductions.Contracts.csproj" />
     <Project Path="src/Modules/Deductions/IntegratedErp.Modules.Deductions/IntegratedErp.Modules.Deductions.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Reports/">
+    <Project Path="src/Modules/Reports/IntegratedErp.Modules.Reports.Contracts/IntegratedErp.Modules.Reports.Contracts.csproj" />
+    <Project Path="src/Modules/Reports/IntegratedErp.Modules.Reports/IntegratedErp.Modules.Reports.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Leave/">
     <Project Path="src/Modules/Leave/IntegratedErp.Modules.Leave.Contracts/IntegratedErp.Modules.Leave.Contracts.csproj" />
     <Project Path="src/Modules/Leave/IntegratedErp.Modules.Leave/IntegratedErp.Modules.Leave.csproj" />

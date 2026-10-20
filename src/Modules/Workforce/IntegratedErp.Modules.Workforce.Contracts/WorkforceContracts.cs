@@ -148,3 +148,32 @@ public interface IStaffRecords
 {
     Task<IReadOnlyList<StaffRecord>> StaffAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>Where the company's workers are now (the dashboard's count: the period ledger first, then the old system).</summary>
+public sealed record WorkforceNow(int OnJob, int InHousing, int ProjectsWithWorkers);
+
+/// <param name="Kind"><c>Work</c> (a work start: delivery or transfer) or <c>Housing</c> (a return to housing).</param>
+/// <param name="FromProjectCrmId">For a return: the project the worker came back from (the work just before).</param>
+public sealed record WorkforceMove(
+    Guid WorkerId,
+    string WorkerNo,
+    string Name,
+    string Kind,
+    DateOnly StartsOn,
+    Guid? ProjectCrmId,
+    string? Place,
+    Guid? FromProjectCrmId,
+    string? FromPlace);
+
+/// <summary>The workforce's numbers for the reports (read only).</summary>
+public interface IWorkforceReport
+{
+    Task<WorkforceNow> NowAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The work starts and returns to housing starting in a period, from the timeline (the old system's history up to
+    /// each worker's first period recorded here, then the recorded ones); none of inactive workers, nor work starts on an
+    /// inactive project.
+    /// </summary>
+    Task<IReadOnlyList<WorkforceMove>> MovesAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+}

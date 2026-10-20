@@ -522,7 +522,8 @@
     "validation_payroll_gosi_wage": "Enter the contributory wage and the GOSI number the task needs.",
     "conflict_payroll_payslip_not_approved": "Payslips are emailed only for an approved run.",
     "validation_payroll_email_not_configured": "The server has no email account to send from.",
-    "validation_approval_reassign_invalid": "The task cannot be given to this person: they hold it now, submitted the request, or already have it."
+    "validation_approval_reassign_invalid": "The task cannot be given to this person: they hold it now, submitted the request, or already have it.",
+    "validation_report_period": "Choose a period of two years at most, from 2025."
   },
   "menu": {
     "label": "Main menu",
@@ -586,7 +587,9 @@
     "payrollGosi": "Social insurance",
     "pin": "Pin the menu",
     "unpin": "Unpin the menu",
-    "sections": "Sections"
+    "sections": "Sections",
+    "reportsSection": "Reports",
+    "executive": "Executive report"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -4767,5 +4770,144 @@
         "Failed": "Failed"
       }
     }
+  },
+  "exec": {
+    "title": "Executive report",
+    "subtitle": "Workforce, operations, billing and collection straight from the system, against the period before",
+    "noAccess": "You do not have permission to view the executive report.",
+    "preset": {
+      "month": "This month",
+      "last": "Last month",
+      "quarter": "This quarter",
+      "ytd": "Year to date",
+      "custom": "Other period"
+    },
+    "from": "From",
+    "to": "To",
+    "print": "Print / PDF",
+    "excel": "Export to Excel",
+    "tabs": {
+      "overview": "Overview",
+      "finance": "Finance"
+    },
+    "comparing": "{{from}} – {{to}} against {{pfrom}} – {{pto}}",
+    "unknown": "Not known for this period",
+    "previous": "before {{value}}",
+    "worker": "workers",
+    "sar": "SAR",
+    "millionSar": "million SAR",
+    "days": "days",
+    "daysCount": "{{count}} days",
+    "empty": "No data in this period.",
+    "kpi": {
+      "onJob": "On the job",
+      "activeProjects": "on {{count}} active projects",
+      "starts": "Work starts",
+      "net": "Net workforce movement",
+      "netNote": "{{starts}} starts · {{returns}} returns",
+      "inHousing": "In housing now",
+      "inHousingNote": "waiting to be delivered to a project",
+      "invoiced": "Invoiced",
+      "invoiceCount": "{{count}} invoices",
+      "rate": "Collection rate",
+      "overdue": "Over 60 days overdue: SAR {{amount}}"
+    },
+    "ins": {
+      "title": "The period for management",
+      "starts": "{{count}} workers started on projects in the period.",
+      "startsUp": "{{count}} workers started on projects, {{diff}} more than the period before.",
+      "startsDown": "{{count}} workers started on projects, {{diff}} fewer than the period before.",
+      "net": "Net workforce movement {{net}}: {{starts}} starts against {{returns}} returns to housing.",
+      "topManager": "Most work starts: {{name}} ({{count}}).",
+      "rate": "The period's invoices are {{rate}}% collected.",
+      "rateCompare": "Collection rate {{rate}}% against {{previous}}% the period before.",
+      "overdue": "Debts over 60 days overdue: SAR {{amount}} ({{share}}% of the debt).",
+      "coverage": "Projects with workers in {{month}} not fully invoiced: {{count}} ({{workers}} workers)."
+    },
+    "moves": {
+      "title": "Workforce movement by month",
+      "hint": "Work starts and returns to housing · click a month for its details",
+      "starts": "Work start",
+      "returns": "Return to housing"
+    },
+    "managers": {
+      "title": "Work starts by project manager",
+      "hint": "In the period · click a manager for the starts"
+    },
+    "projects": {
+      "title": "Busiest projects",
+      "hint": "Starts and returns per project in the period · click for details"
+    },
+    "coverage": {
+      "title": "Billing coverage · {{month}}",
+      "titleNone": "Billing coverage",
+      "hint": "Projects with workers on the job in the month, against the workers on their invoices",
+      "invoiced": "invoiced",
+      "full": "Fully invoiced: {{count}}",
+      "partial": "Partly invoiced: {{count}}",
+      "missing": "Not invoiced: {{count}}",
+      "workers": "Workers who worked and were not invoiced: {{count}}",
+      "gapPartial": "{{invoiced}} of {{worked}}",
+      "gapMissing": "No invoice · {{worked}} workers"
+    },
+    "fin": {
+      "invoiced": "Invoiced",
+      "invoicedShort": "Invoiced",
+      "invoicedNote": "{{count}} invoices · VAT {{vat}}",
+      "collected": "Collected",
+      "collectedShort": "Collected",
+      "rate": "Collection rate",
+      "rateLine": "Collection rate (line)",
+      "debt": "Total debt today",
+      "debtNote": "{{count}} open invoices",
+      "overdue": "Over 60 days overdue",
+      "overdueNote": "{{count}} invoices · {{share}}% of the debt",
+      "dso": "Days sales outstanding",
+      "dsoNote": "Today's debt against the last 90 days' billing",
+      "trend": "Billing against collection by month",
+      "trendHint": "Columns for the amounts, a line for the rate · click a month for its invoices",
+      "aging": "Debt ageing",
+      "agingHint": "From the end of the invoice's period to today · click a bracket for its invoices",
+      "bucket": "Bracket",
+      "amount": "Amount",
+      "invoices": "Invoices",
+      "debtors": "Largest debts by project",
+      "debtorsHint": "Left to collect today · click a project for its open invoices",
+      "project": "Project",
+      "manager": "Project manager",
+      "outstanding": "Outstanding",
+      "oldest": "Oldest debt",
+      "collectedPct": "Collected",
+      "managers": "Collection by project manager",
+      "managersHint": "For the period's invoices · click a manager for the invoices",
+      "managerLeft": "left {{amount}}",
+      "statuses": "The period's invoice statuses",
+      "list": "The period's invoices",
+      "listHint": "Most outstanding first · {{shown}} of {{total}}",
+      "invoice": "Invoice",
+      "workers": "Workers",
+      "total": "With VAT",
+      "status": "Status",
+      "periodEnd": "Period end"
+    },
+    "bucket": {
+      "1": "0–30 days",
+      "2": "31–60 days",
+      "3": "61–90 days",
+      "4": "91–180 days",
+      "5": "Over 180 days"
+    },
+    "drill": {
+      "month": "Details of {{month}}",
+      "manager": "Starts of {{name}}",
+      "count": "{{count}} records",
+      "worker": "Worker",
+      "kind": "Movement",
+      "on": "Date",
+      "Work": "Work start",
+      "Housing": "Return to housing"
+    },
+    "points": "{{value}} pts",
+    "sameDays": "movements to {{to}}"
   }
 }

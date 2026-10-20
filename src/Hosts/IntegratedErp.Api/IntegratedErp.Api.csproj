@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\Modules\Attendance\IntegratedErp.Modules.Attendance\IntegratedErp.Modules.Attendance.csproj" />
     <ProjectReference Include="..\..\Modules\Leave\IntegratedErp.Modules.Leave\IntegratedErp.Modules.Leave.csproj" />
     <ProjectReference Include="..\..\Modules\Deductions\IntegratedErp.Modules.Deductions\IntegratedErp.Modules.Deductions.csproj" />
+    <ProjectReference Include="..\..\Modules\Reports\IntegratedErp.Modules.Reports\IntegratedErp.Modules.Reports.csproj" />
     <ProjectReference Include="..\..\Modules\Operations\IntegratedErp.Modules.Operations\IntegratedErp.Modules.Operations.csproj" />
   </ItemGroup>
 </Project>

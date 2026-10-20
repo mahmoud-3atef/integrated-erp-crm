@@ -35,5 +35,6 @@
     <ProjectReference Include="..\..\src\Modules\Attendance\IntegratedErp.Modules.Attendance\IntegratedErp.Modules.Attendance.csproj" />
     <ProjectReference Include="..\..\src\Modules\Leave\IntegratedErp.Modules.Leave\IntegratedErp.Modules.Leave.csproj" />
     <ProjectReference Include="..\..\src\Modules\Deductions\IntegratedErp.Modules.Deductions\IntegratedErp.Modules.Deductions.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Reports\IntegratedErp.Modules.Reports\IntegratedErp.Modules.Reports.csproj" />
   </ItemGroup>
 </Project>
