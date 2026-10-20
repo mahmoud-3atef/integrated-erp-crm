@@ -520,12 +520,23 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
             '& .MuiTableCell-body': { fontSize: 12, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', py: 0.6 },
             '& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) .MuiTableCell-body': { bgcolor: '#fafcfb' },
             '& .pin': { position: 'sticky', insetInlineStart: 0, zIndex: 2, bgcolor: '#fff', boxShadow: `inset -1px 0 0 ${tokens.gray100}` },
+            '& td.g-days': { backgroundImage: 'linear-gradient(rgba(47,174,115,.06), rgba(47,174,115,.06))' },
+            '& td.g-invoice': { backgroundImage: 'linear-gradient(rgba(31,111,209,.045), rgba(31,111,209,.045))' },
+            '& td.g-worker': { backgroundImage: 'linear-gradient(rgba(124,77,204,.06), rgba(124,77,204,.06))' },
+            '& .gs': { borderInlineStart: '2px solid #fff' },
+            '& td.gs': { borderInlineStart: `2px solid ${tokens.gray100}` },
           }}
         >
           <TableHead
             sx={{
               '& .MuiTableCell-head, & .MuiTableCell-head:first-of-type, & .MuiTableCell-head:last-of-type': { bgcolor: look.dark, color: '#fff', borderBottom: 0, borderRadius: 0, fontSize: 11.5, lineHeight: 1.3, py: 0.6, verticalAlign: 'bottom' },
               '& .grp': { textAlign: 'center', verticalAlign: 'middle', borderBottom: '1px solid rgba(255,255,255,.25) !important' },
+              '& th.g-days.grp': { bgcolor: '#17734b !important' },
+              '& th.g-days:not(.grp)': { bgcolor: '#1f8f5f !important' },
+              '& th.g-invoice.grp': { bgcolor: '#1d4f91 !important' },
+              '& th.g-invoice:not(.grp)': { bgcolor: '#2a64b0 !important' },
+              '& th.g-worker.grp': { bgcolor: '#55358f !important' },
+              '& th.g-worker:not(.grp)': { bgcolor: '#6a47aa !important' },
               '& tr:nth-of-type(2) th': { top: 28 },
               '& th.pin': { zIndex: 4 },
             }}
@@ -534,39 +545,39 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
               <TableCell rowSpan={2} className="pin" sx={{ minWidth: 170 }}>
                 {t('workforce.col.name')}
               </TableCell>
-              <TableCell colSpan={shown('period') ? 4 : 3} className="grp">
+              <TableCell colSpan={shown('period') ? 4 : 3} className="grp g-days gs">
                 {t('timesheets.grid.groups.days')}
               </TableCell>
-              <TableCell colSpan={invoiceCols} className="grp">
+              <TableCell colSpan={invoiceCols} className="grp g-invoice gs">
                 {t('timesheets.grid.groups.invoice')}
               </TableCell>
-              <TableCell colSpan={workerCols} className="grp">
+              <TableCell colSpan={workerCols} className="grp g-worker gs">
                 {t('timesheets.grid.groups.worker')}
               </TableCell>
               {sheet.canEdit && <TableCell rowSpan={2} />}
             </TableRow>
             <TableRow>
-              {shown('period') && <TableCell>{label('period')}</TableCell>}
-              <TableCell align="center">{t('timesheets.register.present')}</TableCell>
-              <TableCell align="center">{t('timesheets.register.absent')}</TableCell>
-              <TableCell align="center">{t('timesheets.grid.overtimeHours')}</TableCell>
+              {shown('period') && <TableCell className="g-days gs">{label('period')}</TableCell>}
+              <TableCell align="center" className={shown('period') ? 'g-days' : 'g-days gs'}>{t('timesheets.register.present')}</TableCell>
+              <TableCell align="center" className="g-days">{t('timesheets.register.absent')}</TableCell>
+              <TableCell align="center" className="g-days">{t('timesheets.grid.overtimeHours')}</TableCell>
               {before.map((c) => (
-                <TableCell key={c.key} align="right">
+                <TableCell key={c.key} align="right" className={`g-invoice${c === before[0] ? ' gs' : ''}`}>
                   {label(c.key)}
                 </TableCell>
               ))}
-              <TableCell align="right">{t('timesheets.grid.amount')}</TableCell>
+              <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'}>{t('timesheets.grid.amount')}</TableCell>
               {after.filter((c) => c.group === 'invoice').map((c) => (
-                <TableCell key={c.key} align="right">
+                <TableCell key={c.key} align="right" className="g-invoice">
                   {label(c.key)}
                 </TableCell>
               ))}
               {after.filter((c) => c.group === 'worker').map((c) => (
-                <TableCell key={c.key} align="right">
+                <TableCell key={c.key} align="right" className="g-worker gs">
                   {label(c.key)}
                 </TableCell>
               ))}
-              <TableCell align="right">{t('timesheets.grid.net')}</TableCell>
+              <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'}>{t('timesheets.grid.net')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -584,33 +595,33 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
                   </Stack>
                 </TableCell>
                 {shown('period') && (
-                  <TableCell sx={{ minWidth: 96 }} title={`${date(l.lineFrom)} – ${date(l.lineTo)} · ${l.sourceNo}${l.fromOldSystem ? ` · ${t('workforce.periods.oldSystem')}` : ''}`}>
+                  <TableCell className="g-days gs" sx={{ minWidth: 96 }} title={`${date(l.lineFrom)} – ${date(l.lineTo)} · ${l.sourceNo}${l.fromOldSystem ? ` · ${t('workforce.periods.oldSystem')}` : ''}`}>
                     <MonthBar from={sheet.from} to={sheet.to} lineFrom={l.lineFrom} lineTo={l.lineTo} absence={l.absenceDays} />
                   </TableCell>
                 )}
-                <TableCell align="center" sx={{ fontWeight: 800, color: `${look.main} !important` }}>
+                <TableCell align="center" className={shown('period') ? 'g-days' : 'g-days gs'} sx={{ fontWeight: 800, color: `${look.main} !important` }}>
                   {sar(l.workDays - l.absenceDays)}
                 </TableCell>
-                <TableCell align="center" title={l.absenceDays > 0 ? `−${sar(l.absenceAmount)}` : undefined} sx={{ fontWeight: 800, color: l.absenceDays > 0 ? '#e03434 !important' : undefined }}>
+                <TableCell align="center" className="g-days" title={l.absenceDays > 0 ? `−${sar(l.absenceAmount)}` : undefined} sx={{ fontWeight: 800, color: l.absenceDays > 0 ? '#e03434 !important' : undefined }}>
                   {l.absenceDays > 0 ? sar(l.absenceDays) : <Box component="span" sx={{ color: tokens.gray300 }}>—</Box>}
                 </TableCell>
-                <TableCell align="center" sx={{ color: l.overtimeHours > 0 ? '#1f6fd1 !important' : undefined, fontWeight: 700 }}>
+                <TableCell align="center" className="g-days" sx={{ color: l.overtimeHours > 0 ? '#1f6fd1 !important' : undefined, fontWeight: 700 }}>
                   {l.overtimeHours > 0 ? sar(l.overtimeHours) : <Box component="span" sx={{ color: tokens.gray300 }}>—</Box>}
                 </TableCell>
                 {before.map((c) => (
-                  <TableCell key={c.key} align="right">
+                  <TableCell key={c.key} align="right" className={`g-invoice${c === before[0] ? ' gs' : ''}`}>
                     {c.key === 'price' && l.totalPrice <= 0 ? <Box component="span" sx={{ color: tokens.danger, fontWeight: 700 }}>{t('timesheets.noPriceShort')}</Box> : money(c.value(l), c.signed)}
                   </TableCell>
                 ))}
-                <TableCell align="right" sx={{ fontWeight: 800, color: `${tokens.navy800} !important` }}>
+                <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'} sx={{ fontWeight: 800, color: `${tokens.navy800} !important` }}>
                   {sar(l.invoiceAmount)}
                 </TableCell>
                 {after.map((c) => (
-                  <TableCell key={c.key} align="right" sx={c.key === 'total' ? { fontWeight: 700 } : undefined}>
+                  <TableCell key={c.key} align="right" className={c.group === 'worker' ? 'g-worker gs' : 'g-invoice'} sx={c.key === 'total' ? { fontWeight: 700 } : undefined}>
                     {money(c.value(l), c.signed)}
                   </TableCell>
                 ))}
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'} sx={{ fontWeight: 700 }}>
                   {sar(l.workerNet)}
                 </TableCell>
                 {sheet.canEdit && (
@@ -646,22 +657,22 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
                     {t('timesheets.grid.lines', { count: sheet.lines.length })}
                   </Typography>
                 </TableCell>
-                {shown('period') && <TableCell />}
-                <TableCell align="center" sx={{ color: `${look.main} !important` }}>{sar(sum((l) => l.workDays - l.absenceDays))}</TableCell>
-                <TableCell align="center" sx={{ color: '#e03434 !important' }}>{sar(sum((l) => l.absenceDays))}</TableCell>
-                <TableCell align="center" sx={{ color: '#1f6fd1 !important' }}>{sar(sum((l) => l.overtimeHours))}</TableCell>
+                {shown('period') && <TableCell className="g-days gs" />}
+                <TableCell align="center" className={shown('period') ? 'g-days' : 'g-days gs'} sx={{ color: `${look.main} !important` }}>{sar(sum((l) => l.workDays - l.absenceDays))}</TableCell>
+                <TableCell align="center" className="g-days" sx={{ color: '#e03434 !important' }}>{sar(sum((l) => l.absenceDays))}</TableCell>
+                <TableCell align="center" className="g-days" sx={{ color: '#1f6fd1 !important' }}>{sar(sum((l) => l.overtimeHours))}</TableCell>
                 {before.map((c) => (
-                  <TableCell key={c.key} align="right">
+                  <TableCell key={c.key} align="right" className={`g-invoice${c === before[0] ? ' gs' : ''}`}>
                     {c.key === 'price' ? '' : sar(sum(c.value))}
                   </TableCell>
                 ))}
-                <TableCell align="right">{sar(sum((l) => l.invoiceAmount))}</TableCell>
+                <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'}>{sar(sum((l) => l.invoiceAmount))}</TableCell>
                 {after.map((c) => (
-                  <TableCell key={c.key} align="right">
+                  <TableCell key={c.key} align="right" className={c.group === 'worker' ? 'g-worker gs' : 'g-invoice'}>
                     {sar(sum(c.value))}
                   </TableCell>
                 ))}
-                <TableCell align="right">{sar(sum((l) => l.workerNet))}</TableCell>
+                <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'}>{sar(sum((l) => l.workerNet))}</TableCell>
                 {sheet.canEdit && <TableCell />}
               </TableRow>
             </TableFooter>

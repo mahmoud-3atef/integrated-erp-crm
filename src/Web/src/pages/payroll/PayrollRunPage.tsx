@@ -342,8 +342,8 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
 
   const filtered = Boolean(query.trim() || note || project);
   const sortBy = (key: string) => setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: key !== 'name' && key !== 'project' }));
-  const head = (key: string, label: string, align: 'left' | 'right' = 'left') => (
-    <TableCell align={align} rowSpan={2} sortDirection={sort.key === key ? (sort.desc ? 'desc' : 'asc') : false}>
+  const head = (key: string, label: string, align: 'left' | 'right' = 'left', className?: string) => (
+    <TableCell align={align} rowSpan={2} className={className} sortDirection={sort.key === key ? (sort.desc ? 'desc' : 'asc') : false}>
       <ButtonBase onClick={() => sortBy(key)} sx={{ font: 'inherit', fontWeight: 600, color: 'inherit', gap: 0.25 }} aria-label={label}>
         {label}
         {sort.key === key && <span aria-hidden>{sort.desc ? '↓' : '↑'}</span>}
@@ -426,6 +426,13 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
                 '& th.pin': { zIndex: 4, bgcolor: hr.muted },
                 '& tfoot td': { position: 'sticky', bottom: 0, bgcolor: '#F8FAFC', fontWeight: 700, borderTop: `1px solid ${hr.border}`, zIndex: 1 },
                 '& tbody tr': { cursor: 'pointer' },
+                '& th.g-allow': { bgcolor: '#E3F6EC', color: '#047857' },
+                '& th.g-allow.grp': { bgcolor: '#C9EEDB' },
+                '& th.g-ded': { bgcolor: '#FDF1DC', color: '#B45309' },
+                '& th.g-ded.grp': { bgcolor: '#FBE2B8' },
+                '& td.g-allow': { backgroundImage: 'linear-gradient(rgba(5,150,105,.045), rgba(5,150,105,.045))' },
+                '& td.g-ded': { backgroundImage: 'linear-gradient(rgba(217,119,6,.05), rgba(217,119,6,.05))' },
+                '& .gs': { borderInlineStart: `2px solid ${hr.border}` },
               }}
             >
               <TableHead>
@@ -439,19 +446,19 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
                   {shown('status') && <TableCell rowSpan={2}>{t('payroll.cols.workerStatus')}</TableCell>}
                   {head('days', t('payroll.cols.days'), 'right')}
                   {head('base', t('payroll.cols.base'), 'right')}
-                  <TableCell colSpan={allowanceCols.length + 1} className="grp">
+                  <TableCell colSpan={allowanceCols.length + 1} className="grp g-allow gs">
                     {t('payroll.cols.allowancesGroup')}
                   </TableCell>
-                  {head('deductions', t('payroll.cols.deductions'), 'right')}
+                  {head('deductions', t('payroll.cols.deductions'), 'right', 'g-ded gs')}
                   {head('net', t('payroll.cols.net'), 'right')}
                 </TableRow>
                 <TableRow>
-                  {allowanceCols.map((c) => (
-                    <TableCell key={c.key} align="right">
+                  {allowanceCols.map((c, i) => (
+                    <TableCell key={c.key} align="right" className={i === 0 ? 'g-allow gs' : 'g-allow'}>
                       {t(`payroll.cols.${c.key}`)}
                     </TableCell>
                   ))}
-                  <TableCell align="right" sortDirection={sort.key === 'allowances' ? (sort.desc ? 'desc' : 'asc') : false}>
+                  <TableCell align="right" className={allowanceCols.length === 0 ? 'g-allow gs' : 'g-allow'} sortDirection={sort.key === 'allowances' ? (sort.desc ? 'desc' : 'asc') : false}>
                     <ButtonBase onClick={() => sortBy('allowances')} sx={{ font: 'inherit', fontWeight: 600, color: 'inherit' }}>
                       {t('payroll.cols.allowances')} {sort.key === 'allowances' && (sort.desc ? '↓' : '↑')}
                     </ButtonBase>
@@ -496,15 +503,15 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
                     <TableCell align="right" className="num">
                       {money(l.base)}
                     </TableCell>
-                    {allowanceCols.map((c) => (
-                      <TableCell key={c.key} align="right" className="num">
+                    {allowanceCols.map((c, i) => (
+                      <TableCell key={c.key} align="right" className={i === 0 ? 'num g-allow gs' : 'num g-allow'}>
                         {money(c.value(l))}
                       </TableCell>
                     ))}
-                    <TableCell align="right" className="num" sx={{ fontWeight: 600 }}>
+                    <TableCell align="right" className={allowanceCols.length === 0 ? 'num g-allow gs' : 'num g-allow'} sx={{ fontWeight: 600 }}>
                       {money(l.allowances)}
                     </TableCell>
-                    <TableCell align="right" className="num" sx={{ color: l.deductions ? '#B45309' : undefined }}>
+                    <TableCell align="right" className="num g-ded gs" sx={{ color: l.deductions ? '#B45309' : undefined }}>
                       {money(l.deductions)}
                     </TableCell>
                     <TableCell align="right" className="num" sx={{ fontWeight: 700, color: l.net <= 0 ? hr.danger : hr.text }}>
@@ -524,13 +531,13 @@ function WorkersTab({ run, version, onScope }: { run: PayrollRun; version: numbe
                   {(shown('project') || shown('status')) && <TableCell colSpan={(shown('project') ? 1 : 0) + (shown('status') ? 1 : 0)} />}
                   <TableCell align="right" className="num">{money(data.sums.paidDays)}</TableCell>
                   <TableCell align="right" className="num" sx={{ color: hr.primary }}>{money(data.sums.base)}</TableCell>
-                  {allowanceCols.map((c) => (
-                    <TableCell key={c.key} align="right" className="num">
+                  {allowanceCols.map((c, i) => (
+                    <TableCell key={c.key} align="right" className={i === 0 ? 'num g-allow gs' : 'num g-allow'}>
                       {money(c.sum(data.sums))}
                     </TableCell>
                   ))}
-                  <TableCell align="right" className="num">{money(data.sums.allowances)}</TableCell>
-                  <TableCell align="right" className="num" sx={{ color: '#B45309' }}>{money(data.sums.deductions)}</TableCell>
+                  <TableCell align="right" className={allowanceCols.length === 0 ? 'num g-allow gs' : 'num g-allow'}>{money(data.sums.allowances)}</TableCell>
+                  <TableCell align="right" className="num g-ded gs" sx={{ color: '#B45309' }}>{money(data.sums.deductions)}</TableCell>
                   <TableCell align="right" className="num" sx={{ color: hr.success }}>{money(data.sums.net)}</TableCell>
                 </TableRow>
               </TableFooter>

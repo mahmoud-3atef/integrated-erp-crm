@@ -352,8 +352,8 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
 
   const filtered = Boolean(query.trim() || note || department);
   const sortBy = (key: string) => setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: key !== 'name' && key !== 'department' }));
-  const head = (key: string, label: string, align: 'left' | 'right' = 'left', rowSpan = 2) => (
-    <TableCell align={align} rowSpan={rowSpan} sortDirection={sort.key === key ? (sort.desc ? 'desc' : 'asc') : false}>
+  const head = (key: string, label: string, align: 'left' | 'right' = 'left', rowSpan = 2, className?: string) => (
+    <TableCell align={align} rowSpan={rowSpan} className={className} sortDirection={sort.key === key ? (sort.desc ? 'desc' : 'asc') : false}>
       <ButtonBase onClick={() => sortBy(key)} sx={{ font: 'inherit', fontWeight: 600, color: 'inherit', gap: 0.25 }}>
         {label}
         {sort.key === key && <span aria-hidden>{sort.desc ? '↓' : '↑'}</span>}
@@ -363,8 +363,8 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
   const rowHeight = dense ? 40 : 50;
   const from = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0;
   const to = data ? Math.min(data.total, data.page * data.pageSize) : 0;
-  const num = (v: number, sx?: object, key?: string) => (
-    <TableCell key={key} align="right" className="num" sx={sx}>
+  const num = (v: number, sx?: object, key?: string, group?: string) => (
+    <TableCell key={key} align="right" className={group ? `num ${group}` : 'num'} sx={sx}>
       {money(v)}
     </TableCell>
   );
@@ -456,6 +456,13 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
                 '& th.pin': { zIndex: 4, bgcolor: hr.muted },
                 '& tfoot td': { position: 'sticky', bottom: 0, bgcolor: '#F8FAFC', fontWeight: 700, borderTop: `1px solid ${hr.border}`, zIndex: 1 },
                 '& tbody tr': { cursor: 'pointer' },
+                '& th.g-allow': { bgcolor: '#E3F6EC', color: '#047857' },
+                '& th.g-allow.grp': { bgcolor: '#C9EEDB' },
+                '& th.g-ded': { bgcolor: '#FDF1DC', color: '#B45309' },
+                '& th.g-ded.grp': { bgcolor: '#FBE2B8' },
+                '& td.g-allow': { backgroundImage: 'linear-gradient(rgba(5,150,105,.045), rgba(5,150,105,.045))' },
+                '& td.g-ded': { backgroundImage: 'linear-gradient(rgba(217,119,6,.05), rgba(217,119,6,.05))' },
+                '& .gs': { borderInlineStart: `2px solid ${hr.border}` },
               }}
             >
               <TableHead>
@@ -468,27 +475,27 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
                   {shown('department') && head('department', t('staffPayroll.cols.department'))}
                   {head('days', t('staffPayroll.cols.days'), 'right')}
                   {head('basic', t('staffPayroll.cols.basic'), 'right')}
-                  <TableCell colSpan={allowanceCols.length + 1} className="grp">
+                  <TableCell colSpan={allowanceCols.length + 1} className="grp g-allow gs">
                     {t('staffPayroll.cols.allowancesGroup')}
                   </TableCell>
-                  <TableCell colSpan={deductionCols.length + 1} className="grp">
+                  <TableCell colSpan={deductionCols.length + 1} className="grp g-ded gs">
                     {t('staffPayroll.cols.deductionsGroup')}
                   </TableCell>
                   {head('net', t('staffPayroll.cols.net'), 'right')}
                 </TableRow>
                 <TableRow>
-                  {allowanceCols.map((c) => (
-                    <TableCell key={c.key} align="right">
+                  {allowanceCols.map((c, i) => (
+                    <TableCell key={c.key} align="right" className={i === 0 ? 'g-allow gs' : 'g-allow'}>
                       {t(`staffPayroll.cols.${c.label}`)}
                     </TableCell>
                   ))}
-                  {head('allowances', t('staffPayroll.cols.total'), 'right', 1)}
-                  {deductionCols.map((c) => (
-                    <TableCell key={c.key} align="right">
+                  {head('allowances', t('staffPayroll.cols.total'), 'right', 1, allowanceCols.length === 0 ? 'g-allow gs' : 'g-allow')}
+                  {deductionCols.map((c, i) => (
+                    <TableCell key={c.key} align="right" className={i === 0 ? 'g-ded gs' : 'g-ded'}>
                       {t(`staffPayroll.cols.${c.label}`)}
                     </TableCell>
                   ))}
-                  {head('deductions', t('staffPayroll.cols.total'), 'right', 1)}
+                  {head('deductions', t('staffPayroll.cols.total'), 'right', 1, deductionCols.length === 0 ? 'g-ded gs' : 'g-ded')}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -522,10 +529,10 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
                     )}
                     {num(l.paidDays)}
                     {num(l.basic)}
-                    {allowanceCols.map((c) => num(c.value(l), undefined, c.key))}
-                    {num(l.allowances, { fontWeight: 600 })}
-                    {deductionCols.map((c) => num(c.value(l), undefined, c.key))}
-                    {num(l.deductions, { fontWeight: 600, color: l.deductions ? '#B45309' : undefined })}
+                    {allowanceCols.map((c, i) => num(c.value(l), undefined, c.key, i === 0 ? 'g-allow gs' : 'g-allow'))}
+                    {num(l.allowances, { fontWeight: 600 }, undefined, allowanceCols.length === 0 ? 'g-allow gs' : 'g-allow')}
+                    {deductionCols.map((c, i) => num(c.value(l), undefined, c.key, i === 0 ? 'g-ded gs' : 'g-ded'))}
+                    {num(l.deductions, { fontWeight: 600, color: l.deductions ? '#B45309' : undefined }, undefined, deductionCols.length === 0 ? 'g-ded gs' : 'g-ded')}
                     {num(l.net, { fontWeight: 700, color: l.net <= 0 ? hr.danger : hr.text })}
                   </TableRow>
                 ))}
@@ -540,10 +547,10 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
                   </TableCell>
                   <TableCell colSpan={shown('department') ? 2 : 1} />
                   {num(data.sums.basic, { color: hr.primary })}
-                  {allowanceCols.map((c) => num(c.sum(data.sums), undefined, c.key))}
-                  {num(data.sums.allowances)}
-                  {deductionCols.map((c) => num(c.sum(data.sums), undefined, c.key))}
-                  {num(data.sums.deductions, { color: '#B45309' })}
+                  {allowanceCols.map((c, i) => num(c.sum(data.sums), undefined, c.key, i === 0 ? 'g-allow gs' : 'g-allow'))}
+                  {num(data.sums.allowances, undefined, undefined, allowanceCols.length === 0 ? 'g-allow gs' : 'g-allow')}
+                  {deductionCols.map((c, i) => num(c.sum(data.sums), undefined, c.key, i === 0 ? 'g-ded gs' : 'g-ded'))}
+                  {num(data.sums.deductions, { color: '#B45309' }, undefined, deductionCols.length === 0 ? 'g-ded gs' : 'g-ded')}
                   {num(data.sums.net, { color: hr.success })}
                 </TableRow>
               </TableFooter>
