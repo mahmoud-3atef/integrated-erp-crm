@@ -4307,7 +4307,8 @@
       "anyNote": "With notes",
       "density": "Density",
       "compact": "Compact",
-      "comfortable": "Comfortable"
+      "comfortable": "Comfortable",
+      "columns": "Columns"
     },
     "clearFilters": "Clear filters",
     "noResults": "Nothing matches.",
@@ -4441,6 +4442,9 @@
       "min": "Wage floor",
       "max": "Wage ceiling",
       "range": "Contributory wage"
-    }
+    },
+    "total": "Total",
+    "totalScopeShort": "Filtered · {{count}} employees",
+    "totalAllShort": "Whole run · {{count}} employees"
   }
 }

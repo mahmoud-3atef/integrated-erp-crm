@@ -4307,7 +4307,8 @@
       "anyNote": "بها ملاحظات",
       "density": "الكثافة",
       "compact": "مضغوطة",
-      "comfortable": "مريحة"
+      "comfortable": "مريحة",
+      "columns": "الأعمدة"
     },
     "clearFilters": "مسح التصفية",
     "noResults": "لا نتائج مطابقة.",
@@ -4441,6 +4442,9 @@
       "min": "الحد الأدنى للأجر",
       "max": "الحد الأقصى للأجر",
       "range": "الأجر الخاضع"
-    }
+    },
+    "total": "الإجمالي",
+    "totalScopeShort": "المصفّى · {{count}} موظفًا",
+    "totalAllShort": "المسير كله · {{count}} موظفًا"
   }
 }

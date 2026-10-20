@@ -13,11 +13,13 @@ import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import SyncIcon from '@mui/icons-material/Sync';
+import ViewColumnOutlinedIcon from '@mui/icons-material/ViewColumnOutlined';
 import {
   Alert,
   Box,
   Button,
   ButtonBase,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
@@ -60,6 +62,21 @@ import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { money, RunStatusBadge } from '../payroll';
 
 type TabKey = 'employees' | 'summary' | 'gosi' | 'deferred';
+
+// The grid's optional columns (the totals, days, basic and net always show); the viewer's choice is kept in their browser.
+const hiddenKey = 'staffPayroll.hiddenColumns';
+type OptionalColumn = 'department' | 'housing' | 'other' | 'overtime' | 'absence' | 'penalties' | 'advances' | 'otherDeductions' | 'gosi';
+const optionalColumns: OptionalColumn[] = ['department', 'housing', 'other', 'overtime', 'absence', 'penalties', 'advances', 'otherDeductions', 'gosi'];
+const detailColumns: { key: OptionalColumn; label: string; group: 'allowances' | 'deductions'; value: (l: StaffLine) => number; sum: (s: StaffLinePage['sums']) => number }[] = [
+  { key: 'housing', label: 'housing', group: 'allowances', value: (l) => l.housing, sum: (s) => s.housing },
+  { key: 'other', label: 'other', group: 'allowances', value: (l) => l.otherAllowances + l.additions, sum: (s) => s.otherAllowances },
+  { key: 'overtime', label: 'overtime', group: 'allowances', value: (l) => l.overtime, sum: (s) => s.overtime },
+  { key: 'absence', label: 'absence', group: 'deductions', value: (l) => l.absence, sum: (s) => s.absence },
+  { key: 'penalties', label: 'penalties', group: 'deductions', value: (l) => l.penalties, sum: (s) => s.penalties },
+  { key: 'advances', label: 'advances', group: 'deductions', value: (l) => l.advances, sum: (s) => s.advances },
+  { key: 'otherDeductions', label: 'otherDeductions', group: 'deductions', value: (l) => l.otherDeductions, sum: (s) => s.otherDeductions },
+  { key: 'gosi', label: 'gosi', group: 'deductions', value: (l) => l.gosiEmployee, sum: (s) => s.gosiEmployee },
+];
 
 export const staffNoteLook: Record<StaffNote, { color: string; tint: string }> = {
   joined: { color: hr.primary, tint: '#EFF6FF' },
@@ -296,6 +313,15 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [dense, setDense] = useState(true);
+  const [hidden, setHidden] = useState<OptionalColumn[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(hiddenKey) ?? '[]') as unknown;
+      return Array.isArray(saved) ? (saved.filter((k) => optionalColumns.includes(k as OptionalColumn)) as OptionalColumn[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null);
   const [data, setData] = useState<StaffLinePage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<StaffLine | null>(null);
@@ -337,11 +363,23 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
   const rowHeight = dense ? 40 : 50;
   const from = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0;
   const to = data ? Math.min(data.total, data.page * data.pageSize) : 0;
-  const num = (v: number, sx?: object) => (
-    <TableCell align="right" className="num" sx={sx}>
+  const num = (v: number, sx?: object, key?: string) => (
+    <TableCell key={key} align="right" className="num" sx={sx}>
       {money(v)}
     </TableCell>
   );
+  const shown = (key: OptionalColumn) => !hidden.includes(key);
+  const allowanceCols = detailColumns.filter((c) => c.group === 'allowances' && shown(c.key));
+  const deductionCols = detailColumns.filter((c) => c.group === 'deductions' && shown(c.key));
+  const toggle = (key: OptionalColumn) => {
+    const next = hidden.includes(key) ? hidden.filter((k) => k !== key) : [...hidden, key];
+    setHidden(next);
+    try {
+      localStorage.setItem(hiddenKey, JSON.stringify(next));
+    } catch {
+      // A private window or blocked storage: the choice lasts for this page only.
+    }
+  };
 
   return (
     <Box>
@@ -377,6 +415,18 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
           </Button>
         )}
         <Box sx={{ flex: 1 }} />
+        <Button variant="outlined" size="small" startIcon={<ViewColumnOutlinedIcon />} onClick={(e) => setColumnsAnchor(e.currentTarget)} sx={{ height: 34 }}>
+          {t('staffPayroll.filters.columns')}
+        </Button>
+        <Menu anchorEl={columnsAnchor} open={Boolean(columnsAnchor)} onClose={() => setColumnsAnchor(null)}>
+          {optionalColumns.map((key) => (
+            <MenuItem key={key} dense onClick={() => toggle(key)}>
+              <Checkbox size="small" checked={shown(key)} sx={{ p: 0.25, marginInlineEnd: 1 }} />
+              {t(`staffPayroll.cols.${key === 'department' ? 'department' : detailColumns.find((c) => c.key === key)!.label}`)}
+              {key !== 'department' && <Box component="span" sx={{ color: hr.textMuted, fontSize: 12, marginInlineStart: 0.75 }}>· {t(`staffPayroll.cols.${detailColumns.find((c) => c.key === key)!.group}Group`)}</Box>}
+            </MenuItem>
+          ))}
+        </Menu>
         <ToggleButtonGroup size="small" exclusive value={dense ? 'compact' : 'comfortable'} onChange={(_, v: string | null) => v && setDense(v === 'compact')} aria-label={t('staffPayroll.filters.density')}>
           <ToggleButton value="compact">{t('staffPayroll.filters.compact')}</ToggleButton>
           <ToggleButton value="comfortable">{t('staffPayroll.filters.comfortable')}</ToggleButton>
@@ -396,9 +446,11 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
               stickyHeader
               size="small"
               sx={{
-                '& th': { bgcolor: hr.muted, color: '#475569', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', py: 0.75 },
-                '& thead tr:nth-of-type(2) th': { top: 33 },
-                '& td': { height: rowHeight, whiteSpace: 'nowrap', fontSize: 12.5, borderBottomColor: '#EEF2F7' },
+                '& th, & td': { px: 0.75 },
+                '& th': { bgcolor: hr.muted, color: '#475569', fontWeight: 600, fontSize: 11.5, lineHeight: 1.3, py: 0.6, verticalAlign: 'bottom' },
+                '& th.grp': { textAlign: 'center', borderBottom: '1px solid #DBE3EE', verticalAlign: 'middle' },
+                '& thead tr:nth-of-type(2) th': { top: 30 },
+                '& td': { height: rowHeight, whiteSpace: 'nowrap', fontSize: 12, borderBottomColor: '#EEF2F7' },
                 '& .num': { fontVariantNumeric: 'tabular-nums' },
                 '& .pin': { position: 'sticky', insetInlineStart: 0, zIndex: 2, bgcolor: '#fff', boxShadow: `inset -1px 0 0 ${hr.border}` },
                 '& th.pin': { zIndex: 4, bgcolor: hr.muted },
@@ -408,33 +460,34 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
             >
               <TableHead>
                 <TableRow>
-                  <TableCell rowSpan={2} className="pin">
+                  <TableCell rowSpan={2} className="pin" sx={{ minWidth: 170 }}>
                     <ButtonBase onClick={() => sortBy('name')} sx={{ font: 'inherit', fontWeight: 600, color: 'inherit' }}>
                       {t('staffPayroll.cols.employee')} {sort.key === 'name' && (sort.desc ? '↓' : '↑')}
                     </ButtonBase>
                   </TableCell>
-                  <TableCell rowSpan={2}>{t('staffPayroll.cols.number')}</TableCell>
-                  {head('department', t('staffPayroll.cols.department'))}
+                  {shown('department') && head('department', t('staffPayroll.cols.department'))}
                   {head('days', t('staffPayroll.cols.days'), 'right')}
                   {head('basic', t('staffPayroll.cols.basic'), 'right')}
-                  <TableCell colSpan={4} align="center" sx={{ borderBottom: '1px solid #DBE3EE' }}>
+                  <TableCell colSpan={allowanceCols.length + 1} className="grp">
                     {t('staffPayroll.cols.allowancesGroup')}
                   </TableCell>
-                  <TableCell colSpan={6} align="center" sx={{ borderBottom: '1px solid #DBE3EE' }}>
+                  <TableCell colSpan={deductionCols.length + 1} className="grp">
                     {t('staffPayroll.cols.deductionsGroup')}
                   </TableCell>
                   {head('net', t('staffPayroll.cols.net'), 'right')}
                 </TableRow>
                 <TableRow>
-                  <TableCell align="right">{t('staffPayroll.cols.housing')}</TableCell>
-                  <TableCell align="right">{t('staffPayroll.cols.other')}</TableCell>
-                  <TableCell align="right">{t('staffPayroll.cols.overtime')}</TableCell>
+                  {allowanceCols.map((c) => (
+                    <TableCell key={c.key} align="right">
+                      {t(`staffPayroll.cols.${c.label}`)}
+                    </TableCell>
+                  ))}
                   {head('allowances', t('staffPayroll.cols.total'), 'right', 1)}
-                  <TableCell align="right">{t('staffPayroll.cols.absence')}</TableCell>
-                  <TableCell align="right">{t('staffPayroll.cols.penalties')}</TableCell>
-                  <TableCell align="right">{t('staffPayroll.cols.advances')}</TableCell>
-                  <TableCell align="right">{t('staffPayroll.cols.otherDeductions')}</TableCell>
-                  <TableCell align="right">{t('staffPayroll.cols.gosi')}</TableCell>
+                  {deductionCols.map((c) => (
+                    <TableCell key={c.key} align="right">
+                      {t(`staffPayroll.cols.${c.label}`)}
+                    </TableCell>
+                  ))}
                   {head('deductions', t('staffPayroll.cols.total'), 'right', 1)}
                 </TableRow>
               </TableHead>
@@ -442,43 +495,36 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
                 {data.items.map((l) => (
                   <TableRow key={l.id} hover onClick={() => setOpen(l)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setOpen(l)}>
                     <TableCell className="pin">
-                      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                        <HrAvatar name={l.name} size={28} />
+                      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
+                        <HrAvatar name={l.name} size={26} />
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 700, fontSize: 12.5, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.name}>
-                            {l.name}
-                          </Typography>
-                          <Stack direction="row" sx={{ gap: 0.5, alignItems: 'center' }}>
-                            <Typography sx={{ fontSize: 11, color: hr.textMuted }}>{(ar ? l.jobTitleAr : l.jobTitleEn) ?? ''}</Typography>
-                            {l.notes.slice(0, 1).map((n) => (
-                              <HrStatusBadge key={n} label={t(`staffPayroll.notes.${n}`)} {...staffNoteLook[n]} />
-                            ))}
-                            {l.notes.length > 1 && (
-                              <Tooltip title={l.notes.slice(1).map((n) => t(`staffPayroll.notes.${n}`)).join('، ')}>
-                                <Box component="span" sx={{ fontSize: 11, color: hr.textMuted }}>
-                                  +{l.notes.length - 1}
-                                </Box>
+                          <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: 12, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.name}>
+                              {l.name}
+                            </Typography>
+                            {l.notes.length > 0 && (
+                              <Tooltip title={l.notes.map((n) => t(`staffPayroll.notes.${n}`)).join('، ')}>
+                                <Box component="span" aria-label={l.notes.map((n) => t(`staffPayroll.notes.${n}`)).join('، ')} sx={{ flex: '0 0 auto', width: 8, height: 8, borderRadius: '50%', bgcolor: staffNoteLook[l.notes[0]!].color }} />
                               </Tooltip>
                             )}
                           </Stack>
+                          <Typography sx={{ fontSize: 10.5, color: hr.textMuted, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <bdi>{l.employeeNo}</bdi>
+                            {(ar ? l.jobTitleAr : l.jobTitleEn) && ` · ${ar ? l.jobTitleAr : l.jobTitleEn}`}
+                          </Typography>
                         </Box>
                       </Stack>
                     </TableCell>
-                    <TableCell className="num">
-                      <bdi>{l.employeeNo}</bdi>
-                    </TableCell>
-                    <TableCell>{(ar ? l.departmentAr : l.departmentEn) ?? '—'}</TableCell>
+                    {shown('department') && (
+                      <TableCell sx={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }} title={(ar ? l.departmentAr : l.departmentEn) ?? undefined}>
+                        {(ar ? l.departmentAr : l.departmentEn) ?? '—'}
+                      </TableCell>
+                    )}
                     {num(l.paidDays)}
                     {num(l.basic)}
-                    {num(l.housing)}
-                    {num(l.otherAllowances + l.additions)}
-                    {num(l.overtime)}
+                    {allowanceCols.map((c) => num(c.value(l), undefined, c.key))}
                     {num(l.allowances, { fontWeight: 600 })}
-                    {num(l.absence)}
-                    {num(l.penalties)}
-                    {num(l.advances)}
-                    {num(l.otherDeductions)}
-                    {num(l.gosiEmployee)}
+                    {deductionCols.map((c) => num(c.value(l), undefined, c.key))}
                     {num(l.deductions, { fontWeight: 600, color: l.deductions ? '#B45309' : undefined })}
                     {num(l.net, { fontWeight: 700, color: l.net <= 0 ? hr.danger : hr.text })}
                   </TableRow>
@@ -486,18 +532,17 @@ function EmployeesTab({ run, version, onScope, onChanged }: { run: StaffRun; ver
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell className="pin">{filtered ? t('staffPayroll.totalScope', { count: data.sums.employees }) : t('staffPayroll.totalAll', { count: data.sums.employees })}</TableCell>
-                  <TableCell colSpan={3} />
+                  <TableCell className="pin">
+                    {t('staffPayroll.total')}
+                    <Typography component="span" sx={{ display: 'block', fontSize: 10.5, color: hr.textMuted, fontWeight: 500 }}>
+                      {filtered ? t('staffPayroll.totalScopeShort', { count: data.sums.employees }) : t('staffPayroll.totalAllShort', { count: data.sums.employees })}
+                    </Typography>
+                  </TableCell>
+                  <TableCell colSpan={shown('department') ? 2 : 1} />
                   {num(data.sums.basic, { color: hr.primary })}
-                  {num(data.sums.housing)}
-                  {num(data.sums.otherAllowances)}
-                  {num(data.sums.overtime)}
+                  {allowanceCols.map((c) => num(c.sum(data.sums), undefined, c.key))}
                   {num(data.sums.allowances)}
-                  {num(data.sums.absence)}
-                  {num(data.sums.penalties)}
-                  {num(data.sums.advances)}
-                  {num(data.sums.otherDeductions)}
-                  {num(data.sums.gosiEmployee)}
+                  {deductionCols.map((c) => num(c.sum(data.sums), undefined, c.key))}
                   {num(data.sums.deductions, { color: '#B45309' })}
                   {num(data.sums.net, { color: hr.success })}
                 </TableRow>
