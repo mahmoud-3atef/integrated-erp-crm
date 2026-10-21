@@ -72,6 +72,12 @@ internal static class ReportsEndpoints
     /// <summary>The CEO report's profitability (docs/03-migration-plan/16), always of a whole invoiced month.</summary>
     private static void MapCeo(IEndpointRouteBuilder endpoints)
     {
+        // A worker's lines on the old system's invoices, for the worker's invoices tab.
+        endpoints.MapGet("/api/v1/reports/workers/{workerId:guid}/legacy-invoices", async (Guid workerId, WorkerLegacyInvoices invoices, CancellationToken ct) =>
+                Results.Ok(await invoices.ForAsync(workerId, ct).ConfigureAwait(false)))
+            .WithTags("CEO report").RequireAuthorization(PlatformPolicies.CompanyUser)
+            .RequirePermission(InvoicesView, companyWide: true);
+
         var group = endpoints.MapGroup("/api/v1/reports/ceo").WithTags("CEO report").RequireAuthorization(PlatformPolicies.CompanyUser);
 
         group.MapGet("", async (string? month, CeoReport report, CancellationToken ct) =>

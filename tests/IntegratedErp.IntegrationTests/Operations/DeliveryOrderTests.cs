@@ -331,6 +331,10 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             var period = timeline[0];
             Assert.Equal(("Housing", today, (DateOnly?)null, false, detail.Summary.OrderNo), (period.Kind, period.StartsOn, period.EndsOn, period.PaySalary, period.SourceNo));
 
+            // The worker's actions timeline opens the period's document: the return order is among the worker's documents.
+            var documents = await scope.ServiceProvider.GetRequiredService<WorkerDocuments>().ForAsync(workerId, default);
+            Assert.Contains(documents, d => d.Type == "return_order" && d.Id == period.SourceId && d.No == detail.Summary.OrderNo);
+
             // In housing here (the old system still says on the job): available for a delivery order again.
             var file = (await scope.ServiceProvider.GetRequiredService<WorkerQueries>().GetAsync(workerId, WorkerKind.Worker, false, default))!.Summary;
             Assert.Equal(("Housing", true, "على رأس العمل"), (file.Placement, file.FromLedger, file.CrmStatusAr));

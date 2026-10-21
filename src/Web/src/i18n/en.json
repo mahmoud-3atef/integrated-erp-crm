@@ -1287,11 +1287,16 @@
     "removedInCrm": "This employee was deleted in the old system; the file stays here for reference.",
     "noSalaryPermission": "You do not have permission to view salaries and allowances.",
     "tabs": {
-      "info": "Employee data",
+      "info": "Worker data",
       "ids": "IDs and documents ({{count}})",
-      "periods": "Period ledger",
       "profile": "Marketing profile",
-      "cost": "Cost"
+      "cost": "Cost",
+      "actions": "Worker actions",
+      "actionsCount": "Worker actions ({{count}})",
+      "invoices": "Invoices",
+      "staffInfo": "Employee data",
+      "staffActions": "Actions",
+      "staffActionsCount": "Actions ({{count}})"
     },
     "sections": {
       "basic": "Basic data",
@@ -1451,7 +1456,73 @@
       }
     },
     "inactiveNote": "Workers on an inactive project ({{count}}): left out of every count.",
-    "inactiveShow": "Show them"
+    "inactiveShow": "Show them",
+    "overview": {
+      "title": "Overview",
+      "service": "Service",
+      "usage": "Utilisation {{value}}%",
+      "usageHint": "Project days as a share of project and housing days since arrival",
+      "projectDays": "Project days",
+      "housingDays": "Housing days",
+      "projects": "Projects",
+      "profit": "Last invoiced month's profit",
+      "iqamaEnds": "Iqama expiry",
+      "lastPrice": "Last monthly service price"
+    },
+    "actions": {
+      "title": "Worker actions",
+      "hint": "Select an action to open its document · latest first",
+      "housing": "Housing",
+      "current": "Current",
+      "open": "Open document {{no}}",
+      "details": "View details",
+      "openDocument": "Open document →",
+      "noDocument": "An old-system action with no document in this system (read-only)",
+      "workDays": "{{count}} work days",
+      "housingDays": "{{count}} housing days",
+      "days": "{{count}} days",
+      "daysLabel": "Days",
+      "housingIn": "Entered housing",
+      "housingOut": "Left housing",
+      "started": "Started",
+      "stopped": "Stopped",
+      "totalPrice": "Total service price",
+      "housingPrice": "Housing",
+      "transport": "Transport",
+      "created": "Created {{date}}",
+      "documents": {
+        "delivery_order": "Delivery order",
+        "return_order": "Return order",
+        "transfer_order": "Transfer order",
+        "worker_movement": "Movement"
+      },
+      "sources": {
+        "empwork": "Work start",
+        "housing_order": "Housing order",
+        "vacation": "Vacation",
+        "delivery_order": "Delivery order",
+        "return_order": "Return order",
+        "transfer_order": "Transfer order",
+        "worker_movement": "Movement"
+      }
+    },
+    "invoices": {
+      "empty": "No invoices for this worker.",
+      "no": "Invoice no.",
+      "period": "Period",
+      "days": "Work days",
+      "price": "Monthly service price",
+      "amount": "Amount before VAT",
+      "note": "Old-system invoices are shown from the reports' financial start, read-only.",
+      "draft": "Draft",
+      "status": {
+        "Draft": "Draft",
+        "ProjectReview": "Project review",
+        "FinanceReview": "Finance review",
+        "Returned": "Returned for changes",
+        "Issued": "Issued"
+      }
+    }
   },
   "commercial": {
     "readOnly": "View only at this stage: data is entered and edited in the old system and arrives here with every sync. Only customers and projects created from 1 January 2025 are brought over.",

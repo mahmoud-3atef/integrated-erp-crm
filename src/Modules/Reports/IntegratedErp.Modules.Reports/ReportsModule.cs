@@ -26,6 +26,7 @@ public sealed class ReportsModule : IModule
         services.AddScoped<MovementReport>();
         services.AddScoped<ProfitReport>();
         services.AddScoped<CeoReport>();
+        services.AddScoped<WorkerLegacyInvoices>();
         services.AddPermissions(ReportsPermissions.All);
     }
 

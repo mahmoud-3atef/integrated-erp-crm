@@ -18,6 +18,10 @@ internal static class InvoiceEndpoints
                 Results.Ok(await queries.ListAsync(month, status, kind, search, ct).ConfigureAwait(false)))
             .RequirePermission(BillingPermissions.InvoicesView, companyWide: true);
 
+        group.MapGet("/workers/{workerId:guid}/invoice-lines", async (Guid workerId, InvoiceQueries queries, CancellationToken ct) =>
+                Results.Ok(await queries.ForWorkerAsync(workerId, ct).ConfigureAwait(false)))
+            .RequirePermission(BillingPermissions.InvoicesView, companyWide: true);
+
         group.MapGet("/invoices/{id:guid}", async (Guid id, InvoiceQueries queries, CancellationToken ct) =>
                 await queries.GetAsync(id, ct).ConfigureAwait(false) is { } invoice ? Results.Ok(invoice) : Results.NotFound())
             .RequirePermission(BillingPermissions.InvoicesView, companyWide: true);

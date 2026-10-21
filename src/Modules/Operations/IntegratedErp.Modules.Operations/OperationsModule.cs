@@ -29,6 +29,7 @@ public sealed class OperationsModule : IModule
         services.AddModuleDbContext<OperationsDbContext>(configuration, OperationsDbContext.SchemaName);
         services.AddScoped<IHousingEntries, HousingEntries>();
         services.AddScoped<Showroom>();
+        services.AddScoped<WorkerDocuments>();
         services.AddScoped<DeliveryOrderService>();
         services.AddScoped<DeliveryOrderQueries>();
         services.AddScoped<IApprovalRecordAdapter, DeliveryOrderAdapter>();

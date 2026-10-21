@@ -20,5 +20,13 @@ internal static class ShowroomEndpoints
         group.MapGet("/{workerId:guid}", async (Guid workerId, bool? presentation, Showroom showroom, CancellationToken ct) =>
                 await showroom.FileAsync(workerId, presentation == true, ct).ConfigureAwait(false) is { } file ? Results.Ok(file) : Results.NotFound())
             .RequirePermission(OperationsPermissions.ShowroomView, companyWide: true);
+
+        // The documents a worker is on, for the worker's actions timeline (each action opens its document).
+        endpoints.MapGet("/api/v1/operations/workers/{workerId:guid}/documents", async (Guid workerId, WorkerDocuments documents, CancellationToken ct) =>
+                Results.Ok(await documents.ForAsync(workerId, ct).ConfigureAwait(false)))
+            .WithTags("Operations").RequireAuthorization(PlatformPolicies.CompanyUser)
+            .RequirePermission(WorkersView, companyWide: true);
     }
+
+    private const string WorkersView = "workforce.workers.view";
 }

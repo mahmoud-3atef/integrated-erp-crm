@@ -90,6 +90,10 @@ public sealed record InvoiceDetailDto(
 /// <summary>A receipt that pays (or, in review, will pay) part of an invoice: its number, date and the amount here.</summary>
 public sealed record InvoicePaymentDto(Guid ReceiptId, string? ReceiptNo, DateOnly ReceiptDate, decimal Amount, string Status, DateTimeOffset? ApprovedAt);
 
+/// <summary>A worker's line on an invoice of this system, for the worker's invoices tab (opens the invoice).</summary>
+public sealed record WorkerInvoiceLineDto(
+    Guid InvoiceId, string? InvoiceNo, string Kind, string Status, string ProjectName, DateOnly From, DateOnly To, DateOnly InvoiceDate, decimal WorkDays, decimal MonthlyPrice, decimal Amount);
+
 /// <summary>A timesheet's invoice, as the timesheet screens show it.</summary>
 public sealed record InvoiceRefDto(Guid Id, string? InvoiceNo, string Status);
 
@@ -142,6 +146,17 @@ internal sealed class InvoiceQueries(
 
         var rows = await query.OrderByDescending(i => i.CreatedAt).Take(500).Select(Row()).ToListAsync(cancellationToken).ConfigureAwait(false);
         return new InvoiceListDto(totals, rows);
+    }
+
+    /// <summary>One worker's lines on the invoices and notes, the latest period first.</summary>
+    public async Task<IReadOnlyList<WorkerInvoiceLineDto>> ForWorkerAsync(Guid workerId, CancellationToken cancellationToken)
+    {
+        var rows = await db.InvoiceWorkers.AsNoTracking().Where(l => l.WorkerId == workerId)
+            .Join(db.Invoices.AsNoTracking(), l => l.InvoiceId, i => i.Id, (l, i) => new { l, i })
+            .OrderByDescending(x => x.l.LineTo).Take(500)
+            .Select(x => new { x.i.Id, x.i.InvoiceNo, x.i.Kind, x.i.Status, x.i.ProjectName, x.l.LineFrom, x.l.LineTo, x.i.InvoiceDate, x.l.WorkDays, x.l.MonthlyPrice, x.l.Amount })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return rows.Select(x => new WorkerInvoiceLineDto(x.Id, x.InvoiceNo, x.Kind.ToString(), x.Status.ToString(), x.ProjectName, x.LineFrom, x.LineTo, x.InvoiceDate, x.WorkDays, x.MonthlyPrice, x.Amount)).ToList();
     }
 
     public async Task<InvoiceDetailDto?> GetAsync(Guid id, CancellationToken cancellationToken)
