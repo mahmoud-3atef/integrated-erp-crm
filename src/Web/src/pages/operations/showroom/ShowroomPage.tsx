@@ -6,9 +6,7 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingBasketOutlinedIcon from '@mui/icons-material/ShoppingBasketOutlined';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
-import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import { Alert, Box, Button, ButtonBase, InputAdornment, MenuItem, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { keyframes } from '@mui/material/styles';
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
@@ -255,18 +253,11 @@ function Hero({ data, presentation, specialty, onSpecialty }: { data: Showroom; 
   const x = useShowroomText();
   const faces = data.workers.filter((w) => !w.reservedBy).sort((a, b) => b.photos.length - a.photos.length).slice(0, 7);
   const top = data.bySpecialty.filter((s) => s.code).slice(0, 3).map((s) => x.name(s));
-  const stats: [number, string][] = [
-    [data.available, t('showroom.hero.available')],
-    [data.nationalities, t('showroom.hero.nationalities')],
-    [data.withHotelExperience, t('showroom.hero.hotel')],
+  // Delivery within a day, and (inside) the workers an order has already reserved.
+  const facts: [ReactNode, string][] = [
+    [<BoltRoundedIcon key="a" />, t('showroom.hero.fast')],
+    ...(!presentation && data.reserved ? [[<LocalShippingOutlinedIcon key="c" />, t('showroom.hero.reserved', { count: data.reserved })] as [ReactNode, string]] : []),
   ];
-  const facts = presentation
-    ? [[<BoltRoundedIcon key="a" />, t('showroom.hero.fast')], [<VerifiedOutlinedIcon key="b" />, t('showroom.hero.ready')]]
-    : [
-        [<BoltRoundedIcon key="a" />, t('showroom.hero.fast')],
-        ...(data.oldestDays !== null ? [[<HourglassBottomOutlinedIcon key="b" />, t('showroom.hero.oldest', { count: data.oldestDays })]] : []),
-        ...(data.reserved ? [[<LocalShippingOutlinedIcon key="c" />, t('showroom.hero.reserved', { count: data.reserved })]] : []),
-      ];
   return (
     <Box
       sx={{
@@ -274,63 +265,53 @@ function Hero({ data, presentation, specialty, onSpecialty }: { data: Showroom; 
         overflow: 'hidden',
         borderRadius: '22px',
         mb: 2,
-        p: { xs: 2.5, md: 3.5 },
+        px: { xs: 2.5, md: 3 },
+        py: { xs: 2, md: 2.25 },
         color: '#fff',
         background: 'linear-gradient(120deg, #072d43 0%, #0d4a6c 48%, #0e7c86 100%)',
         display: 'grid',
-        gap: 3,
-        gridTemplateColumns: { xs: '1fr', lg: '1.3fr 1fr' },
+        columnGap: 3,
+        rowGap: 2,
+        gridTemplateColumns: { xs: '1fr', lg: '1fr auto' },
         alignItems: 'center',
-        rowGap: 2.5,
-        '&::after': { content: '""', position: 'absolute', width: 420, height: 420, borderRadius: '50%', insetInlineEnd: -120, top: -180, background: 'radial-gradient(circle, rgba(252,211,77,.18), transparent 65%)' },
+        '&::after': { content: '""', position: 'absolute', width: 380, height: 380, borderRadius: '50%', insetInlineEnd: -120, top: -200, background: 'radial-gradient(circle, rgba(252,211,77,.18), transparent 65%)' },
       }}
     >
-      <Box sx={{ position: 'relative', zIndex: 1 }}>
-        <Typography component="h1" sx={{ fontSize: { xs: 24, md: 31 }, fontWeight: 800, lineHeight: 1.35 }}>
+      <Box sx={{ position: 'relative', zIndex: 1, minWidth: 0 }}>
+        <Typography component="h1" sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, lineHeight: 1.35 }}>
           {t('showroom.hero.title1')}{' '}
           <Box component="span" sx={{ color: '#FCD34D' }}>
             {t('showroom.hero.title2')}
           </Box>
         </Typography>
-        <Typography sx={{ fontSize: 14.5, opacity: 0.85, mt: 1, mb: 2, maxWidth: 620 }}>
+        <Typography sx={{ fontSize: 13.5, opacity: 0.85, mt: 0.5 }}>
           {top.length ? t('showroom.hero.subtitle', { specialties: top.join(x.ar ? '، ' : ', '), count: data.nationalities }) : t('showroom.hero.subtitleNone')}
         </Typography>
-        <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', mb: 2.25 }}>
-          {facts.map(([icon, text], i) => (
-            <Stack key={i} direction="row" sx={{ alignItems: 'center', gap: 0.75, px: 1.5, py: 0.7, borderRadius: 99, fontSize: 13, fontWeight: 600, bgcolor: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)', '& svg': { fontSize: 17, color: '#FCD34D' } }}>
-              {icon}
-              {text}
-            </Stack>
-          ))}
-        </Stack>
+      </Box>
+      <Stack direction="row" sx={{ position: 'relative', zIndex: 1, alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: { lg: 'flex-end' } }}>
         <Stack direction="row" sx={{ alignItems: 'center' }}>
           {faces.map((w, i) => (
             <Box
               key={w.id}
               title={w.name}
-              sx={{ width: 46, height: 46, borderRadius: '50%', overflow: 'hidden', border: '3px solid #0d4a6c', marginInlineStart: i ? '-12px' : 0, bgcolor: tintOf(w.nationalityCode), display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 14, boxShadow: '0 4px 10px rgba(0,0,0,.2)' }}
+              sx={{ width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', border: '3px solid #0d4a6c', marginInlineStart: i ? '-11px' : 0, bgcolor: tintOf(w.nationalityCode), display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 13, boxShadow: '0 4px 10px rgba(0,0,0,.2)' }}
             >
               {w.photos[0] ? <Box component="img" src={photoUrl(w.id, w.photos[0])} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initialsOf(w.name)}
             </Box>
           ))}
           {data.workers.length > faces.length && (
-            <Box sx={{ width: 46, height: 46, borderRadius: '50%', border: '3px solid #0d4a6c', marginInlineStart: '-12px', bgcolor: '#fff', color: tokens.navy800, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 13 }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: '50%', border: '3px solid #0d4a6c', marginInlineStart: '-11px', bgcolor: '#fff', color: tokens.navy800, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 12.5 }}>
               +{data.workers.length - faces.length}
             </Box>
           )}
         </Stack>
-      </Box>
-      <Box sx={{ position: 'relative', zIndex: 1, display: 'grid', gap: 1.25, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        {stats.map(([value, label], i) => (
-          <Box key={label} sx={{ ...appear(i + 1), textAlign: 'center', py: 2.25, px: 1, borderRadius: '18px', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)', backdropFilter: 'blur(8px)' }}>
-            <Typography sx={{ fontSize: { xs: 30, md: 40 }, fontWeight: 800, lineHeight: 1.1 }}>{value}</Typography>
-            <Stack direction="row" sx={{ justifyContent: 'center', alignItems: 'center', gap: 0.4, fontSize: 12.5, opacity: 0.85 }}>
-              {i === 2 && <StarRoundedIcon sx={{ fontSize: 15, color: '#FCD34D' }} />}
-              {label}
-            </Stack>
-          </Box>
+        {facts.map(([icon, text], i) => (
+          <Stack key={i} direction="row" sx={{ alignItems: 'center', gap: 0.75, px: 1.5, py: 0.8, borderRadius: '12px', fontSize: 13, fontWeight: 700, bgcolor: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)', backdropFilter: 'blur(8px)', '& svg': { fontSize: 18, color: '#FCD34D' } }}>
+            {icon}
+            {text}
+          </Stack>
         ))}
-      </Box>
+      </Stack>
 
       {/* The specialties: glass cards that lean towards the mouse and filter the workers. */}
       <Box role="group" aria-label={t('showroom.bySpecialty')} sx={{ gridColumn: '1 / -1', position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', gap: 1.25, '& > *': { flex: '1 1 130px', maxWidth: { xs: 'none', sm: 240 } } }}>
