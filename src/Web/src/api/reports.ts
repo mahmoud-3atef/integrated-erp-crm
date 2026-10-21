@@ -294,6 +294,9 @@ export interface CeoAlerts {
 
 export interface CeoOverview {
   month: string;
+  /** The period most of the month's invoices cover. */
+  periodFrom: string | null;
+  periodTo: string | null;
   months: string[];
   revenue: Figure;
   uncostedRevenue: number;
@@ -349,6 +352,11 @@ export interface CostParts {
   dailyPrice: number | null;
   lostRevenue: number;
   lostProfit: number;
+  /** The period the worker's days are counted in (their invoices'). */
+  periodFrom: string | null;
+  periodTo: string | null;
+  /** Days on the job after the period: on the next invoice. */
+  nextPeriodDays: number;
 }
 
 export interface ProjectProfit {

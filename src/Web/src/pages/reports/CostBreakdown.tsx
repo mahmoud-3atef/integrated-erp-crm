@@ -76,6 +76,12 @@ export function WorkerCost({ w }: { w: WorkerProfit }) {
       <Typography sx={{ fontWeight: 800, fontSize: 14, mb: 0.25 }}>{t('ceo.parts.title')}</Typography>
       <Typography sx={{ fontSize: 11.5, color: tokens.gray500, mb: 1 }}>
         {w.name} · <bdi>{w.workerNo}</bdi> · {t(`ceo.source.${w.source}`)}
+        {p.periodFrom && p.periodTo && (
+          <>
+            <br />
+            {t('ceo.parts.period', { from: f.day(p.periodFrom), to: f.day(p.periodTo) })}
+          </>
+        )}
       </Typography>
       {supplier ? (
         <>
@@ -99,6 +105,7 @@ export function WorkerCost({ w }: { w: WorkerProfit }) {
             </>
           )}
           {p.unbilledDays > 0 && <Typography sx={{ fontSize: 11.5, color: tokens.warning, py: 0.5 }}>{t('ceo.parts.unbilledDays', { days: p.unbilledDays })}</Typography>}
+          {p.nextPeriodDays > 0 && <Typography sx={{ fontSize: 11.5, color: tokens.info, py: 0.5 }}>{t('ceo.parts.nextPeriod', { days: p.nextPeriodDays })}</Typography>}
           {w.housingDays > 0 && <Typography sx={{ fontSize: 11.5, color: tokens.gray500, py: 0.5 }}>{t('ceo.parts.housingUnpaid', { days: w.housingDays })}</Typography>}
           {w.source === 'Unknown' && <Typography sx={{ fontSize: 11.5, color: tokens.info, py: 0.5 }}>{t('ceo.parts.unknown')}</Typography>}
         </>

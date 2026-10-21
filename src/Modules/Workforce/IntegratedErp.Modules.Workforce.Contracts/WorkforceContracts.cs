@@ -197,9 +197,15 @@ public interface IWorkforceReport
 
 public sealed record ProjectDays(Guid? ProjectCrmId, string? Place, int Days);
 
+/// <param name="Kind"><c>Work</c> or <c>Housing</c>.</param>
+/// <param name="EndsOn">The day after the last (end exclusive); null while open.</param>
+public sealed record WorkerSpan(string Kind, DateOnly StartsOn, DateOnly? EndsOn, Guid? ProjectCrmId, string? Place);
+
 /// <summary>A worker's days in a period: on each project (work on the inactive workers' project is left out) and in housing.</summary>
 /// <param name="NewArrival">Newly arrived: waiting in housing for a first work.</param>
-public sealed record WorkerDays(Guid WorkerId, Guid CrmId, string WorkerNo, string Name, string? Sponsor, decimal Salary, IReadOnlyList<ProjectDays> Projects, int HousingDays, bool NewArrival = false)
+/// <param name="Spans">The work and housing periods behind the days (work on the inactive workers' project and stays no longer
+/// valid left out), to count them in another period (an invoice's).</param>
+public sealed record WorkerDays(Guid WorkerId, Guid CrmId, string WorkerNo, string Name, string? Sponsor, decimal Salary, IReadOnlyList<ProjectDays> Projects, int HousingDays, bool NewArrival = false, IReadOnlyList<WorkerSpan>? Spans = null)
 {
     public int WorkDays => Projects.Sum(p => p.Days);
 }

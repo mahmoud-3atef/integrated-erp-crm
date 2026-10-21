@@ -112,7 +112,14 @@ export function CeoReportPage() {
           </ButtonBase>
         ))}
         <Box sx={{ flex: 1 }} />
-        <Typography sx={{ fontSize: 12.5, color: tokens.gray500, px: 1 }}>{t('ceo.invoicedMonth')}</Typography>
+        <Box sx={{ px: 1, textAlign: 'end' }}>
+          <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('ceo.invoicedMonth')}</Typography>
+          {overview?.periodFrom && overview.periodTo && (
+            <Typography sx={{ fontSize: 11, color: tokens.gray500 }}>
+              <bdi>{t('ceo.periodHint', { from: f.day(overview.periodFrom), to: f.day(overview.periodTo) })}</bdi>
+            </Typography>
+          )}
+        </Box>
         {(overview?.months ?? []).slice(0, 6).map((m) => (
           <ButtonBase
             key={m}

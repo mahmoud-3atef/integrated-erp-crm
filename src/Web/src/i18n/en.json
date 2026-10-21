@@ -5475,7 +5475,7 @@
       "netSalaryHint": "What the worker was actually paid for the month",
       "advance": "Advance installment",
       "advanceHint": "Deducted from the net, but it pays an advance back and saves nothing, so it is added to the cost",
-      "unbilledDays": "{{days}} working days in the period ledger are not on this month's invoice: neither their cost nor their revenue is counted here; they count with the invoice they are billed on.",
+      "unbilledDays": "{{days}} working days inside the invoice's period without a line on it: worked, not invoiced.",
       "lostTitle": "Housing days: what was lost (outside the profit)",
       "noPrice": "{{days}} housing days; the worker was never invoiced, so there is no price to value them.",
       "lostRevenue": "Revenue lost",
@@ -5485,7 +5485,10 @@
       "lostProfitFixed": "The supplier's cost is paid anyway, so all the revenue lost is profit lost",
       "lostProfitByDays": "The revenue lost less the supplier's cost working would have cost",
       "lostNote": "An opportunity lost, shown to follow up; it is not deducted from the profit counted.",
-      "newArrival": "The worker is newly arrived: the housing days are a wait for a first delivery."
-    }
+      "newArrival": "The worker is newly arrived: the housing days are a wait for a first delivery.",
+      "period": "Period: invoices {{from}} – {{to}}",
+      "nextPeriod": "{{days}} working days after the invoice's period: billed in the next period and counted with it."
+    },
+    "periodHint": "Period {{from}} – {{to}}"
   }
 }

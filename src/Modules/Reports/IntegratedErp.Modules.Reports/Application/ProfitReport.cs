@@ -39,7 +39,10 @@ public sealed record CostPartsDto(
     IReadOnlyList<ExpenseItemDto> Expenses,
     decimal? DailyPrice = null,
     decimal LostRevenue = 0,
-    decimal LostProfit = 0);
+    decimal LostProfit = 0,
+    DateOnly? PeriodFrom = null,
+    DateOnly? PeriodTo = null,
+    int NextPeriodDays = 0);
 
 /// <summary>One worker's month: their days, what was billed for them, and what they cost.</summary>
 /// <param name="Source"><c>Company</c>, <c>Supplier</c> or <c>Unknown</c>.</param>
@@ -100,7 +103,9 @@ internal sealed record MonthProfit(
     decimal UnallocatedExpenses,
     int IdleDays,
     IReadOnlyList<WorkerMonth> Workers,
-    IReadOnlyList<ProjectMonth> Projects)
+    IReadOnlyList<ProjectMonth> Projects,
+    DateOnly? PeriodFrom = null,
+    DateOnly? PeriodTo = null)
 {
     public decimal Cost => CompanySalaries + SupplierCosts + IdleCost + WorkerExpenses + ProjectExpenses + GeneralExpenses + UnallocatedExpenses;
 
@@ -169,13 +174,19 @@ internal sealed class ProfitReport(
     private async Task<MonthProfit> ComputeAsync(DateOnly first, CancellationToken cancellationToken)
     {
         var last = first.AddMonths(1).AddDays(-1);
-        var monthDays = last.Day;
         var finance = await legacy.LoadAsync(cancellationToken).ConfigureAwait(false);
         var invoices = finance.Invoices.Where(i => i.To >= first && i.To <= last).ToDictionary(i => i.CrmId);
         var lines = finance.Lines.Where(l => invoices.ContainsKey(l.InvoiceCrmId)).ToList();
 
-        // Every worker with days in the month or a line on its invoices.
-        var days = (await workforce.DaysAsync(first, last, cancellationToken).ConfigureAwait(false)).ToDictionary(d => d.CrmId);
+        // The days are counted in the period the month's invoices cover (e.g. 21 August – 20 September), not the calendar month.
+        DateOnly FromOf(LegacyInvoice i) => i.From is { } f && f <= i.To && f >= i.To.AddMonths(-3) ? f : first;
+        var projectPeriods = invoices.Values.Where(i => i.ProjectCrmId is not null).GroupBy(i => i.ProjectCrmId!.Value)
+            .ToDictionary(g => g.Key, g => (From: g.Min(FromOf), To: g.Max(i => i.To)));
+        var earliest = invoices.Values.Select(FromOf).Append(first).Min();
+        var usual = invoices.Values.GroupBy(i => (From: FromOf(i), i.To)).OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault();
+
+        // Every worker with days from the earliest period's start or a line on the month's invoices.
+        var days = (await workforce.DaysAsync(earliest, last, cancellationToken).ConfigureAwait(false)).ToDictionary(d => d.CrmId);
         var billedOnly = lines.Select(l => l.WorkerCrmId).Where(id => !days.ContainsKey(id)).Distinct().ToList();
         if (billedOnly.Count > 0)
         {
@@ -207,11 +218,36 @@ internal sealed class ProfitReport(
         var allocated = new Dictionary<Guid, Slot>();
         decimal companySalaries = 0, supplierCosts = 0, idle = 0, allocatedExpenses = 0, unallocated = 0;
         var idleDays = 0;
-        foreach (var d in days.Values)
+        var tomorrow = clock.Today.AddDays(1);
+        int Overlap(WorkerSpan s, DateOnly from, DateOnly to) =>
+            Math.Max(0, Math.Min((s.EndsOn ?? tomorrow).DayNumber, to.AddDays(1).DayNumber) - Math.Max(s.StartsOn.DayNumber, from.DayNumber));
+        foreach (var raw in days.Values)
         {
-            var info = cost.GetValueOrDefault(d.WorkerId);
+            var info = cost.GetValueOrDefault(raw.WorkerId);
             var source = info?.Source ?? "Unknown";
-            var mine = linesByWorker[d.CrmId].ToList();
+            var mine = linesByWorker[raw.CrmId].ToList();
+
+            // The worker's period: their invoices', else their project's invoice's, else the calendar month.
+            var spans = raw.Spans ?? [];
+            var period = mine.Count > 0
+                ? (From: mine.Min(l => FromOf(invoices[l.InvoiceCrmId])), To: mine.Max(l => invoices[l.InvoiceCrmId].To))
+                : spans.Where(s => s.Kind == "Work" && s.ProjectCrmId is { } p && projectPeriods.ContainsKey(p))
+                    .OrderByDescending(s => Overlap(s, first, last)).Select(s => projectPeriods[s.ProjectCrmId!.Value]).Cast<(DateOnly From, DateOnly To)?>().FirstOrDefault()
+                  ?? (first, last);
+            var monthDays = period.To.DayNumber - period.From.DayNumber + 1;
+            var d = raw with
+            {
+                Projects = spans.Where(s => s.Kind == "Work").GroupBy(s => (s.ProjectCrmId, s.Place))
+                    .Select(g => new ProjectDays(g.Key.ProjectCrmId, g.Key.Place, g.Sum(s => Overlap(s, period.From, period.To)))).Where(p => p.Days > 0).ToList(),
+                HousingDays = spans.Where(s => s.Kind == "Housing").Sum(s => Overlap(s, period.From, period.To)),
+            };
+
+            // Days on the job after the period: the next invoice's (counted with it).
+            var nextDays = period.To < last ? spans.Where(s => s.Kind == "Work").Sum(s => Overlap(s, period.To.AddDays(1), last)) : 0;
+            if (d.WorkDays == 0 && d.HousingDays == 0 && mine.Count == 0)
+            {
+                continue;
+            }
             var revenue = mine.Sum(l => l.BeforeVat);
             decimal work, idleCost = 0, billedSalary = 0;
             decimal billedDays = 0, dueSalary = 0, absentDays = 0, absenceDeduction = 0, netSalary = 0, advance = 0;
@@ -281,7 +317,7 @@ internal sealed class ProfitReport(
                 new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(netSalary, 2), Math.Round(advance, 2), Math.Round(billedSalary, 2), billedDays, unbilledDays,
                     source == "Supplier" ? info?.SupplierMonthlyCost : null, source == "Supplier" ? info?.ByWorkingDays : null, monthDays,
                     source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList(),
-                    dailyPrice is null ? null : Math.Round(dailyPrice.Value, 2), Math.Round(lostRevenue, 2), Math.Round(lostProfit, 2)), d.NewArrival));
+                    dailyPrice is null ? null : Math.Round(dailyPrice.Value, 2), Math.Round(lostRevenue, 2), Math.Round(lostProfit, 2), period.From, period.To, nextDays), d.NewArrival));
 
             // A company worker's salary goes to the projects of the invoices it came from; a supplier's cost and the worker's
             // expenses to the projects by the days on each.
@@ -356,7 +392,8 @@ internal sealed class ProfitReport(
             Math.Round(projectExpenses.Values.Sum(), 2),
             Math.Round(shares.Where(s => s.ProjectCrmId is null && s.WorkerId is null).Sum(s => s.Amount), 2),
             Math.Round(unallocated, 2), idleDays,
-            workers, projectRows.OrderBy(p => p.Profit).ToList());
+            workers, projectRows.OrderBy(p => p.Profit).ToList(),
+            usual == default ? null : usual.From, usual == default ? null : usual.To);
     }
 
     private sealed class Slot

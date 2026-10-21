@@ -16,6 +16,7 @@ internal sealed record LegacyInvoice(
     string ProjectName,
     string? Manager,
     DateOnly To,
+    DateOnly? From,
     DateOnly? InvoiceDate,
     DateOnly CreatedOn,
     int Workers,
@@ -139,7 +140,7 @@ internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory proj
                 invoices.Add(new LegacyInvoice(
                     crmId, Text(row, "new_invoicenumber") ?? "—", projectId, project?.Name ?? Text(row, "new_projectidname") ?? "—",
                     string.IsNullOrWhiteSpace(project?.Manager) ? null : project.Manager.Trim(),
-                    to, Date(row, "new_invoicedate"), Date(row, "createdon") ?? to, (int)(Money(row, "new_labornumber") ?? 0),
+                    to, Date(row, "new_fromdate"), Date(row, "new_invoicedate"), Date(row, "createdon") ?? to, (int)(Money(row, "new_labornumber") ?? 0),
                     beforeVat, vat, Money(row, "new_netsalarywithvat") ?? (beforeVat + vat), Money(row, "new_totalpaidamount") ?? 0, status));
             }
 

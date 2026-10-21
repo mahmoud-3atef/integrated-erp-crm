@@ -15,8 +15,11 @@ public sealed record AlertsDto(int LosingProjects, decimal LosingTotal, string? 
 
 /// <param name="Month">The invoiced month shown (<c>yyyy-MM</c>).</param>
 /// <param name="Months">The ended months with invoices, the latest first (the month picker).</param>
+/// <param name="PeriodFrom">The period most of the month's invoices cover (e.g. 21 August – 20 September).</param>
 public sealed record CeoOverviewDto(
     string Month,
+    DateOnly? PeriodFrom,
+    DateOnly? PeriodTo,
     IReadOnlyList<string> Months,
     MoneyFigure Revenue,
     decimal UncostedRevenue,
@@ -100,7 +103,7 @@ internal sealed class CeoReport(ProfitReport profit, LegacyInvoices legacy, IWor
         var current = await workforce.NowAsync(cancellationToken).ConfigureAwait(false);
         var alerts = await AlertsAsync(now, cancellationToken).ConfigureAwait(false);
         return new CeoOverviewDto(
-            ProfitReport.Key(m), months.Select(ProfitReport.Key).ToList(),
+            ProfitReport.Key(m), now.PeriodFrom, now.PeriodTo, months.Select(ProfitReport.Key).ToList(),
             new MoneyFigure(now.Revenue, before?.Revenue), now.UncostedRevenue, now.UncostedWorkers, new MoneyFigure(now.Cost, before?.Cost), new MoneyFigure(now.Profit, before?.Profit),
             new MoneyFigure(now.Margin, before?.Margin), new MoneyFigure(now.IdleCost, before?.IdleCost), now.IdleDays,
             new MoneyFigure(now.LostRevenue, before?.LostRevenue), new MoneyFigure(now.LostProfit, before?.LostProfit), now.HousingDays, now.UnpricedHousingDays,

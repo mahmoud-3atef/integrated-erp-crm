@@ -241,13 +241,17 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
         int Overlap(Span s) => Math.Max(0, Math.Min((s.EndsOn ?? today).DayNumber, after.DayNumber) - Math.Max(s.StartsOn.DayNumber, from.DayNumber));
         return workers.Select(w =>
             {
-                var spans = timelines[w.Id].ToList();
-                var projects = spans.Where(s => s.Kind == PeriodKind.Work && !options.Value.IsInactiveProject(s.Place))
+                // No work on the inactive workers' project; a stay still open counts only while the worker is in housing (a
+                // worker since gone on vacation, transferred or out has no such days); a stay followed by a move counts as it was.
+                var spans = timelines[w.Id]
+                    .Where(s => s.Kind == PeriodKind.Work ? !options.Value.IsInactiveProject(s.Place) : s.EndsOn is not null || InHousingStatus(w.Placement))
+                    .Where(s => s.StartsOn < after && (s.EndsOn ?? today) > from)
+                    .ToList();
+                var projects = spans.Where(s => s.Kind == PeriodKind.Work)
                     .GroupBy(s => (s.ProjectCrmId, s.Place)).Select(g => new ProjectDays(g.Key.ProjectCrmId, g.Key.Place, g.Sum(Overlap))).Where(p => p.Days > 0).ToList();
-                // A stay still open counts only while the worker is in housing: a worker since gone on vacation, transferred
-                // or out has no such days. A stay followed by another move counts as it was.
-                var housing = spans.Where(s => s.Kind == PeriodKind.Housing && (s.EndsOn is not null || InHousingStatus(w.Placement))).Sum(Overlap);
-                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, housing, w.Placement == Placement.New);
+                var housing = spans.Where(s => s.Kind == PeriodKind.Housing).Sum(Overlap);
+                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, housing, w.Placement == Placement.New,
+                    spans.Select(s => new WorkerSpan(s.Kind == PeriodKind.Work ? "Work" : "Housing", s.StartsOn, s.EndsOn, s.ProjectCrmId, s.Place)).ToList());
             })
             .Where(w => w.WorkDays > 0 || w.HousingDays > 0)
             .ToList();
