@@ -40,6 +40,7 @@ import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { WorkerPeriods } from './WorkerPeriods';
 import { WorkerProfileTab } from './WorkerProfileTab';
+import { WorkerCostTab } from './WorkerCostTab';
 import { placementLook } from '../../components/workforce/placement';
 import { useCrumb } from '../../app/breadcrumbs';
 
@@ -55,9 +56,9 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const { id } = useParams();
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
   useCrumb(worker?.summary.name);
-  const [tab, setTab] = useState<'info' | 'ids' | 'periods' | 'profile'>(() => {
+  const [tab, setTab] = useState<'info' | 'ids' | 'periods' | 'profile' | 'cost'>(() => {
     const asked = new URLSearchParams(window.location.search).get('tab');
-    return asked === 'periods' || (asked === 'profile' && kind === 'Worker') ? asked : 'info';
+    return asked === 'periods' || ((asked === 'profile' || asked === 'cost') && kind === 'Worker') ? asked : 'info';
   });
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
@@ -223,10 +224,13 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
             { value: 'ids', label: t('workforce.tabs.ids', { count: worker.identifiers.length }) },
             { value: 'periods' as const, label: t('workforce.tabs.periods') },
             ...(staff ? [] : [{ value: 'profile' as const, label: t('workforce.tabs.profile') }]),
+            ...(staff || !can('workforce.costs.view', true) ? [] : [{ value: 'cost' as const, label: t('workforce.tabs.cost') }]),
           ]}
         />
 
-        {tab === 'profile' ? (
+        {tab === 'cost' ? (
+          <WorkerCostTab workerId={id!} name={w.name} />
+        ) : tab === 'profile' ? (
           <WorkerProfileTab workerId={id!} />
         ) : tab === 'periods' ? (
           <WorkerPeriods key={sent} kind={kind} workerId={id!} />

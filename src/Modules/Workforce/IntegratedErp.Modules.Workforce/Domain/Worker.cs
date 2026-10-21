@@ -270,6 +270,8 @@ public static class CrmSponsors
     };
 
     public static string? Name(int? code) => code is { } c ? Names.GetValueOrDefault(c) : null;
+
+    public static IReadOnlyCollection<string> All => Names.Values;
 }
 
 /// <summary>What the last import from the CRM copy did (one row per company).</summary>

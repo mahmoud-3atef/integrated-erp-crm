@@ -91,3 +91,33 @@ public sealed class WorkerPhotoTests
         Assert.Null(IntegratedErp.Modules.Workforce.Domain.WorkerPhoto.ImageType("%PDF-1.7"u8));
     }
 }
+
+public sealed class WorkerCostRulesTests
+{
+    private static readonly DateOnly On = new(2026, 9, 15);
+
+    private static IntegratedErp.Modules.Workforce.Domain.SupplierCostPackage Package(string? profession, string? nationality, decimal cost, string from = "2026-01-01") =>
+        new(Guid.NewGuid(), new IntegratedErp.Modules.Workforce.Domain.CostValues("IRC - 02", profession, nationality, cost, IntegratedErp.Modules.Workforce.Domain.CostMethod.MonthlyFixed, DateOnly.Parse(from, System.Globalization.CultureInfo.InvariantCulture), null), "t", DateTimeOffset.UtcNow);
+
+    [Fact]
+    public void A_worker_takes_the_narrowest_package_that_fits_and_has_started()
+    {
+        var any = Package(null, null, 2500);
+        var waiter = Package("6132115", null, 2800);
+        var filipinoWaiter = Package("6132115", "PHL", 3000);
+        var later = Package("6132115", "PHL", 3300, "2026-10-01");
+        var packages = new[] { any, waiter, filipinoWaiter, later };
+        Assert.Equal(3000m, IntegratedErp.Modules.Workforce.Application.WorkerCostService.Best(packages, "IRC - 02", "6132115", "PHL", On)!.MonthlyCost);
+        Assert.Equal(2800m, IntegratedErp.Modules.Workforce.Application.WorkerCostService.Best(packages, "irc - 02", "6132115", "IND", On)!.MonthlyCost);
+        Assert.Equal(2500m, IntegratedErp.Modules.Workforce.Application.WorkerCostService.Best(packages, "IRC - 02", "999", "IND", On)!.MonthlyCost);
+        Assert.Null(IntegratedErp.Modules.Workforce.Application.WorkerCostService.Best(packages, "Ewan - 13", "6132115", "PHL", On));
+    }
+
+    [Theory]
+    [InlineData("Care-Pro - 05", "Company")]
+    [InlineData("Care-pro - 07", "Company")]
+    [InlineData("IRC - 02", "Supplier")]
+    [InlineData(null, "Unknown")]
+    public void The_source_is_read_from_the_sponsor(string? sponsor, string source) =>
+        Assert.Equal(source, IntegratedErp.Modules.Workforce.Domain.WorkerSources.Of(sponsor).ToString());
+}

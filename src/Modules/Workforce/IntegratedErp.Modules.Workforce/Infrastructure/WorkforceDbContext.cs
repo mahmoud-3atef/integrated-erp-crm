@@ -38,6 +38,44 @@ internal sealed class WorkforceDbContext(DbContextOptions<WorkforceDbContext> op
     public DbSet<WorkerProfile> WorkerProfiles => Set<WorkerProfile>();
 
     public DbSet<WorkerPhoto> WorkerPhotos => Set<WorkerPhoto>();
+
+    public DbSet<SupplierCostPackage> CostPackages => Set<SupplierCostPackage>();
+
+    public DbSet<WorkerCostCard> CostCards => Set<WorkerCostCard>();
+}
+
+internal sealed class SupplierCostPackageConfiguration : IEntityTypeConfiguration<SupplierCostPackage>
+{
+    public void Configure(EntityTypeBuilder<SupplierCostPackage> builder)
+    {
+        builder.ToTable("supplier_cost_package");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.Supplier).HasMaxLength(100).IsRequired();
+        builder.Property(p => p.ProfessionCode).HasMaxLength(30);
+        builder.Property(p => p.NationalityCode).HasMaxLength(30);
+        builder.Property(p => p.MonthlyCost).HasPrecision(18, 2);
+        builder.Property(p => p.Method).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.Notes).HasMaxLength(SupplierCostPackage.NotesMaxLength);
+        builder.Property(p => p.UpdatedBy).HasMaxLength(200).IsRequired();
+        builder.HasIndex(p => new { p.TenantId, p.Supplier, p.EffectiveFrom });
+    }
+}
+
+internal sealed class WorkerCostCardConfiguration : IEntityTypeConfiguration<WorkerCostCard>
+{
+    public void Configure(EntityTypeBuilder<WorkerCostCard> builder)
+    {
+        builder.ToTable("worker_cost_card");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+        builder.Property(c => c.Supplier).HasMaxLength(100).IsRequired();
+        builder.Property(c => c.MonthlyCost).HasPrecision(18, 2);
+        builder.Property(c => c.Method).HasConversion<string>().HasMaxLength(20);
+        builder.Property(c => c.Notes).HasMaxLength(SupplierCostPackage.NotesMaxLength);
+        builder.Property(c => c.CreatedBy).HasMaxLength(200).IsRequired();
+        builder.HasIndex(c => new { c.TenantId, c.WorkerId, c.EffectiveFrom });
+    }
 }
 
 internal sealed class WorkerProfileConfiguration : IEntityTypeConfiguration<WorkerProfile>

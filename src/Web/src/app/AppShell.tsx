@@ -33,6 +33,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
+import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
@@ -151,6 +152,7 @@ const menu: MenuSection[] = [
     icon: <EngineeringOutlinedIcon />,
     items: [
       { path: '/workforce/workers', labelKey: 'menu.workers', icon: <EngineeringOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
+      { path: '/workforce/supplier-costs', labelKey: 'menu.supplierCosts', icon: <PaidOutlinedIcon />, permission: 'workforce.costs.view', companyWide: true },
       { path: '/workforce/history-issues', labelKey: 'menu.historyIssues', icon: <RuleOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
       { path: '/workforce/invoice-check', labelKey: 'menu.invoiceCheck', icon: <FactCheckOutlinedIcon />, permission: 'workforce.workers.view', companyWide: true },
     ],

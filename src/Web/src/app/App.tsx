@@ -61,6 +61,7 @@ import { ProjectDetailPage } from '../pages/commercial/ProjectDetailPage';
 import { ProjectsPage } from '../pages/commercial/ProjectsPage';
 import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
 import { ShowroomPage } from '../pages/operations/showroom/ShowroomPage';
+import { SupplierCostsPage } from '../pages/workforce/SupplierCostsPage';
 import { ShowroomPrintPage } from '../pages/operations/showroom/ShowroomPrintPage';
 import { WorkersPage } from '../pages/workforce/WorkersPage';
 import { RolesPage } from '../pages/admin/RolesPage';
@@ -115,6 +116,7 @@ export function App() {
                 <Route path="/operations/delivery-orders" element={<DeliveryOrdersPage />} />
                 <Route path="/operations/delivery-orders/new" element={<DeliveryOrdersPage key="new" creating />} />
                 <Route path="/housing/showroom" element={<ShowroomPage />} />
+                <Route path="/workforce/supplier-costs" element={<SupplierCostsPage />} />
                 <Route path="/housing/showroom/print" element={<ShowroomPrintPage />} />
                 <Route path="/operations/showroom" element={<Navigate to="/housing/showroom" replace />} />
                 <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />

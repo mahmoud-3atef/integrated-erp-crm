@@ -29,10 +29,66 @@ internal static class WorkforceEndpoints
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
 
         MapShowcase(group);
+        MapCosts(group);
 
         group.MapGet("/history/issues", async (string? code, string? search, Guid? workerId, int? page, int? pageSize, HistoryQueries queries, CancellationToken ct) =>
                 Results.Ok(await queries.IssuesAsync(code, search, workerId, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+    }
+
+    /// <summary>The suppliers' worker costs (docs/03-migration-plan/16): packages, cards, an Excel round trip.</summary>
+    private static void MapCosts(RouteGroupBuilder group)
+    {
+        const string Xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        group.MapGet("/costs", async (WorkerCostService service, CancellationToken ct) => Results.Ok(await service.OverviewAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsView, companyWide: true);
+        group.MapGet("/costs/options", async (WorkerCostService service, CancellationToken ct) => Results.Ok(await service.OptionsAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsView, companyWide: true);
+        group.MapGet("/costs/packages", async (WorkerCostService service, CancellationToken ct) => Results.Ok(await service.PackagesAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsView, companyWide: true);
+        group.MapPost("/costs/packages", async (CostInput input, WorkerCostService service, CancellationToken ct) =>
+            {
+                var result = await service.SavePackageAsync(null, input, ct).ConfigureAwait(false);
+                return result.IsSuccess ? Results.Ok(new { id = result.Value }) : Http(result);
+            })
+            .RequirePermission(WorkforcePermissions.CostsManage, companyWide: true);
+        group.MapPut("/costs/packages/{id:guid}", async (Guid id, CostInput input, WorkerCostService service, CancellationToken ct) =>
+                Http(await service.SavePackageAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsManage, companyWide: true);
+        group.MapDelete("/costs/packages/{id:guid}", async (Guid id, WorkerCostService service, CancellationToken ct) =>
+                Http(await service.DeletePackageAsync(id, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsManage, companyWide: true);
+        group.MapGet("/costs/workers", async (string? supplier, bool? missing, string? search, WorkerCostService service, CancellationToken ct) =>
+                Results.Ok(await service.WorkersAsync(supplier, missing, search, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsView, companyWide: true);
+        group.MapGet("/costs/template", async (string? supplier, WorkerCostService service, CancellationToken ct) =>
+                Results.File(await service.TemplateAsync(supplier, ct).ConfigureAwait(false), Xlsx, "worker-costs.xlsx"))
+            .RequirePermission(WorkforcePermissions.CostsView, companyWide: true);
+        group.MapPost("/costs/import", async (HttpRequest request, WorkerCostService service, CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType || (await request.ReadFormAsync(ct).ConfigureAwait(false)).Files is not { Count: > 0 } files)
+                {
+                    return Results.Problem("Upload an Excel file.", statusCode: StatusCodes.Status400BadRequest, title: "validation.excel_file");
+                }
+
+                await using var stream = files[0].OpenReadStream();
+                var result = await service.ImportAsync(stream, ct).ConfigureAwait(false);
+                return result.IsSuccess ? Results.Ok(result.Value) : Http(result);
+            })
+            .DisableAntiforgery()
+            .RequirePermission(WorkforcePermissions.CostsManage, companyWide: true);
+        group.MapGet("/workers/{id:guid}/cost", async (Guid id, WorkerCostService service, IPermissionService permissions, CancellationToken ct) =>
+            {
+                var withSalary = (await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).Has(WorkforcePermissions.WorkersSalary);
+                return await service.WorkerAsync(id, withSalary, ct).ConfigureAwait(false) is { } cost ? Results.Ok(cost) : Results.NotFound();
+            })
+            .RequirePermission(WorkforcePermissions.CostsView, companyWide: true);
+        group.MapPost("/workers/{id:guid}/cost", async (Guid id, CostInput input, WorkerCostService service, CancellationToken ct) =>
+                Http(await service.AddCardAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsManage, companyWide: true);
+        group.MapDelete("/workers/{id:guid}/cost/{cardId:guid}", async (Guid id, Guid cardId, WorkerCostService service, CancellationToken ct) =>
+                Http(await service.DeleteCardAsync(id, cardId, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.CostsManage, companyWide: true);
     }
 
     /// <summary>The workers' marketing profile and photos (docs/03-migration-plan/15).</summary>

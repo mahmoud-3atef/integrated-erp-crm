@@ -638,6 +638,78 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                     b.ToTable("person_identifier", "workforce");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.SupplierCostPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("method");
+
+                    b.Property<decimal>("MonthlyCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("monthly_cost");
+
+                    b.Property<string>("NationalityCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("nationality_code");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("ProfessionCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("profession_code");
+
+                    b.Property<string>("Supplier")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("supplier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_cost_package");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_supplier_cost_package_tenant_id");
+
+                    b.HasIndex("TenantId", "Supplier", "EffectiveFrom")
+                        .HasDatabaseName("ix_supplier_cost_package_tenant_id_supplier_effective_from");
+
+                    b.ToTable("supplier_cost_package", "workforce");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.Worker", b =>
                 {
                     b.Property<Guid>("Id")
@@ -854,6 +926,72 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                         .HasDatabaseName("ix_worker_tenant_id_worker_no");
 
                     b.ToTable("worker", "workforce");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerCostCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("method");
+
+                    b.Property<decimal>("MonthlyCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("monthly_cost");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Supplier")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("supplier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_worker_cost_card");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_worker_cost_card_tenant_id");
+
+                    b.HasIndex("TenantId", "WorkerId", "EffectiveFrom")
+                        .HasDatabaseName("ix_worker_cost_card_tenant_id_worker_id_effective_from");
+
+                    b.ToTable("worker_cost_card", "workforce");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerPeriod", b =>

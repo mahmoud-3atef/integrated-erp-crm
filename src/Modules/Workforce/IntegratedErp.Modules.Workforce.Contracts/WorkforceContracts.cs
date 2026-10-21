@@ -221,3 +221,15 @@ public interface IWorkerShowcase
 {
     Task<IReadOnlyList<WorkerShowcaseInfo>> ForAsync(IReadOnlyCollection<Guid> workerIds, CancellationToken cancellationToken);
 }
+
+/// <summary>What a worker costs on a day, for the profitability (docs/03-migration-plan/16).</summary>
+/// <param name="Source"><c>Company</c>, <c>Supplier</c> or <c>Unknown</c>, from the sponsor.</param>
+/// <param name="SupplierMonthlyCost">For a supplier's worker: the cost agreed with the supplier (null: not entered yet).</param>
+/// <param name="ByWorkingDays">The supplier charges by the days on the job (else the whole month).</param>
+/// <param name="Salary">The worker's total salary on their file.</param>
+public sealed record WorkerCostInfo(Guid WorkerId, string Source, string? Supplier, decimal? SupplierMonthlyCost, bool? ByWorkingDays, decimal Salary);
+
+public interface IWorkerCosts
+{
+    Task<IReadOnlyList<WorkerCostInfo>> CostsAsync(IReadOnlyCollection<Guid> workerIds, DateOnly on, CancellationToken cancellationToken);
+}

@@ -44,6 +44,8 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<WorkforceDashboard>();
         services.AddScoped<IWorkforceReport>(sp => sp.GetRequiredService<WorkforceDashboard>());
         services.AddScoped<WorkerShowcaseService>();
+        services.AddScoped<WorkerCostService>();
+        services.AddScoped<IWorkerCosts>(sp => sp.GetRequiredService<WorkerCostService>());
         services.AddScoped<IWorkerShowcase>(sp => sp.GetRequiredService<WorkerShowcaseService>());
         services.AddReferenceLists(WorkforceReferenceLists.All);
         services.AddNumberSequences(
@@ -63,6 +65,8 @@ internal static class WorkforcePermissions
     public const string StaffView = "workforce.staff.view";
     public const string StaffSalary = "workforce.staff.salary";
     public const string ProfileEdit = "workforce.workers.profile";
+    public const string CostsView = "workforce.costs.view";
+    public const string CostsManage = "workforce.costs.manage";
 
     // The showroom (Operations module) shows the workers' photos too.
     public const string ShowroomView = "operations.showroom.view";
@@ -77,6 +81,8 @@ internal static class WorkforcePermissions
         new(WorkersView, WorkersAr, WorkersEn, "عرض العمالة", "View workers"),
         new(WorkersSalary, WorkersAr, WorkersEn, "عرض رواتب العمالة وبدلاتها", "View workers' salaries and allowances"),
         new(ProfileEdit, WorkersAr, WorkersEn, "تعديل الملف التسويقي للعامل وصوره", "Edit a worker's marketing profile and photos"),
+        new(CostsView, WorkersAr, WorkersEn, "عرض تكلفة عمالة الموردين", "View the suppliers' worker costs"),
+        new(CostsManage, WorkersAr, WorkersEn, "إدخال تكلفة عمالة الموردين وباقاتها", "Enter the suppliers' worker costs and packages"),
         new(StaffView, StaffAr, StaffEn, "عرض موظفي الشركة", "View company staff"),
         new(StaffSalary, StaffAr, StaffEn, "عرض رواتب الموظفين وبدلاتهم", "View staff salaries and allowances"),
     ];

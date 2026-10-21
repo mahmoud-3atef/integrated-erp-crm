@@ -530,7 +530,15 @@
     "validation_profile_code_unknown": "A chosen item is not in its list.",
     "validation_profile_value": "A value is not accepted.",
     "validation_profile_birth_date": "The date of birth must make the worker 16 to 75 years old.",
-    "validation_profile_bio_too_long": "The introduction is limited to 600 characters."
+    "validation_profile_bio_too_long": "The introduction is limited to 600 characters.",
+    "validation_cost_supplier": "Choose one of the suppliers (not one of the company's registrations).",
+    "validation_cost_amount": "The monthly cost must be above zero and at most 100,000.",
+    "validation_cost_date": "The cost applies from a date in 2025 or later.",
+    "validation_cost_method": "Choose fixed monthly or by working days.",
+    "validation_cost_not_supplier_worker": "The worker is not a supplier's worker.",
+    "validation_cost_code": "Choose the profession and the nationality from their lists.",
+    "validation_cost_notes": "Notes are limited to 300 characters.",
+    "validation_cost_sheet": "The sheet needs a worker number column and a cost column."
   },
   "menu": {
     "label": "Main menu",
@@ -564,6 +572,7 @@
     "showroom": "Housing",
     "deliveryOrders": "Delivery orders",
     "returnOrders": "Return orders",
+    "supplierCosts": "Supplier worker costs",
     "historyIssues": "Period ledger exceptions",
     "invoiceCheck": "Attendance vs invoices",
     "transferOrders": "Transfer orders",
@@ -1271,7 +1280,8 @@
       "info": "Employee data",
       "ids": "IDs and documents ({{count}})",
       "periods": "Period ledger",
-      "profile": "Marketing profile"
+      "profile": "Marketing profile",
+      "cost": "Cost"
     },
     "sections": {
       "basic": "Basic data",
@@ -5130,5 +5140,90 @@
       "BACHELOR": "Bachelor's degree"
     },
     "updated": "Last edited by {{by}} on {{on}}"
+  },
+  "costs": {
+    "title": "Supplier worker costs",
+    "intro": "What each supplier's worker costs the company a month: from the supplier's package, or the worker's own card. The worker's and the project's profitability come from it.",
+    "noAccess": "You do not have permission to view the supplier worker costs.",
+    "template": "Download the sheet (Excel)",
+    "upload": "Upload costs from Excel",
+    "addPackage": "New package",
+    "editPackage": "Edit the package",
+    "deletePackage": "Delete the package",
+    "deleteConfirm": "Delete this package? Workers who take their cost from it have none left unless they have a card.",
+    "cardTitle": "Worker's cost: {{name}}",
+    "setCost": "Set the worker's cost",
+    "search": "Search by worker number or name…",
+    "empty": "No supplier workers match this choice.",
+    "allSuppliers": "All suppliers",
+    "missingTip": "{{count}} without a cost",
+    "any": "Any",
+    "anyHelp": "Leave it on «Any» for the package to cover every profession or nationality.",
+    "notes": "Notes",
+    "packagesHint": "A worker takes the closest package: supplier, profession and nationality together, then the profession, then the nationality, then the supplier alone. The worker's own card comes before any package.",
+    "noPackages": "No packages yet. Add a package for each supplier, or set each worker's cost from the sheet.",
+    "workersCount": "{{count}} workers",
+    "tabs": {
+      "workers": "Workers",
+      "packages": "Packages ({{count}})"
+    },
+    "kpi": {
+      "workers": "Supplier workers",
+      "workersFoot": "From {{count}} suppliers",
+      "card": "Worker's own cost",
+      "cardFoot": "With a card per worker",
+      "package": "From the supplier's package",
+      "packageFoot": "By profession and nationality",
+      "missing": "Without a cost",
+      "missingFoot": "Their profitability waits for it"
+    },
+    "col": {
+      "worker": "Worker",
+      "supplier": "Supplier",
+      "profession": "Profession",
+      "nationality": "Nationality",
+      "status": "Status",
+      "cost": "Monthly cost",
+      "method": "Charged",
+      "source": "Cost from",
+      "from": "From",
+      "covered": "Workers"
+    },
+    "method": {
+      "MonthlyFixed": "Fixed monthly",
+      "ByWorkingDays": "By working days"
+    },
+    "methodHelp": {
+      "MonthlyFixed": "Paid in full even while the worker is in housing.",
+      "ByWorkingDays": "The cost ÷ 30 for each working day."
+    },
+    "source": {
+      "Card": "Worker's own",
+      "Package": "Supplier's package",
+      "none": "No cost"
+    },
+    "imported": {
+      "title": "Cost upload result",
+      "summary": "{{added}} cards added, {{failed}} not accepted.",
+      "row": "Row {{row}} ({{no}})"
+    },
+    "worker": {
+      "company": "The worker is on the company's sponsorship: their cost is their salary and expenses, not a supplier's.",
+      "unknown": "No sponsor is recorded for this worker, so it is not known whether they are the company's or a supplier's. Correct the sponsor on their file.",
+      "companyCost": "The worker's cost to the company",
+      "salary": "Total salary",
+      "expenses": "Worker expenses",
+      "expensesSoon": "Shown with the expenses screen (the next stage).",
+      "newCard": "New cost",
+      "current": "Current cost",
+      "fromPackage": "{{supplier}} package · profession: {{profession}} · nationality: {{nationality}}",
+      "noneHint": "No card or package fits: add a cost for the worker or a package for the supplier.",
+      "history": "Cost history ({{count}})",
+      "noCards": "No cards of the worker's own; the cost comes from the supplier's package if there is one.",
+      "by": "Entered by",
+      "currentBadge": "Current",
+      "deleteCard": "Delete the card",
+      "deleteConfirm": "Delete this card from the worker's cost history?"
+    }
   }
 }
