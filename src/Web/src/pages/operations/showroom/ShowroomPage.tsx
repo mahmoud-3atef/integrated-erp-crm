@@ -1,3 +1,4 @@
+import AppsRoundedIcon from '@mui/icons-material/AppsRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import CloseIcon from '@mui/icons-material/Close';
 import FullscreenOutlinedIcon from '@mui/icons-material/FullscreenOutlined';
@@ -5,13 +6,12 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingBasketOutlinedIcon from '@mui/icons-material/ShoppingBasketOutlined';
-import SlideshowOutlinedIcon from '@mui/icons-material/SlideshowOutlined';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
 import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import { Alert, Box, Button, ButtonBase, InputAdornment, MenuItem, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { keyframes } from '@mui/material/styles';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
@@ -90,58 +90,22 @@ export function ShowroomPage() {
 
   const body = (
     <Box sx={{ pb: picked.length ? 10 : 2 }}>
-      {!presentation && (
-        <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 1, mb: 1.5 }}>
-          <Button variant="contained" startIcon={<SlideshowOutlinedIcon />} onClick={() => present(true)} sx={{ fontWeight: 800 }}>
-            {t('showroom.present')}
-          </Button>
-        </Stack>
-      )}
       <ErrorMessage messageKey={error} />
       {!data ? !error && <Loading /> : (
         <>
-          <Hero data={data} presentation={presentation} />
+          <Hero data={data} presentation={presentation} specialty={specialty} onSpecialty={setSpecialty} />
 
-          <Box sx={{ bgcolor: '#fff', borderRadius: '18px', boxShadow: tokens.shadowSm, p: { xs: 2, md: 2.5 }, mb: 2 }}>
-            <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800, mb: 0.25 }}>{t('showroom.bySpecialty')}</Typography>
-            <Typography sx={{ fontSize: 12, color: tokens.gray500, mb: 1.5 }}>{t('showroom.bySpecialtyHint')}</Typography>
-            <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', mb: 2.25 }}>
-              {data.bySpecialty.map((s, i) => {
-                const on = specialty !== undefined && specialty === s.code;
-                return (
-                  <ButtonBase
-                    key={s.code ?? 'none'}
-                    onClick={() => setSpecialty(on ? undefined : s.code)}
-                    aria-pressed={on}
-                    sx={{
-                      ...appear(i),
-                      flexDirection: 'column',
-                      gap: 0.75,
-                      p: 1.75,
-                      borderRadius: '14px',
-                      border: `1.5px solid ${on ? tokens.navy700 : tokens.gray100}`,
-                      bgcolor: on ? tokens.navy50 : '#fff',
-                      transition: 'all .2s',
-                      '&:hover': { borderColor: tokens.navy600, transform: 'translateY(-2px)', boxShadow: tokens.shadowSm },
-                    }}
-                  >
-                    <Box sx={{ width: 46, height: 46, borderRadius: '14px', display: 'grid', placeItems: 'center', color: on ? '#fff' : tokens.navy700, bgcolor: on ? tokens.navy700 : tokens.navy50, '& svg': { fontSize: 26 } }}>
-                      {specialtyIcon(s.code)}
-                    </Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800, textAlign: 'center' }}>{s.code ? x.name(s) : t('showroom.noSpecialty')}</Typography>
-                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: '#0e7c86', lineHeight: 1 }}>{s.count}</Typography>
-                  </ButtonBase>
-                );
-              })}
-            </Box>
-            <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800, mb: 1.25 }}>{t('showroom.byNationality')}</Typography>
-            <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
-              <Chip on={nationality === undefined} onClick={() => setNationality(undefined)} label={t('showroom.all')} count={data.workers.length} />
-              {data.byNationality.map((n) => (
-                <Chip key={n.code ?? 'none'} on={nationality !== undefined && nationality === n.code} onClick={() => setNationality(nationality === n.code ? undefined : n.code)} label={x.name(n)} count={n.count} flag={n.code} />
-              ))}
-            </Stack>
-          </Box>
+          <Stack
+            direction="row"
+            role="group"
+            aria-label={t('showroom.byNationality')}
+            sx={{ alignItems: 'center', gap: 0.75, mb: 2, px: 1, py: 0.75, bgcolor: '#fff', borderRadius: '14px', boxShadow: tokens.shadowSm, overflowX: 'auto', scrollbarWidth: 'thin', '& > *': { flex: '0 0 auto' } }}
+          >
+            <Chip on={nationality === undefined} onClick={() => setNationality(undefined)} label={t('showroom.all')} count={data.workers.length} />
+            {data.byNationality.map((n) => (
+              <Chip key={n.code ?? 'none'} on={nationality !== undefined && nationality === n.code} onClick={() => setNationality(nationality === n.code ? undefined : n.code)} label={x.name(n)} count={n.count} flag={n.code} />
+            ))}
+          </Stack>
 
           <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1, mb: 2, p: 1, bgcolor: '#fff', borderRadius: '14px', boxShadow: tokens.shadowSm }}>
             <TextField
@@ -274,9 +238,9 @@ function Chip({ on, onClick, label, count, flag }: { on: boolean; onClick: () =>
     <ButtonBase
       onClick={onClick}
       aria-pressed={on}
-      sx={{ gap: 1, paddingInlineStart: flag === undefined ? 1.75 : 0.75, paddingInlineEnd: 1, py: 0.6, borderRadius: 99, border: `1px solid ${on ? '#082B49' : tokens.gray200}`, bgcolor: on ? '#082B49' : '#fff', color: on ? '#fff' : tokens.navy800, fontWeight: 700, fontSize: 13, transition: 'all .2s', '&:hover': { borderColor: '#082B49' } }}
+      sx={{ gap: 0.75, paddingInlineStart: flag === undefined ? 1.5 : 0.5, paddingInlineEnd: 0.75, py: 0.4, borderRadius: 99, whiteSpace: 'nowrap', border: `1px solid ${on ? '#082B49' : tokens.gray200}`, bgcolor: on ? '#082B49' : '#fff', color: on ? '#fff' : tokens.navy800, fontWeight: 700, fontSize: 13, transition: 'all .2s', '&:hover': { borderColor: '#082B49' } }}
     >
-      {flag !== undefined && <Flag code={flag} size={24} />}
+      {flag !== undefined && <Flag code={flag} size={22} />}
       {label}
       <Box component="span" sx={{ px: 0.9, py: 0.1, borderRadius: 99, fontSize: 12, bgcolor: on ? 'rgba(255,255,255,.2)' : tokens.gray100 }}>
         {count}
@@ -286,7 +250,7 @@ function Chip({ on, onClick, label, count, flag }: { on: boolean; onClick: () =>
 }
 
 /** The banner: what is ready now, said as sales would say it. */
-function Hero({ data, presentation }: { data: Showroom; presentation: boolean }) {
+function Hero({ data, presentation, specialty, onSpecialty }: { data: Showroom; presentation: boolean; specialty: string | null | undefined; onSpecialty: (code: string | null | undefined) => void }) {
   const { t } = useTranslation();
   const x = useShowroomText();
   const faces = data.workers.filter((w) => !w.reservedBy).sort((a, b) => b.photos.length - a.photos.length).slice(0, 7);
@@ -317,6 +281,7 @@ function Hero({ data, presentation }: { data: Showroom; presentation: boolean })
         gap: 3,
         gridTemplateColumns: { xs: '1fr', lg: '1.3fr 1fr' },
         alignItems: 'center',
+        rowGap: 2.5,
         '&::after': { content: '""', position: 'absolute', width: 420, height: 420, borderRadius: '50%', insetInlineEnd: -120, top: -180, background: 'radial-gradient(circle, rgba(252,211,77,.18), transparent 65%)' },
       }}
     >
@@ -366,6 +331,85 @@ function Hero({ data, presentation }: { data: Showroom; presentation: boolean })
           </Box>
         ))}
       </Box>
+
+      {/* The specialties: glass cards that lean towards the mouse and filter the workers. */}
+      <Box role="group" aria-label={t('showroom.bySpecialty')} sx={{ gridColumn: '1 / -1', position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', gap: 1.25, '& > *': { flex: '1 1 130px', maxWidth: { xs: 'none', sm: 240 } } }}>
+        <GlassCard index={0} on={specialty === undefined} onClick={() => onSpecialty(undefined)} icon={<AppsRoundedIcon />} label={t('showroom.all')} count={data.workers.length} />
+        {data.bySpecialty.map((s, i) => {
+          const on = specialty !== undefined && specialty === s.code;
+          return <GlassCard key={s.code ?? 'none'} index={i + 1} on={on} onClick={() => onSpecialty(on ? undefined : s.code)} icon={specialtyIcon(s.code)} label={s.code ? x.name(s) : t('showroom.noSpecialty')} count={s.count} />;
+        })}
+      </Box>
+    </Box>
+  );
+}
+
+/** A glass card that tilts towards the mouse, with a light that follows it (still when less motion is asked). */
+function GlassCard({ index, on, onClick, icon, label, count }: { index: number; on: boolean; onClick: () => void; icon: ReactNode; label: string; count: number }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const move = (e: MouseEvent<HTMLButtonElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    el.style.setProperty('--rx', `${((0.5 - py) * 16).toFixed(1)}deg`);
+    el.style.setProperty('--ry', `${((px - 0.5) * 16).toFixed(1)}deg`);
+    el.style.setProperty('--gx', `${(px * 100).toFixed(0)}%`);
+    el.style.setProperty('--gy', `${(py * 100).toFixed(0)}%`);
+  };
+  const leave = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty('--rx', '0deg');
+    el.style.setProperty('--ry', '0deg');
+  };
+  return (
+    <Box sx={{ perspective: '700px', ...appear(index + 2) }}>
+      <ButtonBase
+        ref={ref}
+        onClick={onClick}
+        onMouseMove={move}
+        onMouseLeave={leave}
+        aria-pressed={on}
+        sx={{
+          position: 'relative',
+          width: '100%',
+          flexDirection: 'column',
+          gap: 0.6,
+          py: 1.5,
+          px: 1,
+          overflow: 'hidden',
+          borderRadius: '16px',
+          color: '#fff',
+          bgcolor: on ? 'rgba(255,255,255,.24)' : 'rgba(255,255,255,.09)',
+          border: `1px solid ${on ? 'rgba(252,211,77,.85)' : 'rgba(255,255,255,.18)'}`,
+          boxShadow: on ? '0 10px 28px rgba(0,0,0,.25), inset 0 0 0 1px rgba(252,211,77,.4)' : '0 6px 18px rgba(0,0,0,.12)',
+          backdropFilter: 'blur(10px) saturate(140%)',
+          transform: 'rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0)',
+          transformStyle: 'preserve-3d',
+          transition: 'transform .18s ease-out, background-color .2s, border-color .2s, box-shadow .2s',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: 'radial-gradient(160px circle at var(--gx, 50%) var(--gy, 0%), rgba(255,255,255,.28), transparent 60%)',
+            opacity: 0,
+            transition: 'opacity .25s',
+          },
+          '&:hover': { bgcolor: on ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.16)' },
+          '&:hover::before': { opacity: 1 },
+          '&:focus-visible': { outline: '2px solid #FCD34D', outlineOffset: 2 },
+          '@media (prefers-reduced-motion: reduce)': { transform: 'none', transition: 'background-color .2s' },
+        }}
+      >
+        <Box sx={{ width: 40, height: 40, borderRadius: '12px', display: 'grid', placeItems: 'center', color: on ? '#082B49' : '#FCD34D', bgcolor: on ? '#FCD34D' : 'rgba(255,255,255,.12)', transform: 'translateZ(24px)', '& svg': { fontSize: 23 } }}>{icon}</Box>
+        <Typography noWrap sx={{ fontSize: 12.5, fontWeight: 700, maxWidth: '100%', transform: 'translateZ(16px)' }}>
+          {label}
+        </Typography>
+        <Typography sx={{ fontSize: 22, fontWeight: 800, lineHeight: 1, color: on ? '#FCD34D' : '#fff', transform: 'translateZ(20px)' }}>{count}</Typography>
+      </ButtonBase>
     </Box>
   );
 }
