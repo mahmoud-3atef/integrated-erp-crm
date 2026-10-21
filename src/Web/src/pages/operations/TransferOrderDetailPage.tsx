@@ -1,6 +1,7 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
@@ -77,6 +78,8 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [amending, setAmending] = useState(false);
+  const [cancelingApproved, setCancelingApproved] = useState<string | null>(null);
   const approval = useRecordApproval(order?.approval?.instanceId);
 
   const reload = useCallback(async () => {
@@ -153,6 +156,16 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
                 {t('operations.transfer.cancel')}
               </Button>
             )}
+            {order.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('operations.transfer.amend.action')}
+              </Button>
+            )}
+            {order.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelingApproved('')}>
+                {t('operations.transfer.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/operations/transfer-orders')}>
               {t('common.back')}
             </Button>
@@ -169,6 +182,16 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
       {o.status === 'Transferred' && (
         <Alert severity="success" sx={{ mb: `${tokens.gap}px` }}>
           {t('operations.transfer.transferredHint', { date: date(o.transferOn) })}
+        </Alert>
+      )}
+      {order.amendedAt && o.status === 'Transferred' && (
+        <Alert severity="info" sx={{ mb: `${tokens.gap}px` }}>
+          {t('operations.transfer.amend.amendedBy', { by: order.amendedByName, date: date(order.amendedAt) })} — {order.amendNote}
+        </Alert>
+      )}
+      {o.status === 'CanceledAfterApproval' && (
+        <Alert severity="warning" sx={{ mb: `${tokens.gap}px` }}>
+          {t('operations.transfer.amend.canceledBy', { by: order.canceledByName, date: date(order.canceledAt) })} — {order.lastComment}
         </Alert>
       )}
 
@@ -384,6 +407,53 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
           </DialogActions>
         </Dialog>
       )}
+      {amending && (
+        <TransferAmendDialog
+          order={order}
+          onClose={() => setAmending(false)}
+          onSaved={() =>
+            void run(async () => {
+              setAmending(false);
+            })
+          }
+        />
+      )}
+      {cancelingApproved !== null && (
+        <Dialog open onClose={() => setCancelingApproved(null)} fullWidth maxWidth="sm">
+          <DialogTitle>{t('operations.transfer.amend.cancelTitle', { no: o.orderNo })}</DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t('operations.transfer.amend.cancelHint')}
+            </Alert>
+            <TextField
+              required
+              label={t('operations.transfer.amend.reason')}
+              value={cancelingApproved}
+              onChange={(e) => setCancelingApproved(e.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              slotProps={{ htmlInput: { maxLength: 500 } }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelingApproved(null)}>{t('common.close')}</Button>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={busy || !cancelingApproved.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await transfersApi.cancelApproved(o.id, cancelingApproved.trim());
+                  setCancelingApproved(null);
+                })
+              }
+            >
+              {t('operations.transfer.amend.cancelAction')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
       {wizard && (
         <TransferOrderWizard
           id={o.id}
@@ -400,5 +470,97 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
         />
       )}
     </Box>
+  );
+}
+
+/**
+ * Changing a transferred order (its own permission): the transfer date (every worker's period on the new project moves
+ * with it), the receiver and the notes, and each worker's monthly price (a new price is a special price with its
+ * reason), with the reason for the change.
+ */
+function TransferAmendDialog({ order, onClose, onSaved }: { order: TransferDetail; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const o = order.summary;
+  const [transferOn, setTransferOn] = useState(o.transferOn);
+  const [receiverName, setReceiverName] = useState(order.receiverName ?? '');
+  const [receiverTitle, setReceiverTitle] = useState(order.receiverTitle ?? '');
+  const [notes, setNotes] = useState(order.notes ?? '');
+  const [lines, setLines] = useState(order.lines.map((l) => ({ lineId: l.id, name: l.name, workerNo: l.workerNo, price: String(l.totalPrice), was: l.totalPrice, specialReason: '' })));
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (i: number, change: Partial<(typeof lines)[number]>) => setLines((all) => all.map((l, n) => (n === i ? { ...l, ...change } : l)));
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await transfersApi.amend(o.id, {
+        transferOn,
+        receiverName: receiverName.trim() || null,
+        receiverTitle: receiverTitle.trim() || null,
+        notes: notes.trim() || null,
+        lines: lines.map((l) => ({ lineId: l.lineId, totalPrice: Number(l.price) || 0, specialReason: l.specialReason.trim() || null })),
+        amendReason: why.trim(),
+      });
+      onSaved();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>{t('operations.transfer.amend.title', { no: o.orderNo })}</DialogTitle>
+      <DialogContent dividers>
+        <Stack sx={{ gap: 2 }}>
+          <Alert severity="info">{t('operations.transfer.amend.hint')}</Alert>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
+            <TextField required type="date" label={t('operations.transfer.amend.transferOn')} value={transferOn} onChange={(e) => setTransferOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <TextField label={t('operations.transfer.amend.receiver')} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} sx={{ flex: 1 }} />
+            <TextField label={t('operations.transfer.amend.receiverTitle')} value={receiverTitle} onChange={(e) => setReceiverTitle(e.target.value)} sx={{ flex: 1 }} />
+          </Stack>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('operations.transfer.amend.worker')}</TableCell>
+                  <TableCell>{t('operations.transfer.amend.price')}</TableCell>
+                  <TableCell>{t('operations.transfer.amend.specialReason')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {lines.map((l, i) => (
+                  <TableRow key={l.lineId}>
+                    <TableCell>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                        <bdi>{l.name}</bdi>
+                      </Typography>
+                      <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+                        <bdi>{l.workerNo}</bdi>
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <TextField size="small" type="number" value={l.price} onChange={(e) => set(i, { price: e.target.value })} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} sx={{ width: 130 }} />
+                    </TableCell>
+                    <TableCell>
+                      <TextField size="small" disabled={Number(l.price) === l.was} required={Number(l.price) !== l.was} value={l.specialReason} onChange={(e) => set(i, { specialReason: e.target.value })} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TextField label={t('operations.transfer.amend.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} multiline minRows={2} />
+          <TextField required label={t('operations.transfer.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} multiline minRows={2} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          {error && <Alert severity="error">{t(error)}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
+        <Button variant="contained" disabled={busy || !why.trim() || !transferOn} onClick={() => void save()}>
+          {t('operations.transfer.amend.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

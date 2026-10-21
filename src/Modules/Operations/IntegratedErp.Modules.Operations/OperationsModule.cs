@@ -90,6 +90,8 @@ internal static class OperationsPermissions
     public const string TransferView = "operations.transfer.view";
     public const string TransferCreate = "operations.transfer.create";
     public const string TransferApprove = "operations.transfer.approve";
+    public const string TransferAmend = "operations.transfer.amend";
+    public const string TransferCancelApproved = "operations.transfer.cancel_approved";
     public const string MovementsView = "operations.movements.view";
     public const string MovementsManage = "operations.movements.manage";
     public const string MovementsApprove = "operations.movements.approve";
@@ -114,6 +116,8 @@ internal static class OperationsPermissions
         new(TransferView, GroupAr, GroupEn, "عرض أوامر النقل بين المشاريع", "View project transfer orders"),
         new(TransferCreate, GroupAr, GroupEn, "إنشاء أوامر النقل وتعديلها", "Create and edit project transfer orders"),
         new(TransferApprove, GroupAr, GroupEn, "اعتماد أوامر النقل (مدير العمليات)", "Approve project transfer orders (operations manager)"),
+        new(TransferAmend, GroupAr, GroupEn, "تعديل أمر نقل معتمد (تاريخ النقل، والسعر، والمستلم…)", "Change a transferred order (transfer date, price, receiver…)"),
+        new(TransferCancelApproved, GroupAr, GroupEn, "إلغاء أمر نقل معتمد", "Cancel a transferred order"),
         new(ShowroomView, GroupAr, GroupEn, "عرض شاشة السكن (العمالة المتاحة)", "View the housing screen (available workers)"),
         new(MovementsView, GroupAr, GroupEn, "عرض حركات العمال (الوصول والإجازات والانقطاع والإيقاف والخروج)", "View worker movements (arrival, vacation, absconding, suspension, exit)"),
         new(MovementsManage, GroupAr, GroupEn, "إنشاء حركات العمال وتعديلها وإلغاؤها", "Create, edit and cancel worker movements"),

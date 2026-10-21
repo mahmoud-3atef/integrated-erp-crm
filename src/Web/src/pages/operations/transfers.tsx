@@ -10,6 +10,7 @@ export const transferTone: Record<TransferStatus, Tone> = {
   Rejected: 'danger',
   Transferred: 'success',
   Canceled: 'neutral',
+  CanceledAfterApproval: 'danger',
 };
 
 export function TransferStatusBadge({ status }: { status: TransferStatus }) {

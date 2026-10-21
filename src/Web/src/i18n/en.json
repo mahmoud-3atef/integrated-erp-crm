@@ -556,7 +556,12 @@
     "validation_delivery_amend_reason": "Give the reason (500 characters at most).",
     "not_found_delivery_line": "The worker is not on this order.",
     "conflict_delivery_later_period": "A worker of the order has an action after it: cancel it first.",
-    "conflict_delivery_period_overlap": "A new start of work overlaps another period of the worker."
+    "conflict_delivery_period_overlap": "A new start of work overlaps another period of the worker.",
+    "conflict_transfer_not_amendable": "Only a transferred order can be changed or cancelled after its approval.",
+    "validation_transfer_amend_reason": "Give the reason (500 characters at most).",
+    "not_found_transfer_line": "The worker is not on this order.",
+    "conflict_transfer_later_period": "A worker of the order has an action after it: cancel it first.",
+    "conflict_transfer_period_overlap": "The new transfer date overlaps another period of a worker."
   },
   "menu": {
     "label": "Main menu",
@@ -2057,7 +2062,8 @@
         "Returned": "Returned",
         "Rejected": "Rejected",
         "Transferred": "Transferred",
-        "Canceled": "Canceled"
+        "Canceled": "Canceled",
+        "CanceledAfterApproval": "Canceled after approval"
       },
       "orderStatus": "Transfer order status",
       "kind": "Transfer order",
@@ -2074,6 +2080,25 @@
         "summary": "Transfer summary",
         "hint": "Choose the new project and the date, then the workers, then check the new prices before sending for approval.",
         "picked": "{{count}} workers chosen. Add more or go on to the prices."
+      },
+      "amend": {
+        "action": "Change after approval",
+        "cancelAction": "Cancel the approved order",
+        "title": "Change transferred order {{no}}",
+        "hint": "Each worker's period on the new project moves with the new transfer date, and their period on the former project ends that day. A new price is a special price with its reason. The change and its reason are recorded.",
+        "transferOn": "Transfer date",
+        "receiver": "Receiver's name",
+        "receiverTitle": "Receiver's title",
+        "worker": "Worker",
+        "price": "Monthly service price",
+        "specialReason": "Reason for the new price",
+        "notes": "Notes",
+        "reason": "Reason for the change or cancellation",
+        "save": "Save the change",
+        "cancelTitle": "Cancel transferred order {{no}}",
+        "cancelHint": "The work periods the order opened on the new project are removed, and each worker's period on their former project is open again. Not allowed if any of them has a later action.",
+        "amendedBy": "Changed after approval by {{by}} on {{date}}",
+        "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
       }
     }
   },

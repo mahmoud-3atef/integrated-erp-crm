@@ -22,6 +22,9 @@ public sealed record TransferInput(
     string? Notes,
     IReadOnlyList<TransferLineInput> Lines);
 
+/// <summary>What may change on a transferred order: its date, receiver and notes, and the workers' prices, with the reason.</summary>
+public sealed record TransferAmendInput(DateOnly TransferOn, string? ReceiverName, string? ReceiverTitle, string? Notes, IReadOnlyList<TransferLineChange> Lines, string AmendReason);
+
 /// <summary>
 /// Transfer orders: workers on the job moved to another project with the new project's package price. Saved under
 /// preparation and sent through the company's approval process at once (the creator's confirmation comes first).
@@ -33,6 +36,7 @@ internal sealed class TransferOrderService(
     DeliveryOrderService delivery,
     IApprovalService approvals,
     NumberSequenceService numbering,
+    IPeriodLedger ledger,
     ICurrentUser user,
     IClock clock)
 {
@@ -136,6 +140,123 @@ internal sealed class TransferOrderService(
             return Result.Failure(started.Error);
         }
 
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Changes a transferred order (its own permission and a reason): the transfer date (every worker's period on the new
+    /// project moves, the one on the former project ends that day, never overlapping), the receiver and notes, and a
+    /// worker's price (a special price with its reason, on the work period too).
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, TransferAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var order = await db.TransferOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(TransferErrors.NotFound);
+        }
+
+        if (!order.IsAmendable)
+        {
+            return Result.Failure(TransferErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(input.AmendReason))
+        {
+            return Result.Failure(TransferErrors.AmendReason);
+        }
+
+        var prices = new Dictionary<Guid, TransferLineChange>();
+        foreach (var change in input.Lines)
+        {
+            if (order.Lines.FirstOrDefault(l => l.Id == change.LineId) is not { } line)
+            {
+                return Result.Failure(TransferErrors.LineNotFound);
+            }
+
+            if (change.TotalPrice != line.TotalPrice)
+            {
+                if (change.TotalPrice <= 0 || string.IsNullOrWhiteSpace(change.SpecialReason))
+                {
+                    return Result.Failure(TransferErrors.SpecialReason);
+                }
+
+                prices[line.Id] = change;
+            }
+        }
+
+        // The work periods first (each worker whose date or price changes), then the order.
+        var moving = input.TransferOn != order.TransferOn;
+        foreach (var line in order.Lines.Where(l => moving || prices.ContainsKey(l.Id)))
+        {
+            var moved = await ledger.AmendAsync(
+                new PeriodAmendRequest(line.WorkerId, order.Id, input.TransferOn, false, null, order.OrderNo, prices.TryGetValue(line.Id, out var p) ? p.TotalPrice : null),
+                cancellationToken).ConfigureAwait(false);
+            if (moved.IsFailure)
+            {
+                return Result.Failure(moved.Error.Code == "conflict.period_overlap" ? TransferErrors.PeriodOverlap : moved.Error);
+            }
+        }
+
+        var amended = order.Amend(input.TransferOn, input.ReceiverName, input.ReceiverTitle, input.Notes, prices.Values.ToList(), input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Cancels a transferred order (its own permission and a reason): every worker's period on the new project is taken
+    /// back — only when none of them has an action after it (all or none) — and their period on the former project is
+    /// open again.
+    /// </summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        var order = await db.TransferOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(TransferErrors.NotFound);
+        }
+
+        if (!order.IsAmendable)
+        {
+            return Result.Failure(TransferErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Result.Failure(TransferErrors.AmendReason);
+        }
+
+        foreach (var line in order.Lines)
+        {
+            var timeline = await ledger.PeriodsAsync(line.WorkerId, cancellationToken).ConfigureAwait(false);
+            if (timeline.Any(p => p.SourceId == order.Id) && timeline[0].SourceId != order.Id)
+            {
+                return Result.Failure(TransferErrors.LaterPeriod);
+            }
+        }
+
+        foreach (var line in order.Lines)
+        {
+            var undone = await ledger.UndoAsync(line.WorkerId, order.Id, cancellationToken).ConfigureAwait(false);
+            if (undone.IsFailure)
+            {
+                return Result.Failure(undone.Error.Code == "conflict.period_not_last" ? TransferErrors.LaterPeriod : undone.Error);
+            }
+        }
+
+        var canceled = order.CancelApproved(reason, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
 

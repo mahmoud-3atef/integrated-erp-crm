@@ -21,6 +21,9 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
     public const string ScreenCode = "operations.transfer_order";
     public const string SourceType = "transfer_order";
 
+    /// <summary>The order's code: the workers' periods move to the new project (the order means nothing without it).</summary>
+    public const string MoveWorkers = "move_workers";
+
     private static readonly RecordFieldOption[] Statuses =
     [
         new(nameof(TransferStatus.UnderPreparation), "قيد الإعداد", "Under preparation"),
@@ -30,6 +33,7 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
         new(nameof(TransferStatus.Rejected), "مرفوض", "Rejected", Settable: false),
         new(nameof(TransferStatus.Transferred), "تم النقل", "Transferred", Settable: false),
         new(nameof(TransferStatus.Canceled), "ملغى", "Canceled", Settable: false),
+        new(nameof(TransferStatus.CanceledAfterApproval), "ملغى بعد الاعتماد", "Canceled after approval", Settable: false),
     ];
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -56,6 +60,10 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
                     type = "approval", id = "operations-manager", label = "اعتماد مدير العمليات",
                     nameAr = "اعتماد مدير العمليات", nameEn = "Operations manager's approval",
                     assignees = new[] { new { kind = "Permission", permission = OperationsPermissions.TransferApprove } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "move-workers", label = "نقل العمالة وإتمام الأمر", action = MoveWorkers },
+                    },
                 },
             },
         },
@@ -79,7 +87,17 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
             new("requested_by", "منشئ الأمر", "Created by", RecordFieldType.User, Updatable: false),
             new("status", "حالة الأمر", "Order status", RecordFieldType.Choice, Updatable: true, Statuses),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد أمر النقل", "Transfer order approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد أمر النقل", "Transfer order approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                MoveWorkers,
+                "نقل العمالة وإتمام الأمر",
+                "Move the workers and complete the order",
+                "تنتهي فترة عمل كل عامل في الأمر على مشروعه السابق، وتبدأ فترة عمله على المشروع الجديد من تاريخ النقل وبسعره، وتصبح حالة الأمر «تم النقل». إن تداخل التاريخ مع فترة أخرى لأحدهم يعود الأمر لمنشئه للتعديل.",
+                "Each worker's work period on their former project ends, and one on the new project opens from the transfer date at their price; the order is «transferred». A date overlapping another period sends the order back to its creator.",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -163,6 +181,56 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
         return Result.Success();
     }
 
+    /// <summary>
+    /// «Move the workers» (the process runs it, by default after the operations manager's approval): each worker's work
+    /// period moves to the new project from the transfer date (all or none), and the order is transferred. Run again on a
+    /// transferred order, it does nothing; a date overlapping a worker's timeline sends the order back to its creator.
+    /// </summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != MoveWorkers)
+        {
+            return RecordActionResult.Failed($"A transfer order has no action \"{action}\".");
+        }
+
+        var order = await db.TransferOrders.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return RecordActionResult.Failed("The transfer order no longer exists.");
+        }
+
+        if (order.Status == TransferStatus.Transferred)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (!order.IsInApproval)
+        {
+            return RecordActionResult.Failed("The transfer order is not in approval.");
+        }
+
+        var starts = order.Lines.Select(l => new WorkStartRequest(
+                l.WorkerId, order.ProjectId, order.ProjectCrmId, order.ProjectName, order.TransferOn,
+                SourceType, order.Id, l.Id, order.OrderNo, l.PackageId, l.PackageNo, l.Salary, l.ServiceFee, l.Housing, l.HousingBillable,
+                l.Transport, l.TransportBillable, l.TotalPrice, l.IsSpecialPrice))
+            .ToList();
+        var moved = await ledger.StartWorkAsync(starts, cancellationToken).ConfigureAwait(false);
+        if (moved.IsFailure)
+        {
+            return RecordActionResult.SendBack(moved.Error.Code == "conflict.period_overlap"
+                ? "لم يكتمل النقل: تاريخ النقل يتداخل مع فترة أخرى في سجل فترات أحد العمال. عدّل التاريخ وأعد الإرسال."
+                : $"لم يكتمل النقل: {moved.Error.Message}");
+        }
+
+        order.Complete(user.DisplayName, null, clock.UtcNow);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>
+    /// The approval ended: a rejection, return or cancel sets the order's state. Approved, the order was already
+    /// transferred by its «move the workers» code (the engine runs a required code an older process version lacks).
+    /// </summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         var order = await db.TransferOrders.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
@@ -174,8 +242,9 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
         switch (end)
         {
             case ApprovalEnd.Approved:
-                await TransferAsync(order, comment, cancellationToken).ConfigureAwait(false);
-                return;
+                // Not transferred (its code did not complete it): back to its creator rather than approved without a move.
+                order.ApprovalEnded(TransferStatus.Returned, "انتهى الاعتماد دون نقل العمالة؛ أعد إرسال الأمر.");
+                break;
             case ApprovalEnd.Rejected:
                 order.ApprovalEnded(TransferStatus.Rejected, comment);
                 break;
@@ -186,31 +255,6 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
                 // Withdrawn by its creator or canceled by an administrator: back under preparation, to send again or cancel.
                 order.ApprovalEnded(TransferStatus.UnderPreparation, comment);
                 break;
-        }
-
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>Transferred: each worker's work period on the old project closes and one on the new project opens on the transfer date.</summary>
-    private async Task TransferAsync(TransferOrder order, string? comment, CancellationToken cancellationToken)
-    {
-        // The engine ends the approval in the scope of the person who took the last decision.
-        if (order.Complete(user.DisplayName, comment, clock.UtcNow).IsFailure)
-        {
-            return;
-        }
-
-        var starts = order.Lines.Select(l => new WorkStartRequest(
-                l.WorkerId, order.ProjectId, order.ProjectCrmId, order.ProjectName, order.TransferOn,
-                SourceType, order.Id, l.Id, order.OrderNo, l.PackageId, l.PackageNo, l.Salary, l.ServiceFee, l.Housing, l.HousingBillable,
-                l.Transport, l.TransportBillable, l.TotalPrice, l.IsSpecialPrice))
-            .ToList();
-        var moved = await ledger.StartWorkAsync(starts, cancellationToken).ConfigureAwait(false);
-        if (moved.IsFailure)
-        {
-            order.ReturnForFix(moved.Error.Code == "conflict.period_overlap"
-                ? "لم يكتمل النقل: تاريخ النقل يتداخل مع فترة أخرى في سجل فترات أحد العمال. عدّل التاريخ وأعد الحفظ."
-                : $"لم يكتمل النقل: {moved.Error.Message}");
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

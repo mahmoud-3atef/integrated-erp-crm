@@ -8,6 +8,7 @@ using IntegratedErp.Modules.CrmSync.Infrastructure;
 using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Operations.Application;
+using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Workflow.Application;
 using IntegratedErp.Modules.Workflow.Contracts;
@@ -109,6 +110,21 @@ public sealed class TransferOrderTests(TestDatabase database)
             Assert.Equal(("مشروع جدة", today, true), (card.ProjectName, card.ProjectJoinedOn, card.OnJob));
             var list = await scope.ServiceProvider.GetRequiredService<TransferOrderQueries>().ListAsync(new DeliveryListFilter(null, "transferred", null, null, true, 1, 50), default);
             Assert.Equal(("مشروع الرياض", 1), (list.Items.Single().FromProjects, list.Totals.Transferred));
+
+            // Changed after the transfer (with a reason): a day later at a new price; the work period follows.
+            var service = scope.ServiceProvider.GetRequiredService<TransferOrderService>();
+            var change = new TransferAmendInput(today.AddDays(1), "أحمد", null, null, [new TransferLineChange(detail.Lines.Single().Id, 3400m, null)], "نُقل في اليوم التالي");
+            Assert.Equal("validation.transfer_special_reason", (await service.AmendAsync(orderId, change, default)).Error.Code);
+            Assert.True((await service.AmendAsync(orderId, change with { Lines = [new TransferLineChange(detail.Lines.Single().Id, 3400m, "سعر المشروع الجديد")] }, default)).IsSuccess);
+            period = (await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(moving, default))[0];
+            Assert.Equal((today.AddDays(1), 3400m, true), (period.StartsOn, period.TotalPrice, period.IsSpecialPrice));
+            Assert.Equal("نُقل في اليوم التالي", (await scope.ServiceProvider.GetRequiredService<TransferOrderQueries>().GetAsync(orderId, default))!.AmendNote);
+
+            // Cancelled after the transfer: the period on the new project is taken back.
+            Assert.True((await service.CancelApprovedAsync(orderId, "سُجِّل بالخطأ", default)).IsSuccess);
+            Assert.Equal("CanceledAfterApproval", (await scope.ServiceProvider.GetRequiredService<TransferOrderQueries>().GetAsync(orderId, default))!.Summary.Status);
+            Assert.DoesNotContain(await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(moving, default), p => p.SourceId == orderId);
+            Assert.Equal("conflict.transfer_not_amendable", (await service.CancelApprovedAsync(orderId, "مرة أخرى", default)).Error.Code);
         }
     }
 

@@ -75,7 +75,14 @@ public sealed record TransferDetailDto(
     bool AwaitingApproval,
     bool CanEdit,
     bool CanSubmit,
-    bool CanCancel);
+    bool CanCancel,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceData reference, IApprovalService approvals, IPermissionService permissions, IPeriodLedger ledger)
 {
@@ -155,14 +162,22 @@ internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceDat
             })
             .ToList();
         var approval = await approvals.StatusAsync(TransferOrderAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        var canCreate = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(OperationsPermissions.TransferCreate);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var canCreate = granted.Has(OperationsPermissions.TransferCreate);
         return new TransferDetailDto(
             row, order.ProjectCode, order.ContractType, order.ProjectManager, order.ReceiverName, order.ReceiverTitle, order.DelayReason, order.Notes,
             order.LastComment, order.SubmittedAt, order.TransferredAt, order.TransferredByName, lines, approval,
             AwaitingApproval: order.AwaitingApproval,
             CanEdit: canCreate && order.IsEditable,
             CanSubmit: canCreate && order.IsEditable && !order.AwaitingApproval && lines.Count > 0,
-            CanCancel: canCreate && order.IsEditable && !order.AwaitingApproval);
+            CanCancel: canCreate && order.IsEditable && !order.AwaitingApproval,
+            CanAmend: granted.Has(OperationsPermissions.TransferAmend) && order.IsAmendable,
+            CanCancelApproved: granted.Has(OperationsPermissions.TransferCancelApproved) && order.IsAmendable,
+            AmendedAt: order.AmendedAt,
+            AmendedByName: order.AmendedByName,
+            AmendNote: order.AmendNote,
+            CanceledAt: order.CanceledAt,
+            CanceledByName: order.CanceledByName);
     }
 
     private async Task<List<TransferRowDto>> RowsAsync(Guid? only, CancellationToken cancellationToken)

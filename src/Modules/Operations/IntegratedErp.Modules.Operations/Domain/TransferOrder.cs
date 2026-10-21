@@ -21,6 +21,9 @@ public enum TransferStatus
     /// <summary>Approved: the workers are on the new project from the transfer date.</summary>
     Transferred,
     Canceled,
+
+    /// <summary>Cancelled after the transfer: the work periods it opened were taken back (with the reason).</summary>
+    CanceledAfterApproval,
 }
 
 /// <summary>The order's header fields, as entered.</summary>
@@ -138,7 +141,21 @@ public sealed class TransferOrder : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The last change after the transfer: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
     public IReadOnlyList<TransferLine> Lines => _lines;
+
+    /// <summary>A transferred order: it may still be changed or cancelled (with their own permissions and a reason).</summary>
+    public bool IsAmendable => Status == TransferStatus.Transferred;
 
     public bool IsEditable => Status is TransferStatus.UnderPreparation or TransferStatus.Returned;
 
@@ -245,6 +262,60 @@ public sealed class TransferOrder : ITenantOwned
         TransferredAt = null;
         TransferredByName = null;
         LastComment = reason;
+    }
+
+    /// <summary>Changed after the transfer: the transfer date, the receiver, the notes, and each changed line's price (with the reason).</summary>
+    public Result Amend(DateOnly transferOn, string? receiverName, string? receiverTitle, string? notes, IReadOnlyList<TransferLineChange> lines, string reason, string by, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        if (!IsAmendable)
+        {
+            return Result.Failure(TransferErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(TransferErrors.AmendReason);
+        }
+
+        foreach (var change in lines)
+        {
+            if (_lines.FirstOrDefault(l => l.Id == change.LineId) is not { } line)
+            {
+                return Result.Failure(TransferErrors.LineNotFound);
+            }
+
+            line.Amend(change.TotalPrice, change.SpecialReason);
+        }
+
+        TransferOn = transferOn;
+        ReceiverName = Clean(receiverName);
+        ReceiverTitle = Clean(receiverTitle);
+        Notes = Clean(notes);
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = reason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after the transfer (the work periods were taken back).</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(TransferErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(TransferErrors.AmendReason);
+        }
+
+        Status = TransferStatus.CanceledAfterApproval;
+        CanceledAt = at;
+        CanceledByName = by;
+        LastComment = reason.Trim();
+        return Result.Success();
     }
 
     public Result Cancel(string? comment)
@@ -383,7 +454,23 @@ public sealed class TransferLine : ITenantOwned
     public bool IsSpecialPrice { get; private set; }
 
     public string? SpecialReason { get; private set; }
+
+    /// <summary>Changed after the transfer: a different price is a special price with its reason.</summary>
+    internal void Amend(decimal totalPrice, string? specialReason)
+    {
+        if (totalPrice != TotalPrice)
+        {
+            TotalPrice = totalPrice;
+            IsSpecialPrice = true;
+            PackageId = null;
+            PackageNo = null;
+            SpecialReason = string.IsNullOrWhiteSpace(specialReason) ? SpecialReason : specialReason.Trim();
+        }
+    }
 }
+
+/// <summary>A transferred line's change: the worker's monthly service price on the new project (with the reason when it is new).</summary>
+public sealed record TransferLineChange(Guid LineId, decimal TotalPrice, string? SpecialReason);
 
 public static class TransferErrors
 {
@@ -393,4 +480,10 @@ public static class TransferErrors
     public static readonly Error StatusNotSettable = Error.Validation("transfer_status_not_settable", "This status cannot be set by a process.");
     public static readonly Error NotCancelable = Error.Conflict("transfer_not_cancelable", "This order can no longer be canceled.");
     public static readonly Error NoWorkers = Error.Validation("transfer_no_workers", "Add at least one worker.");
+    public static readonly Error NotAmendable = Error.Conflict("transfer_not_amendable", "Only a transferred order can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("transfer_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error LineNotFound = Error.NotFound("transfer_line", "The worker is not on this order.");
+    public static readonly Error LaterPeriod = Error.Conflict("transfer_later_period", "A worker of the order has an action after it: cancel it first.");
+    public static readonly Error PeriodOverlap = Error.Conflict("transfer_period_overlap", "The new transfer date overlaps another period of a worker.");
+    public static readonly Error SpecialReason = Error.Validation("transfer_special_reason", "A special price needs its reason.");
 }

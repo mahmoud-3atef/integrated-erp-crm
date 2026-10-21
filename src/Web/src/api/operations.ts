@@ -325,7 +325,7 @@ export const returnsApi = {
 
 // ---------------------------------------------------------------- Transfer orders (between projects)
 
-export type TransferStatus = 'UnderPreparation' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Transferred' | 'Canceled';
+export type TransferStatus = 'UnderPreparation' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Transferred' | 'Canceled' | 'CanceledAfterApproval';
 
 export interface TransferRow {
   id: string;
@@ -400,6 +400,24 @@ export interface TransferDetail {
   canEdit: boolean;
   canSubmit: boolean;
   canCancel: boolean;
+  /** A transferred order: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
+}
+
+/** What may change on a transferred order: its date, the receiver and notes, and the workers' prices, with the reason. */
+export interface TransferAmendInput {
+  transferOn: string;
+  receiverName: string | null;
+  receiverTitle: string | null;
+  notes: string | null;
+  lines: { lineId: string; totalPrice: number; specialReason: string | null }[];
+  amendReason: string;
 }
 
 export interface TransferInput {
@@ -430,4 +448,6 @@ export const transfersApi = {
   update: (id: string, input: TransferInput) => request<SavedOrder>('PUT', `${transfersBase}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${transfersBase}/${id}/submit`),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${transfersBase}/${id}/cancel`, { comment }),
+  amend: (id: string, input: TransferAmendInput) => request<void>('PUT', `${transfersBase}/${id}/amend`, input),
+  cancelApproved: (id: string, reason: string) => request<void>('POST', `${transfersBase}/${id}/cancel-approved`, { comment: reason }),
 };
