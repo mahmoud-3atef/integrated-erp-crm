@@ -126,6 +126,22 @@ public sealed class LeaveTests(TestDatabase database)
             Assert.Equal(3m, pay.Single(p => p.EmployeeId == khaled).FullPay);
         }
 
+        // Changed after its approval (a reason): four days instead of six, the two days back in the balance; then cancelled.
+        using (var scope6 = database.Scope(tenantId, user: hr.ToString()))
+        {
+            var leave6 = scope6.ServiceProvider.GetRequiredService<LeaveRequests>();
+            var change = new LeaveAmendInput(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 5), "إجازة عائلية", null, false, " ");
+            Assert.Equal("validation.leave_amend_reason", (await leave6.AmendAsync(id, change, default)).Error.Code);
+            Assert.True((await leave6.AmendAsync(id, change with { AmendReason = "عاد مبكرًا بطلبه" }, default)).IsSuccess);
+            var queries6 = scope6.ServiceProvider.GetRequiredService<LeaveQueries>();
+            var amended = (await queries6.RequestAsync(id, default))!;
+            Assert.Equal((4m, "عاد مبكرًا بطلبه", 18.5m), (amended.Request.Days, amended.AmendNote, amended.Available!.Value));
+            Assert.True((await leave6.CancelApprovedAsync(id, "لم يسافر", default)).IsSuccess);
+            var canceled = (await queries6.RequestAsync(id, default))!;
+            Assert.Equal(("Cancelled", 22.5m), (canceled.Request.Status, canceled.Available!.Value));
+            Assert.Equal("conflict.leave_not_amendable", (await leave6.CancelApprovedAsync(id, "مرة أخرى", default)).Error.Code);
+        }
+
         // Sick days by the year's tiers.
         Assert.Equal(new SickSplit(5, 5, 0), LeaveRequests.Split(25, 10));
         Assert.Equal(new SickSplit(0, 10, 5), LeaveRequests.Split(80, 15));

@@ -43,3 +43,13 @@ public interface ILeavePayroll
 
 public sealed record AnnualLeaveBalance(Guid EmployeeId, decimal Balance, decimal TakenThisYear);
 
+
+/// <summary>
+/// Documents of other modules made from an approved leave (a vacation settlement): the leave cannot be changed or
+/// cancelled after its approval while one of them stands.
+/// </summary>
+public interface ILeaveUsage
+{
+    /// <summary>The number of the document made from the leave request, if any (not cancelled).</summary>
+    Task<string?> UsedByAsync(Guid leaveRequestId, CancellationToken cancellationToken);
+}

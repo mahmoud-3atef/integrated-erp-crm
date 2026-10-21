@@ -6,6 +6,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import HourglassEmptyOutlinedIcon from '@mui/icons-material/HourglassEmptyOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import ReplayOutlinedIcon from '@mui/icons-material/ReplayOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
@@ -13,10 +14,12 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -288,6 +291,8 @@ export function LeaveRequestPage() {
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [returning, setReturning] = useState(false);
+  const [amending, setAmending] = useState(false);
+  const [cancellingApproved, setCancellingApproved] = useState(false);
   const approval = useRecordApproval(d?.approval?.instanceId);
   useCrumb(d?.request.requestNo, `/hr/leave/${id}`);
   const reload = useCallback(async () => {
@@ -335,10 +340,22 @@ export function LeaveRequestPage() {
                 {t('leave.return.confirm')}
               </Button>
             )}
-            {d.canCancel && manage && (
-              <Button variant="outlined" color="error" startIcon={<ReplayOutlinedIcon />} onClick={() => setCancelling(true)}>
-                {t('leave.cancel')}
+            {d.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('leave.amend.action')}
               </Button>
+            )}
+            {d.canCancelApproved ? (
+              <Button variant="outlined" color="error" startIcon={<ReplayOutlinedIcon />} onClick={() => setCancellingApproved(true)}>
+                {t('leave.amend.cancelAction')}
+              </Button>
+            ) : (
+              d.canCancel &&
+              manage && (
+                <Button variant="outlined" color="error" startIcon={<ReplayOutlinedIcon />} onClick={() => setCancelling(true)}>
+                  {t('leave.cancel')}
+                </Button>
+              )
             )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: (th) => (th.direction === 'rtl' ? 'scaleX(-1)' : 'none') }} />} onClick={() => navigate(-1)}>
               {t('common.back')}
@@ -356,6 +373,16 @@ export function LeaveRequestPage() {
             void approval.reload();
           }}
         />
+      )}
+      {d.amendedAt && r.status === 'Approved' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('leave.amend.amendedBy', { by: d.amendedByName, date: date(d.amendedAt) })} — {d.amendNote}
+        </Alert>
+      )}
+      {d.canceledAt && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('leave.amend.canceledBy', { by: d.canceledByName, date: date(d.canceledAt) })}
+        </Alert>
       )}
       {d.lastComment && r.status !== 'Approved' && (
         <Alert severity={r.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: 1.5 }}>
@@ -410,6 +437,28 @@ export function LeaveRequestPage() {
           }}
         />
       )}
+      {amending && (
+        <LeaveAmendDialog
+          detail={d}
+          onClose={() => setAmending(false)}
+          onSaved={() => {
+            setAmending(false);
+            void reload();
+          }}
+        />
+      )}
+      {cancellingApproved && (
+        <CancelDialog
+          title={t('leave.amend.cancelAction')}
+          hint={t('leave.amend.cancelHint')}
+          onClose={() => setCancellingApproved(false)}
+          onCancel={async (reason) => {
+            await leaveApi.cancelApproved(r.id, reason);
+            setCancellingApproved(false);
+            await reload();
+          }}
+        />
+      )}
       {cancelling && (
         <CancelDialog
           onClose={() => setCancelling(false)}
@@ -453,22 +502,74 @@ function ReturnDialog({ expected, onClose, onConfirm }: { expected: string | nul
   );
 }
 
-function CancelDialog({ onClose, onCancel }: { onClose: () => void; onCancel: (reason: string) => Promise<void> }) {
+function CancelDialog({ title, hint, onClose, onCancel }: { title?: string; hint?: string; onClose: () => void; onCancel: (reason: string) => Promise<void> }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
       <HrScope>
-        <DialogTitle sx={{ fontWeight: 700 }}>{t('leave.cancel')}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{title ?? t('leave.cancel')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
-          <Typography sx={{ fontSize: 13 }}>{t('leave.cancelHint')}</Typography>
-          <TextField size="small" required multiline minRows={2} label={t('leave.reason')} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Typography sx={{ fontSize: 13 }}>{hint ?? t('leave.cancelHint')}</Typography>
+          <TextField size="small" required multiline minRows={2} label={t('leave.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
           <ErrorMessage messageKey={error} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
           <Button variant="contained" color="error" disabled={!reason.trim()} onClick={() => void onCancel(reason.trim()).catch((f) => setError(errorKey(f)))}>
-            {t('leave.cancel')}
+            {title ?? t('leave.cancel')}
+          </Button>
+          <Button onClick={onClose}>{t('common.back')}</Button>
+        </DialogActions>
+      </HrScope>
+    </Dialog>
+  );
+}
+
+/**
+ * Changing an approved leave (its own permission): its days (counted again by its type; the balance follows), the
+ * reason and the ticket, with the reason for the change. Not while its attendance month is closing or closed, nor while
+ * a settlement made from it stands.
+ */
+function LeaveAmendDialog({ detail, onClose, onSaved }: { detail: LeaveDetail; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const r = detail.request;
+  const [from, setFrom] = useState(r.from);
+  const [to, setTo] = useState(r.to);
+  const [reason, setReason] = useState(detail.reason ?? '');
+  const [ticket, setTicket] = useState(detail.ticket);
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await leaveApi.amend(r.id, { from, to, reason: reason.trim() || null, substituteId: null, ticket, amendReason: why.trim() });
+      onSaved();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+      <HrScope>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('leave.amend.title', { no: r.requestNo })}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          <Alert severity="info">{t('leave.amend.hint')}</Alert>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
+            <TextField size="small" type="date" label={t('leave.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <TextField size="small" type="date" label={t('leave.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+          </Stack>
+          <TextField size="small" multiline minRows={2} label={t('leave.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <FormControlLabel control={<Checkbox checked={ticket} onChange={(e) => setTicket(e.target.checked)} />} label={t('leave.ticket')} />
+          <TextField size="small" required multiline minRows={2} label={t('leave.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <ErrorMessage messageKey={error} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+          <Button variant="contained" disabled={busy || !why.trim() || !from || !to} onClick={() => void save()}>
+            {t('leave.amend.save')}
           </Button>
           <Button onClick={onClose}>{t('common.back')}</Button>
         </DialogActions>

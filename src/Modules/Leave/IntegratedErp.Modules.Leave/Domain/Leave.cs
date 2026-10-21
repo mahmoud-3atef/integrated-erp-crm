@@ -291,6 +291,18 @@ public sealed class LeaveRequest : ITenantOwned
     /// <summary>The day the employee was back at work (HR confirms it after the leave).</summary>
     public DateOnly? ReturnedOn { get; private set; }
 
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    /// <summary>Cancelled after its approval: when and by whom (the reason is the last comment).</summary>
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
     public string? ReturnNote { get; private set; }
 
     public bool Holds => Status is RequestStatus.InApproval or RequestStatus.Approved;
@@ -305,6 +317,58 @@ public sealed class LeaveRequest : ITenantOwned
             To = on.AddDays(-1);
             Days = d;
         }
+    }
+
+
+    /// <summary>Changed after its approval: the days, the reason, the substitute and the ticket (with the reason for the change).</summary>
+    public Result Amend(DateOnly from, DateOnly to, decimal days, string? reason, Guid? substituteId, string? substituteName, bool ticket, string amendReason, string by, DateTimeOffset at)
+    {
+        if (Status != RequestStatus.Approved)
+        {
+            return Result.Failure(LeaveErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(amendReason) || amendReason.Trim().Length > 500)
+        {
+            return Result.Failure(LeaveErrors.AmendReason);
+        }
+
+        if (to < from || days <= 0 || (reason?.Length ?? 0) > 500)
+        {
+            return Result.Failure(LeaveErrors.Dates);
+        }
+
+        From = from;
+        To = to;
+        Days = days;
+        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        SubstituteId = substituteId;
+        SubstituteName = substituteName;
+        Ticket = ticket;
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = amendReason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after its approval, started or not (its days were given back to the balance).</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (Status != RequestStatus.Approved)
+        {
+            return Result.Failure(LeaveErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(LeaveErrors.AmendReason);
+        }
+
+        Status = RequestStatus.Cancelled;
+        LastComment = reason.Trim();
+        CanceledAt = at;
+        CanceledByName = by;
+        return Result.Success();
     }
 
     public static LeaveRequest Create(string requestNo, Guid employeeId, string employeeName, string by, DateTimeOffset at) => new()
@@ -475,4 +539,7 @@ public static class LeaveErrors
     public static readonly Error Entry = Error.Validation("leave_entry", "Give the days (not zero), the date and the reason.");
     public static readonly Error OpeningExists = Error.Conflict("leave_opening_exists", "The employee already has an opening balance for this type: correct it with an adjustment.");
     public static readonly Error NotCancellable = Error.Conflict("leave_not_cancellable", "Only an approved leave that has not started can be cancelled.");
+    public static readonly Error NotAmendable = Error.Conflict("leave_not_amendable", "Only an approved leave can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("leave_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error Settled = Error.Conflict("leave_settled", "A settlement was made from this leave: cancel the settlement first.");
 }

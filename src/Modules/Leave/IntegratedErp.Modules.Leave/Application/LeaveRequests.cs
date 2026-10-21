@@ -16,6 +16,9 @@ namespace IntegratedErp.Modules.Leave.Application;
 
 public sealed record LeaveInput(Guid EmployeeId, Guid LeaveTypeId, DateOnly From, DateOnly To, string? Reason, Guid? SubstituteId, bool Ticket);
 
+/// <summary>What may change on an approved leave: its days, the reason, the substitute and the ticket, with the reason for the change.</summary>
+public sealed record LeaveAmendInput(DateOnly From, DateOnly To, string? Reason, Guid? SubstituteId, bool Ticket, string AmendReason);
+
 /// <summary>The sick days of a request by the year's tiers (full pay, three quarters, unpaid).</summary>
 public sealed record SickSplit(decimal Full, decimal ThreeQuarters, decimal Unpaid);
 
@@ -44,6 +47,7 @@ internal sealed class LeaveRequests(
     LeaveSetup setup,
     NumberSequenceService numbering,
     IApprovalService approvals,
+    IEnumerable<ILeaveUsage> usages,
     ICurrentUser user,
     IClock clock)
 {
@@ -234,6 +238,125 @@ internal sealed class LeaveRequests(
     }
 
     /// <summary>
+    /// Changes an approved leave (its own permission and a reason), started or not: the days (checked as a new request
+    /// would be, its own days counted back in the balance), the reason, the substitute and the ticket. Not while an
+    /// attendance month of the old or new days is closing or closed, nor while a settlement made from it stands.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, LeaveAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Requests.FirstOrDefaultAsync(r => r.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(LeaveErrors.RequestNotFound);
+        }
+
+        if (await HeldAsync(request, input.AmendReason, cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            return Result.Failure(held);
+        }
+
+        var preview = await PreviewAsync(new LeaveInput(request.EmployeeId, request.LeaveTypeId, input.From, input.To, input.Reason, input.SubstituteId, input.Ticket), id, cancellationToken).ConfigureAwait(false);
+        if (preview.IsFailure)
+        {
+            return Result.Failure(preview.Error);
+        }
+
+        // The balance still holds the request's own days: they come back before the new days are taken.
+        var p = preview.Value;
+        var problems = p.Problems.Where(x => x != "balance").ToList();
+        if (p.Available is { } available && available + request.Days < p.Days)
+        {
+            problems.Add("balance");
+        }
+
+        if (Refusal(p with { Problems = problems }) is { } refused)
+        {
+            return Result.Failure(refused);
+        }
+
+        var members = await staff.MembersAsync(cancellationToken).ConfigureAwait(false);
+        // No substitute given: the leave keeps its own.
+        var substitute = input.SubstituteId is { } sid ? members.FirstOrDefault(m => m.Id == sid) : null;
+        var (substituteId, substituteName) = substitute is null ? (request.SubstituteId, request.SubstituteName) : (substitute.Id, substitute.NameAr ?? substitute.NameEn);
+        var (oldDays, oldFrom) = (request.Days, request.From);
+        var amended = request.Amend(input.From, input.To, p.Days, input.Reason, substituteId, substituteName, input.Ticket, input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        if ((oldDays != p.Days || oldFrom != input.From) && await db.Types.AsNoTracking().AnyAsync(t => t.Id == request.LeaveTypeId && t.HasBalance, cancellationToken).ConfigureAwait(false))
+        {
+            var note = $"تعديل {request.RequestNo}: {input.AmendReason.Trim()}";
+            db.Entries.Add(BalanceEntry.Of(request.EmployeeId, request.LeaveTypeId, oldFrom, EntryKind.Reversal, oldDays, note, null, request.Id, user.DisplayName, clock.UtcNow));
+            db.Entries.Add(BalanceEntry.Of(request.EmployeeId, request.LeaveTypeId, input.From, EntryKind.Consumption, -p.Days, request.RequestNo, null, request.Id, user.DisplayName, clock.UtcNow));
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Cancels an approved leave (its own permission and a reason), started or not: its days go back to the balance. Not
+    /// while an attendance month of its days is closing or closed, nor while a settlement made from it stands.
+    /// </summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        if (await db.Requests.FirstOrDefaultAsync(r => r.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(LeaveErrors.RequestNotFound);
+        }
+
+        if (await HeldAsync(request, reason, cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            return Result.Failure(held);
+        }
+
+        if (await db.Types.AsNoTracking().AnyAsync(t => t.Id == request.LeaveTypeId && t.HasBalance, cancellationToken).ConfigureAwait(false))
+        {
+            db.Entries.Add(BalanceEntry.Of(request.EmployeeId, request.LeaveTypeId, request.From, EntryKind.Reversal, request.Days, $"إلغاء {request.RequestNo}: {reason!.Trim()}", null, request.Id, user.DisplayName, clock.UtcNow));
+        }
+
+        var canceled = request.CancelApproved(reason!, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Why an approved leave cannot be changed or cancelled now (null when it can).</summary>
+    private async Task<Error?> HeldAsync(LeaveRequest request, string? reason, CancellationToken cancellationToken)
+    {
+        if (request.Status != RequestStatus.Approved)
+        {
+            return LeaveErrors.NotAmendable;
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return LeaveErrors.AmendReason;
+        }
+
+        if (await calendar.LockedAsync(request.From, request.To, cancellationToken).ConfigureAwait(false))
+        {
+            return LeaveErrors.Locked;
+        }
+
+        foreach (var usage in usages)
+        {
+            if (await usage.UsedByAsync(request.Id, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                return LeaveErrors.Settled;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// HR confirms the day the employee was back at work. Back early, the leave ends the day before and the days not taken
     /// go back to the balance; back late, the days after the expected return are absences in the attendance.
     /// </summary>
@@ -315,6 +438,9 @@ internal sealed class LeaveAdapter(LeaveDbContext db, IClock clock) : IApprovalR
 {
     public const string ScreenCode = "leave.request";
 
+    /// <summary>The request's code: the leave is approved and its days are taken from the balance.</summary>
+    public const string ApproveLeave = "approve_leave";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static readonly string DefaultDefinition = JsonSerializer.Serialize(
@@ -373,6 +499,7 @@ internal sealed class LeaveAdapter(LeaveDbContext db, IClock clock) : IApprovalR
                         },
                     },
                 },
+                new { type = "action", id = "approve-leave", label = "اعتماد الإجازة وخصمها من الرصيد", action = ApproveLeave },
             },
         },
         JsonOptions);
@@ -397,7 +524,17 @@ internal sealed class LeaveAdapter(LeaveDbContext db, IClock clock) : IApprovalR
             new("pay", "الأجر", "Pay", RecordFieldType.Choice, Updatable: false, Pays),
             new("manager", "المدير المباشر", "Direct manager", RecordFieldType.User, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد الإجازات", "Leave approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد الإجازات", "Leave approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                ApproveLeave,
+                "اعتماد الإجازة وخصمها من الرصيد",
+                "Approve the leave and take it from the balance",
+                "تصبح حالة الطلب «معتمدة»، وتُخصم أيامها من رصيد نوعها إن كان له رصيد، وتظهر أيامها في الحضور إجازةً لا غيابًا.",
+                "The request is «approved», its days are taken from its type's balance (when it has one), and the attendance shows them as leave, not absence.",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -434,6 +571,46 @@ internal sealed class LeaveAdapter(LeaveDbContext db, IClock clock) : IApprovalR
         return Result.Success();
     }
 
+    /// <summary>
+    /// «Approve the leave» (the process runs it, by default at its end): the request is approved and its days are taken
+    /// from the balance. Run again on an approved request, it does nothing.
+    /// </summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != ApproveLeave)
+        {
+            return RecordActionResult.Failed($"A leave request has no action \"{action}\".");
+        }
+
+        if (await db.Requests.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return RecordActionResult.Failed("The leave request no longer exists.");
+        }
+
+        if (request.Status == RequestStatus.Approved)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (request.Status != RequestStatus.InApproval)
+        {
+            return RecordActionResult.Failed("The leave request is not in approval.");
+        }
+
+        if (await db.Types.AsNoTracking().AnyAsync(t => t.Id == request.LeaveTypeId && t.HasBalance, cancellationToken).ConfigureAwait(false))
+        {
+            db.Entries.Add(BalanceEntry.Of(request.EmployeeId, request.LeaveTypeId, request.From, EntryKind.Consumption, -request.Days, request.RequestNo, null, request.Id, "approval", clock.UtcNow));
+        }
+
+        request.Ended(RequestStatus.Approved, null, clock.UtcNow);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>
+    /// The approval ended: a rejection or return sets the request's state. Approved, the request was already approved by
+    /// its «approve the leave» code (the engine runs a required code an older process version lacks before it ends).
+    /// </summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         if (await db.Requests.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: RequestStatus.InApproval } request)
@@ -441,20 +618,10 @@ internal sealed class LeaveAdapter(LeaveDbContext db, IClock clock) : IApprovalR
             return;
         }
 
-        if (end == ApprovalEnd.Approved)
-        {
-            if (await db.Types.AsNoTracking().AnyAsync(t => t.Id == request.LeaveTypeId && t.HasBalance, cancellationToken).ConfigureAwait(false))
-            {
-                db.Entries.Add(BalanceEntry.Of(request.EmployeeId, request.LeaveTypeId, request.From, EntryKind.Consumption, -request.Days, request.RequestNo, null, request.Id, "approval", clock.UtcNow));
-            }
-
-            request.Ended(RequestStatus.Approved, comment, clock.UtcNow);
-        }
-        else
-        {
-            request.Ended(end == ApprovalEnd.Rejected ? RequestStatus.Rejected : RequestStatus.Returned, comment, clock.UtcNow);
-        }
-
+        request.Ended(
+            end == ApprovalEnd.Rejected ? RequestStatus.Rejected : RequestStatus.Returned,
+            end == ApprovalEnd.Approved ? "انتهى الاعتماد دون اعتماد الإجازة؛ أعد إرسال الطلب." : comment,
+            clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

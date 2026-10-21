@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Leave.Domain;
 using IntegratedErp.Modules.Leave.Infrastructure;
@@ -43,7 +44,14 @@ public sealed record RequestDetailDto(
     DateOnly? ReturnedOn = null,
     string? ReturnNote = null,
     DateOnly? ExpectedReturn = null,
-    bool CanConfirmReturn = false);
+    bool CanConfirmReturn = false,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record EntryDto(Guid Id, Guid LeaveTypeId, DateOnly Date, string Kind, decimal Days, string Reason, string? RequestNo, string CreatedByName, decimal Running);
 
@@ -54,7 +62,7 @@ public sealed record EmployeeLeaveDto(Guid EmployeeId, string Name, DateOnly? Hi
 public sealed record BalanceRowDto(Guid EmployeeId, string EmployeeNo, string Name, string? DepartmentAr, string? DepartmentEn, decimal PerYear, decimal Opening, decimal AccruedThisYear, decimal UsedThisYear, decimal Reserved, decimal Available, decimal SickUsedThisYear);
 
 /// <summary>The leave screens: the requests and their cards, the calendar, a request, an employee's leave, the balances.</summary>
-internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, LeaveSetup setup, LeaveBalances balances, IApprovalService approvals, IClock clock, Attendance.Contracts.IAttendanceCalendar calendar)
+internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, LeaveSetup setup, LeaveBalances balances, IApprovalService approvals, IClock clock, Attendance.Contracts.IAttendanceCalendar calendar, IPermissionService permissions)
 {
     public async Task<LeaveKpis> KpisAsync(CancellationToken cancellationToken)
     {
@@ -131,9 +139,17 @@ internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, Lea
         var available = row.HasBalance ? (await balances.BalanceAsync(r.EmployeeId, r.LeaveTypeId, null, cancellationToken).ConfigureAwait(false)).Available : (decimal?)null;
         var approval = await approvals.StatusAsync(LeaveAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
         var expected = r.Status == RequestStatus.Approved ? await calendar.NextWorkingDayAsync(r.EmployeeId, r.To, cancellationToken).ConfigureAwait(false) : (DateOnly?)null;
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
         return new RequestDetailDto(
             row, r.Reason, r.SubstituteName, r.Ticket, r.LastComment, r.DecidedAt, available, r.Status == RequestStatus.Approved && r.From > clock.Today, approval,
-            r.ReturnedOn, r.ReturnNote, expected, r.Status == RequestStatus.Approved && r.From <= clock.Today && r.ReturnedOn == null);
+            r.ReturnedOn, r.ReturnNote, expected, r.Status == RequestStatus.Approved && r.From <= clock.Today && r.ReturnedOn == null,
+            CanAmend: r.Status == RequestStatus.Approved && granted.Has(LeavePermissions.RequestAmend),
+            CanCancelApproved: r.Status == RequestStatus.Approved && granted.Has(LeavePermissions.RequestCancelApproved),
+            AmendedAt: r.AmendedAt,
+            AmendedByName: r.AmendedByName,
+            AmendNote: r.AmendNote,
+            CanceledAt: r.CanceledAt,
+            CanceledByName: r.CanceledByName);
     }
 
     public async Task<EmployeeLeaveDto?> EmployeeAsync(Guid employeeId, CancellationToken cancellationToken)

@@ -566,7 +566,10 @@
     "validation_movement_amend_reason": "Give the reason (500 characters at most).",
     "conflict_movement_later_period": "The worker has an action after this one: cancel it first.",
     "conflict_movement_period_overlap": "The new date overlaps another period in the worker's timeline.",
-    "forbidden_movement_type": "You do not have this permission for this type of action."
+    "forbidden_movement_type": "You do not have this permission for this type of action.",
+    "conflict_leave_not_amendable": "Only an approved leave can be changed or cancelled after its approval.",
+    "validation_leave_amend_reason": "Give the reason (500 characters at most).",
+    "conflict_leave_settled": "A settlement was made from this leave: cancel the settlement first."
   },
   "menu": {
     "label": "Main menu",
@@ -4157,6 +4160,17 @@
       "lateNote": "Back late: the days after the expected return count in the attendance (absence unless excused).",
       "done": "Back at work on {{date}}.",
       "late": "Back at work on {{date}}, after the expected {{expected}}."
+    },
+    "amend": {
+      "action": "Change after approval",
+      "cancelAction": "Cancel the approved leave",
+      "title": "Change approved leave {{no}}",
+      "hint": "The leave's days are counted again by its type and the balance follows. Not allowed while the attendance month is closing or closed, nor when a settlement was made from it. The change and its reason are recorded.",
+      "reason": "Reason for the change",
+      "save": "Save the change",
+      "cancelHint": "The leave's days go back to the balance, started or not. Not allowed while the attendance month is closing or closed, nor when a settlement was made from it.",
+      "amendedBy": "Changed after approval by {{by}} on {{date}}",
+      "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
     }
   },
   "leaveBalances": {

@@ -130,6 +130,24 @@ export interface LeaveDetail {
   returnNote: string | null;
   expectedReturn: string | null;
   canConfirmReturn: boolean;
+  /** An approved leave: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
+}
+
+/** What may change on an approved leave: its days, the reason and the ticket, with the reason for the change. */
+export interface LeaveAmendInput {
+  from: string;
+  to: string;
+  reason: string | null;
+  substituteId: string | null;
+  ticket: boolean;
+  amendReason: string;
 }
 
 export interface LeaveInput {
@@ -236,6 +254,8 @@ export const leaveApi = {
   send: (input: LeaveInput) => request<{ id: string }>('POST', `${base}/requests`, input),
   resubmit: (id: string, input: LeaveInput) => request<{ id: string }>('POST', `${base}/requests/${id}/resubmit`, input),
   cancel: (id: string, reason: string) => request<void>('POST', `${base}/requests/${id}/cancel`, { reason }),
+  amend: (id: string, input: LeaveAmendInput) => request<void>('PUT', `${base}/requests/${id}/amend`, input),
+  cancelApproved: (id: string, reason: string) => request<void>('POST', `${base}/requests/${id}/cancel-approved`, { reason }),
   confirmReturn: (id: string, returnedOn: string, note: string | null) => request<void>('POST', `${base}/requests/${id}/return`, { returnedOn, note }),
   permissions: (q: { employeeId?: string; period?: string; tab?: string }) => request<Permission[]>('GET', `${base}/permissions${qs(q)}`),
   permission: (id: string) => request<Permission>('GET', `${base}/permissions/${id}`),

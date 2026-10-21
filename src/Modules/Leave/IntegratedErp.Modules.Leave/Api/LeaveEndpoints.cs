@@ -38,6 +38,11 @@ internal static class LeaveEndpoints
         group.MapPost("/requests/{id:guid}/cancel", async (Guid id, CancelInput input, LeaveRequests requests, CancellationToken ct) => ToHttp(await requests.CancelAsync(id, input.Reason, ct).ConfigureAwait(false)))
             .RequirePermission(LeavePermissions.Manage, companyWide: true);
 
+        group.MapPut("/requests/{id:guid}/amend", async (Guid id, LeaveAmendInput input, LeaveRequests requests, CancellationToken ct) => ToHttp(await requests.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.RequestAmend, companyWide: true);
+        group.MapPost("/requests/{id:guid}/cancel-approved", async (Guid id, CancelInput input, LeaveRequests requests, CancellationToken ct) => ToHttp(await requests.CancelApprovedAsync(id, input.Reason, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.RequestCancelApproved, companyWide: true);
+
         group.MapPost("/requests/{id:guid}/return", async (Guid id, ReturnInput input, LeaveRequests requests, CancellationToken ct) => ToHttp(await requests.ConfirmReturnAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(LeavePermissions.Manage, companyWide: true);
 

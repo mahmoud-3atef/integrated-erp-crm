@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Leave.Contracts;
 using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
@@ -35,6 +36,7 @@ public sealed class PayrollModule : IModule
         services.AddScoped<SettlementService>();
         services.AddScoped<SettlementQueries>();
         services.AddScoped<IApprovalRecordAdapter, SettlementAdapter>();
+        services.AddScoped<ILeaveUsage, LeaveSettlements>();
         services.AddScoped<IApprovalRecordAdapter, WorkerSettlementAdapter>();
         services.AddScoped<GosiService>();
         services.AddScoped<PayslipService>();

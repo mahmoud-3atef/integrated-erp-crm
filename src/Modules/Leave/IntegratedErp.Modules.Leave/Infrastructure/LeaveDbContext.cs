@@ -108,6 +108,9 @@ internal sealed class LeaveRequestConfiguration : IEntityTypeConfiguration<Leave
         builder.Property(r => r.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(r => r.LastComment).HasMaxLength(2000);
         builder.Property(r => r.ReturnNote).HasMaxLength(500);
+        builder.Property(r => r.AmendedByName).HasMaxLength(200);
+        builder.Property(r => r.AmendNote).HasMaxLength(500);
+        builder.Property(r => r.CanceledByName).HasMaxLength(200);
         builder.Ignore(r => r.Holds);
         builder.HasIndex(r => new { r.TenantId, r.RequestNo }).IsUnique();
         builder.HasIndex(r => new { r.TenantId, r.EmployeeId, r.From });

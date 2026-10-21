@@ -55,6 +55,8 @@ internal static class LeavePermissions
     public const string Settings = "leave.settings";
     public const string Approve = "leave.approve";
     public const string ApproveManagement = "leave.approve.management";
+    public const string RequestAmend = "leave.request.amend";
+    public const string RequestCancelApproved = "leave.request.cancel_approved";
 
     private const string GroupAr = "الإجازات";
     private const string GroupEn = "Leave";
@@ -66,5 +68,7 @@ internal static class LeavePermissions
         new(Settings, GroupAr, GroupEn, "إدارة أنواع الإجازات وإعداداتها", "Manage leave types and settings"),
         new(Approve, GroupAr, GroupEn, "اعتماد الإجازات (الموارد البشرية)", "Approve leave (HR)"),
         new(ApproveManagement, GroupAr, GroupEn, "اعتماد الإجازات (الإدارة العليا)", "Approve leave (senior management)"),
+        new(RequestAmend, GroupAr, GroupEn, "تعديل إجازة معتمدة (تواريخها وبياناتها)", "Change an approved leave (its dates and details)"),
+        new(RequestCancelApproved, GroupAr, GroupEn, "إلغاء إجازة معتمدة (بدأت أو لم تبدأ)", "Cancel an approved leave (started or not)"),
     ];
 }
