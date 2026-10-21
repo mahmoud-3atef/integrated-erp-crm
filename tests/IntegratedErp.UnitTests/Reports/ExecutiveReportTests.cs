@@ -121,3 +121,28 @@ public sealed class WorkerCostRulesTests
     public void The_source_is_read_from_the_sponsor(string? sponsor, string source) =>
         Assert.Equal(source, IntegratedErp.Modules.Workforce.Domain.WorkerSources.Of(sponsor).ToString());
 }
+
+public sealed class ExpenseShareTests
+{
+    private static IntegratedErp.Modules.Expenses.Domain.Expense Expense(string on, decimal amount, int months) =>
+        new(Guid.NewGuid(), "EXP-1", new IntegratedErp.Modules.Expenses.Domain.ExpenseValues(DateOnly.Parse(on, System.Globalization.CultureInfo.InvariantCulture), "IQAMA_RENEWAL", null, null, null, null, null, amount, 0, months, null, null, null), "t", DateTimeOffset.UtcNow);
+
+    [Fact]
+    public void An_expense_over_months_counts_an_equal_share_in_each_month_it_covers()
+    {
+        var renewal = Expense("2026-03-20", 1200, 12);
+        Assert.Equal(100m, renewal.ShareIn(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30)));
+        Assert.Equal(300m, renewal.ShareIn(new DateOnly(2026, 7, 1), new DateOnly(2026, 9, 30)));
+        Assert.Equal(0m, renewal.ShareIn(new DateOnly(2027, 3, 1), new DateOnly(2027, 3, 31)));
+        Assert.Equal(1200m, renewal.ShareIn(new DateOnly(2026, 1, 1), new DateOnly(2027, 12, 31)));
+        Assert.Equal(450m, Expense("2026-09-03", 450, 1).ShareIn(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30)));
+    }
+
+    [Fact]
+    public void A_cancelled_expense_counts_nothing()
+    {
+        var e = Expense("2026-09-03", 450, 1);
+        e.Cancel("خطأ", "t", DateTimeOffset.UtcNow);
+        Assert.Equal(0m, e.ShareIn(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30)));
+    }
+}

@@ -538,7 +538,16 @@
     "validation_cost_not_supplier_worker": "The worker is not a supplier's worker.",
     "validation_cost_code": "Choose the profession and the nationality from their lists.",
     "validation_cost_notes": "Notes are limited to 300 characters.",
-    "validation_cost_sheet": "The sheet needs a worker number column and a cost column."
+    "validation_cost_sheet": "The sheet needs a worker number column and a cost column.",
+    "validation_expense_date": "The date must be from 2025 and not in the future.",
+    "validation_expense_category": "Choose a category from the list.",
+    "validation_expense_amount": "The amount must be above zero and at most 10,000,000; the VAT at most the amount.",
+    "validation_expense_months": "An expense covers 1 to 36 months.",
+    "validation_expense_worker": "The worker was not found.",
+    "validation_expense_project": "The project was not found.",
+    "validation_expense_text": "A text is longer than allowed.",
+    "validation_expense_cancelled": "The expense is cancelled.",
+    "validation_expense_reason": "Write why the expense is cancelled."
   },
   "menu": {
     "label": "Main menu",
@@ -583,6 +592,7 @@
     "timesheets": "Monthly timesheets",
     "invoices": "Customer invoices",
     "receipts": "Receipt vouchers",
+    "expenses": "Expenses",
     "aging": "Debt aging",
     "bankAccounts": "Bank accounts",
     "movements": "Worker actions",
@@ -5213,7 +5223,6 @@
       "companyCost": "The worker's cost to the company",
       "salary": "Total salary",
       "expenses": "Worker expenses",
-      "expensesSoon": "Shown with the expenses screen (the next stage).",
       "newCard": "New cost",
       "current": "Current cost",
       "fromPackage": "{{supplier}} package · profession: {{profession}} · nationality: {{nationality}}",
@@ -5224,6 +5233,66 @@
       "currentBadge": "Current",
       "deleteCard": "Delete the card",
       "deleteConfirm": "Delete this card from the worker's cost history?"
+    }
+  },
+  "expenses": {
+    "title": "Expenses",
+    "intro": "What the company spends on a project (part of its cost), on a worker (their cost) or in general. The projects' and the workers' profitability come from them.",
+    "noAccess": "You do not have permission to view expenses.",
+    "add": "New expense",
+    "edit": "Edit the expense",
+    "month": "Month",
+    "category": "Category",
+    "all": "All",
+    "search": "Search by expense number, worker, project or payee…",
+    "withCancelled": "Show cancelled",
+    "empty": "No expenses match this choice.",
+    "cancelled": "Cancelled",
+    "files": "Attachments",
+    "cancel": "Cancel the expense",
+    "cancelTitle": "Cancel expense {{no}}",
+    "cancelReason": "Reason for cancelling",
+    "vatOf": "VAT {{vat}}",
+    "spread": "Over {{count}} months",
+    "chargeTo": "Who is the expense charged to?",
+    "project": "Project",
+    "worker": "Worker",
+    "workerOptional": "Worker (optional)",
+    "typeToSearch": "Type two letters of the name or number",
+    "amount": "Amount before VAT",
+    "vat": "VAT",
+    "months": "Covers (months)",
+    "monthsHelp": "1: counted wholly in its month.",
+    "monthsHelpSpread": "Spread over {{count}} months: {{share}} SAR a month.",
+    "reference": "Receipt or invoice number",
+    "notes": "Notes",
+    "filesHint": "After saving, attach the receipt or invoice from the attachments button in the list.",
+    "kpi": {
+      "total": "Total expenses",
+      "totalFoot": "{{count}} expenses · VAT {{vat}}"
+    },
+    "scope": {
+      "Project": "On projects",
+      "Worker": "On workers",
+      "General": "General"
+    },
+    "scopeFoot": {
+      "Project": "{{count}} expenses · in the project's profitability",
+      "Worker": "{{count}} expenses · the worker's cost",
+      "General": "{{count}} expenses · on the company"
+    },
+    "scopeHint": {
+      "Project": "Delivery tickets, transport, anything spent on the project",
+      "Worker": "Residence renewal, visa, work permit",
+      "General": "Neither a project's nor a worker's"
+    },
+    "col": {
+      "no": "No.",
+      "date": "Date",
+      "chargedTo": "Charged to",
+      "amount": "Amount",
+      "months": "Spread",
+      "paidTo": "Payee"
     }
   }
 }

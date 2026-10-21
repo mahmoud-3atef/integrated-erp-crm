@@ -16,6 +16,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge } from '../../components/ui';
 import { CostDialog } from './SupplierCostsPage';
+import { ExpensesPage } from '../expenses/ExpensesPage';
 
 /** A worker's cost to the company: for a supplier's worker the agreed cost (its history), for the company's the salary. */
 export function WorkerCostTab({ workerId, name }: { workerId: string; name: string }) {
@@ -71,9 +72,9 @@ export function WorkerCostTab({ workerId, name }: { workerId: string; name: stri
           <FieldBox label={t('costs.worker.salary')} icon={<PaidOutlinedIcon />}>
             {cost.salary !== null ? money(cost.salary) : '—'}
           </FieldBox>
-          <FieldBox label={t('costs.worker.expenses')} icon={<RuleOutlinedIcon />}>
-            {t('costs.worker.expensesSoon')}
-          </FieldBox>
+        </FieldSection>
+        <FieldSection title={t('costs.worker.expenses')} icon={<RuleOutlinedIcon />} columns={1}>
+          <ExpensesPage workerId={workerId} compact />
         </FieldSection>
       </Stack>
     );
@@ -157,6 +158,11 @@ export function WorkerCostTab({ workerId, name }: { workerId: string; name: stri
               </TableBody>
             </Table>
           )}
+        </FieldSection>
+      </Box>
+      <Box sx={{ mt: 2.5 }}>
+        <FieldSection title={t('costs.worker.expenses')} icon={<RuleOutlinedIcon />} columns={1}>
+          <ExpensesPage workerId={workerId} compact />
         </FieldSection>
       </Box>
       {editing && (

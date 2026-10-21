@@ -34,6 +34,7 @@ import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
+import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
@@ -134,6 +135,7 @@ const menu: MenuSection[] = [
       { path: '/billing/timesheets', labelKey: 'menu.timesheets', icon: <FactCheckOutlinedIcon />, permission: 'billing.timesheets.view', companyWide: true },
       { path: '/billing/invoices', labelKey: 'menu.invoices', icon: <ReceiptLongOutlinedIcon />, permission: 'billing.invoices.view', companyWide: true },
       { path: '/billing/receipts', labelKey: 'menu.receipts', icon: <PaymentsOutlinedIcon />, permission: 'billing.receipts.view', companyWide: true },
+      { path: '/expenses', labelKey: 'menu.expenses', icon: <ReceiptOutlinedIcon />, permission: 'expenses.view', companyWide: true },
       { path: '/billing/aging', labelKey: 'menu.aging', icon: <TimelapseOutlinedIcon />, permission: 'billing.receipts.view', companyWide: true },
       { path: '/billing/bank-accounts', labelKey: 'menu.bankAccounts', icon: <AccountBalanceIcon />, permission: 'billing.receipts.view', companyWide: true },
     ],
