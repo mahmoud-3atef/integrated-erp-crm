@@ -262,3 +262,132 @@ export const movementApi = {
   list: <T,>(list: MovementList, from: string, to: string, drill: MovementDrill) => request<T[]>('GET', `${movementBase}/${list}?${query(from, to, { ...drill })}`),
   excel: (list: MovementList, from: string, to: string, drill: MovementDrill) => `${movementBase}/${list}?${query(from, to, { ...drill, excel: true })}`,
 };
+
+// The CEO report (/api/v1/reports/ceo): an invoiced month's profit and loss.
+const ceoBase = '/api/v1/reports/ceo';
+
+export type WorkerSource = 'Company' | 'Supplier' | 'Unknown';
+
+export interface CeoSource {
+  source: WorkerSource;
+  workers: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin: number | null;
+  missingCosts: number;
+}
+
+export interface CeoAlerts {
+  losingProjects: number;
+  losingTotal: number;
+  worstProject: string | null;
+  worstLoss: number | null;
+  unbilledProjects: number;
+  unbilledWorkers: number;
+  unbilledLargest: string | null;
+  suppliersInHousing: number;
+  dailyIdleCost: number;
+  missingCosts: number;
+  uncostedRevenue: number;
+}
+
+export interface CeoOverview {
+  month: string;
+  months: string[];
+  revenue: Figure;
+  uncostedRevenue: number;
+  uncostedWorkers: number;
+  cost: Figure;
+  profit: Figure;
+  margin: Figure;
+  idleCost: Figure;
+  idleDays: number;
+  collectionRate: Figure;
+  onJob: number;
+  inHousing: number;
+  breakdown: { key: string; amount: number }[];
+  trend: { month: string; revenue: number; cost: number; profit: number }[];
+  sources: CeoSource[];
+  alerts: CeoAlerts;
+}
+
+export interface ProjectProfit {
+  projectCrmId: string | null;
+  name: string;
+  manager: string | null;
+  workers: number;
+  workDays: number;
+  revenue: number;
+  cost: number;
+  expenses: number;
+  profit: number;
+  margin: number | null;
+  unbilledWorkers: number;
+  missingCosts: number;
+}
+
+export interface SupplierProfit {
+  supplier: string;
+  workers: number;
+  revenue: number;
+  cost: number;
+  idleCost: number;
+  idleDays: number;
+  profit: number;
+  missingCosts: number;
+}
+
+export interface CeoProfit {
+  month: string;
+  profit: Figure;
+  margin: Figure;
+  losingProjects: number;
+  losingTotal: number;
+  averageWorkerProfit: number | null;
+  losingWorkers: number;
+  losingWorkersTotal: number;
+  sources: CeoSource[];
+  projects: ProjectProfit[];
+  suppliers: SupplierProfit[];
+}
+
+export interface WorkerProfit {
+  workerId: string;
+  workerNo: string;
+  name: string;
+  source: WorkerSource;
+  supplier: string | null;
+  projects: string | null;
+  workDays: number;
+  housingDays: number;
+  revenue: number;
+  cost: number;
+  idleCost: number;
+  expenses: number;
+  profit: number;
+  costMissing: boolean;
+}
+
+export interface WorkerProfitQuery {
+  project?: string | null;
+  supplier?: string | null;
+  source?: WorkerSource | null;
+  losing?: boolean;
+  housing?: boolean;
+  search?: string;
+}
+
+function ceoQuery(month: string | null, extra: Record<string, string | boolean | null | undefined> = {}) {
+  const p = new URLSearchParams();
+  if (month) p.set('month', month);
+  for (const [k, v] of Object.entries(extra)) if (v !== null && v !== undefined && v !== '' && v !== false) p.set(k, String(v));
+  return p.toString();
+}
+
+export const ceoApi = {
+  overview: (month: string | null) => request<CeoOverview | undefined>('GET', `${ceoBase}?${ceoQuery(month)}`),
+  profit: (month: string | null) => request<CeoProfit | undefined>('GET', `${ceoBase}/profit?${ceoQuery(month)}`),
+  workers: (month: string | null, q: WorkerProfitQuery) => request<WorkerProfit[]>('GET', `${ceoBase}/workers?${ceoQuery(month, { ...q })}`),
+  workersExcel: (month: string | null, q: WorkerProfitQuery) => `${ceoBase}/workers?${ceoQuery(month, { ...q, excel: true })}`,
+};

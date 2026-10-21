@@ -31,8 +31,14 @@ internal sealed record LegacyInvoice(
     public decimal Remaining => Math.Max(0, Total - Paid);
 }
 
+/// <summary>A worker's line on a counted invoice: what was billed for them before VAT, for how many days, and the salary due to them.</summary>
+internal sealed record LegacyLine(Guid InvoiceCrmId, Guid WorkerCrmId, decimal BeforeVat, decimal WorkingDays, decimal DueSalary);
+
 /// <summary>The old system's invoices and the workers on each (invoice lines), read from the CRM copy.</summary>
-internal sealed record LegacyFinance(IReadOnlyList<LegacyInvoice> Invoices, IReadOnlyDictionary<Guid, HashSet<Guid>> WorkersByInvoice);
+internal sealed record LegacyFinance(IReadOnlyList<LegacyInvoice> Invoices, IReadOnlyDictionary<Guid, HashSet<Guid>> WorkersByInvoice)
+{
+    public IReadOnlyList<LegacyLine> Lines { get; init; } = [];
+}
 
 public sealed class ReportsOptions
 {
@@ -137,6 +143,7 @@ internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory proj
             // The workers on each counted invoice (its lines), for the billing coverage.
             var counted = invoices.Select(i => i.CrmId).ToHashSet();
             var workers = new Dictionary<Guid, HashSet<Guid>>();
+            var lines = new List<LegacyLine>();
             foreach (var line in await staging.ChangedSinceAsync("new_invoicdetail", null, cancellationToken).ConfigureAwait(false))
             {
                 if (line.IsDeleted)
@@ -148,10 +155,12 @@ internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory proj
                 if (Id(document.RootElement, "new_invoiceid") is { } invoice && counted.Contains(invoice) && Id(document.RootElement, "new_employeeid") is { } employee)
                 {
                     (workers.TryGetValue(invoice, out var set) ? set : workers[invoice] = []).Add(employee);
+                    var r = document.RootElement;
+                    lines.Add(new LegacyLine(invoice, employee, Money(r, "new_totalwithoutvat") ?? 0, Money(r, "new_workingdays") ?? 0, Money(r, "new_duesalary") ?? Money(r, "new_nettoemployee") ?? 0));
                 }
             }
 
-            return new LegacyFinance(invoices, workers);
+            return new LegacyFinance(invoices, workers) { Lines = lines };
         }
         finally
         {

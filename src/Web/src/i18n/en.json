@@ -616,7 +616,7 @@
     "unpin": "Unpin the menu",
     "sections": "Sections",
     "reportsSection": "Reports",
-    "executive": "Executive report",
+    "executive": "CEO report",
     "movement": "Workforce movement"
   },
   "roles": {
@@ -5293,6 +5293,145 @@
       "amount": "Amount",
       "months": "Spread",
       "paidTo": "Payee"
+    }
+  },
+  "ceo": {
+    "noProfit": "The CEO report needs the «View profit and loss» permission.",
+    "noInvoices": "No ended month has invoices yet.",
+    "invoicedMonth": "Invoiced month:",
+    "tabs": {
+      "overview": "Overview",
+      "profit": "Profitability",
+      "workforce": "Workforce and housing",
+      "finance": "Finance"
+    },
+    "source": {
+      "Company": "Company-sponsored",
+      "Supplier": "From suppliers",
+      "Unknown": "Source not set"
+    },
+    "kpi": {
+      "revenue": "Revenue (before VAT)",
+      "revenueNote": "The month's project invoices",
+      "cost": "Cost",
+      "costNote": "Salaries, suppliers, expenses",
+      "profit": "Gross profit",
+      "margin": "Profit margin",
+      "marginNote": "Without {{count}} supplier workers without a cost",
+      "idle": "Non-productive workforce cost",
+      "idleNote": "{{count}} housing days of supplier workers",
+      "onJob": "On the job now",
+      "inHousing": "{{count}} in housing"
+    },
+    "ins": {
+      "profit": "The month's gross profit is {{profit}} SAR at a {{margin}}% margin.",
+      "marginUp": "The margin rose {{diff}} points from the month before.",
+      "marginDown": "The margin fell {{diff}} points from the month before.",
+      "losing": "{{count}} losing projects, {{total}} SAR in all.",
+      "unbilled": "{{count}} workers worked and were not invoiced, on {{projects}} projects.",
+      "uncosted": "{{count}} supplier workers have no cost recorded; their {{revenue}} SAR of revenue is left out of the profit.",
+      "collection": "{{rate}}% of the month's invoices is collected."
+    },
+    "flow": {
+      "title": "From revenue to profit",
+      "hint": "{{month}} · before VAT",
+      "Revenue": "Revenue",
+      "Uncosted": "Revenue of supplier workers without a cost",
+      "CompanySalaries": "Company workers' salaries",
+      "SupplierCosts": "Paid to suppliers for working days",
+      "IdleCost": "Paid to suppliers for housing days",
+      "WorkerExpenses": "Workers' expenses (residence, visas…)",
+      "ProjectExpenses": "Projects' expenses (tickets, transport…)",
+      "GeneralExpenses": "General expenses",
+      "note": "The revenue of supplier workers whose cost is not entered stays out of the profit until it is entered in «Supplier worker costs»."
+    },
+    "alerts": {
+      "title": "Needs your decision",
+      "hint": "Drawn from the figures",
+      "losing": "{{count}} losing projects, −{{total}} SAR in all; the largest «{{worst}}» −{{loss}}.",
+      "unbilled": "{{count}} workers worked and were not invoiced on {{projects}} projects; most on «{{largest}}».",
+      "housing": "{{count}} supplier workers are in housing now, costing {{daily}} SAR a day without revenue.",
+      "housingNoCost": "{{count}} supplier workers are in housing now (their cost is not recorded).",
+      "missing": "{{count}} supplier workers have no cost recorded; their {{revenue}} SAR of revenue is out of the profit. Enter their cost →"
+    },
+    "trend": {
+      "title": "Revenue, cost and profit by month",
+      "hint": "Invoiced months · before VAT",
+      "revenue": "Revenue",
+      "cost": "Cost",
+      "profit": "Profit"
+    },
+    "sources": {
+      "title": "Workforce sources and their profitability",
+      "hint": "Click a source to see its workers",
+      "workers": "{{count}} workers",
+      "noCost": "No cost recorded",
+      "unknownHint": "No sponsor recorded in the old system; costed by salary like the company's workers until the sponsor is corrected."
+    },
+    "profit": {
+      "losing": "Losing projects",
+      "projectsUnit": "projects",
+      "total": "{{total}} SAR in all",
+      "perWorker": "Average profit per worker",
+      "perMonth": "SAR/month",
+      "losingWorkers": "Losing workers",
+      "suppliers": "Supplier workers",
+      "suppliersNote": "{{count}} without a cost",
+      "projects": "Project profitability",
+      "projectsHint": "{{month}} · revenue from the invoices, cost from the project's workers on their days and its expenses · click a project for its workers",
+      "filter": {
+        "all": "All projects ({{count}})",
+        "losing": "Losing ({{count}})",
+        "unbilled": "Worked, not invoiced ({{count}})",
+        "weak": "Margin under 5% ({{count}})"
+      },
+      "notBilled": "Not invoiced",
+      "unbilledSome": "{{count}} not invoiced",
+      "missingSome": "{{count}} without a cost",
+      "withExpenses": "Including {{amount}} expenses",
+      "suppliersTitle": "Supplier profitability",
+      "suppliersHint": "What we pay the supplier against what we invoice for its workers · click a supplier for its workers",
+      "idleDays": "{{count}} housing days",
+      "example": "Example: a worker invoiced at 3,500 who costs 3,000 a month fixed from the supplier works 20 days and spends 10 in housing: revenue 2,333 against a 3,000 cost, a 667 loss (1,000 of it for the housing days)."
+    },
+    "work": {
+      "inHousing": "In housing now",
+      "toHousing": "Housing screen →",
+      "suppliersInHousing": "Supplier workers in housing",
+      "daily": "{{amount}} SAR a day",
+      "movement": "The month's net movement",
+      "moves": "{{starts}} starts · {{returns}} returns",
+      "toMovement": "Workforce movement report →",
+      "unbilled": "Worked, not invoiced",
+      "unbilledNote": "On {{count}} projects",
+      "title": "Worker profitability",
+      "hint": "{{month}} · each worker: working and housing days, what was invoiced and what they cost · click a worker to open their cost",
+      "view": {
+        "all": "All",
+        "losing": "Losing",
+        "housing": "With housing days",
+        "Supplier": "Supplier workers",
+        "Company": "Company workers"
+      },
+      "search": "Search by worker number or name…",
+      "noSalary": "The worker list shows salaries, so it needs the permission to view workers' salaries.",
+      "missingTip": "The supplier's cost for this worker is not recorded.",
+      "idleOf": "Housing {{amount}}",
+      "more": "The first 500 of {{count}} are shown; download Excel for all."
+    },
+    "col": {
+      "project": "Project",
+      "workers": "Workers",
+      "workDays": "Working days",
+      "housingDays": "Housing days",
+      "revenue": "Revenue",
+      "cost": "Cost",
+      "profit": "Profit",
+      "margin": "Margin",
+      "supplier": "Supplier",
+      "idle": "Housing days' cost",
+      "worker": "Worker",
+      "source": "Source"
     }
   }
 }

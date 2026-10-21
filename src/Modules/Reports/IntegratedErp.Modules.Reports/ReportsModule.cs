@@ -24,6 +24,8 @@ public sealed class ReportsModule : IModule
         services.AddScoped<LegacyInvoices>();
         services.AddScoped<ExecutiveReport>();
         services.AddScoped<MovementReport>();
+        services.AddScoped<ProfitReport>();
+        services.AddScoped<CeoReport>();
         services.AddPermissions(ReportsPermissions.All);
     }
 
@@ -34,10 +36,12 @@ internal static class ReportsPermissions
 {
     public const string ExecutiveView = "reports.executive.view";
     public const string MovementView = "reports.movement.view";
+    public const string ProfitView = "reports.profit.view";
 
     public static readonly PermissionDefinition[] All =
     [
-        new(ExecutiveView, "التقارير", "Reports", "عرض تقرير الإدارة العليا", "View the executive report"),
+        new(ExecutiveView, "التقارير", "Reports", "عرض تقرير الرئيس التنفيذي", "View the CEO report"),
         new(MovementView, "التقارير", "Reports", "عرض تقرير حركة العمالة", "View the workforce movement report"),
+        new(ProfitView, "التقارير", "Reports", "عرض الربحية والخسارة (المشاريع والموردين والعمالة)", "View profit and loss (projects, suppliers, workers)"),
     ];
 }

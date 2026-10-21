@@ -213,6 +213,29 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
             .OrderBy(h => h.Since).ToList();
     }
 
+    public async Task<IReadOnlyList<WorkerDays>> DaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var after = to.AddDays(1);
+        var ids = (await db.Periods.AsNoTracking().Where(p => (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing) && p.StartsOn < after && (p.EndsOn == null || p.EndsOn > from)).Select(p => p.WorkerId)
+                .Union(db.HistoryPeriods.AsNoTracking().Where(p => (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing) && p.StartsOn < after && (p.EndsOn == null || p.EndsOn > from)).Select(p => p.WorkerId))
+                .ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
+        var workers = await db.Workers.AsNoTracking().Where(w => ids.Contains(w.Id) && w.Kind == WorkerKind.Worker)
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.CrmId, w.WorkerNo, w.Sponsor, w.Salary, Name = p.NameAr ?? p.NameEn })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var timelines = await TimelinesAsync(workers.Select(w => w.Id).ToHashSet(), cancellationToken).ConfigureAwait(false);
+        var today = clock.Today.AddDays(1);
+        int Overlap(Span s) => Math.Max(0, Math.Min((s.EndsOn ?? today).DayNumber, after.DayNumber) - Math.Max(s.StartsOn.DayNumber, from.DayNumber));
+        return workers.Select(w =>
+            {
+                var spans = timelines[w.Id].ToList();
+                var projects = spans.Where(s => s.Kind == PeriodKind.Work && !options.Value.IsInactiveProject(s.Place))
+                    .GroupBy(s => (s.ProjectCrmId, s.Place)).Select(g => new ProjectDays(g.Key.ProjectCrmId, g.Key.Place, g.Sum(Overlap))).Where(p => p.Days > 0).ToList();
+                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, spans.Where(s => s.Kind == PeriodKind.Housing).Sum(Overlap));
+            })
+            .Where(w => w.WorkDays > 0 || w.HousingDays > 0)
+            .ToList();
+    }
+
     internal sealed record Span(PeriodKind Kind, DateOnly StartsOn, DateOnly? EndsOn, Guid? ProjectCrmId, string? Place);
 
     /// <summary>The timeline of some workers: the old system's history up to the first period recorded here, then the recorded ones.</summary>

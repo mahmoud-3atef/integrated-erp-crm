@@ -190,6 +190,17 @@ public interface IWorkforceReport
 
     /// <summary>The active workers in housing now, the longest there first.</summary>
     Task<IReadOnlyList<WorkforceInHousing>> InHousingAsync(CancellationToken cancellationToken);
+
+    /// <summary>Every worker with days on the job or in housing in a period: their days on each project and in housing.</summary>
+    Task<IReadOnlyList<WorkerDays>> DaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+}
+
+public sealed record ProjectDays(Guid? ProjectCrmId, string? Place, int Days);
+
+/// <summary>A worker's days in a period: on each project (work on the inactive workers' project is left out) and in housing.</summary>
+public sealed record WorkerDays(Guid WorkerId, Guid CrmId, string WorkerNo, string Name, string? Sponsor, decimal Salary, IReadOnlyList<ProjectDays> Projects, int HousingDays)
+{
+    public int WorkDays => Projects.Sum(p => p.Days);
 }
 
 /// <summary>A work period on a worker's record, for their showroom file.</summary>

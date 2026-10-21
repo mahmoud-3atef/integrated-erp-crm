@@ -1,17 +1,10 @@
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
-import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
-import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
-import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
-import DonutLargeOutlinedIcon from '@mui/icons-material/DonutLargeOutlined';
 import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import CloseIcon from '@mui/icons-material/Close';
@@ -21,7 +14,6 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import {
-  Alert,
   Box,
   Button,
   ButtonBase,
@@ -41,211 +33,16 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../api/auth';
-import { reportsApi, type Drill, type Finance, type InvoiceRow, type MoveRow, type Overview } from '../../api/reports';
-import { useSession } from '../../app/session';
+import { reportsApi, type Drill, type Finance, type InvoiceRow, type MoveRow } from '../../api/reports';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { Columns, RankedBars, Ring } from '../../components/charts';
-import { accents, appear, card, CardTitle, Dot, Empty, filling, Hero, Kpi, Legend, Loading, PrintStyles, ReportBar, Ticker, useFormat, useMark, usePeriodChoice } from './reportKit';
+import { Columns } from '../../components/charts';
+import { accents, appear, card, CardTitle, Dot, Empty, filling, Hero, Kpi, Legend, Loading, useFormat } from './reportKit';
 
-type Tab = 'overview' | 'finance';
 
-/**
- * The executive report (docs/03-migration-plan/14, phase A): the period and its comparison, the summary written from the
- * numbers, the overview and the finance; any chart opens the list behind it, as Excel too. Every figure comes from the
- * server; an unknown one shows «—».
- */
-export function ExecutiveReportPage() {
-  const { t } = useTranslation();
-  const { can } = useSession();
-  const [tab, setTab] = useState<Tab>('overview');
-  const choice = usePeriodChoice();
-  const { from, to } = choice;
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [finance, setFinance] = useState<Finance | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [drill, setDrill] = useState<{ kind: 'moves' | 'invoices'; title: string; drill: Drill } | null>(null);
 
-  useEffect(() => {
-    setOverview(null);
-    setError(null);
-    reportsApi.overview(from, to).then(setOverview).catch((f) => setError(errorKey(f)));
-  }, [from, to]);
-  useEffect(() => {
-    if (tab !== 'finance' || !overview?.financeVisible) return;
-    setFinance(null);
-    reportsApi.finance(from, to).then(setFinance).catch((f) => setError(errorKey(f)));
-  }, [tab, from, to, overview?.financeVisible]);
 
-  if (!can('reports.executive.view', true)) {
-    return <Alert severity="warning">{t('exec.noAccess')}</Alert>;
-  }
-
-  return (
-    <Box>
-      <PrintStyles />
-      <ReportBar
-        tabs={[
-          { key: 'overview' as Tab, label: t('exec.tabs.overview'), icon: <QueryStatsOutlinedIcon /> },
-          ...(overview?.financeVisible !== false ? [{ key: 'finance' as Tab, label: t('exec.tabs.finance'), icon: <PaymentsOutlinedIcon /> }] : []),
-        ]}
-        tab={tab}
-        onTab={setTab}
-        choice={choice}
-        period={overview?.period}
-      />
-
-      <ErrorMessage messageKey={error} />
-      {tab === 'overview' ? (
-        <OverviewTab key={`${from}-${to}`} data={overview} onDrill={(kind, title, d) => setDrill({ kind, title, drill: d })} />
-      ) : (
-        <FinanceTab key={`${from}-${to}`} data={finance} onDrill={(title, d) => setDrill({ kind: 'invoices', title, drill: d })} />
-      )}
-      {drill && <DrillDrawer from={from} to={to} {...drill} onClose={() => setDrill(null)} />}
-    </Box>
-  );
-}
-
-/** The summary for senior management, written from the figures (nothing typed by hand). */
-function Insights({ data }: { data: Overview }) {
-  const f = useFormat();
-  const mark = useMark();
-  const lines: string[] = [];
-  const s = data.starts.value ?? 0;
-  const ps = data.starts.previous;
-  lines.push(ps === null ? mark('exec.ins.starts', { count: f.n(s) }) : mark(s >= ps ? 'exec.ins.startsUp' : 'exec.ins.startsDown', { count: f.n(s), diff: f.n(Math.abs(s - ps)) }));
-  lines.push(mark('exec.ins.net', { net: f.n(data.net.value ?? 0), starts: f.n(s), returns: f.n(data.returns.value ?? 0) }));
-  if (data.startsByManager[0]) lines.push(mark('exec.ins.topManager', { name: data.startsByManager[0].name, count: f.n(data.startsByManager[0].count) }));
-  if (data.financeVisible && data.collectionRate.value !== null) {
-    lines.push(
-      data.collectionRate.previous === null
-        ? mark('exec.ins.rate', { rate: data.collectionRate.value })
-        : mark('exec.ins.rateCompare', { rate: data.collectionRate.value, previous: data.collectionRate.previous }),
-    );
-  }
-  if (data.financeVisible && data.overdue60 > 0) lines.push(mark('exec.ins.overdue', { amount: f.n(data.overdue60), share: data.totalDebt > 0 ? Math.round((data.overdue60 * 100) / data.totalDebt) : 0 }));
-  if (data.financeVisible && data.coverage.month && data.coverage.missing + data.coverage.partial > 0) {
-    lines.push(mark('exec.ins.coverage', { month: f.monthLong(data.coverage.month), count: data.coverage.missing + data.coverage.partial, workers: f.n(data.coverage.workersNotInvoiced) }));
-  }
-  return <Ticker lines={lines} />;
-
-}
-
-function OverviewTab({ data, onDrill }: { data: Overview | null; onDrill: (kind: 'moves' | 'invoices', title: string, drill: Drill) => void }) {
-  const { t } = useTranslation();
-  const f = useFormat();
-  if (!data) return <Loading />;
-  const months = data.moves.map((m) => f.monthName(m.month));
-  const c = data.coverage;
-  const covTotal = c.full + c.partial + c.missing;
-  return (
-    <Box>
-      <Hero>
-        <Kpi index={0} label={t('exec.kpi.onJob')} icon={<GroupsOutlinedIcon />} value={data.onJob} unit={t('exec.worker')} accent={accents.navy} note={t('exec.kpi.activeProjects', { count: f.n(data.activeProjects) })} />
-        <Kpi index={1} label={t('exec.kpi.starts')} icon={<TrendingUpOutlinedIcon />} figure={data.starts} unit={t('exec.worker')} good="up" accent={accents.teal} spark={data.moves.map((m) => m.starts)} />
-        <Kpi index={2} label={t('exec.kpi.net')} icon={<SyncAltOutlinedIcon />} figure={data.net} good="up" accent={accents.green} spark={data.moves.map((m) => m.starts - m.returns)} note={t('exec.kpi.netNote', { starts: f.n(data.starts.value ?? 0), returns: f.n(data.returns.value ?? 0) })} />
-        <Kpi index={3} label={t('exec.kpi.inHousing')} icon={<HotelOutlinedIcon />} value={data.inHousing} unit={t('exec.worker')} accent={accents.amber} note={t('exec.kpi.inHousingNote')} />
-        <Kpi index={4} label={t('exec.kpi.invoiced')} icon={<ReceiptLongOutlinedIcon />} figure={data.invoiced} unit={t('exec.sar')} money good="up" accent={accents.violet} spark={data.money.map((m) => m.invoiced)} note={data.invoiceCount.value !== null ? t('exec.kpi.invoiceCount', { count: f.n(data.invoiceCount.value) }) : undefined} />
-        <Kpi index={5} label={t('exec.kpi.rate')} icon={<PercentOutlinedIcon />} figure={data.collectionRate} unit="%" good="up" accent={accents.rose} spark={data.money.map((m) => m.rate)} note={data.financeVisible ? t('exec.kpi.overdue', { amount: f.n(data.overdue60) }) : undefined} />
-      </Hero>
-      <Insights data={data} />
-      <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' }, mb: 1.75 }}>
-        <Box sx={{ ...card, ...appear(0.35) }}>
-          <CardTitle icon={<HistoryOutlinedIcon />} title={t('exec.moves.title')} hint={t('exec.moves.hint')} />
-          <Columns
-            categories={months}
-            series={[
-              { key: 'starts', label: t('exec.moves.starts'), color: tokens.navy700 },
-              { key: 'returns', label: t('exec.moves.returns'), color: accents.amber },
-            ]}
-            values={[data.moves.map((m) => m.starts), data.moves.map((m) => m.returns)]}
-            onPick={(i) => onDrill('moves', t('exec.drill.month', { month: f.monthLong(data.moves[i]!.month) }), { month: data.moves[i]!.month })}
-          />
-          <Legend items={[[t('exec.moves.starts'), tokens.navy700], [t('exec.moves.returns'), accents.amber]]} />
-        </Box>
-        <Box sx={{ ...card, ...appear(0.43) }}>
-          <CardTitle icon={<ManageAccountsOutlinedIcon />} title={t('exec.managers.title')} hint={t('exec.managers.hint')} />
-          {data.startsByManager.length === 0 ? (
-            <Empty />
-          ) : (
-            <RankedBars items={data.startsByManager.slice(0, 8).map((r) => ({ key: r.key, label: r.name, value: r.count }))} onClick={(key) => onDrill('moves', t('exec.drill.manager', { name: key }), { manager: key, kind: 'Work' })} />
-          )}
-        </Box>
-      </Box>
-      <Box sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) minmax(0, 1fr)' } }}>
-        <Box sx={{ ...card, ...appear(0.51) }}>
-          <CardTitle icon={<BusinessCenterOutlinedIcon />} title={t('exec.projects.title')} hint={t('exec.projects.hint')} />
-          {data.projects.length === 0 ? (
-            <Empty />
-          ) : (
-            <Stack sx={{ gap: 1 }}>
-              {data.projects.map((p) => {
-                const max = Math.max(1, ...data.projects.map((x) => x.starts + x.returns));
-                return (
-                  <ButtonBase
-                    key={p.projectCrmId ?? p.name}
-                    onClick={() => p.projectCrmId && onDrill('moves', p.name, { project: p.projectCrmId })}
-                    sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 220px) 1fr 64px', gap: 1, alignItems: 'center', textAlign: 'start', borderRadius: '8px', px: 0.5, py: 0.25, '&:hover': { bgcolor: tokens.navy50 } }}
-                  >
-                    <Typography noWrap sx={{ fontSize: 12.5 }} title={p.name}>
-                      {p.name}
-                    </Typography>
-                    <Box sx={{ display: 'flex', height: 9, borderRadius: 5, overflow: 'hidden', bgcolor: tokens.gray100 }}>
-                      <Box sx={{ display: 'flex', width: `${((p.starts + p.returns) / max) * 100}%`, ...filling(0.5) }}>
-                        <Box sx={{ flex: p.starts, bgcolor: tokens.navy700 }} />
-                        <Box sx={{ flex: p.returns, bgcolor: accents.amber }} />
-                      </Box>
-                    </Box>
-                    <Typography sx={{ fontSize: 12.5, fontWeight: 700, textAlign: 'end' }}>
-                      <bdi>{`${p.starts} / ${p.returns}`}</bdi>
-                    </Typography>
-                  </ButtonBase>
-                );
-              })}
-              <Legend items={[[t('exec.moves.starts'), tokens.navy700], [t('exec.moves.returns'), accents.amber]]} />
-            </Stack>
-          )}
-        </Box>
-        {data.financeVisible && (
-          <Box sx={{ ...card, ...appear(0.59) }}>
-            <CardTitle icon={<DonutLargeOutlinedIcon />} title={c.month ? t('exec.coverage.title', { month: f.monthLong(c.month) }) : t('exec.coverage.titleNone')} hint={t('exec.coverage.hint')} />
-            {covTotal === 0 ? (
-              <Empty />
-            ) : (
-              <>
-                <Stack direction="row" sx={{ gap: 2, alignItems: 'center', mb: 1.25 }}>
-                  <Ring percent={Math.round(((c.full + c.partial) * 100) / covTotal)} color={accents.green} size={118} label={t('exec.coverage.invoiced')}>
-                    <Typography sx={{ fontSize: 20, fontWeight: 800 }}>{`${Math.round(((c.full + c.partial) * 100) / covTotal)}%`}</Typography>
-                  </Ring>
-                  <Stack sx={{ gap: 0.6, fontSize: 12.5 }}>
-                    <Dot color={accents.green} text={t('exec.coverage.full', { count: c.full })} />
-                    <Dot color={accents.amber} text={t('exec.coverage.partial', { count: c.partial })} />
-                    <Dot color={accents.rose} text={t('exec.coverage.missing', { count: c.missing })} />
-                    <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{t('exec.coverage.workers', { count: f.n(c.workersNotInvoiced) })}</Typography>
-                  </Stack>
-                </Stack>
-                <Stack sx={{ gap: 0.5 }}>
-                  {c.gaps.slice(0, 6).map((g) => (
-                    <Stack key={g.projectCrmId} direction="row" sx={{ gap: 1, fontSize: 12, borderBottom: `1px solid ${tokens.gray100}`, py: 0.5 }}>
-                      <Typography noWrap sx={{ flex: 1, fontSize: 12 }} title={g.name}>
-                        {g.name}
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: g.hasInvoice ? accents.amber : accents.rose, fontWeight: 700 }}>
-                        {g.hasInvoice ? t('exec.coverage.gapPartial', { invoiced: g.invoiced, worked: g.worked }) : t('exec.coverage.gapMissing', { worked: g.worked })}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              </>
-            )}
-          </Box>
-        )}
-      </Box>
-    </Box>
-  );
-}
-
-function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: string, drill: Drill) => void }) {
+export function FinanceTab({ data, onDrill }: { data: Finance | null; onDrill: (title: string, drill: Drill) => void }) {
   const { t, i18n } = useTranslation();
   const ar = i18n.language === 'ar';
   const f = useFormat();
@@ -456,7 +253,7 @@ function InvoiceTable({ rows }: { rows: InvoiceRow[] }) {
 }
 
 /** The list behind a clicked figure, with its Excel. */
-function DrillDrawer({ from, to, kind, title, drill, onClose }: { from: string; to: string; kind: 'moves' | 'invoices'; title: string; drill: Drill; onClose: () => void }) {
+export function DrillDrawer({ from, to, kind, title, drill, onClose }: { from: string; to: string; kind: 'moves' | 'invoices'; title: string; drill: Drill; onClose: () => void }) {
   const { t } = useTranslation();
   const f = useFormat();
   const [moves, setMoves] = useState<MoveRow[] | null>(null);

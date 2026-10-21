@@ -64,9 +64,38 @@ internal static class ReportsEndpoints
             .RequirePermission(ReportsPermissions.ExecutiveView, companyWide: true);
 
         MapMovement(endpoints);
+        MapCeo(endpoints);
     }
 
     private const string Xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    /// <summary>The CEO report's profitability (docs/03-migration-plan/16), always of a whole invoiced month.</summary>
+    private static void MapCeo(IEndpointRouteBuilder endpoints)
+    {
+        var group = endpoints.MapGroup("/api/v1/reports/ceo").WithTags("CEO report").RequireAuthorization(PlatformPolicies.CompanyUser);
+
+        group.MapGet("", async (string? month, CeoReport report, CancellationToken ct) =>
+                await report.OverviewAsync(Month(month), ct).ConfigureAwait(false) is { } overview ? Results.Ok(overview) : Results.NoContent())
+            .RequirePermission(ReportsPermissions.ExecutiveView, companyWide: true)
+            .RequirePermission(ReportsPermissions.ProfitView, companyWide: true);
+
+        group.MapGet("/profit", async (string? month, CeoReport report, CancellationToken ct) =>
+                await report.ProfitAsync(Month(month), ct).ConfigureAwait(false) is { } tab ? Results.Ok(tab) : Results.NoContent())
+            .RequirePermission(ReportsPermissions.ProfitView, companyWide: true);
+
+        // A worker's cost shows a company worker's salary: the salaries' permission too.
+        group.MapGet("/workers", async (string? month, Guid? project, string? supplier, string? source, bool? losing, bool? housing, string? search, bool? excel, CeoReport report, CancellationToken ct) =>
+            {
+                var rows = await report.WorkersAsync(Month(month), new WorkerProfitFilter(project, supplier, source, losing == true, housing == true, search), ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.WorkerProfit(rows), Xlsx, "worker-profit.xlsx") : Results.Ok(rows);
+            })
+            .RequirePermission(ReportsPermissions.ProfitView, companyWide: true)
+            .RequirePermission(SalariesView, companyWide: true);
+    }
+
+    private const string SalariesView = "workforce.workers.salary";
+
+    private static DateOnly? Month(string? month) => month is not null && DateOnly.TryParseExact(month + "-01", "yyyy-MM-dd", out var m) ? m : null;
 
     private static void MapMovement(IEndpointRouteBuilder endpoints)
     {
