@@ -1471,16 +1471,11 @@
     },
     "actions": {
       "title": "سجل إجراءات العامل",
-      "hint": "اضغط أي إجراء لفتح مستنده · الأحدث أولًا",
       "housing": "السكن",
-      "current": "الحالي",
+      "current": "جاري الآن",
       "open": "فتح المستند {{no}}",
       "details": "عرض التفاصيل",
-      "openDocument": "فتح المستند ←",
       "noDocument": "إجراء من النظام القديم ليس له مستند في هذا النظام (للاطلاع فقط)",
-      "workDays": "{{count}} يوم عمل",
-      "housingDays": "{{count}} يوم سكن",
-      "days": "{{count}} يوم",
       "daysLabel": "عدد الأيام",
       "housingIn": "تاريخ دخول السكن",
       "housingOut": "تاريخ مغادرة السكن",
@@ -1489,7 +1484,6 @@
       "totalPrice": "إجمالي سعر الخدمة",
       "housingPrice": "السكن",
       "transport": "المواصلات",
-      "created": "أُنشئ {{date}}",
       "documents": {
         "delivery_order": "أمر تسليم",
         "return_order": "أمر رجيع",
@@ -1504,7 +1498,21 @@
         "return_order": "أمر رجيع",
         "transfer_order": "أمر نقل",
         "worker_movement": "حركة"
-      }
+      },
+      "workStart": "مباشرة عمل",
+      "untilNow": "حتى الآن",
+      "riyal": "ريال",
+      "kindWork": "عمل",
+      "kindHousing": "سكن",
+      "kindOther": "",
+      "daysOne": "{{count}} يوم {{kind}}",
+      "daysTwo": "يومين {{kind}}",
+      "daysFew": "{{count}} أيام {{kind}}",
+      "daysMany": "{{count}} يوم {{kind}}",
+      "late": "تأخير {{count}} يوم",
+      "lateWhy": "تأخير في إثبات رجوع العامل: سُجِّل الأمر بعد {{count}} يوم من تاريخ دخول السكن — السبب: {{reason}}",
+      "lateNoReason": "تأخير في إثبات رجوع العامل: سُجِّل الأمر بعد {{count}} يوم من تاريخ دخول السكن — لم يُسجَّل سبب",
+      "createdTitle": "تاريخ الإنشاء والمنشئ"
     },
     "invoices": {
       "empty": "لا توجد فواتير على هذا العامل.",

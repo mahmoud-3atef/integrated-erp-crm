@@ -1471,16 +1471,11 @@
     },
     "actions": {
       "title": "Worker actions",
-      "hint": "Select an action to open its document · latest first",
       "housing": "Housing",
-      "current": "Current",
+      "current": "Ongoing",
       "open": "Open document {{no}}",
       "details": "View details",
-      "openDocument": "Open document →",
       "noDocument": "An old-system action with no document in this system (read-only)",
-      "workDays": "{{count}} work days",
-      "housingDays": "{{count}} housing days",
-      "days": "{{count}} days",
       "daysLabel": "Days",
       "housingIn": "Entered housing",
       "housingOut": "Left housing",
@@ -1489,7 +1484,6 @@
       "totalPrice": "Total service price",
       "housingPrice": "Housing",
       "transport": "Transport",
-      "created": "Created {{date}}",
       "documents": {
         "delivery_order": "Delivery order",
         "return_order": "Return order",
@@ -1504,7 +1498,21 @@
         "return_order": "Return order",
         "transfer_order": "Transfer order",
         "worker_movement": "Movement"
-      }
+      },
+      "workStart": "Work start",
+      "untilNow": "Until now",
+      "riyal": "SAR",
+      "kindWork": "work",
+      "kindHousing": "housing",
+      "kindOther": "",
+      "daysOne": "{{count}} {{kind}} day",
+      "daysTwo": "2 {{kind}} days",
+      "daysFew": "{{count}} {{kind}} days",
+      "daysMany": "{{count}} {{kind}} days",
+      "late": "{{count}} days late",
+      "lateWhy": "The worker's return was recorded {{count}} days after entering housing — reason: {{reason}}",
+      "lateNoReason": "The worker's return was recorded {{count}} days after entering housing — no reason given",
+      "createdTitle": "Created on and by"
     },
     "invoices": {
       "empty": "No invoices for this worker.",

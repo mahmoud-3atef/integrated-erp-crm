@@ -15,6 +15,9 @@ export interface WorkerDocument {
   reason: string | null;
   createdByName: string | null;
   createdAt: string | null;
+  /** A return order's way into housing: ReturnedWorker, NewArrival or BackFromVacation. */
+  entry?: string | null;
+  delayReason?: string | null;
 }
 
 export interface WorkerInvoiceLine {
