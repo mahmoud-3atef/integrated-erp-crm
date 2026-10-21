@@ -5586,7 +5586,7 @@
     "shown": "Showing {{from}} - {{to}} of {{count}}",
     "empty": "No settlements yet",
     "emptyHint": "Create a vacation settlement for an approved annual leave, or an end-of-service settlement for an employee.",
-    "emptyWorkers": "The settlements of the company's sponsored workers come in phase 4.11b.",
+    "emptyWorkers": "No worker settlements yet.",
     "noResults": "No matching results",
     "noResultsHint": "Change the search or the filters.",
     "kpi": {
@@ -5667,7 +5667,13 @@
       "lastDay": "Last working day",
       "term": "Contract term",
       "contractEnds": "Contract end date",
-      "submit": "Create and calculate"
+      "submit": "Create and calculate",
+      "party": "Who",
+      "workerHint": "Only a worker on the sponsorship of one of the company's registrations (a supplier pays its workers). Only approved work days are paid; housing days are not.",
+      "worker": "Worker",
+      "noWorkers": "Type the worker's number, name or iqama (company workers only)",
+      "leaveFrom": "First leave day",
+      "leaveTo": "Last leave day"
     },
     "daysN": "{{count}} days",
     "itemsN": "{{count}} items",
@@ -5713,7 +5719,8 @@
       "suspension": "Suspension",
       "other_due": "Other approved deduction",
       "custody": "Custody",
-      "other_deduction": "Other deductions"
+      "other_deduction": "Other deductions",
+      "timesheet_pay": "Approved timesheet pay not paid"
     },
     "detail": {
       "unpaid": "{{from}} – {{to}} · {{days}} days × {{rate}}",
@@ -5723,7 +5730,8 @@
       "art77": "15 days' wage a year, two months at least",
       "art77Fixed": "The wage of the rest of the contract, two months at least",
       "installment": "{{no}} · {{period}}",
-      "days": "{{no}} · {{days}} days × {{rate}}"
+      "days": "{{no}} · {{days}} days × {{rate}}",
+      "timesheet": "Approved timesheet {{no}} · {{days}} work days"
     },
     "share": {
       "all": "The full award",
@@ -5766,6 +5774,9 @@
     "acknowledgeVacation": "I, {{name}}, acknowledge receiving SAR {{net}}, my unpaid salary and the pay of the annual leave above.",
     "employeeSign": "Employee's signature",
     "hrSign": "HR",
-    "financeSign": "Finance"
+    "financeSign": "Finance",
+    "worker": "Worker",
+    "professionProject": "Profession / project",
+    "workerSign": "Worker's signature"
   }
 }

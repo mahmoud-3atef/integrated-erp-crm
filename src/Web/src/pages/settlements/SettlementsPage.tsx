@@ -255,7 +255,7 @@ export function SettlementsPage() {
           </>
         )}
       </Box>
-      {creating && <NewSettlementDialog onClose={() => setCreating(false)} onCreated={(id) => navigate(`/hr/settlements/${id}`)} />}
+      {creating && <NewSettlementDialog party={party} onClose={() => setCreating(false)} onCreated={(id) => navigate(`/hr/settlements/${id}`)} />}
     </HrScope>
   );
 }

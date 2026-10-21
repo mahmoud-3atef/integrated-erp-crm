@@ -13,15 +13,40 @@ using Microsoft.EntityFrameworkCore;
 namespace IntegratedErp.Modules.Payroll.Application;
 
 /// <summary>
-/// A settlement as the approval engine sees it: HR, then payroll, then finance (docs/03-migration-plan/18). Approved: it
-/// is locked; what it took of the advances, penalties and deductions is recorded on them; an end of service closes the
-/// employee's file on its last day.
+/// The staff's settlements as the approval engine sees them: HR, then payroll, then finance (docs/03-migration-plan/18).
 /// </summary>
-internal sealed class SettlementAdapter(PayrollDbContext db, IStaffDeductions deductions, IStaffPayroll staff, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class SettlementAdapter(PayrollDbContext db, IStaffDeductions deductions, IStaffPayroll staff, ICurrentUser user, IClock clock)
+    : SettlementAdapterBase(db, deductions, staff, user, clock)
 {
     public const string ScreenCode = "payroll.settlement";
 
+    public override ApprovalScreen Screen { get; } = Build(
+        ScreenCode, "مخالصات الموظفين", "Staff settlements",
+        ("hr", "الموارد البشرية", "HR", PayrollPermissions.SettlementsApproveHr), "اعتماد مخالصات الموظفين", "Staff settlement approval");
+}
+
+/// <summary>
+/// The sponsored workers' settlements (4.11ب) as the approval engine sees them: operations, then payroll, then finance.
+/// </summary>
+internal sealed class WorkerSettlementAdapter(PayrollDbContext db, IStaffDeductions deductions, IStaffPayroll staff, ICurrentUser user, IClock clock)
+    : SettlementAdapterBase(db, deductions, staff, user, clock)
+{
+    public const string ScreenCode = "payroll.settlement.worker";
+
+    public override ApprovalScreen Screen { get; } = Build(
+        ScreenCode, "مخالصات العمالة", "Worker settlements",
+        ("operations", "التشغيل", "Operations", PayrollPermissions.SettlementsApproveOperations), "اعتماد مخالصات العمالة", "Worker settlement approval");
+}
+
+/// <summary>
+/// A settlement as the approval engine sees it. Approved: it is locked; what it took of the advances, penalties and
+/// deductions is recorded on them; a staff member's end of service closes the file on its last day.
+/// </summary>
+internal abstract class SettlementAdapterBase(PayrollDbContext db, IStaffDeductions deductions, IStaffPayroll staff, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+{
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    public abstract ApprovalScreen Screen { get; }
 
     private static object Stage(string id, string ar, string en, string permission) => new
     {
@@ -29,32 +54,31 @@ internal sealed class SettlementAdapter(PayrollDbContext db, IStaffDeductions de
         assignees = new[] { new { kind = "Permission", permission } }, rule = "Any",
     };
 
-    private static readonly string DefaultDefinition = JsonSerializer.Serialize(
-        new
-        {
-            startCondition = (object?)null,
-            steps = new[]
-            {
-                Stage("hr", "الموارد البشرية", "HR", PayrollPermissions.SettlementsApproveHr),
-                Stage("payroll", "الرواتب", "Payroll", PayrollPermissions.SettlementsApprovePayroll),
-                Stage("finance", "المالية", "Finance", PayrollPermissions.SettlementsApproveFinance),
-            },
-        },
-        JsonOptions);
-
-    public ApprovalScreen Screen { get; } = new(
-        ScreenCode,
-        "المخالصات",
-        "Settlements",
+    /// <summary>The screen and its default process: the first stage, then payroll, then finance.</summary>
+    protected static ApprovalScreen Build(string code, string nameAr, string nameEn, (string Id, string Ar, string En, string Permission) first, string processAr, string processEn) => new(
+        code,
+        nameAr,
+        nameEn,
         "/hr/settlements/{id}",
         [
             new("kind", "نوع المخالصة", "Settlement kind", RecordFieldType.Text, Updatable: false),
-            new("employee", "الموظف", "Employee", RecordFieldType.Text, Updatable: false),
+            new("employee", "الموظف أو العامل", "Employee or worker", RecordFieldType.Text, Updatable: false),
             new("additions", "إجمالي المستحقات", "Total due", RecordFieldType.Money, Updatable: false),
             new("deductions", "إجمالي المستقطعات", "Total deductions", RecordFieldType.Money, Updatable: false),
             new("net", "الصافي", "Net", RecordFieldType.Money, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد المخالصات", "Settlement approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess(processAr, processEn, JsonSerializer.Serialize(
+            new
+            {
+                startCondition = (object?)null,
+                steps = new[]
+                {
+                    Stage(first.Id, first.Ar, first.En, first.Permission),
+                    Stage("payroll", "الرواتب", "Payroll", PayrollPermissions.SettlementsApprovePayroll),
+                    Stage("finance", "المالية", "Finance", PayrollPermissions.SettlementsApproveFinance),
+                },
+            },
+            JsonOptions)));
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {

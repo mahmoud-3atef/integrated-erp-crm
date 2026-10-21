@@ -19,6 +19,8 @@ internal static class SettlementEndpoints
             .RequirePermission(PayrollPermissions.SettlementsView, companyWide: true);
         group.MapGet("/leaves", async (SettlementService service, CancellationToken ct) => Results.Ok(await service.LeavesAsync(ct).ConfigureAwait(false)))
             .RequirePermission(PayrollPermissions.SettlementsManage, companyWide: true);
+        group.MapGet("/workers", async (string? search, SettlementService service, CancellationToken ct) => Results.Ok(await service.WorkersAsync(search ?? string.Empty, ct).ConfigureAwait(false)))
+            .RequirePermission(PayrollPermissions.SettlementsManage, companyWide: true);
         group.MapPost("", async (CreateSettlementInput input, SettlementService service, CancellationToken ct) =>
                 await service.CreateAsync(input, ct).ConfigureAwait(false) is var r && r.IsSuccess ? Results.Ok(new { id = r.Value }) : Problem(r.Error))
             .RequirePermission(PayrollPermissions.SettlementsManage, companyWide: true);

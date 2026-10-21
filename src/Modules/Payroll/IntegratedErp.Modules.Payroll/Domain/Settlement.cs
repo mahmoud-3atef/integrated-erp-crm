@@ -280,6 +280,25 @@ public sealed class Settlement : ITenantOwned
         return Result.Success();
     }
 
+    /// <summary>A worker's annual leave it pays in advance (workers' leaves are not requested in this system yet).</summary>
+    public Result SetWorkerLeave(DateOnly from, DateOnly to)
+    {
+        if (!IsEditable)
+        {
+            return Result.Failure(SettlementErrors.NotEditable);
+        }
+
+        if (Kind != SettlementKind.Vacation || Party != SettlementParty.Worker || to < from || to.DayNumber - from.DayNumber >= 120)
+        {
+            return Result.Failure(SettlementErrors.Leave);
+        }
+
+        LeaveFrom = from;
+        LeaveTo = to;
+        LastDay = from.AddDays(-1);
+        return Result.Success();
+    }
+
     /// <summary>What the user enters before sending it (each change is audited).</summary>
     public Result SetManual(decimal otherAdditions, decimal custody, decimal otherDeductions, bool deductFullAdvance, string? notes)
     {
@@ -336,7 +355,7 @@ public sealed class Settlement : ITenantOwned
             return Result.Failure(SettlementErrors.NotEditable);
         }
 
-        if (Wage <= 0 || (Kind == SettlementKind.EndOfService && Reason is null) || (Kind == SettlementKind.Vacation && LeaveRequestId is null))
+        if (Wage <= 0 || (Kind == SettlementKind.EndOfService && Reason is null) || (Kind == SettlementKind.Vacation && LeaveFrom is null))
         {
             return Result.Failure(SettlementErrors.Incomplete);
         }
@@ -410,7 +429,7 @@ public sealed record SettlementPerson(
 public sealed record SettlementFacts(string Period, decimal Wage, DateOnly? UnpaidFrom, decimal ExcludedDays, decimal LeaveDays);
 
 /// <param name="Code">
-/// unpaid_salary, leave_allowance, leave_balance, end_of_service, article_77, other_addition; installment, penalty_days,
+/// unpaid_salary, timesheet_pay, leave_allowance, leave_balance, end_of_service, article_77, other_addition; installment, penalty_days,
 /// penalty_amount, suspension, other_due, custody, other_deduction.
 /// </param>
 /// <param name="Days">The days it counts (pay, leave, service or penalty days).</param>
@@ -485,5 +504,6 @@ public static class SettlementErrors
     public static readonly Error NotPayable = Error.Conflict("settlement_not_payable", "Only an approved settlement is paid.");
     public static readonly Error Payment = Error.Validation("settlement_payment", "Enter the payment method (and its reference, 100 characters at most).");
     public static readonly Error Employee = Error.Validation("settlement_employee", "The employee has no joining date or no salary on the file.");
+    public static readonly Error NotSponsored = Error.Validation("settlement_not_sponsored", "Only a worker on the sponsorship of one of the company's registrations is settled here (a supplier pays its workers).");
     public static readonly Error Exists = Error.Conflict("settlement_exists", "The employee already has an open settlement of this kind (or this leave has one).");
 }

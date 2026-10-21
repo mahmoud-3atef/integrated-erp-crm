@@ -150,7 +150,7 @@ internal sealed class SettlementQueries(PayrollDbContext db, IApprovalService ap
         }
 
         var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
-        var approval = await approvals.StatusAsync(SettlementAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
+        var approval = await approvals.StatusAsync(s.Party == SettlementParty.Worker ? WorkerSettlementAdapter.ScreenCode : SettlementAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
         return new SettlementDetailDto(
             s.Id, s.SettlementNo, s.Kind.ToString(), s.Party.ToString(), s.PersonId, s.PersonNo, s.Name, s.DepartmentAr, s.DepartmentEn, s.JobTitleAr, s.JobTitleEn,
             s.Reason?.ToString(), s.Term.ToString(), s.ContractEndsOn, s.LeaveRequestId, s.LeaveRequestNo, s.LeaveFrom, s.LeaveTo, s.HireDate, s.LastDay, s.Period,

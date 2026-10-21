@@ -52,6 +52,25 @@ internal sealed class WorkforceDirectory(WorkforceDbContext db, IReferenceData r
             .ToList();
     }
 
+    public async Task<WorkerService?> ServiceAsync(Guid workerId, CancellationToken cancellationToken)
+    {
+        var row = await db.Workers.AsNoTracking().Where(x => x.Id == workerId && x.Kind == WorkerKind.Worker)
+            .Join(db.People, x => x.PersonId, p => p.Id, (x, p) => new { Worker = x, p.NameEn })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (row is null)
+        {
+            return null;
+        }
+
+        var w = row.Worker;
+        var profession = w.ProfessionCode is { } code
+            ? (await reference.ListAllAsync(ReferenceListCodes.Professions, cancellationToken).ConfigureAwait(false)).FirstOrDefault(i => i.Code == code)
+            : null;
+        return new WorkerService(
+            w.Id, w.WorkerNo, row.NameEn, w.Sponsor, profession?.NameAr, profession?.NameEn, w.ProjectName, w.ArrivedOn,
+            w.Contract.StartsOn, w.Contract.EndsOn, w.Leave.Remaining, w.Salary.Total);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, int>> WorkingByProjectAsync(CancellationToken cancellationToken) =>
         await db.Workers.AsNoTracking()
             .Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.Placement == Placement.Working && w.ProjectCrmId != null)

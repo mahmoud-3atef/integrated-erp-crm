@@ -10,6 +10,8 @@ namespace IntegratedErp.Modules.Payroll.Application;
 /// <param name="ExcludedDays">Unpaid leave days not counted in the service (beyond 20 a year, article 116).</param>
 /// <param name="LeaveDays">The leave's days (vacation) or the unused annual balance (end of service).</param>
 /// <param name="Due">The advances' installments, penalties and deductions it takes.</param>
+/// <param name="Timesheets">A worker's approved timesheet lines no run paid: paid at the timesheet's own net.</param>
+/// <param name="WorkedDays">A worker's days on the job from <paramref name="UnpaidFrom"/> (not the calendar's: housing is not paid).</param>
 public sealed record SettlementCalculation(
     SettlementKind Kind,
     EndReason? Reason,
@@ -24,7 +26,12 @@ public sealed record SettlementCalculation(
     IReadOnlyList<DueDeduction> Due,
     decimal OtherAdditions,
     decimal Custody,
-    decimal OtherDeductions);
+    decimal OtherDeductions,
+    IReadOnlyList<TimesheetPay>? Timesheets = null,
+    decimal? WorkedDays = null);
+
+/// <summary>An approved timesheet line a settlement pays (its days and the timesheet's net for the worker).</summary>
+public sealed record TimesheetPay(Guid LineId, string TimesheetNo, decimal Days, decimal Net);
 
 /// <summary>
 /// The settlement's figures under the Saudi labour law. The day's wage is the monthly wage ÷ 30.
@@ -51,7 +58,12 @@ public static class SettlementCalculator
         var day = c.Wage / 30m;
         var lines = new List<SettlementLineValues>();
 
-        var unpaidDays = c.UnpaidFrom is { } from && from <= c.LastDay ? PayDays(from, c.LastDay) : 0;
+        foreach (var line in c.Timesheets ?? [])
+        {
+            lines.Add(new(SettlementSide.Addition, "timesheet_pay", line.Days, 0, Money(line.Net), line.LineId, null, line.TimesheetNo));
+        }
+
+        var unpaidDays = c.WorkedDays ?? (c.UnpaidFrom is { } from && from <= c.LastDay ? PayDays(from, c.LastDay) : 0);
         if (unpaidDays > 0)
         {
             lines.Add(new(SettlementSide.Addition, "unpaid_salary", unpaidDays, Money(day), Money(unpaidDays * day)));

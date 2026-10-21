@@ -35,6 +35,7 @@ public sealed class PayrollModule : IModule
         services.AddScoped<SettlementService>();
         services.AddScoped<SettlementQueries>();
         services.AddScoped<IApprovalRecordAdapter, SettlementAdapter>();
+        services.AddScoped<IApprovalRecordAdapter, WorkerSettlementAdapter>();
         services.AddScoped<GosiService>();
         services.AddScoped<PayslipService>();
         services.AddScoped<PayslipMailer>();
@@ -80,6 +81,7 @@ internal static class PayrollPermissions
     public const string SettlementsView = "payroll.settlements.view";
     public const string SettlementsManage = "payroll.settlements.manage";
     public const string SettlementsApproveHr = "payroll.settlements.approve.hr";
+    public const string SettlementsApproveOperations = "payroll.settlements.approve.operations";
     public const string SettlementsApprovePayroll = "payroll.settlements.approve.payroll";
     public const string SettlementsApproveFinance = "payroll.settlements.approve.finance";
     public const string SettlementsPay = "payroll.settlements.pay";
@@ -107,6 +109,7 @@ internal static class PayrollPermissions
         new(SettlementsView, GroupAr, GroupEn, "عرض المخالصات (الإجازات ونهاية الخدمة)", "View the settlements (vacation and end of service)"),
         new(SettlementsManage, GroupAr, GroupEn, "إنشاء المخالصات وتعديلها وإرسالها وإلغاؤها", "Create, change, send and cancel the settlements"),
         new(SettlementsApproveHr, GroupAr, GroupEn, "اعتماد المخالصات (الموارد البشرية)", "Approve the settlements (HR)"),
+        new(SettlementsApproveOperations, GroupAr, GroupEn, "اعتماد مخالصات العمالة (التشغيل)", "Approve the workers' settlements (operations)"),
         new(SettlementsApprovePayroll, GroupAr, GroupEn, "اعتماد المخالصات (الرواتب)", "Approve the settlements (payroll)"),
         new(SettlementsApproveFinance, GroupAr, GroupEn, "اعتماد المخالصات (المالية)", "Approve the settlements (finance)"),
         new(SettlementsPay, GroupAr, GroupEn, "تأكيد صرف المخالصات (المالية)", "Confirm the settlements' payment (finance)"),

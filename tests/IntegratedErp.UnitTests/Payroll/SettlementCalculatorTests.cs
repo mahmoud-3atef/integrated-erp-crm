@@ -99,6 +99,26 @@ public sealed class SettlementCalculatorTests
     }
 
     [Fact]
+    public void A_worker_is_paid_the_approved_timesheet_at_its_net_and_the_days_on_the_job_after_it()
+    {
+        var line = new TimesheetPay(Guid.NewGuid(), "TS-2026-00012", 20, 980);
+        var r = SettlementCalculator.Calculate(new SettlementCalculation(
+            SettlementKind.Vacation, null, ContractTerm.Indefinite, null, 1500, Day("2024-10-01"), Day("2026-10-15"), Day("2026-10-01"), 0, 30, [], 0, 0, 0, [line], 12));
+
+        Assert.Equal((980m, 20m, line.LineId), (Amount(r, "timesheet_pay"), r.Lines.Single(l => l.Code == "timesheet_pay").Days, r.Lines.Single(l => l.Code == "timesheet_pay").SourceId!.Value));
+        Assert.Equal(600, Amount(r, "unpaid_salary")); // 12 days on the job (not the 15 calendar days: housing is not paid)
+        Assert.Equal(1500, Amount(r, "leave_allowance"));
+    }
+
+    [Theory]
+    [InlineData("2026-10-01", "2026-10-15", "2026-09-11", null, 15)]
+    [InlineData("2026-10-01", "2026-10-31", "2026-09-11", null, 30)] // a month on the job is 30
+    [InlineData("2026-10-01", "2026-10-31", "2026-10-06", "2026-10-16", 10)] // the end is the first day off the job
+    [InlineData("2026-02-01", "2026-02-28", "2026-01-01", null, 30)]
+    public void A_worker_days_on_the_job_follow_the_ledger_and_the_30_day_rule(string from, string to, string starts, string? ends, decimal days) =>
+        Assert.Equal(days, SettlementService.WorkedDays(Day(from), Day(to), [(Day(starts), ends is null ? null : Day(ends))]));
+
+    [Fact]
     public void Unpaid_leave_above_20_days_a_year_is_not_service()
     {
         var hired = Day("2024-01-01");

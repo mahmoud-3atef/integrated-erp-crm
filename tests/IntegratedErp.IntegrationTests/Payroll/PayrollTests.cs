@@ -10,6 +10,7 @@ using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Organization.Application.Settings;
 using IntegratedErp.Modules.Payroll.Application;
+using IntegratedErp.Modules.Workforce.Infrastructure;
 using IntegratedErp.Modules.Workflow.Application;
 using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.Modules.Workflow.Domain;
@@ -121,6 +122,7 @@ public sealed class PayrollTests(TestDatabase database)
             Assert.Equal("conflict.payroll_overlap", (await service.CreateAsync(new CreateRunInput(care05, new DateOnly(2026, 9, 15), new DateOnly(2026, 10, 14)), default)).Error.Code);
             var run07 = (await service.CreateAsync(new CreateRunInput(care07, september, new DateOnly(2026, 9, 30)), default)).Value;
             Assert.Equal([("BSS0802", 20m)], (await queries.LinesAsync(run07, new LineQuery(null, null, null, null, false, 1, 25), default))!.Items.Select(l => (l.WorkerNo, l.PaidDays)));
+            Assert.True((await service.DeleteAsync(run07, default)).IsSuccess); // BSS0802's September is settled below (4.11ب)
 
             var file = await queries.ScopeAsync(run05, new LineQuery(null, null, null, null, false, 1, int.MaxValue), default);
             Assert.NotEmpty(PayrollWorkbook.Build(file!.Value.Run, file.Value.Lines, filtered: false));
@@ -160,6 +162,44 @@ public sealed class PayrollTests(TestDatabase database)
             var late = (await scope.ServiceProvider.GetRequiredService<PayrollQueries>().LinesAsync(october, new LineQuery(null, "late", null, null, false, 1, 25), default))!;
             Assert.Equal([("BSS0804", 30m)], late.Items.Select(l => (l.WorkerNo, l.PaidDays)));
         }
+
+        // 4.11ب: BSS0802 (Care-pro - 07, from 1 October 2024) ends the contract on 15 October 2026: September's approved line no
+        // run paid, the 15 days on the job in October, the full award and the 10 days of leave left in the file.
+        Guid settlementId;
+        string settlementNo;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var workers = scope.ServiceProvider.GetRequiredService<WorkforceDbContext>().Workers.AsNoTracking();
+            var w2Id = await workers.Where(w => w.WorkerNo == "BSS0802").Select(w => w.Id).SingleAsync();
+            var w3Id = await workers.Where(w => w.WorkerNo == "BSS0803").Select(w => w.Id).SingleAsync();
+            var settlements = scope.ServiceProvider.GetRequiredService<SettlementService>();
+            Assert.Equal([w2Id], (await settlements.WorkersAsync("BSS080", default)).Where(w => w.WorkerNo is "BSS0802" or "BSS0803").Select(w => w.Id));
+            Assert.Equal("validation.settlement_not_sponsored", (await settlements.CreateAsync(new CreateSettlementInput("EndOfService", null, w3Id, "ContractEnd", new DateOnly(2026, 10, 15), null, null, "Worker"), default)).Error.Code);
+            settlementId = (await settlements.CreateAsync(new CreateSettlementInput("EndOfService", null, w2Id, "ContractEnd", new DateOnly(2026, 10, 15), null, null, "Worker"), default)).Value;
+
+            var s = (await scope.ServiceProvider.GetRequiredService<SettlementQueries>().GetAsync(settlementId, default))!;
+            settlementNo = s.SettlementNo;
+            decimal Line(string code) => s.Lines.Where(l => l.Code == code).Sum(l => l.Amount);
+            Assert.Equal(("Worker", 1500m, 745m, 15m, 10m), (s.Party, s.Wage, s.ServiceDays, s.UnpaidDays, s.LeaveDays));
+            Assert.Equal((20m, 1000m), (s.Lines.Single(l => l.Code == "timesheet_pay").Days, Line("timesheet_pay")));
+            Assert.Equal((750m, 1530.82m, 500m), (Line("unpaid_salary"), Line("end_of_service"), Line("leave_balance")));
+            Assert.True((await settlements.SubmitAsync(settlementId, default)).IsSuccess);
+        }
+
+        // Operations, payroll and finance approve.
+        await ApproveNextAsync(tenantId, approver);
+        await ApproveNextAsync(tenantId, approver);
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            Assert.Equal("Approved", (await scope.ServiceProvider.GetRequiredService<SettlementQueries>().GetAsync(settlementId, default))!.Status);
+
+            // September's run of the registration no longer pays the line the settlement paid.
+            var run07 = (await scope.ServiceProvider.GetRequiredService<PayrollService>().CreateAsync(new CreateRunInput(care07, september, new DateOnly(2026, 9, 30)), default)).Value;
+            var queries = scope.ServiceProvider.GetRequiredService<PayrollQueries>();
+            Assert.Equal(0, (await queries.GetAsync(run07, default))!.Totals.Workers);
+            Assert.Contains((await queries.ExclusionsAsync(run07, default))!, e => e is { Kind: "PaidElsewhere", WorkerNo: "BSS0802" } && e.Reference == settlementNo);
+        }
     }
 
     /// <summary>The approver takes their one open task and approves it.</summary>
@@ -190,8 +230,9 @@ public sealed class PayrollTests(TestDatabase database)
         }
 
         return (
-            await PersonAsync("مسؤول الرواتب", "billing.timesheets.manage", "payroll.workers.manage", "payroll.settings.manage"),
-            await PersonAsync("المعتمد", "billing.timesheets.approve", "payroll.workers.review", "payroll.workers.finance", "payroll.workers.approve"));
+            await PersonAsync("مسؤول الرواتب", "billing.timesheets.manage", "payroll.workers.manage", "payroll.settings.manage", "payroll.settlements.view", "payroll.settlements.manage"),
+            await PersonAsync("المعتمد", "billing.timesheets.approve", "payroll.workers.review", "payroll.workers.finance", "payroll.workers.approve",
+                "payroll.settlements.view", "payroll.settlements.approve.operations", "payroll.settlements.approve.payroll", "payroll.settlements.approve.finance"));
     }
 
     private static Guid Worker(FakeCrm crm, string number, int? sponsor) =>
@@ -199,7 +240,7 @@ public sealed class PayrollTests(TestDatabase database)
         {
             ["new_name"] = $"WORKER {number}", ["new_empidnumber"] = number, ["new_idnumber"] = $"2{number[3..]}00000", ["statuscode"] = 100000000, ["new_employeetype"] = 2,
             ["new_totalsalary"] = 1500m, ["new_basicsalary"] = 1000m, ["new_housingallowance"] = 300m, ["new_foodallowance"] = 100m, ["new_trasnallowance"] = 100m,
-            ["new_sponseredby"] = sponsor,
+            ["new_sponseredby"] = sponsor, ["new_contractstartdate"] = "2024-10-01T00:00:00Z", ["new_remainingbalance"] = 10m,
         }, created: Created2025);
 
     private static void WorkStart(FakeCrm crm, Guid worker, Guid project, string projectName, string on) =>

@@ -127,6 +127,16 @@ export interface SettlementLeave {
   days: number;
 }
 
+/** A worker on the company's sponsorship (the dialog's search). */
+export interface SettlementWorker {
+  id: string;
+  workerNo: string;
+  name: string;
+  sponsor: string | null;
+  placement: string;
+  projectName: string | null;
+}
+
 export interface SettlementQuery {
   party?: SettlementParty;
   kind?: SettlementKind | '';
@@ -165,7 +175,19 @@ export const settlementsApi = {
   },
   get: (id: string) => request<SettlementDetail>('GET', `${base}/${id}`),
   leaves: () => request<SettlementLeave[]>('GET', `${base}/leaves`),
-  create: (input: { kind: SettlementKind; leaveRequestId?: string; employeeId?: string; reason?: EndReason; lastDay?: string; term?: string; contractEndsOn?: string | null }) =>
+  workers: (search: string) => request<SettlementWorker[]>('GET', `${base}/workers?search=${encodeURIComponent(search)}`),
+  create: (input: {
+    kind: SettlementKind;
+    party?: SettlementParty;
+    leaveRequestId?: string;
+    employeeId?: string;
+    reason?: EndReason;
+    lastDay?: string;
+    term?: string;
+    contractEndsOn?: string | null;
+    leaveFrom?: string;
+    leaveTo?: string;
+  }) =>
     request<{ id: string }>('POST', base, input),
   update: (id: string, input: SettlementEdit) => request<void>('PUT', `${base}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${base}/${id}/submit`),

@@ -104,11 +104,32 @@ public interface IWorkforceDirectory
 /// </summary>
 public sealed record WorkerSalary(Guid WorkerId, string? Sponsor, decimal Basic, decimal Housing, decimal Food, decimal Transport, decimal Other, decimal Total);
 
+/// <summary>
+/// A worker's service as a settlement needs it (4.11ب): who, the sponsor, the arrival and the contract's dates, the
+/// leave days left in the file, and the salary.
+/// </summary>
+public sealed record WorkerService(
+    Guid WorkerId,
+    string WorkerNo,
+    string Name,
+    string? Sponsor,
+    string? ProfessionAr,
+    string? ProfessionEn,
+    string? ProjectName,
+    DateOnly? ArrivedOn,
+    DateOnly? ContractStartsOn,
+    DateOnly? ContractEndsOn,
+    decimal? LeaveRemaining,
+    decimal TotalSalary);
+
 /// <summary>The workers' salaries, for the payroll (salaries are read only by the payroll module).</summary>
 public interface IWorkerSalaries
 {
     /// <summary>The salaries of these workers (unknown ids are left out).</summary>
     Task<IReadOnlyList<WorkerSalary>> SalariesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>A worker's service for a settlement (null when unknown or not a worker).</summary>
+    Task<WorkerService?> ServiceAsync(Guid workerId, CancellationToken cancellationToken);
 }
 
 /// <summary>

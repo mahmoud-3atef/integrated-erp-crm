@@ -83,6 +83,7 @@ export function SettlementPage() {
   }
 
   const end = d.kind === 'EndOfService';
+  const worker = d.party === 'Worker';
   const adds = d.lines.filter((l) => l.side === 'Addition');
   const deds = d.lines.filter((l) => l.side === 'Deduction');
   const done = () => {
@@ -116,7 +117,7 @@ export function SettlementPage() {
         subtitle={
           end
             ? `${t(`settlements.reason.${d.reason}`)} · ${t('settlements.lastDayOn', { date: date(d.lastDay) })}`
-            : `${t('settlements.annualLeave')} · ${date(d.leaveFrom)} – ${date(d.leaveTo)} · ${d.leaveRequestNo ?? ''}`
+            : `${t('settlements.annualLeave')} · ${date(d.leaveFrom)} – ${date(d.leaveTo)}${d.leaveRequestNo ? ` · ${d.leaveRequestNo}` : ''}${worker ? ` · ${t('settlements.party.Worker')}` : ''}`
         }
         actions={
           <>
@@ -158,8 +159,8 @@ export function SettlementPage() {
           <GlassKpi icon={<CheckCircleOutlineIcon />} label={t('settlements.net')} value={sar(d.net)} hint={d.status === 'Paid' ? t('settlements.paidOn', { date: date(d.paidOn) }) : t('settlements.netHint')} />
         </GlassRow>
         <GlassRow>
-          <GlassFact label={t('settlements.employee')}>
-            <RouterLink to={`/hr/employees/${d.personId}`} style={{ color: '#fff' }}>
+          <GlassFact label={t(worker ? 'settlements.worker' : 'settlements.employee')}>
+            <RouterLink to={worker ? `/workforce/workers/${d.personId}` : `/hr/employees/${d.personId}`} style={{ color: '#fff' }}>
               <bdi>{d.personNo}</bdi>
             </RouterLink>
             {(ar ? d.jobTitleAr : d.jobTitleEn) && ` · ${ar ? d.jobTitleAr : d.jobTitleEn}`}
@@ -228,6 +229,8 @@ export function useLineDetail() {
     switch (l.code) {
       case 'unpaid_salary':
         return t('settlements.detail.unpaid', { from: date(d.unpaidFrom), to: date(d.lastDay), days: l.days, rate: sar(l.rate) });
+      case 'timesheet_pay':
+        return t('settlements.detail.timesheet', { no: l.reference, days: l.days });
       case 'leave_allowance':
         return t('settlements.detail.leave', { days: l.days, rate: sar(l.rate) });
       case 'leave_balance':
@@ -417,7 +420,7 @@ function EditDialog({ d, onClose, onSaved }: { d: SettlementDetail; onClose: () 
           {money(t('settlements.line.other_addition'), other, setOther)}
           {money(t('settlements.line.custody'), custody, setCustody)}
           {money(t('settlements.line.other_deduction'), otherDeduction, setOtherDeduction)}
-          {!end && <FormControlLabel control={<Checkbox checked={full} onChange={(e) => setFull(e.target.checked)} />} label={t('settlements.fullAdvance')} />}
+          {!end && d.party === 'Staff' && <FormControlLabel control={<Checkbox checked={full} onChange={(e) => setFull(e.target.checked)} />} label={t('settlements.fullAdvance')} />}
           <TextField size="small" multiline minRows={2} label={t('settlements.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} slotProps={{ htmlInput: { maxLength: 2000 } }} />
           <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{t('settlements.editHint')}</Typography>
           {error && <Alert severity="error">{t(error)}</Alert>}

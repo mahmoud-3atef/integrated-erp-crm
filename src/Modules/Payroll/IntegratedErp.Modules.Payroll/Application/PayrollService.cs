@@ -243,6 +243,30 @@ internal sealed class PayrollService(
                                    select new { s.TimesheetLineId, r.RunNo })
             .ToDictionaryAsync(x => x.TimesheetLineId, x => x.RunNo, cancellationToken).ConfigureAwait(false);
 
+        // What an approved settlement paid (4.11ب): its timesheet lines, and the lines within the days it paid.
+        var workerIds = lines.Select(l => l.WorkerId).Distinct().ToList();
+        var settled = await db.Settlements.AsNoTracking()
+            .Where(x => x.Party == SettlementParty.Worker && workerIds.Contains(x.PersonId) && (x.Status == SettlementStatus.Approved || x.Status == SettlementStatus.Paid))
+            .Select(x => new { x.Id, x.PersonId, x.SettlementNo, x.UnpaidFrom, x.LastDay })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var settledIds = settled.Select(x => x.Id).ToList();
+        var settledLines = await db.SettlementLines.AsNoTracking()
+            .Where(l => settledIds.Contains(l.SettlementId) && l.Code == SettlementService.TimesheetPayCode && l.SourceId != null)
+            .Select(l => new { LineId = l.SourceId!.Value, l.SettlementId })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var l in settledLines)
+        {
+            paidElsewhere.TryAdd(l.LineId, settled.First(x => x.Id == l.SettlementId).SettlementNo);
+        }
+
+        foreach (var l in lines)
+        {
+            if (settled.FirstOrDefault(x => x.PersonId == l.WorkerId && x.UnpaidFrom is { } f && l.LineFrom >= f && l.LineTo <= x.LastDay) is { } by)
+            {
+                paidElsewhere.TryAdd(l.LineId, by.SettlementNo);
+            }
+        }
+
         var inPeriod = lines.Where(l => l.LineTo >= run.From).ToList();
         var payable = lines.Where(l => l.TimesheetStatus == "Approved" && !paidElsewhere.ContainsKey(l.LineId)).ToList();
         var cards = (await workforce.CardsAsync(payable.Select(l => l.WorkerId).Concat(worked.Where(Ours)).Distinct().ToList(), cancellationToken).ConfigureAwait(false))

@@ -82,8 +82,8 @@ export function SettlementPrintPage() {
         <Typography sx={{ fontSize: 12, color: '#64748b' }}>{date(new Date().toISOString())}</Typography>
       </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5, mb: 2 }}>
-        {fact(t('settlements.employee'), <>{d.name} · <bdi>{d.personNo}</bdi></>)}
-        {fact(t('settlements.jobDepartment'), [ar ? d.jobTitleAr : d.jobTitleEn, ar ? d.departmentAr : d.departmentEn].filter(Boolean).join(' · ') || '—')}
+        {fact(t(d.party === 'Worker' ? 'settlements.worker' : 'settlements.employee'), <>{d.name} · <bdi>{d.personNo}</bdi></>)}
+        {fact(t(d.party === 'Worker' ? 'settlements.professionProject' : 'settlements.jobDepartment'), [ar ? d.jobTitleAr : d.jobTitleEn, ar ? d.departmentAr : d.departmentEn].filter(Boolean).join(' · ') || '—')}
         {fact(t('settlements.hireDate'), date(d.hireDate))}
         {end
           ? fact(t('settlements.col.reason'), t(`settlements.reason.${d.reason}`))
@@ -102,7 +102,7 @@ export function SettlementPrintPage() {
       </Stack>
       <Typography sx={{ fontSize: 12.5, lineHeight: 2, mb: 4 }}>{t(end ? 'settlements.acknowledgeEnd' : 'settlements.acknowledgeVacation', { name: d.name, net: sar(d.net) })}</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, textAlign: 'center', fontSize: 12.5 }}>
-        {['employeeSign', 'hrSign', 'financeSign'].map((k) => (
+        {[d.party === 'Worker' ? 'workerSign' : 'employeeSign', 'hrSign', 'financeSign'].map((k) => (
           <Box key={k} sx={{ borderTop: '1px solid #94a3b8', pt: 1 }}>
             {t(`settlements.${k}`)}
           </Box>
