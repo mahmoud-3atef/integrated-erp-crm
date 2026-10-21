@@ -52,7 +52,8 @@ public static class StaffPayCalculator
         StaffPayRules rules,
         DateOnly from,
         DateOnly to,
-        decimal? registeredWage = null)
+        decimal? registeredWage = null,
+        decimal settledDays = 0)
     {
         ArgumentNullException.ThrowIfNull(e);
         ArgumentNullException.ThrowIfNull(salary);
@@ -62,7 +63,13 @@ public static class StaffPayCalculator
         var notes = new List<string>();
         var items = new List<StaffPayrollItem>();
 
-        var service = ServiceDays(from, to, e.HireDate, e.EndedOn);
+        // The days a settlement already paid (the pay before a leave, the leave itself, the last days) are not paid again.
+        var service = Math.Max(0, ServiceDays(from, to, e.HireDate, e.EndedOn) - settledDays);
+        if (settledDays > 0)
+        {
+            notes.Add("settled");
+        }
+
         if (e.HireDate is { } hired && hired > from)
         {
             notes.Add("joined");

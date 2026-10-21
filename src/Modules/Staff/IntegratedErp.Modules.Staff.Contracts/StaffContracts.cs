@@ -93,4 +93,7 @@ public interface IStaffPayroll
 
     /// <summary>Records the GOSI number and the day the employee joined GOSI (closing a GOSI registration task, 4.9).</summary>
     Task<bool> SetGosiAsync(Guid employeeId, string gosiNo, DateOnly? since, CancellationToken cancellationToken);
+
+    /// <summary>Ends the employment on its last day (an approved end-of-service settlement, 4.11): the employee has left.</summary>
+    Task<bool> EndEmploymentAsync(Guid employeeId, DateOnly lastDay, CancellationToken cancellationToken);
 }

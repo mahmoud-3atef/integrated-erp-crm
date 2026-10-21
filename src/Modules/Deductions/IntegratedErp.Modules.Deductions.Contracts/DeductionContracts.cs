@@ -41,6 +41,12 @@ public interface IStaffDeductions
 
     /// <summary>Each paid advance still being deducted: what is left of it and in how many installments (for the payslip).</summary>
     Task<IReadOnlyList<AdvanceBalance>> OutstandingAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every installment still due of an employee's paid advances, whatever its month (a settlement can take the rest of an
+    /// advance at once; recorded with <see cref="RecordAsync"/>, the advance is then settled).
+    /// </summary>
+    Task<IReadOnlyList<DueDeduction>> OpenInstallmentsAsync(Guid employeeId, CancellationToken cancellationToken);
 }
 
 public sealed record AdvanceBalance(Guid EmployeeId, string AdvanceNo, decimal Remaining, int Installments);

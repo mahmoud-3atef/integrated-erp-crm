@@ -9,7 +9,9 @@ public static class LeaveContracts
 }
 
 /// <summary>An approved leave: the attendance counts its days as leave, not absence.</summary>
-public sealed record ApprovedLeave(Guid RequestId, string RequestNo, Guid EmployeeId, DateOnly From, DateOnly To, string TypeAr, string TypeEn, string Pay);
+/// <param name="TypeCode">The leave type's code ("annual" for the annual leave).</param>
+/// <param name="Days">The days the request counts (its type's day count).</param>
+public sealed record ApprovedLeave(Guid RequestId, string RequestNo, Guid EmployeeId, DateOnly From, DateOnly To, string TypeAr, string TypeEn, string Pay, string? TypeCode = null, decimal Days = 0);
 
 public interface IApprovedLeaves
 {

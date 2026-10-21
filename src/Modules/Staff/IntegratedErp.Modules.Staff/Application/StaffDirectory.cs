@@ -114,6 +114,19 @@ internal sealed class StaffDirectory(StaffDbContext db) : IStaffDirectory, IStaf
         return true;
     }
 
+    public async Task<bool> EndEmploymentAsync(Guid employeeId, DateOnly lastDay, CancellationToken cancellationToken)
+    {
+        var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == employeeId, cancellationToken).ConfigureAwait(false);
+        if (e is null)
+        {
+            return false;
+        }
+
+        e.EndEmployment(lastDay);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
     public Task<int> WithoutRegistrationAsync(CancellationToken cancellationToken) =>
         db.Employees.CountAsync(e => e.LegalEntityId == null && e.Status != Domain.StaffStatus.Left, cancellationToken);
 }

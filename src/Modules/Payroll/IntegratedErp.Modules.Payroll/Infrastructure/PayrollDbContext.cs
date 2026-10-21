@@ -50,6 +50,65 @@ internal sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> option
     public DbSet<PayslipPrint> PayslipPrints => Set<PayslipPrint>();
 
     public DbSet<PayslipEmail> PayslipEmails => Set<PayslipEmail>();
+
+    public DbSet<Settlement> Settlements => Set<Settlement>();
+
+    public DbSet<SettlementLine> SettlementLines => Set<SettlementLine>();
+}
+
+internal sealed class SettlementConfiguration : IEntityTypeConfiguration<Settlement>
+{
+    public void Configure(EntityTypeBuilder<Settlement> builder)
+    {
+        builder.ToTable("settlement");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.SettlementNo).HasMaxLength(40).IsRequired();
+        builder.Property(s => s.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.Party).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.PersonNo).HasMaxLength(50).IsRequired();
+        builder.Property(s => s.Name).HasMaxLength(300).IsRequired();
+        builder.Property(s => s.DepartmentAr).HasMaxLength(200);
+        builder.Property(s => s.DepartmentEn).HasMaxLength(200);
+        builder.Property(s => s.JobTitleAr).HasMaxLength(200);
+        builder.Property(s => s.JobTitleEn).HasMaxLength(200);
+        builder.Property(s => s.Reason).HasConversion<string>().HasMaxLength(30);
+        builder.Property(s => s.Term).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.LeaveRequestNo).HasMaxLength(40);
+        builder.Property(s => s.Period).HasMaxLength(7).IsRequired();
+        builder.Property(s => s.ServiceYears).HasPrecision(18, 4);
+        builder.Property(s => s.AwardFactor).HasPrecision(18, 4);
+        builder.Property(s => s.Notes).HasMaxLength(2000);
+        builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.Property(s => s.ApprovedByName).HasMaxLength(200);
+        builder.Property(s => s.LastComment).HasMaxLength(2000);
+        builder.Property(s => s.PaymentMethod).HasMaxLength(30);
+        builder.Property(s => s.PaymentReference).HasMaxLength(100);
+        builder.Property(s => s.PaidByName).HasMaxLength(200);
+        builder.HasMany(s => s.Lines).WithOne().HasForeignKey(l => l.SettlementId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(s => s.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasIndex(s => new { s.TenantId, s.SettlementNo }).IsUnique();
+        builder.HasIndex(s => new { s.TenantId, s.PersonId, s.Kind });
+        builder.HasIndex(s => new { s.TenantId, s.LeaveRequestId });
+    }
+}
+
+internal sealed class SettlementLineConfiguration : IEntityTypeConfiguration<SettlementLine>
+{
+    public void Configure(EntityTypeBuilder<SettlementLine> builder)
+    {
+        builder.ToTable("settlement_line");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Id).ValueGeneratedNever();
+        builder.Property(l => l.Side).HasConversion<string>().HasMaxLength(20);
+        builder.Property(l => l.Code).HasMaxLength(40).IsRequired();
+        builder.Property(l => l.Rate).HasPrecision(18, 4);
+        builder.Property(l => l.SourceKind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(l => l.Reference).HasMaxLength(60);
+        builder.Property(l => l.SourcePeriod).HasMaxLength(7);
+        builder.HasIndex(l => l.SettlementId);
+    }
 }
 
 internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<PayrollRun>

@@ -468,7 +468,7 @@ internal sealed class ApprovedLeaves(LeaveDbContext db) : IApprovedLeaves
         var query = from r in db.Requests.AsNoTracking()
                     join t in db.Types.AsNoTracking() on r.LeaveTypeId equals t.Id
                     where r.Status == RequestStatus.Approved && r.From <= end && r.To >= start && (employeeId == null || r.EmployeeId == employeeId)
-                    select new ApprovedLeave(r.Id, r.RequestNo, r.EmployeeId, r.From, r.To, t.NameAr, t.NameEn, t.Pay.ToString());
+                    select new ApprovedLeave(r.Id, r.RequestNo, r.EmployeeId, r.From, r.To, t.NameAr, t.NameEn, t.Pay.ToString(), t.Code, r.Days);
         return await query.ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -1154,6 +1154,359 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                     b.ToTable("saudization_target", "payroll");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.Settlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("approved_at");
+
+                    b.Property<string>("ApprovedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("approved_by_name");
+
+                    b.Property<bool>("AwaitingApproval")
+                        .HasColumnType("bit")
+                        .HasColumnName("awaiting_approval");
+
+                    b.Property<decimal>("AwardFactor")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("award_factor");
+
+                    b.Property<decimal>("AwardFull")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("award_full");
+
+                    b.Property<DateTimeOffset>("CalculatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("calculated_at");
+
+                    b.Property<DateOnly?>("ContractEndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("contract_ends_on");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<decimal>("Custody")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("custody");
+
+                    b.Property<bool>("DeductFullAdvance")
+                        .HasColumnType("bit")
+                        .HasColumnName("deduct_full_advance");
+
+                    b.Property<string>("DepartmentAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("department_ar");
+
+                    b.Property<string>("DepartmentEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("department_en");
+
+                    b.Property<decimal>("ExcludedDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("excluded_days");
+
+                    b.Property<DateOnly>("HireDate")
+                        .HasColumnType("date")
+                        .HasColumnName("hire_date");
+
+                    b.Property<string>("JobTitleAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("job_title_ar");
+
+                    b.Property<string>("JobTitleEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("job_title_en");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<DateOnly>("LastDay")
+                        .HasColumnType("date")
+                        .HasColumnName("last_day");
+
+                    b.Property<decimal>("LeaveDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("leave_days");
+
+                    b.Property<DateOnly?>("LeaveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("leave_from");
+
+                    b.Property<Guid?>("LeaveRequestId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("leave_request_id");
+
+                    b.Property<string>("LeaveRequestNo")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("leave_request_no");
+
+                    b.Property<DateOnly?>("LeaveTo")
+                        .HasColumnType("date")
+                        .HasColumnName("leave_to");
+
+                    b.Property<Guid?>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legal_entity_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("Net")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("net");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<decimal>("OtherAdditions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("other_additions");
+
+                    b.Property<decimal>("OtherDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("other_deductions");
+
+                    b.Property<string>("PaidByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("paid_by_name");
+
+                    b.Property<DateOnly?>("PaidOn")
+                        .HasColumnType("date")
+                        .HasColumnName("paid_on");
+
+                    b.Property<string>("Party")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("party");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("payment_method");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("payment_reference");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)")
+                        .HasColumnName("period");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("person_id");
+
+                    b.Property<string>("PersonNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("person_no");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("reason");
+
+                    b.Property<decimal>("ServiceDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("service_days");
+
+                    b.Property<decimal>("ServiceYears")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("service_years");
+
+                    b.Property<string>("SettlementNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("settlement_no");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Term")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("term");
+
+                    b.Property<decimal>("TotalAdditions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_additions");
+
+                    b.Property<decimal>("TotalDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_deductions");
+
+                    b.Property<decimal>("UnpaidDays")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unpaid_days");
+
+                    b.Property<DateOnly?>("UnpaidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("unpaid_from");
+
+                    b.Property<decimal>("Wage")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("wage");
+
+                    b.HasKey("Id")
+                        .HasName("pk_settlement");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_settlement_tenant_id");
+
+                    b.HasIndex("TenantId", "LeaveRequestId")
+                        .HasDatabaseName("ix_settlement_tenant_id_leave_request_id");
+
+                    b.HasIndex("TenantId", "SettlementNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_settlement_tenant_id_settlement_no");
+
+                    b.HasIndex("TenantId", "PersonId", "Kind")
+                        .HasDatabaseName("ix_settlement_tenant_id_person_id_kind");
+
+                    b.ToTable("settlement", "payroll");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SettlementLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("code");
+
+                    b.Property<decimal>("Days")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("days");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("int")
+                        .HasColumnName("line_no");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("rate");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid>("SettlementId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("settlement_id");
+
+                    b.Property<string>("Side")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("side");
+
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("source_id");
+
+                    b.Property<string>("SourceKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("source_kind");
+
+                    b.Property<string>("SourcePeriod")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)")
+                        .HasColumnName("source_period");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_settlement_line");
+
+                    b.HasIndex("SettlementId")
+                        .HasDatabaseName("ix_settlement_line_settlement_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_settlement_line_tenant_id");
+
+                    b.ToTable("settlement_line", "payroll");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SponsorRegistration", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1829,6 +2182,16 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                         .HasConstraintName("fk_payroll_line_source_payroll_line_line_id");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.SettlementLine", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Payroll.Domain.Settlement", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_settlement_line_settlement_settlement_id");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.StaffPayrollItem", b =>
                 {
                     b.HasOne("IntegratedErp.Modules.Payroll.Domain.StaffPayrollLine", null)
@@ -1858,6 +2221,11 @@ namespace IntegratedErp.Modules.Payroll.Infrastructure.Migrations
                 {
                     b.Navigation("Exclusions");
 
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Payroll.Domain.Settlement", b =>
+                {
                     b.Navigation("Lines");
                 });
 

@@ -329,6 +329,20 @@ internal sealed class StaffDeductions(DeductionsDbContext db, DeductionSetup set
             .Where(b => b.Remaining > 0).OrderBy(b => b.AdvanceNo, StringComparer.Ordinal).ToList();
     }
 
+    public async Task<IReadOnlyList<DueDeduction>> OpenInstallmentsAsync(Guid employeeId, CancellationToken cancellationToken)
+    {
+        var open = await (from i in db.Installments.AsNoTracking()
+                          join a in db.Advances.AsNoTracking() on i.AdvanceId equals a.Id
+                          where a.EmployeeId == employeeId && a.Status == AdvanceStatus.Disbursed
+                              && (i.Status == InstallmentStatus.Scheduled || i.Status == InstallmentStatus.Deferred || i.Status == InstallmentStatus.Postponed)
+                          orderby i.Period
+                          select new { i.Id, a.AdvanceNo, i.Period, Due = i.Amount - i.Deducted, a.AboveCap })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return open.Where(i => i.Due > 0)
+            .Select(i => new DueDeduction(i.Id, DeductionItemKind.Installment, employeeId, i.AdvanceNo, i.Period, 0, i.Due, i.AboveCap, i.AdvanceNo))
+            .ToList();
+    }
+
     public async Task<DeductionRules> RulesAsync(CancellationToken cancellationToken) =>
         new((await setup.SettingAsync(cancellationToken).ConfigureAwait(false)).MonthlyCapPercent);
 

@@ -395,6 +395,20 @@ internal sealed class StaffPayrollService(
         var adjustments = (await db.StaffAdjustments.AsNoTracking().Where(a => a.RunId == run.Id).ToListAsync(cancellationToken).ConfigureAwait(false))
             .ToLookup(a => a.EmployeeId);
 
+        // The days an approved settlement paid (its unpaid days, and a vacation's leave), by the 30-day rule: all the run's days are 30.
+        var settlements = (await db.Settlements.AsNoTracking()
+                .Where(s => s.Party == SettlementParty.Staff && (s.Status == SettlementStatus.Approved || s.Status == SettlementStatus.Paid))
+                .Select(s => new { s.PersonId, s.UnpaidFrom, s.UnpaidDays, s.LastDay, s.LeaveFrom, s.LeaveTo })
+                .ToListAsync(cancellationToken).ConfigureAwait(false))
+            .ToLookup(s => s.PersonId);
+        int Overlap(DateOnly? start, DateOnly? end) =>
+            start is { } f && end is { } t ? Math.Max(0, Math.Min(t.DayNumber, run.To.DayNumber) - Math.Max(f.DayNumber, run.From.DayNumber) + 1) : 0;
+        decimal Settled(Guid employeeId)
+        {
+            var days = settlements[employeeId].Sum(s => Overlap(s.UnpaidDays > 0 ? s.UnpaidFrom : null, s.LastDay) + Overlap(s.LeaveFrom, s.LeaveTo));
+            return days >= run.To.DayNumber - run.From.DayNumber + 1 ? 30 : Math.Min(30, days);
+        }
+
         var lines = new List<StaffPayrollLine>();
         var noSalary = 0;
         foreach (var e in employees)
@@ -405,12 +419,18 @@ internal sealed class StaffPayrollService(
                 continue;
             }
 
+            var settled = Settled(e.EmployeeId);
+            if (settled > 0 && StaffPayCalculator.ServiceDays(run.From, run.To, e.HireDate, e.EndedOn) <= settled)
+            {
+                continue;
+            }
+
             var category = StaffPayCalculator.CategoryOf(e, run.From);
             var rate = gosi.GetValueOrDefault(category);
             var (values, items) = StaffPayCalculator.Line(
                 e, salary, attended.GetValueOrDefault(e.EmployeeId), due[e.EmployeeId].ToList(),
                 adjustments[e.EmployeeId].Select(a => new StaffAdjustmentInput(a.Id, a.Kind, a.Amount, a.Reason)).ToList(),
-                rate, rules, run.From, run.To, registered.TryGetValue(e.EmployeeId, out var wage) ? wage : null);
+                rate, rules, run.From, run.To, registered.TryGetValue(e.EmployeeId, out var wage) ? wage : null, settled);
             lines.Add(StaffPayrollLine.Create(run.Id, values, items));
         }
 

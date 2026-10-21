@@ -32,6 +32,9 @@ public sealed class PayrollModule : IModule
         services.AddScoped<StaffPayrollService>();
         services.AddScoped<StaffPayrollQueries>();
         services.AddScoped<IApprovalRecordAdapter, StaffPayrollAdapter>();
+        services.AddScoped<SettlementService>();
+        services.AddScoped<SettlementQueries>();
+        services.AddScoped<IApprovalRecordAdapter, SettlementAdapter>();
         services.AddScoped<GosiService>();
         services.AddScoped<PayslipService>();
         services.AddScoped<PayslipMailer>();
@@ -39,7 +42,9 @@ public sealed class PayrollModule : IModule
         services.AddPermissions(PayrollPermissions.All);
         services.AddNumberSequences(
             new NumberSequenceDefinition("payroll", PayrollDbContext.SchemaName, "الرواتب", "Payroll", "مسيرات الرواتب", "Payroll runs", "PR-{YYYY}-{N:5}", NumberReset.Yearly),
-            new NumberSequenceDefinition(StaffPayrollService.Sequence, PayrollDbContext.SchemaName, "الرواتب", "Payroll", "مسيرات رواتب الموظفين", "Staff payroll runs", "SP-{YYYY}-{N:5}", NumberReset.Yearly));
+            new NumberSequenceDefinition(StaffPayrollService.Sequence, PayrollDbContext.SchemaName, "الرواتب", "Payroll", "مسيرات رواتب الموظفين", "Staff payroll runs", "SP-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition(SettlementService.VacationSequence, PayrollDbContext.SchemaName, "الرواتب", "Payroll", "مخالصات الإجازات", "Vacation settlements", "SV-{YYYY}-{N:5}", NumberReset.Yearly),
+            new NumberSequenceDefinition(SettlementService.FinalSequence, PayrollDbContext.SchemaName, "الرواتب", "Payroll", "مخالصات نهاية الخدمة", "End-of-service settlements", "ST-{YYYY}-{N:5}", NumberReset.Yearly));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -47,6 +52,7 @@ public sealed class PayrollModule : IModule
         endpoints.MapPayrollEndpoints();
         endpoints.MapStaffPayrollEndpoints();
         endpoints.MapGosiEndpoints();
+        endpoints.MapSettlementEndpoints();
     }
 }
 
@@ -71,6 +77,12 @@ internal static class PayrollPermissions
     public const string GosiManage = "payroll.gosi.manage";
     public const string GosiInvoice = "payroll.gosi.invoice";
     public const string PayslipsSend = "payroll.payslips.send";
+    public const string SettlementsView = "payroll.settlements.view";
+    public const string SettlementsManage = "payroll.settlements.manage";
+    public const string SettlementsApproveHr = "payroll.settlements.approve.hr";
+    public const string SettlementsApprovePayroll = "payroll.settlements.approve.payroll";
+    public const string SettlementsApproveFinance = "payroll.settlements.approve.finance";
+    public const string SettlementsPay = "payroll.settlements.pay";
 
     private const string GroupAr = "الرواتب";
     private const string GroupEn = "Payroll";
@@ -92,5 +104,11 @@ internal static class PayrollPermissions
         new(GosiManage, GroupAr, GroupEn, "إغلاق مهام التأمينات الاجتماعية (التسجيل وتحديث الأجر والاستبعاد)", "Close GOSI tasks (registration, wage update, exclusion)"),
         new(GosiInvoice, GroupAr, GroupEn, "تسجيل فاتورة التأمينات الاجتماعية ومطابقتها (المالية)", "Record and reconcile GOSI's invoice (finance)"),
         new(PayslipsSend, GroupAr, GroupEn, "إرسال قسائم الرواتب إلى بريد الموظفين", "Email the payslips to the employees"),
+        new(SettlementsView, GroupAr, GroupEn, "عرض المخالصات (الإجازات ونهاية الخدمة)", "View the settlements (vacation and end of service)"),
+        new(SettlementsManage, GroupAr, GroupEn, "إنشاء المخالصات وتعديلها وإرسالها وإلغاؤها", "Create, change, send and cancel the settlements"),
+        new(SettlementsApproveHr, GroupAr, GroupEn, "اعتماد المخالصات (الموارد البشرية)", "Approve the settlements (HR)"),
+        new(SettlementsApprovePayroll, GroupAr, GroupEn, "اعتماد المخالصات (الرواتب)", "Approve the settlements (payroll)"),
+        new(SettlementsApproveFinance, GroupAr, GroupEn, "اعتماد المخالصات (المالية)", "Approve the settlements (finance)"),
+        new(SettlementsPay, GroupAr, GroupEn, "تأكيد صرف المخالصات (المالية)", "Confirm the settlements' payment (finance)"),
     ];
 }
