@@ -1,4 +1,6 @@
 import CheckIcon from '@mui/icons-material/Check';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ReplayOutlinedIcon from '@mui/icons-material/ReplayOutlined';
@@ -23,6 +25,8 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '../../../app/session';
 import { errorKey } from '../../../api/auth';
 import {
   exitKinds,
@@ -554,6 +558,7 @@ export function MovementWizard({
               {t('movements.busyWith', { number: options.busyWith })}
             </Alert>
           )}
+          <DocumentActions worker={worker} />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 1.5 }}>
             {[...movementTypes].sort((x, y) => Number(options.allowed.includes(y)) - Number(options.allowed.includes(x))).map((m, n) => {
               const allowed = options.allowed.includes(m) && !options.busyWith;
@@ -610,5 +615,70 @@ export function MovementWizard({
 
       {step === 2 && worker && type && details()}
     </WizardDialog>
+  );
+}
+
+/**
+ * The orders a worker's state allows, as the old employee screen's «إجراء جديد»: a delivery order to a project (a
+ * worker in housing or new; the step suggested for one in housing), and a return to housing (a worker on the job; the
+ * step suggested for them). Each opens its order with the worker chosen; a locked one says why.
+ */
+function DocumentActions({ worker }: { worker: WorkerCard }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { can } = useSession();
+  const ended = worker.placement === 'Exited' || worker.placement === 'Absconded';
+  const actions = [
+    {
+      key: 'delivery',
+      show: can('operations.delivery.create', true),
+      icon: <WorkOutlineOutlinedIcon />,
+      from: '#0e7c86',
+      reason: worker.available ? null : ended ? t('movements.docs.ended') : t('movements.docs.deliveryWhen'),
+      suggested: worker.available && worker.placement === 'Housing',
+      open: () => navigate('/operations/delivery-orders/new', { state: { workerIds: [worker.id] } }),
+    },
+    {
+      key: 'return',
+      show: can('operations.return.create', true),
+      icon: <HomeOutlinedIcon />,
+      from: '#b38a0f',
+      reason: worker.onJob ? null : worker.placement === 'Housing' ? t('movements.docs.inHousing') : ended ? t('movements.docs.ended') : t('movements.docs.returnWhen'),
+      suggested: worker.onJob,
+      open: () => navigate('/operations/return-orders/new', { state: { workerId: worker.id } }),
+    },
+  ].filter((a) => a.show);
+  if (actions.length === 0) return null;
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 1.5, mb: 1.5 }}>
+      {actions.map((a) => {
+        const allowed = !a.reason;
+        return (
+          <ButtonBase
+            key={a.key}
+            disabled={!allowed}
+            onClick={a.open}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1.5, p: 2, textAlign: 'start', borderRadius: `${tokens.radius + 4}px`, position: 'relative',
+              border: `${a.suggested && allowed ? 2 : 1}px solid ${a.suggested && allowed ? a.from : tokens.gray100}`,
+              opacity: allowed ? 1 : 0.5, filter: allowed ? 'none' : 'grayscale(1)', transition: 'all .2s ease',
+              '&:hover': allowed ? { transform: 'translateY(-3px)', boxShadow: `0 14px 28px ${a.from}2e`, borderColor: a.from } : undefined,
+            }}
+          >
+            <Box aria-hidden sx={{ flex: '0 0 auto', width: 46, height: 46, borderRadius: '14px', display: 'grid', placeItems: 'center', color: '#fff', bgcolor: a.from, '& svg': { fontSize: 24 } }}>{a.icon}</Box>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography sx={{ fontSize: 14.5, fontWeight: 800, color: tokens.navy800 }}>{t(`movements.docs.${a.key}`)}</Typography>
+              <Typography sx={{ fontSize: 12, color: tokens.gray500, lineHeight: 1.5 }}>{t(`movements.docs.${a.key}Hint`)}</Typography>
+            </Box>
+            {(a.reason || a.suggested) && (
+              <Box component="span" sx={{ position: 'absolute', top: 10, insetInlineEnd: 10, borderRadius: 99, px: 1, py: 0.2, fontSize: 11, fontWeight: 700, color: a.reason ? tokens.gray600 : '#fff', bgcolor: a.reason ? tokens.gray100 : a.from }}>
+                {a.reason ?? t('movements.docs.suggested')}
+              </Box>
+            )}
+            {!allowed && <LockOutlinedIcon sx={{ fontSize: 18, color: tokens.gray500 }} />}
+          </ButtonBase>
+        );
+      })}
+    </Box>
   );
 }

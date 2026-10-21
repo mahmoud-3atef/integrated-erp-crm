@@ -46,7 +46,7 @@ const daysAgo = (iso: string) => Math.floor((Date.parse(isoToday()) - Date.parse
  * A new or returned return order, in three steps: the worker on the job, the return (arrival in housing, reason,
  * room, salary), then a review drawing the way back before it goes for approval.
  */
-export function ReturnOrderWizard({ id, onClose, onSaved }: { id?: string; onClose: () => void; onSaved: (id: string, approvalError: string | null) => void }) {
+export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { id?: string; initialWorkerId?: string; onClose: () => void; onSaved: (id: string, approvalError: string | null) => void }) {
   const { t } = useTranslation();
   const { ar, date } = useCommercialFormat();
   const stateName = useStateName();
@@ -69,7 +69,17 @@ export function ReturnOrderWizard({ id, onClose, onSaved }: { id?: string; onClo
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    returnsApi.onJobWorkers(id).then(setWorkers).catch((failure: unknown) => setError(errorKey(failure)));
+    returnsApi
+      .onJobWorkers(id)
+      .then((list) => {
+        setWorkers(list);
+        // From a worker's page («إجراء جديد»): that worker is chosen.
+        if (!id && initialWorkerId && list.some((w) => w.worker.id === initialWorkerId && !w.busyOrderNo)) {
+          setWorkerId(initialWorkerId);
+          setStep(1);
+        }
+      })
+      .catch((failure: unknown) => setError(errorKey(failure)));
     returnsApi.rooms().then(setRooms).catch(() => setRooms([]));
     if (id) {
       returnsApi

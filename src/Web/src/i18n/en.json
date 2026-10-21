@@ -2796,7 +2796,7 @@
       "closed": "Rejected or canceled"
     },
     "types": {
-      "Arrival": "Arrival",
+      "Arrival": "New entry (newly arrived)",
       "VacationDeparture": "Vacation departure",
       "VacationReturn": "Return from vacation",
       "Absconding": "Absconding report",
@@ -2880,7 +2880,18 @@
     "action": "Action",
     "journey": "The change in the worker's state",
     "executed": "Executed by",
-    "created": "Created by"
+    "created": "Created by",
+    "docs": {
+      "delivery": "Delivery to a project",
+      "deliveryHint": "Deliver the worker to a project to start work.",
+      "return": "Return to housing",
+      "returnHint": "Return order: the worker back from the project to housing.",
+      "suggested": "Suggested step",
+      "ended": "The worker's service has ended",
+      "deliveryWhen": "Available when the worker is in housing or new",
+      "inHousing": "The worker is already in housing",
+      "returnWhen": "Available when the worker is on the job"
+    }
   },
   "alerts": {
     "title": "Alerts",

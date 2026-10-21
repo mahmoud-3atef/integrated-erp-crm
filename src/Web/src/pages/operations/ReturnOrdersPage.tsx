@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { returnsApi, type ReturnList } from '../../api/operations';
 import { useSession } from '../../app/session';
@@ -46,6 +46,7 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
   const { can } = useSession();
   const { date } = useCommercialFormat();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const status = params.get('status') ?? '';
   const source = params.get('source') ?? '';
   const search = params.get('q') ?? '';
@@ -219,6 +220,7 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
       </Box>
       {wizard && (
         <ReturnOrderWizard
+          initialWorkerId={creating ? (location.state as { workerId?: string } | null)?.workerId : undefined}
           onClose={() => (creating ? navigate('/operations/return-orders') : setWizard(false))}
           onSaved={(saved, failed) => navigate(`/operations/return-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
         />
