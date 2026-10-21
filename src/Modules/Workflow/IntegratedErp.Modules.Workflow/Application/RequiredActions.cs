@@ -7,8 +7,8 @@ namespace IntegratedErp.Modules.Workflow.Application;
 
 /// <summary>
 /// A screen's required actions (e.g. a return order's «house the worker») in its processes. A process published before
-/// the screen declared them gets them as «action» steps at its end — a new version published by the system, keeping
-/// the process's state and the designer's unpublished draft (which gets them too).
+/// the screen declared them gets them as «action» steps on the approval of its last stage — a new version published by
+/// the system, keeping the process's state and the designer's unpublished draft (which gets them too).
 /// </summary>
 internal static class RequiredActions
 {
@@ -39,7 +39,17 @@ internal static class RequiredActions
             return id[..Math.Min(40, id.Length)];
         }
 
-        return definition with { Steps = [.. definition.Steps, .. missing.Select(a => new ActionStep { Id = Id(a.Key), Label = a.NameAr, Action = a.Key })] };
+        // Where the default processes run them: on the approval of the last stage (else at the process's end).
+        var added = missing.Select(a => (Step)new ActionStep { Id = Id(a.Key), Label = a.NameAr, Action = a.Key }).ToList();
+        var last = definition.Steps.Select((s, i) => (Step: s, Index: i)).LastOrDefault(x => x.Step is ApprovalStep);
+        if (last.Step is ApprovalStep stage)
+        {
+            var steps2 = definition.Steps.ToList();
+            steps2[last.Index] = stage with { OnApprove = [.. stage.OnApprove, .. added] };
+            return definition with { Steps = steps2 };
+        }
+
+        return definition with { Steps = [.. definition.Steps, .. added] };
     }
 
     public static async Task UpgradeAsync(WorkflowDbContext db, ApprovalScreen screen, DateTimeOffset at, CancellationToken cancellationToken)

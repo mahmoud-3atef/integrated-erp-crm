@@ -812,7 +812,7 @@
       "Failed": "Stopped with an error",
       "Retried": "Retried",
       "Reassigned": "Reassigned",
-      "ActionRun": "Action run"
+      "ActionRun": "Code run"
     },
     "decided": {
       "Approved": "Approved",
@@ -1028,7 +1028,7 @@
       "update": "Update record",
       "notify": "Send notification",
       "stop": "Stop process",
-      "action": "Run an action"
+      "action": "Run code"
     },
     "typeHint": {
       "approval": "A task for people to approve, reject or return",
@@ -1036,7 +1036,7 @@
       "update": "Set a field or change the record's status",
       "notify": "In-system notification and email",
       "stop": "End the process as approved, rejected or canceled",
-      "action": "Run one of the screen's pieces of work, e.g. housing the worker or opening the work period."
+      "action": "Run one of the screen's codes by name, e.g. housing the worker or opening the work period."
     },
     "assignee": {
       "Role": "Role",
@@ -1081,10 +1081,10 @@
       "none": "No active process for this screen. Create one in Approval processes.",
       "start": "Run"
     },
-    "action": "Action",
+    "action": "Code",
     "actionHint": "The system's own code, chosen by name, run at its place in the process as the user whose decision reached it.",
-    "noActions": "This screen has no actions.",
-    "noAction": "No action chosen",
+    "noActions": "This screen has no codes.",
+    "noAction": "No code chosen",
     "requiredAction": "required"
   },
   "myApprovals": {

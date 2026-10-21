@@ -77,11 +77,11 @@ public sealed class ProcessDefinitionTests
         Assert.Contains("not an action", DefinitionRules.Validate(With(house, new ActionStep { Id = "y", Action = "delete_all" }), screen).Error.Message, StringComparison.Ordinal);
         Assert.Contains("must run the action", DefinitionRules.Validate(With(new ActionStep { Id = "y", Action = "notify_sales" }), screen).Error.Message, StringComparison.Ordinal);
 
-        // A process published before the action existed gets it at its end (once).
+        // A process published before the action existed gets it on its last stage's approval (once).
         var old = With();
         var upgraded = IntegratedErp.Modules.Workflow.Application.RequiredActions.WithRequired(old, screen);
-        var added = Assert.IsType<ActionStep>(upgraded.Steps[^1]);
-        Assert.Equal(("house_worker", 2), (added.Action, upgraded.Steps.Count));
+        var added = Assert.IsType<ActionStep>(Assert.Single(Assert.IsType<ApprovalStep>(Assert.Single(upgraded.Steps)).OnApprove));
+        Assert.Equal("house_worker", added.Action);
         Assert.True(DefinitionRules.Validate(upgraded, screen).IsSuccess);
         Assert.Same(upgraded, IntegratedErp.Modules.Workflow.Application.RequiredActions.WithRequired(upgraded, screen));
     }
