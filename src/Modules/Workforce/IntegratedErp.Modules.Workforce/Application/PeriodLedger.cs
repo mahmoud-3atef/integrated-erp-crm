@@ -116,7 +116,7 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
             return Result.Failure(Error.Conflict("period_overlap", "The new day overlaps another period of the worker."));
         }
 
-        period.Amend(amend.StartsOn, amend.PaySalary, amend.Place);
+        period.Amend(amend.StartsOn, amend.PaySalary, amend.Place, amend.TotalPrice);
         before?.EndOn(amend.StartsOn);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();

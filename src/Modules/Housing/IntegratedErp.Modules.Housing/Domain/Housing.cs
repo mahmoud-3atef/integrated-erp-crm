@@ -216,6 +216,9 @@ public sealed class RoomAssignment : ITenantOwned
 
     /// <summary>The worker left the room on the given day (a day before or on the start closes it at its start).</summary>
     public void Close(DateOnly on) => EndsOn = on > StartsOn ? on : StartsOn;
+
+    /// <summary>The leaving was taken back: the stay goes on.</summary>
+    public void Reopen() => EndsOn = null;
 }
 
 public static class HousingErrors

@@ -58,6 +58,12 @@ internal static class OperationsEndpoints
                 ToHttp(await service.SubmitAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);
 
+        group.MapPut("/{id:guid}/amend", async (Guid id, DeliveryAmendInput input, DeliveryOrderService service, CancellationToken ct) =>
+                ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.DeliveryAmend, companyWide: true);
+        group.MapPost("/{id:guid}/cancel-approved", async (Guid id, CancelRequest r, DeliveryOrderService service, CancellationToken ct) =>
+                ToHttp(await service.CancelApprovedAsync(id, r.Comment, ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.DeliveryCancelApproved, companyWide: true);
         group.MapPost("/{id:guid}/cancel", async (Guid id, CancelRequest r, DeliveryOrderService service, CancellationToken ct) =>
                 ToHttp(await service.CancelAsync(id, r.Comment, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.DeliveryCreate, companyWide: true);

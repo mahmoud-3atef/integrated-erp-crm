@@ -178,6 +178,27 @@ public sealed class DeliveryOrderTests(TestDatabase database)
                 new ApprovalSubmission(DeliveryOrderAdapter.ScreenCode, orderId, "x", null, process.Id), default);
             Assert.Equal("conflict.delivery_not_startable", run.Error.Code);
         }
+
+        // Changed after the delivery (with a reason): the second worker started a day later at a new price; the period follows.
+        using (var scope = database.Scope(tenantId, user: operationsManager.ToString()))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<DeliveryOrderService>();
+            var detail = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!;
+            var secondLine = detail.Lines.Single(l => l.WorkerId == second);
+            var change = new DeliveryAmendInput(detail.Summary.ReceiverName, null, null, [new DeliveryLineChange(secondLine.Id, deliverOn.AddDays(2), 3300m, null)], "باشر متأخرًا يومًا");
+            Assert.Equal("validation.delivery_special_reason", (await service.AmendAsync(orderId, change, default)).Error.Code);
+            Assert.True((await service.AmendAsync(orderId, change with { Lines = [new DeliveryLineChange(secondLine.Id, deliverOn.AddDays(2), 3300m, "اتفاق جديد مع العميل")] }, default)).IsSuccess);
+            var period = (await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(second, default)).Single();
+            Assert.Equal((deliverOn.AddDays(2), 3300m, true), (period.StartsOn, period.TotalPrice, period.IsSpecialPrice));
+
+            // Cancelled after the delivery: both workers' work periods are taken back; they are available again.
+            Assert.True((await service.CancelApprovedAsync(orderId, "سُجِّل بالخطأ", default)).IsSuccess);
+            Assert.Equal("CanceledAfterApproval", (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().GetAsync(orderId, default))!.Summary.Status);
+            Assert.Empty(await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(first, default));
+            var available = await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().AvailableAsync(default);
+            Assert.Contains(available, w => w.Id == first);
+            Assert.Equal("conflict.delivery_not_amendable", (await service.CancelApprovedAsync(orderId, "مرة أخرى", default)).Error.Code);
+        }
     }
 
     [SkippableFact]

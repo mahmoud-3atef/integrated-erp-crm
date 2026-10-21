@@ -282,13 +282,13 @@
     "conflict_package_overlap": "An active package for the same project, profession and nationality covers part of this period. Change its dates or stop it first.",
     "not_found_price_package": "Package not found.",
     "validation_delivery_project": "Choose an active project.",
-    "validation_delivery_receiver": "The receiver's name is required.",
+    "validation_delivery_receiver": "Enter the receiver's name.",
     "validation_delivery_delay_reason": "The delivery date is more than two days ago: write the reason for the delay.",
     "validation_delivery_worker_duplicate": "A worker is on the order twice.",
     "validation_delivery_worker_unavailable": "A worker is not available for delivery (not in housing or not active).",
     "conflict_delivery_worker_busy": "A worker is on another open delivery order.",
     "validation_delivery_no_price": "A worker has no package for their profession and nationality: enter a special price with a reason.",
-    "validation_delivery_special_reason": "A special price needs a reason.",
+    "validation_delivery_special_reason": "A new price is a special price: give its reason.",
     "validation_delivery_price_minimum": "The service price cannot be less than SAR 1,000.",
     "validation_delivery_price_below_cost": "The service price is less than the salary, housing and transport.",
     "validation_delivery_start_before": "The start of work cannot be before the delivery date.",
@@ -551,7 +551,12 @@
     "conflict_return_not_amendable": "Only an approved order of this system can be changed or cancelled after its approval.",
     "validation_return_amend_reason": "Give the reason (500 characters at most).",
     "conflict_return_later_period": "The worker has an action after this order: cancel it first.",
-    "conflict_return_period_overlap": "The new arrival day overlaps another period of the worker."
+    "conflict_return_period_overlap": "The new arrival day overlaps another period of the worker.",
+    "conflict_delivery_not_amendable": "Only a delivered order of this system can be changed or cancelled after its approval.",
+    "validation_delivery_amend_reason": "Give the reason (500 characters at most).",
+    "not_found_delivery_line": "The worker is not on this order.",
+    "conflict_delivery_later_period": "A worker of the order has an action after it: cancel it first.",
+    "conflict_delivery_period_overlap": "A new start of work overlaps another period of the worker."
   },
   "menu": {
     "label": "Main menu",
@@ -1845,6 +1850,24 @@
         "review": "Review and send",
         "hint": "Choose the project and dates, then the workers, then check the prices before sending for approval.",
         "picked": "{{count}} workers chosen. Add more or go on to the prices."
+      },
+      "amend": {
+        "action": "Change after approval",
+        "cancelAction": "Cancel the approved order",
+        "title": "Change delivered order {{no}}",
+        "hint": "Each worker's work period moves with their new start, and their period before it ends that day. A new price is a special price with its reason. The change and its reason are recorded.",
+        "receiver": "Receiver's name",
+        "receiverTitle": "Receiver's title",
+        "worker": "Worker",
+        "startedOn": "Start of work",
+        "price": "Monthly service price",
+        "specialReason": "Reason for the new price",
+        "reason": "Reason for the change or cancellation",
+        "save": "Save the change",
+        "cancelTitle": "Cancel delivered order {{no}}",
+        "cancelHint": "The work periods the order opened are removed for all its workers, their periods before are open again, and they go back to their housing rooms. Not allowed if any of them has a later action.",
+        "amendedBy": "Changed after approval by {{by}} on {{date}}",
+        "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
       }
     },
     "status": {
@@ -1855,7 +1878,8 @@
       "Rejected": "Rejected",
       "Delivered": "Delivered",
       "NotDelivered": "Not delivered",
-      "Canceled": "Canceled"
+      "Canceled": "Canceled",
+      "CanceledAfterApproval": "Canceled after approval"
     },
     "crmStatus": {
       "279640000": "Under preparation",

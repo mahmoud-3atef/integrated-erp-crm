@@ -2,6 +2,7 @@ using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Commercial.Contracts;
+using IntegratedErp.Modules.Housing.Contracts;
 using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.Modules.Operations.Infrastructure;
 using IntegratedErp.Modules.Workflow.Contracts;
@@ -45,6 +46,9 @@ public sealed record WorkerPriceDto(
     bool TransportBillable,
     decimal? TotalPrice);
 
+/// <summary>What may change on a delivered order: the receiver and notes, and the workers' starts and prices, with the reason.</summary>
+public sealed record DeliveryAmendInput(string ReceiverName, string? ReceiverTitle, string? Notes, IReadOnlyList<DeliveryLineChange> Lines, string AmendReason);
+
 /// <summary>
 /// Delivery orders written in this system: drafted with prices from the price packages, sent through the company's
 /// approval process, then confirmed by the delivery officer for the whole order.
@@ -56,6 +60,8 @@ internal sealed class DeliveryOrderService(
     IPriceCatalog prices,
     IApprovalService approvals,
     NumberSequenceService numbering,
+    IPeriodLedger ledger,
+    IHousingRooms housing,
     ICurrentUser user,
     IClock clock)
 {
@@ -163,6 +169,128 @@ internal sealed class DeliveryOrderService(
             return Result.Failure(started.Error);
         }
 
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Changes a delivered order (its own permission and a reason): the receiver and notes, and for each changed worker
+    /// the start of work (their work period moves, the period before it ends that day, never overlapping) and the price
+    /// (a special price with its reason, on the work period too).
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, DeliveryAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var order = await db.DeliveryOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(DeliveryErrors.NotFound);
+        }
+
+        if (!order.IsAmendable)
+        {
+            return Result.Failure(DeliveryErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(input.AmendReason))
+        {
+            return Result.Failure(DeliveryErrors.AmendReason);
+        }
+
+        var changed = new List<(DeliveryLine Line, DeliveryLineChange Change)>();
+        foreach (var change in input.Lines)
+        {
+            if (order.Lines.FirstOrDefault(l => l.Id == change.LineId) is not { } line)
+            {
+                return Result.Failure(DeliveryErrors.LineNotFound);
+            }
+
+            if (change.StartedOn != line.StartedOn || change.TotalPrice != line.TotalPrice)
+            {
+                if (change.TotalPrice != line.TotalPrice && (change.TotalPrice <= 0 || string.IsNullOrWhiteSpace(change.SpecialReason)))
+                {
+                    return Result.Failure(DeliveryErrors.SpecialReason);
+                }
+
+                changed.Add((line, change));
+            }
+        }
+
+        // The work periods first (each worker's), then the order.
+        foreach (var (line, change) in changed.Where(c => c.Line.WorkerId is not null))
+        {
+            var moved = await ledger.AmendAsync(
+                new PeriodAmendRequest(line.WorkerId!.Value, order.Id, change.StartedOn, false, null, order.OrderNo, change.TotalPrice != line.TotalPrice ? change.TotalPrice : null),
+                cancellationToken).ConfigureAwait(false);
+            if (moved.IsFailure)
+            {
+                return Result.Failure(moved.Error.Code == "conflict.period_overlap" ? DeliveryErrors.PeriodOverlap : moved.Error);
+            }
+        }
+
+        var amended = order.Amend(input.ReceiverName, input.ReceiverTitle, input.Notes, changed.Select(c => c.Change).ToList(), input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Cancels a delivered order (its own permission and a reason): every worker's work period it opened is taken back —
+    /// only when none of them has an action after it (all or none) — the period before it is open again, and the workers
+    /// go back to the rooms they left that day.
+    /// </summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        var order = await db.DeliveryOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(DeliveryErrors.NotFound);
+        }
+
+        if (!order.IsAmendable)
+        {
+            return Result.Failure(DeliveryErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Result.Failure(DeliveryErrors.AmendReason);
+        }
+
+        var workers = order.Lines.Where(l => l.WorkerId is not null).Select(l => (WorkerId: l.WorkerId!.Value, l.StartedOn)).ToList();
+        foreach (var (workerId, _) in workers)
+        {
+            var timeline = await ledger.PeriodsAsync(workerId, cancellationToken).ConfigureAwait(false);
+            if (timeline.Any(p => p.SourceId == order.Id) && timeline[0].SourceId != order.Id)
+            {
+                return Result.Failure(DeliveryErrors.LaterPeriod);
+            }
+        }
+
+        foreach (var (workerId, _) in workers)
+        {
+            var undone = await ledger.UndoAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false);
+            if (undone.IsFailure)
+            {
+                return Result.Failure(undone.Error.Code == "conflict.period_not_last" ? DeliveryErrors.LaterPeriod : undone.Error);
+            }
+        }
+
+        foreach (var day in workers.Where(w => w.StartedOn is not null).GroupBy(w => w.StartedOn!.Value))
+        {
+            await housing.ReopenAsync(day.Select(w => w.WorkerId).ToList(), day.Key, cancellationToken).ConfigureAwait(false);
+        }
+
+        var canceled = order.CancelApproved(reason, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
 

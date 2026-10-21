@@ -114,6 +114,9 @@ internal sealed class DeliveryOrderConfiguration : IEntityTypeConfiguration<Deli
         builder.Property(o => o.Notes).HasMaxLength(2000);
         builder.Property(o => o.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(o => o.DeliveredByName).HasMaxLength(200);
+        builder.Property(o => o.AmendedByName).HasMaxLength(200);
+        builder.Property(o => o.AmendNote).HasMaxLength(500);
+        builder.Property(o => o.CanceledByName).HasMaxLength(200);
         builder.Property(o => o.LastComment).HasMaxLength(2000);
         builder.HasMany(o => o.Lines).WithOne().HasForeignKey(l => l.OrderId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(o => o.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);

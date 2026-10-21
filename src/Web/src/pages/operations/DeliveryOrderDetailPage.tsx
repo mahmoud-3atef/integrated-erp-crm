@@ -3,6 +3,7 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -75,6 +76,8 @@ export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [amending, setAmending] = useState(false);
+  const [cancelingApproved, setCancelingApproved] = useState<string | null>(null);
   const approval = useRecordApproval(order?.approval?.instanceId);
 
   const reload = useCallback(async () => {
@@ -149,6 +152,16 @@ export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean
                 {t('operations.delivery.cancel')}
               </Button>
             )}
+            {order.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('operations.delivery.amend.action')}
+              </Button>
+            )}
+            {order.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelingApproved('')}>
+                {t('operations.delivery.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/operations/delivery-orders')}>
               {t('common.back')}
             </Button>
@@ -157,6 +170,16 @@ export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean
       />
 
       <ErrorMessage messageKey={error} />
+      {order.amendedAt && o.status === 'Delivered' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('operations.delivery.amend.amendedBy', { by: order.amendedByName, date: date(order.amendedAt) })} — {order.amendNote}
+        </Alert>
+      )}
+      {o.status === 'CanceledAfterApproval' && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('operations.delivery.amend.canceledBy', { by: order.canceledByName, date: date(order.canceledAt) })} — {order.lastComment}
+        </Alert>
+      )}
       {o.source === 'System' && o.status === 'UnderPreparation' && order.awaitingApproval && (
         <Alert severity="info" sx={{ mb: `${tokens.gap}px` }}>
           {t('operations.delivery.creatorHint')}
@@ -350,6 +373,34 @@ export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean
           </DialogActions>
         </Dialog>
       )}
+      {amending && <DeliveryAmendDialog order={order} onClose={() => setAmending(false)} onSaved={() => void run(async () => setAmending(false))} />}
+      {cancelingApproved !== null && (
+        <Dialog open onClose={() => setCancelingApproved(null)} fullWidth maxWidth="sm">
+          <DialogTitle>{t('operations.delivery.amend.cancelTitle', { no: o.orderNo })}</DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t('operations.delivery.amend.cancelHint')}
+            </Alert>
+            <TextField required label={t('operations.delivery.amend.reason')} value={cancelingApproved} onChange={(e) => setCancelingApproved(e.target.value)} fullWidth multiline minRows={2} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelingApproved(null)}>{t('common.close')}</Button>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={busy || !cancelingApproved.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await operationsApi.cancelApproved(o.id, cancelingApproved.trim());
+                  setCancelingApproved(null);
+                })
+              }
+            >
+              {t('operations.delivery.amend.cancelAction')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
       {wizard && (
         <DeliveryOrderWizard
           id={o.id}
@@ -366,5 +417,98 @@ export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean
         />
       )}
     </Box>
+  );
+}
+
+/**
+ * Changing a delivered order (its own permission): the receiver and the notes, and each worker's start of work and
+ * monthly price (a new price is a special price with its reason), with the reason for the change. The work periods
+ * follow on the server.
+ */
+function DeliveryAmendDialog({ order, onClose, onSaved }: { order: DeliveryDetail; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const o = order.summary;
+  const [receiverName, setReceiverName] = useState(o.receiverName);
+  const [receiverTitle, setReceiverTitle] = useState(order.receiverTitle ?? '');
+  const [notes, setNotes] = useState(order.notes ?? '');
+  const [lines, setLines] = useState(order.lines.map((l) => ({ lineId: l.id, name: l.name, workerNo: l.workerNo, startedOn: l.startedOn ?? '', price: String(l.totalPrice), was: l.totalPrice, specialReason: '' })));
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (i: number, change: Partial<(typeof lines)[number]>) => setLines((all) => all.map((l, n) => (n === i ? { ...l, ...change } : l)));
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await operationsApi.amend(o.id, {
+        receiverName: receiverName.trim(),
+        receiverTitle: receiverTitle.trim() || null,
+        notes: notes.trim() || null,
+        lines: lines.map((l) => ({ lineId: l.lineId, startedOn: l.startedOn, totalPrice: Number(l.price) || 0, specialReason: l.specialReason.trim() || null })),
+        amendReason: why.trim(),
+      });
+      onSaved();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>{t('operations.delivery.amend.title', { no: o.orderNo })}</DialogTitle>
+      <DialogContent dividers>
+        <Stack sx={{ gap: 2 }}>
+          <Alert severity="info">{t('operations.delivery.amend.hint')}</Alert>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
+            <TextField required label={t('operations.delivery.amend.receiver')} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} sx={{ flex: 1 }} />
+            <TextField label={t('operations.delivery.amend.receiverTitle')} value={receiverTitle} onChange={(e) => setReceiverTitle(e.target.value)} sx={{ flex: 1 }} />
+          </Stack>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('operations.delivery.amend.worker')}</TableCell>
+                  <TableCell>{t('operations.delivery.amend.startedOn')}</TableCell>
+                  <TableCell>{t('operations.delivery.amend.price')}</TableCell>
+                  <TableCell>{t('operations.delivery.amend.specialReason')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {lines.map((l, i) => (
+                  <TableRow key={l.lineId}>
+                    <TableCell>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                        <bdi>{l.name}</bdi>
+                      </Typography>
+                      <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+                        <bdi>{l.workerNo}</bdi>
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <TextField size="small" type="date" value={l.startedOn} onChange={(e) => set(i, { startedOn: e.target.value })} />
+                    </TableCell>
+                    <TableCell>
+                      <TextField size="small" type="number" value={l.price} onChange={(e) => set(i, { price: e.target.value })} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} sx={{ width: 130 }} />
+                    </TableCell>
+                    <TableCell>
+                      <TextField size="small" disabled={Number(l.price) === l.was} required={Number(l.price) !== l.was} value={l.specialReason} onChange={(e) => set(i, { specialReason: e.target.value })} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TextField label={t('operations.delivery.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} multiline minRows={2} />
+          <TextField required label={t('operations.delivery.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} multiline minRows={2} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          {error && <Alert severity="error">{t(error)}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
+        <Button variant="contained" disabled={busy || !why.trim() || !receiverName.trim() || lines.some((l) => !l.startedOn)} onClick={() => void save()}>
+          {t('operations.delivery.amend.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

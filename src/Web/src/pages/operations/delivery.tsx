@@ -11,6 +11,7 @@ export const deliveryTone: Record<DeliveryStatus, Tone> = {
   Delivered: 'success',
   NotDelivered: 'danger',
   Canceled: 'neutral',
+  CanceledAfterApproval: 'danger',
 };
 
 /** Old system statuses with their own names (sent to the delivery officer, the sales coordinator…). */

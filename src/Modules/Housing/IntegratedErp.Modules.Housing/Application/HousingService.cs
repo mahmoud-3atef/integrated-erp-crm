@@ -268,6 +268,33 @@ internal sealed class HousingService(HousingDbContext db, IWorkforceDirectory wo
         return Result.Success();
     }
 
+    public async Task ReopenAsync(IReadOnlyList<Guid> workerIds, DateOnly on, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(workerIds);
+        var ids = workerIds.ToList();
+        var ended = await db.Assignments.Where(a => ids.Contains(a.WorkerId) && a.EndsOn == on).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var reopened = 0;
+        foreach (var stay in ended.Where(s => !ended.Any(o => o.WorkerId == s.WorkerId && o.StartsOn > s.StartsOn)))
+        {
+            if (await db.Assignments.AnyAsync(a => a.WorkerId == stay.WorkerId && a.EndsOn == null, cancellationToken).ConfigureAwait(false))
+            {
+                continue;
+            }
+
+            var room = await FindAsync(stay.RoomId, cancellationToken).ConfigureAwait(false);
+            if (room is not null && room.Occupied < room.Capacity)
+            {
+                stay.Reopen();
+                reopened++;
+            }
+        }
+
+        if (reopened > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     public async Task ReleaseAsync(IReadOnlyList<Guid> workerIds, DateOnly on, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(workerIds);

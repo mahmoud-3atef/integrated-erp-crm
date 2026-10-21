@@ -43,6 +43,12 @@ public interface IHousingRooms
     /// </summary>
     Task<bool> UndoStayAsync(Guid workerId, string sourceType, string sourceNo, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The workers' leaving housing on that day was taken back (their delivery cancelled): the stays that ended that day
+    /// are open again, within the rooms' capacity (a worker whose room has no place left is not put back).
+    /// </summary>
+    Task ReopenAsync(IReadOnlyList<Guid> workerIds, DateOnly on, CancellationToken cancellationToken);
+
     /// <summary>The workers left housing on the given day (delivered, transferred out…): their rooms are free from then.</summary>
     Task ReleaseAsync(IReadOnlyList<Guid> workerIds, DateOnly on, CancellationToken cancellationToken);
 }

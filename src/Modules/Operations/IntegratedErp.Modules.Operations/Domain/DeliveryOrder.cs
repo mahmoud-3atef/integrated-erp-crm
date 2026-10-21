@@ -27,6 +27,9 @@ public enum DeliveryStatus
     /// <summary>Old system only: "لم يتم التسليم".</summary>
     NotDelivered,
     Canceled,
+
+    /// <summary>Cancelled after its delivery: the work periods it opened were taken back (with the reason).</summary>
+    CanceledAfterApproval,
 }
 
 /// <summary>Who created the order: this system, or the old CRM (copied, read-only).</summary>
@@ -160,7 +163,21 @@ public sealed class DeliveryOrder : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The last change after the delivery: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
     public IReadOnlyList<DeliveryLine> Lines => _lines;
+
+    /// <summary>A delivered order of this system: it may still be changed or cancelled (with their own permissions and a reason).</summary>
+    public bool IsAmendable => Source == DocumentSource.System && Status == DeliveryStatus.Delivered;
 
     public bool IsEditable => Source == DocumentSource.System && Status is DeliveryStatus.UnderPreparation or DeliveryStatus.Returned;
 
@@ -265,6 +282,69 @@ public sealed class DeliveryOrder : ITenantOwned
         DeliveredAt = at;
         DeliveredByName = approvedBy;
         LastComment = comment;
+        return Result.Success();
+    }
+
+    /// <summary>Changed after its delivery: the receiver, the notes, and each changed line's start and price (with the reason).</summary>
+    public Result Amend(string receiverName, string? receiverTitle, string? notes, IReadOnlyList<DeliveryLineChange> lines, string reason, string by, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        if (!IsAmendable)
+        {
+            return Result.Failure(DeliveryErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(DeliveryErrors.AmendReason);
+        }
+
+        if (string.IsNullOrWhiteSpace(receiverName))
+        {
+            return Result.Failure(DeliveryErrors.Receiver);
+        }
+
+        foreach (var change in lines)
+        {
+            if (_lines.FirstOrDefault(l => l.Id == change.LineId) is not { } line)
+            {
+                return Result.Failure(DeliveryErrors.LineNotFound);
+            }
+
+            if (DeliverOn is { } deliverOn && change.StartedOn < deliverOn)
+            {
+                return Result.Failure(DeliveryErrors.StartBeforeDelivery);
+            }
+
+            line.Amend(change.StartedOn, change.TotalPrice, change.SpecialReason);
+        }
+
+        ReceiverName = receiverName.Trim();
+        ReceiverTitle = Clean(receiverTitle);
+        Notes = Clean(notes);
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = reason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after its delivery (the work periods were taken back).</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(DeliveryErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(DeliveryErrors.AmendReason);
+        }
+
+        Status = DeliveryStatus.CanceledAfterApproval;
+        CanceledAt = at;
+        CanceledByName = by;
+        LastComment = reason.Trim();
         return Result.Success();
     }
 
@@ -449,7 +529,24 @@ public sealed class DeliveryLine : ITenantOwned
     public string? WorkStartNo { get; private set; }
 
     internal void Confirm(DateOnly? startedOn) => StartedOn = startedOn;
+
+    /// <summary>Changed after the delivery: the start of work, and the price (a different one is a special price with its reason).</summary>
+    internal void Amend(DateOnly startedOn, decimal totalPrice, string? specialReason)
+    {
+        StartedOn = startedOn;
+        if (totalPrice != TotalPrice)
+        {
+            TotalPrice = totalPrice;
+            IsSpecialPrice = true;
+            PackageId = null;
+            PackageNo = null;
+            SpecialReason = string.IsNullOrWhiteSpace(specialReason) ? SpecialReason : specialReason.Trim();
+        }
+    }
 }
+
+/// <summary>A delivered line's change: the worker's start of work and monthly service price (with the reason when it is a new price).</summary>
+public sealed record DeliveryLineChange(Guid LineId, DateOnly StartedOn, decimal TotalPrice, string? SpecialReason);
 
 /// <summary>An order as read from the old system.</summary>
 public sealed record CrmDeliveryOrder(
@@ -480,4 +577,11 @@ public static class DeliveryErrors
     public static readonly Error NotCancelable = Error.Conflict("delivery_not_cancelable", "This order can no longer be canceled.");
     public static readonly Error NoWorkers = Error.Validation("delivery_no_workers", "Add at least one worker.");
     public static readonly Error StartBeforeDelivery = Error.Validation("delivery_start_before", "The start of work cannot be before the delivery date.");
+    public static readonly Error NotAmendable = Error.Conflict("delivery_not_amendable", "Only a delivered order of this system can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("delivery_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error Receiver = Error.Validation("delivery_receiver", "Enter the receiver's name.");
+    public static readonly Error LineNotFound = Error.NotFound("delivery_line", "The worker is not on this order.");
+    public static readonly Error LaterPeriod = Error.Conflict("delivery_later_period", "A worker of the order has an action after it: cancel it first.");
+    public static readonly Error PeriodOverlap = Error.Conflict("delivery_period_overlap", "A new start of work overlaps another period of the worker.");
+    public static readonly Error SpecialReason = Error.Validation("delivery_special_reason", "A special price needs its reason.");
 }

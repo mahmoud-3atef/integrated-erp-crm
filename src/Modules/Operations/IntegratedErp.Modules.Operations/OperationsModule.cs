@@ -79,6 +79,8 @@ internal static class OperationsPermissions
     public const string DeliveryView = "operations.delivery.view";
     public const string DeliveryCreate = "operations.delivery.create";
     public const string DeliveryApprove = "operations.delivery.approve";
+    public const string DeliveryAmend = "operations.delivery.amend";
+    public const string DeliveryCancelApproved = "operations.delivery.cancel_approved";
     public const string ReturnView = "operations.return.view";
     public const string ReturnCreate = "operations.return.create";
     public const string ReturnSales = "operations.return.sales";
@@ -101,6 +103,8 @@ internal static class OperationsPermissions
         new(DeliveryView, GroupAr, GroupEn, "عرض أوامر التسليم", "View delivery orders"),
         new(DeliveryCreate, GroupAr, GroupEn, "إنشاء أوامر التسليم وتعديلها وإرسالها للاعتماد", "Create, edit and submit delivery orders"),
         new(DeliveryApprove, GroupAr, GroupEn, "اعتماد أوامر التسليم (مدير العمليات)", "Approve delivery orders (operations manager)"),
+        new(DeliveryAmend, GroupAr, GroupEn, "تعديل أمر تسليم معتمد (تاريخ المباشرة، والسعر، والمستلم…)", "Change a delivered order (start of work, price, receiver…)"),
+        new(DeliveryCancelApproved, GroupAr, GroupEn, "إلغاء أمر تسليم معتمد", "Cancel a delivered order"),
         new(ReturnView, GroupAr, GroupEn, "عرض أوامر الرجيع", "View return orders"),
         new(ReturnCreate, GroupAr, GroupEn, "إنشاء أوامر الرجيع وتعديلها", "Create and edit return orders"),
         new(ReturnSales, GroupAr, GroupEn, "تسجيل رغبة العميل في أوامر الرجيع (المبيعات)", "Record the customer's wish on return orders (sales)"),

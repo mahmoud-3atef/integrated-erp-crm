@@ -31,6 +31,7 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
         new(nameof(DeliveryStatus.Rejected), "مرفوض", "Rejected", Settable: false),
         new(nameof(DeliveryStatus.Delivered), "تم التسليم", "Delivered", Settable: false),
         new(nameof(DeliveryStatus.Canceled), "ملغى", "Canceled", Settable: false),
+        new(nameof(DeliveryStatus.CanceledAfterApproval), "ملغى بعد الاعتماد", "Canceled after approval", Settable: false),
     ];
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -57,6 +58,10 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
                     type = "approval", id = "operations-manager", label = "اعتماد مدير العمليات",
                     nameAr = "اعتماد مدير العمليات", nameEn = "Operations manager's approval",
                     assignees = new[] { new { kind = "Permission", permission = OperationsPermissions.DeliveryApprove } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "start-work", label = "مباشرة العمل وإتمام التسليم", action = StartWork },
+                    },
                 },
             },
         },
@@ -80,7 +85,20 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
             new("requested_by", "منشئ الأمر", "Created by", RecordFieldType.User, Updatable: false),
             new("status", "حالة الأمر", "Order status", RecordFieldType.Choice, Updatable: true, Statuses),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد أمر التسليم", "Delivery order approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد أمر التسليم", "Delivery order approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                StartWork,
+                "مباشرة العمل وإتمام التسليم",
+                "Start the work and complete the delivery",
+                "يفتح لكل عامل في الأمر فترة عمل على المشروع من تاريخ مباشرته وبسعره، ويخرجه من غرفته في السكن من ذلك اليوم، وتصبح حالة الأمر «تم التسليم». إن تداخل تاريخ مباشرة أحدهم مع فترة أخرى يعود الأمر لمنشئه للتعديل.",
+                "Opens each worker's work period on the project from their start day at their price, takes them out of their housing room that day, and the order is «delivered». A start overlapping another period sends the order back to its creator.",
+                Required: true),
+        ]);
+
+    /// <summary>The order's code: the workers' work starts (the order means nothing without it).</summary>
+    public const string StartWork = "start_work";
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -165,6 +183,64 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
         return Result.Success();
     }
 
+    /// <summary>
+    /// «Start the work» (the process runs it, by default after the operations manager's approval): each worker's work
+    /// period opens from their start day at their line's price (all or none), then the order is delivered and the workers
+    /// leave their rooms. Run again on a delivered order, it does nothing; a start overlapping a worker's timeline sends
+    /// the order back to its creator.
+    /// </summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != StartWork)
+        {
+            return RecordActionResult.Failed($"A delivery order has no action \"{action}\".");
+        }
+
+        var order = await db.DeliveryOrders.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return RecordActionResult.Failed("The delivery order no longer exists.");
+        }
+
+        if (order.Status == DeliveryStatus.Delivered)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (!order.IsInApproval || order.ProjectId is null || order.ProjectCrmId is null)
+        {
+            return RecordActionResult.Failed("The delivery order is not in approval (or has no project).");
+        }
+
+        var starts = order.Lines.Where(l => l.WorkerId is not null).Select(l => new WorkStartRequest(
+                l.WorkerId!.Value, order.ProjectId.Value, order.ProjectCrmId.Value, order.ProjectName, l.StartOn ?? order.StartOn ?? order.DeliverOn!.Value,
+                SourceType, order.Id, l.Id, order.OrderNo, l.PackageId, l.PackageNo, l.Salary, l.ServiceFee, l.Housing, l.HousingBillable,
+                l.Transport, l.TransportBillable, l.TotalPrice, l.IsSpecialPrice))
+            .ToList();
+        var opened = await ledger.StartWorkAsync(starts, cancellationToken).ConfigureAwait(false);
+        if (opened.IsFailure)
+        {
+            return RecordActionResult.SendBack(opened.Error.Code == "conflict.period_overlap"
+                ? "لم يكتمل التسليم: تاريخ مباشرة أحد العمال يتداخل مع فترة أخرى في سجل فتراته. عدّل التاريخ وأعد الإرسال."
+                : $"لم يكتمل التسليم: {opened.Error.Message}");
+        }
+
+        order.Deliver(user.DisplayName, null, clock.UtcNow);
+
+        // Out of housing: their rooms are free from their start of work.
+        foreach (var day in starts.GroupBy(x => x.StartsOn))
+        {
+            await housing.ReleaseAsync(day.Select(x => x.WorkerId).ToList(), day.Key, cancellationToken).ConfigureAwait(false);
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>
+    /// The approval ended: a rejection, return or cancel sets the order's state. Approved, the order was already delivered
+    /// by its «start the work» code (the engine runs a required code an older process version lacks before it ends).
+    /// </summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         var order = await db.DeliveryOrders.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
@@ -176,8 +252,9 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
         switch (end)
         {
             case ApprovalEnd.Approved:
-                await DeliverAsync(order, comment, cancellationToken).ConfigureAwait(false);
-                return;
+                // Not delivered (its code did not complete it): back to its creator rather than approved without work.
+                order.ApprovalEnded(DeliveryStatus.Returned, "انتهى الاعتماد دون مباشرة العمل؛ أعد إرسال الأمر.");
+                break;
             case ApprovalEnd.Rejected:
                 order.ApprovalEnded(DeliveryStatus.Rejected, comment);
                 break;
@@ -188,39 +265,6 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
                 // Withdrawn by its creator or canceled by an administrator: back under preparation, to send again or cancel.
                 order.ApprovalEnded(DeliveryStatus.UnderPreparation, comment);
                 break;
-        }
-
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>Delivered: each worker's work period opens on their start date with their line's price.</summary>
-    private async Task DeliverAsync(DeliveryOrder order, string? comment, CancellationToken cancellationToken)
-    {
-        // The engine ends the approval in the scope of the person who took the last decision.
-        if (order.Deliver(user.DisplayName, comment, clock.UtcNow).IsFailure)
-        {
-            return;
-        }
-
-        var starts = order.Lines.Where(l => l.WorkerId is not null).Select(l => new WorkStartRequest(
-                l.WorkerId!.Value, order.ProjectId!.Value, order.ProjectCrmId!.Value, order.ProjectName, l.StartedOn!.Value,
-                SourceType, order.Id, l.Id, order.OrderNo, l.PackageId, l.PackageNo, l.Salary, l.ServiceFee, l.Housing, l.HousingBillable,
-                l.Transport, l.TransportBillable, l.TotalPrice, l.IsSpecialPrice))
-            .ToList();
-        var opened = await ledger.StartWorkAsync(starts, cancellationToken).ConfigureAwait(false);
-        if (opened.IsFailure)
-        {
-            order.ReturnForFix(opened.Error.Code == "conflict.period_overlap"
-                ? "لم يكتمل التسليم: تاريخ مباشرة أحد العمال يتداخل مع فترة أخرى في سجل فتراته. عدّل التاريخ وأعد الحفظ."
-                : $"لم يكتمل التسليم: {opened.Error.Message}");
-        }
-        else
-        {
-            // Out of housing: their rooms are free from their start of work.
-            foreach (var day in starts.GroupBy(s => s.StartsOn))
-            {
-                await housing.ReleaseAsync(day.Select(s => s.WorkerId).ToList(), day.Key, cancellationToken).ConfigureAwait(false);
-            }
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

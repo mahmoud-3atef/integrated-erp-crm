@@ -148,5 +148,8 @@ public sealed record WorkSpan(
     string SourceNo,
     bool FromOldSystem);
 
-/// <summary>The new values of a period a document opened: its first day, whether it is paid (housing), and its place.</summary>
-public sealed record PeriodAmendRequest(Guid WorkerId, Guid SourceId, DateOnly StartsOn, bool PaySalary, string? Place, string SourceNo);
+/// <summary>
+/// The new values of a period a document opened: its first day, whether it is paid (housing), its place, and a work
+/// period's monthly service price (a special price; null keeps it).
+/// </summary>
+public sealed record PeriodAmendRequest(Guid WorkerId, Guid SourceId, DateOnly StartsOn, bool PaySalary, string? Place, string SourceNo, decimal? TotalPrice = null);

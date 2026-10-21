@@ -5,7 +5,7 @@ import type { RoomOption } from './housing';
 import type { ApprovalStatus } from './workflow';
 import type { Placement } from './workforce';
 
-export type DeliveryStatus = 'UnderPreparation' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Delivered' | 'NotDelivered' | 'Canceled';
+export type DeliveryStatus = 'UnderPreparation' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Delivered' | 'NotDelivered' | 'Canceled' | 'CanceledAfterApproval';
 
 export interface DeliveryRow {
   id: string;
@@ -79,6 +79,23 @@ export interface DeliveryDetail {
   canEdit: boolean;
   canSubmit: boolean;
   canCancel: boolean;
+  /** A delivered order: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
+}
+
+/** What may change on a delivered order: the receiver and notes, and the workers' starts and prices, with the reason. */
+export interface DeliveryAmendInput {
+  receiverName: string;
+  receiverTitle: string | null;
+  notes: string | null;
+  lines: { lineId: string; startedOn: string; totalPrice: number; specialReason: string | null }[];
+  amendReason: string;
 }
 
 export interface ProjectOption {
@@ -194,6 +211,8 @@ export const operationsApi = {
   update: (id: string, input: DeliveryInput) => request<SavedOrder>('PUT', `${base}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${base}/${id}/submit`),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${base}/${id}/cancel`, { comment }),
+  amend: (id: string, input: DeliveryAmendInput) => request<void>('PUT', `${base}/${id}/amend`, input),
+  cancelApproved: (id: string, reason: string) => request<void>('POST', `${base}/${id}/cancel-approved`, { comment: reason }),
 };
 
 // ---------------------------------------------------------------- Return orders (worker back to housing)

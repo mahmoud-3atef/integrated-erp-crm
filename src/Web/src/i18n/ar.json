@@ -282,13 +282,13 @@
     "conflict_package_overlap": "توجد باقة سارية لنفس المشروع والمهنة والجنسية في جزء من هذه المدة. عدّل مدتها أو أوقفها أولًا.",
     "not_found_price_package": "الباقة غير موجودة.",
     "validation_delivery_project": "اختر مشروعًا نشطًا.",
-    "validation_delivery_receiver": "اسم المفوض بالاستلام مطلوب.",
+    "validation_delivery_receiver": "اكتب اسم المستلم.",
     "validation_delivery_delay_reason": "تاريخ التسليم أقدم من يومين: اكتب سبب التأخير.",
     "validation_delivery_worker_duplicate": "عامل مدرج في الأمر مرتين.",
     "validation_delivery_worker_unavailable": "أحد العمال غير متاح للتسليم (ليس في السكن أو ليس نشطًا).",
     "conflict_delivery_worker_busy": "أحد العمال مدرج في أمر تسليم آخر مفتوح.",
     "validation_delivery_no_price": "أحد العمال لا توجد باقة لمهنته وجنسيته: حدّد سعرًا خاصًا مع السبب.",
-    "validation_delivery_special_reason": "السعر الخاص يحتاج سببًا.",
+    "validation_delivery_special_reason": "السعر الجديد سعر خاص: اكتب سببه.",
     "validation_delivery_price_minimum": "لا يمكن أن يقل سعر الخدمة عن 1,000 ريال.",
     "validation_delivery_price_below_cost": "سعر الخدمة أقل من الراتب والسكن والمواصلات.",
     "validation_delivery_start_before": "لا يمكن أن يكون تاريخ المباشرة قبل تاريخ التسليم.",
@@ -551,7 +551,12 @@
     "conflict_return_not_amendable": "لا يُعدَّل ولا يُلغى بعد الاعتماد إلا أمر معتمد من هذا النظام.",
     "validation_return_amend_reason": "اكتب السبب (500 حرف على الأكثر).",
     "conflict_return_later_period": "للعامل إجراء بعد هذا الأمر: ألغِه أولًا.",
-    "conflict_return_period_overlap": "تاريخ الوصول الجديد يتداخل مع فترة أخرى للعامل."
+    "conflict_return_period_overlap": "تاريخ الوصول الجديد يتداخل مع فترة أخرى للعامل.",
+    "conflict_delivery_not_amendable": "لا يُعدَّل ولا يُلغى بعد الاعتماد إلا أمر تسليم معتمد من هذا النظام.",
+    "validation_delivery_amend_reason": "اكتب السبب (500 حرف على الأكثر).",
+    "not_found_delivery_line": "العامل ليس في هذا الأمر.",
+    "conflict_delivery_later_period": "لأحد عمال الأمر إجراء بعده: ألغِه أولًا.",
+    "conflict_delivery_period_overlap": "تاريخ مباشرة جديد يتداخل مع فترة أخرى للعامل."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -1845,6 +1850,24 @@
         "review": "المراجعة والإرسال",
         "hint": "اختر المشروع والتواريخ، ثم العمالة، ثم راجع الأسعار قبل الإرسال للاعتماد.",
         "picked": "اخترت {{count}} عامل. أضف غيرهم أو انتقل إلى الأسعار."
+      },
+      "amend": {
+        "action": "تعديل بعد الاعتماد",
+        "cancelAction": "إلغاء الأمر المعتمد",
+        "title": "تعديل أمر التسليم المعتمد {{no}}",
+        "hint": "تتحرك فترة عمل كل عامل مع تاريخ مباشرته الجديد، وتنتهي فترته السابقة في نفس اليوم. السعر الجديد يصير سعرًا خاصًا بسببه. يُسجَّل التعديل وسببه.",
+        "receiver": "اسم المستلم",
+        "receiverTitle": "صفة المستلم",
+        "worker": "العامل",
+        "startedOn": "تاريخ المباشرة",
+        "price": "سعر الخدمة الشهري",
+        "specialReason": "سبب السعر الجديد",
+        "reason": "سبب التعديل أو الإلغاء",
+        "save": "حفظ التعديل",
+        "cancelTitle": "إلغاء أمر التسليم المعتمد {{no}}",
+        "cancelHint": "تُحذف فترات العمل التي فتحها الأمر لكل عماله، وتعود فتراتهم السابقة مفتوحة، ويعودون لغرفهم في السكن. لا يُسمح إن كان لأحدهم إجراء بعده.",
+        "amendedBy": "عُدِّل بعد الاعتماد بواسطة {{by}} في {{date}}",
+        "canceledBy": "أُلغي بعد الاعتماد بواسطة {{by}} في {{date}}"
       }
     },
     "status": {
@@ -1855,7 +1878,8 @@
       "Rejected": "مرفوض",
       "Delivered": "تم التسليم",
       "NotDelivered": "لم يتم التسليم",
-      "Canceled": "ملغى"
+      "Canceled": "ملغى",
+      "CanceledAfterApproval": "ملغى بعد الاعتماد"
     },
     "crmStatus": {
       "279640000": "قيد الإعداد",

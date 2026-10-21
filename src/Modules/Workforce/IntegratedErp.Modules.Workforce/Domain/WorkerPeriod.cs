@@ -111,11 +111,15 @@ public sealed class WorkerPeriod : ITenantOwned
     }
 
     /// <summary>The document that opened it was amended: its first day, whether it is paid, and its place.</summary>
-    public void Amend(DateOnly startsOn, bool paySalary, string? place)
+    public void Amend(DateOnly startsOn, bool paySalary, string? place, decimal? totalPrice = null)
     {
         StartsOn = startsOn;
         PaySalary = paySalary;
         ProjectName = Kind == PeriodKind.Work ? ProjectName : place;
+        if (totalPrice is { } price && price != Rate.TotalPrice)
+        {
+            Rate = Rate with { TotalPrice = price, IsSpecialPrice = true };
+        }
     }
 
     /// <summary>The next period's first day moved: this one ends then.</summary>

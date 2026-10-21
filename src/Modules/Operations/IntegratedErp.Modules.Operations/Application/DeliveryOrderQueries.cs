@@ -76,7 +76,14 @@ public sealed record DeliveryDetailDto(
     bool AwaitingApproval,
     bool CanEdit,
     bool CanSubmit,
-    bool CanCancel);
+    bool CanCancel,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record DeliveryListFilter(string? Search, string? Status, string? Source, string? Sort, bool Descending, int Page, int PageSize);
 
@@ -170,7 +177,14 @@ internal sealed class DeliveryOrderQueries(
             AwaitingApproval: order.AwaitingApproval,
             CanEdit: canCreate && order.IsEditable,
             CanSubmit: canCreate && order.IsEditable && !order.AwaitingApproval && lines.Count > 0,
-            CanCancel: canCreate && system && order.IsEditable && !order.AwaitingApproval);
+            CanCancel: canCreate && system && order.IsEditable && !order.AwaitingApproval,
+            CanAmend: granted.Has(OperationsPermissions.DeliveryAmend) && order.IsAmendable,
+            CanCancelApproved: granted.Has(OperationsPermissions.DeliveryCancelApproved) && order.IsAmendable,
+            AmendedAt: order.AmendedAt,
+            AmendedByName: order.AmendedByName,
+            AmendNote: order.AmendNote,
+            CanceledAt: order.CanceledAt,
+            CanceledByName: order.CanceledByName);
     }
 
     /// <summary>The projects an order can be for.</summary>
