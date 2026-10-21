@@ -198,7 +198,8 @@ public interface IWorkforceReport
 public sealed record ProjectDays(Guid? ProjectCrmId, string? Place, int Days);
 
 /// <summary>A worker's days in a period: on each project (work on the inactive workers' project is left out) and in housing.</summary>
-public sealed record WorkerDays(Guid WorkerId, Guid CrmId, string WorkerNo, string Name, string? Sponsor, decimal Salary, IReadOnlyList<ProjectDays> Projects, int HousingDays)
+/// <param name="NewArrival">Newly arrived: waiting in housing for a first work.</param>
+public sealed record WorkerDays(Guid WorkerId, Guid CrmId, string WorkerNo, string Name, string? Sponsor, decimal Salary, IReadOnlyList<ProjectDays> Projects, int HousingDays, bool NewArrival = false)
 {
     public int WorkDays => Projects.Sum(p => p.Days);
 }

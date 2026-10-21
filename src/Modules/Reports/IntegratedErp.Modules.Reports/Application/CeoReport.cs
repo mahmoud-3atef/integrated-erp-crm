@@ -55,7 +55,7 @@ public sealed record ProfitTabDto(
     IReadOnlyList<ProjectProfitDto> Projects,
     IReadOnlyList<SupplierProfitDto> Suppliers);
 
-public sealed record WorkerProfitDto(Guid WorkerId, string WorkerNo, string Name, string Source, string? Supplier, string? Projects, int WorkDays, int HousingDays, decimal Revenue, decimal Cost, decimal IdleCost, decimal Expenses, decimal Profit, bool CostMissing, CostPartsDto Parts, decimal LostRevenue);
+public sealed record WorkerProfitDto(Guid WorkerId, string WorkerNo, string Name, string Source, string? Supplier, string? Projects, int WorkDays, int HousingDays, decimal Revenue, decimal Cost, decimal IdleCost, decimal Expenses, decimal Profit, bool CostMissing, CostPartsDto Parts, decimal LostRevenue, bool NewArrival);
 
 /// <param name="Lost">The workers who lost revenue in housing, the most first.</param>
 public sealed record WorkerProfitFilter(Guid? Project, string? Supplier, string? Source, bool Losing, bool Housing, string? Search, bool Lost = false);
@@ -188,7 +188,7 @@ internal sealed class CeoReport(ProfitReport profit, LegacyInvoices legacy, IWor
         var ordered = f.Lost || f.Housing ? list.OrderByDescending(w => w.LostRevenue).ThenBy(w => w.Profit) : list.OrderBy(w => w.CostMissing).ThenBy(w => w.Profit);
         return ordered.Take(3000)
             .Select(w => new WorkerProfitDto(w.WorkerId, w.WorkerNo, w.Name, w.Source, w.Supplier, w.Projects.Count == 0 ? null : string.Join(" · ", w.Projects.OrderByDescending(p => p.Days).Select(p => p.Place ?? "—")),
-                w.WorkDays, w.HousingDays, w.Revenue, w.Cost, w.IdleCost, w.Expenses, w.Profit, w.CostMissing, w.Parts, w.LostRevenue))
+                w.WorkDays, w.HousingDays, w.Revenue, w.Cost, w.IdleCost, w.Expenses, w.Profit, w.CostMissing, w.Parts, w.LostRevenue, w.NewArrival))
             .ToList();
     }
 

@@ -5423,7 +5423,8 @@
       "missingTip": "The supplier's cost for this worker is not recorded.",
       "idleOf": "Housing {{amount}}",
       "more": "The first 500 of {{count}} are shown; download Excel for all.",
-      "noPrice": "The worker was never invoiced, so there is no price to value their housing days."
+      "noPrice": "The worker was never invoiced, so there is no price to value their housing days.",
+      "newArrival": "Newly arrived"
     },
     "col": {
       "project": "Project",
@@ -5483,7 +5484,8 @@
       "lostProfitCompany": "The revenue lost less the salary working would have cost (the salary ÷ 30 × the days)",
       "lostProfitFixed": "The supplier's cost is paid anyway, so all the revenue lost is profit lost",
       "lostProfitByDays": "The revenue lost less the supplier's cost working would have cost",
-      "lostNote": "An opportunity lost, shown to follow up; it is not deducted from the profit counted."
+      "lostNote": "An opportunity lost, shown to follow up; it is not deducted from the profit counted.",
+      "newArrival": "The worker is newly arrived: the housing days are a wait for a first delivery."
     }
   }
 }

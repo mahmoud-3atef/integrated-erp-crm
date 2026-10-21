@@ -110,6 +110,7 @@ export function WorkerCost({ w }: { w: WorkerProfit }) {
       {w.housingDays > 0 && (
         <Box sx={{ mt: 1.25, p: 1.25, borderRadius: '10px', bgcolor: '#FFFBEB', border: '1px solid #FDE68A' }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: '#92400E' }}>{t('ceo.parts.lostTitle')}</Typography>
+          {w.newArrival && <Typography sx={{ fontSize: 11.5, color: '#075985', fontWeight: 700 }}>{t('ceo.parts.newArrival')}</Typography>}
           {p.dailyPrice === null ? (
             <Typography sx={{ fontSize: 11.5, color: '#92400E' }}>{t('ceo.parts.noPrice', { days: w.housingDays })}</Typography>
           ) : (

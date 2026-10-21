@@ -601,6 +601,11 @@ function WorkersList({ month, query, withFilters }: { month: string; query: Work
                     </Typography>
                     <Typography sx={{ fontSize: 11, color: tokens.gray500 }}>
                       <bdi>{w.workerNo}</bdi>
+                      {w.newArrival && (
+                        <Box component="span" sx={{ marginInlineStart: 0.75, px: 0.75, py: 0.1, borderRadius: 99, bgcolor: '#E0F2FE', color: '#075985', fontWeight: 700, fontSize: 10.5 }}>
+                          {t('ceo.work.newArrival')}
+                        </Box>
+                      )}
                     </Typography>
                   </TableCell>
                   <TableCell>

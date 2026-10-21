@@ -247,7 +247,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 // A stay still open counts only while the worker is in housing: a worker since gone on vacation, transferred
                 // or out has no such days. A stay followed by another move counts as it was.
                 var housing = spans.Where(s => s.Kind == PeriodKind.Housing && (s.EndsOn is not null || InHousingStatus(w.Placement))).Sum(Overlap);
-                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, housing);
+                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, housing, w.Placement == Placement.New);
             })
             .Where(w => w.WorkDays > 0 || w.HousingDays > 0)
             .ToList();

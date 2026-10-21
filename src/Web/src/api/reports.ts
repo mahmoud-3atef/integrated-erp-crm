@@ -412,6 +412,8 @@ export interface WorkerProfit {
   costMissing: boolean;
   parts: CostParts;
   lostRevenue: number;
+  /** Newly arrived, waiting in housing for a first work. */
+  newArrival: boolean;
 }
 
 export interface WorkerProfitQuery {

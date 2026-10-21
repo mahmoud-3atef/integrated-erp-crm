@@ -60,7 +60,8 @@ internal sealed record WorkerMonth(
     decimal IdleCost,
     decimal Expenses,
     bool CostMissing,
-    CostPartsDto Parts)
+    CostPartsDto Parts,
+    bool NewArrival = false)
 {
     public decimal Cost => WorkCost + IdleCost + Expenses;
 
@@ -280,7 +281,7 @@ internal sealed class ProfitReport(
                 new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(netSalary, 2), Math.Round(advance, 2), Math.Round(billedSalary, 2), billedDays, unbilledDays,
                     source == "Supplier" ? info?.SupplierMonthlyCost : null, source == "Supplier" ? info?.ByWorkingDays : null, monthDays,
                     source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList(),
-                    dailyPrice is null ? null : Math.Round(dailyPrice.Value, 2), Math.Round(lostRevenue, 2), Math.Round(lostProfit, 2))));
+                    dailyPrice is null ? null : Math.Round(dailyPrice.Value, 2), Math.Round(lostRevenue, 2), Math.Round(lostProfit, 2)), d.NewArrival));
 
             // A company worker's salary goes to the projects of the invoices it came from; a supplier's cost and the worker's
             // expenses to the projects by the days on each.
