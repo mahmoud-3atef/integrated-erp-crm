@@ -1486,7 +1486,7 @@
       "transport": "Transport",
       "documents": {
         "delivery_order": "Delivery order",
-        "return_order": "Return order",
+        "return_order": "Housing order",
         "transfer_order": "Transfer order",
         "worker_movement": "Movement"
       },
@@ -1495,7 +1495,7 @@
         "housing_order": "Housing order",
         "vacation": "Vacation",
         "delivery_order": "Delivery order",
-        "return_order": "Return order",
+        "return_order": "Housing order",
         "transfer_order": "Transfer order",
         "worker_movement": "Movement"
       },

@@ -1486,16 +1486,16 @@
       "transport": "المواصلات",
       "documents": {
         "delivery_order": "أمر تسليم",
-        "return_order": "أمر رجيع",
+        "return_order": "أمر تسكين",
         "transfer_order": "أمر نقل",
         "worker_movement": "حركة"
       },
       "sources": {
         "empwork": "مباشرة عمل",
-        "housing_order": "أمر سكن",
+        "housing_order": "أمر تسكين",
         "vacation": "إجازة",
         "delivery_order": "أمر تسليم",
-        "return_order": "أمر رجيع",
+        "return_order": "أمر تسكين",
         "transfer_order": "أمر نقل",
         "worker_movement": "حركة"
       },
