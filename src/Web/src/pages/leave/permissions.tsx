@@ -1,4 +1,6 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { Alert, Autocomplete, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -205,6 +207,8 @@ export function PermissionPage() {
   const [p, setP] = useState<Permission | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [amending, setAmending] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const approval = useRecordApproval(p?.approval?.instanceId);
   useCrumb(p?.requestNo, `/hr/permissions/${id}`);
   const reload = useCallback(async () => {
@@ -245,6 +249,16 @@ export function PermissionPage() {
                 {t('leave.resubmit')}
               </Button>
             )}
+            {p.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('permissions.amend.action')}
+              </Button>
+            )}
+            {p.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelling(true)}>
+                {t('permissions.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: (th) => (th.direction === 'rtl' ? 'scaleX(-1)' : 'none') }} />} onClick={() => navigate(-1)}>
               {t('common.back')}
             </Button>
@@ -261,6 +275,16 @@ export function PermissionPage() {
             void approval.reload();
           }}
         />
+      )}
+      {p.amendedAt && p.status === 'Approved' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('permissions.amend.amendedBy', { by: p.amendedByName, date: date(p.amendedAt) })} — {p.amendNote}
+        </Alert>
+      )}
+      {p.canceledAt && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('permissions.amend.canceledBy', { by: p.canceledByName, date: date(p.canceledAt) })}
+        </Alert>
       )}
       {p.lastComment && p.status !== 'Approved' && <Alert severity={p.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: 1.5 }}>{p.lastComment}</Alert>}
       <Box sx={{ ...(hrCard as object), p: 2, display: 'grid', gap: 1.25, maxWidth: 760 }}>
@@ -282,6 +306,26 @@ export function PermissionPage() {
         ))}
         <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{t('permissions.effect')}</Typography>
       </Box>
+      {amending && (
+        <PermissionAmendDialog
+          permission={p}
+          onClose={() => setAmending(false)}
+          onSaved={() => {
+            setAmending(false);
+            void reload();
+          }}
+        />
+      )}
+      {cancelling && (
+        <PermissionCancelDialog
+          onClose={() => setCancelling(false)}
+          onCancel={async (reason) => {
+            await leaveApi.cancelApprovedPermission(p.id, reason);
+            setCancelling(false);
+            await reload();
+          }}
+        />
+      )}
       {editing && (
         <PermissionDialog
           request={p}
@@ -294,5 +338,84 @@ export function PermissionPage() {
         />
       )}
     </HrScope>
+  );
+}
+
+/** Changing an approved permission (its own permission): its day, times, kind and reason, with the reason for the change. */
+function PermissionAmendDialog({ permission: p, onClose, onSaved }: { permission: Permission; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const [day, setDay] = useState(p.date);
+  const [from, setFrom] = useState(hhmm(p.from));
+  const [to, setTo] = useState(hhmm(p.to));
+  const [kind, setKind] = useState<PermissionKind>(p.kind);
+  const [reason, setReason] = useState(p.reason ?? '');
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await leaveApi.amendPermission(p.id, { date: day, from, to, kind, reason: reason.trim() || null, amendReason: why.trim() });
+      onSaved();
+    } catch (f) {
+      setError(errorKey(f));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+      <HrScope>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('permissions.amend.title', { no: p.requestNo })}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          <Alert severity="info">{t('permissions.amend.hint')}</Alert>
+          <TextField size="small" select label={t('permissions.kind')} value={kind} onChange={(e) => setKind(e.target.value as PermissionKind)}>
+            {permissionKinds.map((k) => (
+              <MenuItem key={k} value={k}>
+                {t(`permissions.kinds.${k}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
+            <TextField size="small" type="date" label={t('permissions.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <TextField size="small" type="time" label={t('permissions.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <TextField size="small" type="time" label={t('permissions.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+          </Stack>
+          <TextField size="small" multiline minRows={2} label={t('leave.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <TextField size="small" required multiline minRows={2} label={t('permissions.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <ErrorMessage messageKey={error} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+          <Button variant="contained" disabled={busy || !why.trim() || !day || !from || !to} onClick={() => void save()}>
+            {t('permissions.amend.save')}
+          </Button>
+          <Button onClick={onClose}>{t('common.back')}</Button>
+        </DialogActions>
+      </HrScope>
+    </Dialog>
+  );
+}
+
+function PermissionCancelDialog({ onClose, onCancel }: { onClose: () => void; onCancel: (reason: string) => Promise<void> }) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <HrScope>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('permissions.amend.cancelAction')}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          <Typography sx={{ fontSize: 13 }}>{t('permissions.amend.cancelHint')}</Typography>
+          <TextField size="small" required multiline minRows={2} label={t('permissions.amend.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <ErrorMessage messageKey={error} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+          <Button variant="contained" color="error" disabled={!reason.trim()} onClick={() => void onCancel(reason.trim()).catch((f) => setError(errorKey(f)))}>
+            {t('permissions.amend.cancelAction')}
+          </Button>
+          <Button onClick={onClose}>{t('common.back')}</Button>
+        </DialogActions>
+      </HrScope>
+    </Dialog>
   );
 }

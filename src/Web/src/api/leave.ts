@@ -73,6 +73,14 @@ export interface Permission {
   decidedAt: string | null;
   lastComment: string | null;
   approval: ApprovalStatus | null;
+  /** An approved permission: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
 }
 
 export interface PermissionInput {
@@ -262,6 +270,9 @@ export const leaveApi = {
   previewPermission: (input: PermissionInput, requestId?: string) => request<PermissionPreview>('POST', `${base}/permissions/preview${qs({ requestId })}`, input),
   sendPermission: (input: PermissionInput) => request<{ id: string }>('POST', `${base}/permissions`, input),
   resubmitPermission: (id: string, input: PermissionInput) => request<{ id: string }>('POST', `${base}/permissions/${id}/resubmit`, input),
+  amendPermission: (id: string, input: { date: string; from: string; to: string; kind: PermissionKind; reason: string | null; amendReason: string }) =>
+    request<void>('PUT', `${base}/permissions/${id}/amend`, input),
+  cancelApprovedPermission: (id: string, reason: string) => request<void>('POST', `${base}/permissions/${id}/cancel-approved`, { reason }),
   employee: (id: string) => request<EmployeeLeave>('GET', `${base}/employees/${id}`),
   opening: (id: string, input: { leaveTypeId: string; date: string; days: number; reason: string }) => request<void>('POST', `${base}/employees/${id}/opening`, input),
   adjustment: (id: string, input: { leaveTypeId: string; date: string; days: number; reason: string }) => request<void>('POST', `${base}/employees/${id}/adjustment`, input),

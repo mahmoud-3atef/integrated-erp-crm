@@ -474,6 +474,69 @@ public sealed class PermissionRequest : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    /// <summary>Cancelled after its approval: when and by whom (the reason is the last comment).</summary>
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
+    /// <summary>Changed after its approval: the day, the times, the kind and the reason (with the reason for the change).</summary>
+    public Result Amend(DateOnly date, TimeOnly from, TimeOnly to, PermissionKind kind, string? reason, string amendReason, string by, DateTimeOffset at)
+    {
+        var minutes = (int)(to - from).TotalMinutes;
+        if (Status != RequestStatus.Approved)
+        {
+            return Result.Failure(LeaveErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(amendReason) || amendReason.Trim().Length > 500)
+        {
+            return Result.Failure(LeaveErrors.AmendReason);
+        }
+
+        if (to <= from || minutes is < 15 or > 480 || (reason?.Length ?? 0) > 500)
+        {
+            return Result.Failure(LeaveErrors.PermissionTimes);
+        }
+
+        Date = date;
+        FromTime = from;
+        ToTime = to;
+        Minutes = minutes;
+        Kind = kind;
+        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = amendReason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after its approval: its minutes count again as late or early in the attendance.</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (Status != RequestStatus.Approved)
+        {
+            return Result.Failure(LeaveErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(LeaveErrors.AmendReason);
+        }
+
+        Status = RequestStatus.Cancelled;
+        LastComment = reason.Trim();
+        CanceledAt = at;
+        CanceledByName = by;
+        return Result.Success();
+    }
+
     public static PermissionRequest Create(string requestNo, Guid employeeId, string employeeName, string by, DateTimeOffset at) => new()
     {
         Id = Guid.CreateVersion7(),

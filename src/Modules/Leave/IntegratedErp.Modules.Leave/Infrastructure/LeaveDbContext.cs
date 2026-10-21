@@ -40,6 +40,9 @@ internal sealed class PermissionRequestConfiguration : IEntityTypeConfiguration<
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(p => p.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(p => p.LastComment).HasMaxLength(2000);
+        builder.Property(p => p.AmendedByName).HasMaxLength(200);
+        builder.Property(p => p.AmendNote).HasMaxLength(500);
+        builder.Property(p => p.CanceledByName).HasMaxLength(200);
         builder.HasIndex(p => new { p.TenantId, p.RequestNo }).IsUnique();
         builder.HasIndex(p => new { p.TenantId, p.EmployeeId, p.Date });
     }

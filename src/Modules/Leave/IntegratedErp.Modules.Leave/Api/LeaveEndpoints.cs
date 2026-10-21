@@ -57,6 +57,10 @@ internal static class LeaveEndpoints
             .RequirePermission(LeavePermissions.Manage, companyWide: true);
         group.MapPost("/permissions", async (PermissionInput input, LeavePermissionService service, CancellationToken ct) => Saved(await service.RequestAsync(input, ct).ConfigureAwait(false)))
             .RequirePermission(LeavePermissions.Manage, companyWide: true);
+        group.MapPut("/permissions/{id:guid}/amend", async (Guid id, PermissionAmendInput input, LeavePermissionService service, CancellationToken ct) => ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.PermissionAmend, companyWide: true);
+        group.MapPost("/permissions/{id:guid}/cancel-approved", async (Guid id, CancelInput input, LeavePermissionService service, CancellationToken ct) => ToHttp(await service.CancelApprovedAsync(id, input.Reason, ct).ConfigureAwait(false)))
+            .RequirePermission(LeavePermissions.PermissionCancelApproved, companyWide: true);
         group.MapPost("/permissions/{id:guid}/resubmit", async (Guid id, PermissionInput input, LeavePermissionService service, CancellationToken ct) => Saved(await service.ResubmitAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(LeavePermissions.Manage, companyWide: true);
 

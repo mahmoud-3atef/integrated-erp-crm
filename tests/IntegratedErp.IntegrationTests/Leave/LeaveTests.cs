@@ -110,6 +110,15 @@ public sealed class LeaveTests(TestDatabase database)
         {
             var off = await scope4.ServiceProvider.GetRequiredService<IApprovedTimeOff>().InAsync(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30), mona, default);
             Assert.Equal([90, 150], off.OrderBy(o => o.Date).Select(o => o.Waived));
+
+            // The first changed after its approval (an hour on the 18th), then the second cancelled: only the first is waived.
+            var permits4 = scope4.ServiceProvider.GetRequiredService<LeavePermissionService>();
+            var all = await scope4.ServiceProvider.GetRequiredService<LeaveQueries>().PermissionsAsync(mona, "2026-11", null, default);
+            var (p16, p17) = (all.Single(x => x.Date == new DateOnly(2026, 11, 16)).Id, all.Single(x => x.Date == new DateOnly(2026, 11, 17)).Id);
+            Assert.True((await permits4.AmendAsync(p16, new PermissionAmendInput(new DateOnly(2026, 11, 18), new TimeOnly(9, 0), new TimeOnly(10, 0), "LateArrival", "موعد", "تغيّر الموعد"), default)).IsSuccess);
+            Assert.True((await permits4.CancelApprovedAsync(p17, "لم يخرج", default)).IsSuccess);
+            off = await scope4.ServiceProvider.GetRequiredService<IApprovedTimeOff>().InAsync(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30), mona, default);
+            Assert.Equal((new DateOnly(2026, 11, 18), 60), (Assert.Single(off).Date, off[0].Waived));
         }
 
         // A past sick leave for Khaled (no manager above him: HR approves), back a day early: the leave ends the day before.

@@ -268,7 +268,16 @@ internal sealed class LeaveQueries(LeaveDbContext db, IStaffDirectory staff, Lea
         }
 
         var approval = await approvals.StatusAsync(PermissionAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        return new PermissionDto(p.Id, p.RequestNo, p.EmployeeId, p.EmployeeName, p.Date, p.FromTime, p.ToTime, p.Minutes, p.Kind.ToString(), p.Reason, p.Status.ToString(), p.CreatedByName, p.CreatedAt, p.DecidedAt, p.LastComment, approval);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        return new PermissionDto(
+            p.Id, p.RequestNo, p.EmployeeId, p.EmployeeName, p.Date, p.FromTime, p.ToTime, p.Minutes, p.Kind.ToString(), p.Reason, p.Status.ToString(), p.CreatedByName, p.CreatedAt, p.DecidedAt, p.LastComment, approval,
+            CanAmend: p.Status == RequestStatus.Approved && granted.Has(LeavePermissions.PermissionAmend),
+            CanCancelApproved: p.Status == RequestStatus.Approved && granted.Has(LeavePermissions.PermissionCancelApproved),
+            AmendedAt: p.AmendedAt,
+            AmendedByName: p.AmendedByName,
+            AmendNote: p.AmendNote,
+            CanceledAt: p.CanceledAt,
+            CanceledByName: p.CanceledByName);
     }
 
     private async Task<List<RequestRowDto>> RowsAsync(Guid? employeeId, CancellationToken cancellationToken)

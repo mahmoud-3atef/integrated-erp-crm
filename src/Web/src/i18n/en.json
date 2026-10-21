@@ -4274,7 +4274,18 @@
     "monthTitle": "Permission this month",
     "left": "left",
     "monthLine": "Used {{used}} of {{allowance}}",
-    "listTitle": "Permissions"
+    "listTitle": "Permissions",
+    "amend": {
+      "action": "Change after approval",
+      "cancelAction": "Cancel the approved permission",
+      "title": "Change approved permission {{no}}",
+      "hint": "The permission is checked again as a new request would be (the month's allowance, leave). Not allowed while the attendance month is closing or closed. The change and its reason are recorded.",
+      "reason": "Reason for the change or cancellation",
+      "save": "Save the change",
+      "cancelHint": "The permission's time counts again as late or early in the attendance. Not allowed while the attendance month is closing or closed.",
+      "amendedBy": "Changed after approval by {{by}} on {{date}}",
+      "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
+    }
   },
   "deductions": {
     "sar": "SAR",

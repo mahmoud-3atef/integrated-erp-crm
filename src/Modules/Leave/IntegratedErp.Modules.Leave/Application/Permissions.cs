@@ -34,9 +34,19 @@ public sealed record PermissionDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? DecidedAt,
     string? LastComment,
-    ApprovalStatusInfo? Approval);
+    ApprovalStatusInfo? Approval,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record ReturnInput(DateOnly ReturnedOn, string? Note);
+
+/// <summary>What may change on an approved permission: its day, times, kind and reason, with the reason for the change.</summary>
+public sealed record PermissionAmendInput(DateOnly Date, TimeOnly From, TimeOnly To, string Kind, string? Reason, string AmendReason);
 
 /// <summary>
 /// Permissions (استئذان) of some hours on a day: the preview (the month's allowance used and what is left), the request
@@ -167,6 +177,82 @@ internal sealed class LeavePermissionService(
         return await SendAsync(request, legalEntity, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Changes an approved permission (its own permission and a reason): its day, times, kind and reason, checked as a
+    /// new request would be. Not while the attendance month of the old or new day is closing or closed.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, PermissionAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Permissions.FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(LeaveErrors.PermissionNotFound);
+        }
+
+        if (await HeldAsync(request, input.AmendReason, cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            return Result.Failure(held);
+        }
+
+        var preview = await PreviewAsync(new PermissionInput(request.EmployeeId, input.Date, input.From, input.To, input.Kind, input.Reason), id, cancellationToken).ConfigureAwait(false);
+        if (preview.IsFailure)
+        {
+            return Result.Failure(preview.Error);
+        }
+
+        if (Refusal(preview.Value) is { } refused)
+        {
+            return Result.Failure(refused);
+        }
+
+        var amended = request.Amend(input.Date, input.From, input.To, Enum.Parse<PermissionKind>(input.Kind), input.Reason, input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Cancels an approved permission (its own permission and a reason). Not while its attendance month is closing or closed.</summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        if (await db.Permissions.FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(LeaveErrors.PermissionNotFound);
+        }
+
+        if (await HeldAsync(request, reason, cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            return Result.Failure(held);
+        }
+
+        var canceled = request.CancelApproved(reason!, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    private async Task<Error?> HeldAsync(PermissionRequest request, string? reason, CancellationToken cancellationToken)
+    {
+        if (request.Status != RequestStatus.Approved)
+        {
+            return LeaveErrors.NotAmendable;
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return LeaveErrors.AmendReason;
+        }
+
+        return await calendar.LockedAsync(request.Date, request.Date, cancellationToken).ConfigureAwait(false) ? LeaveErrors.Locked : null;
+    }
+
     private static Error? Refusal(PermissionPreview p) => (p.Problems.Count > 0 ? p.Problems[0] : null) switch
     {
         null => null,
@@ -194,6 +280,9 @@ internal sealed class LeavePermissionService(
 internal sealed class PermissionAdapter(LeaveDbContext db, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "leave.permission";
+
+    /// <summary>The request's code: the permission is approved (the attendance no longer counts its minutes).</summary>
+    public const string ApprovePermission = "approve_permission";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -230,6 +319,7 @@ internal sealed class PermissionAdapter(LeaveDbContext db, IClock clock) : IAppr
                         },
                     },
                 },
+                new { type = "action", id = "approve-permission", label = "اعتماد الاستئذان", action = ApprovePermission },
             },
         },
         JsonOptions);
@@ -254,7 +344,17 @@ internal sealed class PermissionAdapter(LeaveDbContext db, IClock clock) : IAppr
             new("minutes", "الدقائق", "Minutes", RecordFieldType.Number, Updatable: false),
             new("manager", "المدير المباشر", "Direct manager", RecordFieldType.User, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد الاستئذانات", "Permission approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد الاستئذانات", "Permission approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                ApprovePermission,
+                "اعتماد الاستئذان",
+                "Approve the permission",
+                "تصبح حالة الاستئذان «معتمد»، ولا يُحسب وقته في الحضور تأخيرًا أو خروجًا مبكرًا (في حدود رصيد الشهر، والمهمة كاملة).",
+                "The permission is «approved», and the attendance no longer counts its time as late or early (within the month's allowance; a mission in full).",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -286,6 +386,35 @@ internal sealed class PermissionAdapter(LeaveDbContext db, IClock clock) : IAppr
         return Result.Success();
     }
 
+    /// <summary>«Approve the permission» (the process runs it, by default at its end). Run again on an approved one, it does nothing.</summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != ApprovePermission)
+        {
+            return RecordActionResult.Failed($"A permission has no action \"{action}\".");
+        }
+
+        if (await db.Permissions.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { } p)
+        {
+            return RecordActionResult.Failed("The permission no longer exists.");
+        }
+
+        if (p.Status == RequestStatus.Approved)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (p.Status != RequestStatus.InApproval)
+        {
+            return RecordActionResult.Failed("The permission is not in approval.");
+        }
+
+        p.Ended(RequestStatus.Approved, null, clock.UtcNow);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>The approval ended: a rejection or return sets the state; approved, its code already approved it.</summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         if (await db.Permissions.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: RequestStatus.InApproval } p)
@@ -293,7 +422,10 @@ internal sealed class PermissionAdapter(LeaveDbContext db, IClock clock) : IAppr
             return;
         }
 
-        p.Ended(end switch { ApprovalEnd.Approved => RequestStatus.Approved, ApprovalEnd.Rejected => RequestStatus.Rejected, _ => RequestStatus.Returned }, comment, clock.UtcNow);
+        p.Ended(
+            end == ApprovalEnd.Rejected ? RequestStatus.Rejected : RequestStatus.Returned,
+            end == ApprovalEnd.Approved ? "انتهى الاعتماد دون اعتماد الاستئذان؛ أعد إرسال الطلب." : comment,
+            clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
