@@ -23,7 +23,14 @@ public sealed record AdvanceDto(
     string CreatedByName,
     string? LastComment,
     IReadOnlyList<InstallmentDto> Installments,
-    ApprovalStatusInfo? Approval);
+    ApprovalStatusInfo? Approval,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record AdvanceKpis(decimal OpenBalance, int OpenEmployees, int Pending, decimal PendingAmount, int ToDisburse, decimal PaidThisMonth, int PaidThisMonthCount, decimal DueNextMonth, string NextPeriod);
 
@@ -46,7 +53,19 @@ public sealed record PenaltyRowDto(
     string Status,
     DateTimeOffset CreatedAt);
 
-public sealed record PenaltyDto(PenaltyRowDto Penalty, string? Statement, string CreatedByName, string? LastComment, ApprovalStatusInfo? Approval);
+public sealed record PenaltyDto(
+    PenaltyRowDto Penalty,
+    string? Statement,
+    string CreatedByName,
+    string? LastComment,
+    ApprovalStatusInfo? Approval,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record EmployeeDeductionsDto(decimal OpenAdvances, int Warnings, decimal PenaltyDaysThisYear, IReadOnlyList<AdvanceRowDto> Advances, IReadOnlyList<PenaltyRowDto> Penalties);
 
@@ -105,12 +124,20 @@ internal sealed class DeductionQueries(DeductionsDbContext db, IStaffDirectory s
 
         var member = (await staff.MembersAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefault(m => m.Id == a.EmployeeId);
         var approval = await approvals.StatusAsync(AdvanceAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        var seeSalary = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(AdvanceService.SalariesView);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var seeSalary = granted.Has(AdvanceService.SalariesView);
         return new AdvanceDto(
             Row(a, member), a.Reason, seeSalary ? a.SalaryAtRequest : null, a.PaidOn, a.PaymentMethod, a.PaymentReference, a.PaidBy, a.CreatedByName, a.LastComment,
             a.Installments.OrderBy(i => i.Period).ThenBy(i => i.Status == InstallmentStatus.Postponed ? 0 : 1)
                 .Select(i => new InstallmentDto(i.Id, i.Period, i.Amount, i.Deducted, i.Status.ToString(), i.Note)).ToList(),
-            approval);
+            approval,
+            CanAmend: a.IsAmendable && granted.Has(DeductionPermissions.AdvanceAmend),
+            CanCancelApproved: a.IsAmendable && granted.Has(DeductionPermissions.AdvanceCancelApproved),
+            AmendedAt: a.AmendedAt,
+            AmendedByName: a.AmendedByName,
+            AmendNote: a.AmendNote,
+            CanceledAt: a.CanceledAt,
+            CanceledByName: a.CanceledByName);
     }
 
     public async Task<IReadOnlyList<PenaltyRowDto>> PenaltiesAsync(string? tab, Guid? employeeId, string? search, CancellationToken cancellationToken)
@@ -149,7 +176,16 @@ internal sealed class DeductionQueries(DeductionsDbContext db, IStaffDirectory s
 
         var type = p.PenaltyTypeId is { } t ? await db.PenaltyTypes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == t, cancellationToken).ConfigureAwait(false) : null;
         var approval = await approvals.StatusAsync(p.Category == PenaltyCategory.Other ? OtherDeductionAdapter.ScreenCode : PenaltyAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        return new PenaltyDto(Row(p, type), p.Statement, p.CreatedByName, p.LastComment, approval);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        return new PenaltyDto(
+            Row(p, type), p.Statement, p.CreatedByName, p.LastComment, approval,
+            CanAmend: p.IsAmendable && granted.Has(DeductionPermissions.AmendOf(p.Category)),
+            CanCancelApproved: p.IsAmendable && granted.Has(DeductionPermissions.CancelApprovedOf(p.Category)),
+            AmendedAt: p.AmendedAt,
+            AmendedByName: p.AmendedByName,
+            AmendNote: p.AmendNote,
+            CanceledAt: p.CanceledAt,
+            CanceledByName: p.CanceledByName);
     }
 
     public async Task<EmployeeDeductionsDto> EmployeeAsync(Guid employeeId, CancellationToken cancellationToken)

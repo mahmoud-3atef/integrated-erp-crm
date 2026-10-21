@@ -141,6 +141,9 @@ public sealed record DisburseInput(DateOnly PaidOn, string Method, string? Refer
 
 public sealed record NoteInput(string Note);
 
+/// <summary>What may change on an approved advance not yet paid, with the reason for the change.</summary>
+public sealed record AdvanceAmendInput(decimal Amount, int Months, string FirstPeriod, string Reason, bool AboveCap, string AmendReason);
+
 /// <summary>
 /// Salary advances: the preview (the salary, the cap, the installment, the month's deductions against its cap, the
 /// conditions), the request through approval, finance's payment, and the early settlement or a postponed installment.
@@ -320,6 +323,70 @@ internal sealed class AdvanceService(
         return await SendAsync(advance, legalEntity, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Changes an approved advance not yet paid (its own permission and a reason): the amount, the months, the first
+    /// month and the reason, checked as a request is; its schedule is made again.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, AdvanceAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Advances.Include(a => a.Installments).FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false) is not { } advance)
+        {
+            return Result.Failure(DeductionErrors.AdvanceNotFound);
+        }
+
+        if (!advance.IsAmendable)
+        {
+            return Result.Failure(DeductionErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(input.AmendReason))
+        {
+            return Result.Failure(DeductionErrors.AmendReason);
+        }
+
+        var preview = await PreviewAsync(new AdvanceInput(advance.EmployeeId, input.Amount, input.Months, input.FirstPeriod, input.Reason, input.AboveCap), id, cancellationToken).ConfigureAwait(false);
+        if (preview.IsFailure)
+        {
+            return Result.Failure(preview.Error);
+        }
+
+        if (Refusal(preview.Value) is { } refused)
+        {
+            return Result.Failure(refused);
+        }
+
+        var amended = advance.Amend(input.Amount, input.Months, input.FirstPeriod, input.Reason, preview.Value.NeedsAboveCap.Count > 0 && input.AboveCap, input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return Result.Failure(amended.Error);
+        }
+
+        db.Installments.RemoveRange(amended.Value.Removed);
+        db.Installments.AddRange(amended.Value.Added);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Cancels an approved advance not yet paid (its own permission and a reason): its schedule is removed.</summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        if (await db.Advances.Include(a => a.Installments).FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false) is not { } advance)
+        {
+            return Result.Failure(DeductionErrors.AdvanceNotFound);
+        }
+
+        var canceled = advance.CancelApproved(reason ?? string.Empty, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return Result.Failure(canceled.Error);
+        }
+
+        db.Installments.RemoveRange(canceled.Value);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     public async Task<Result> DisburseAsync(Guid id, DisburseInput input, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
@@ -405,6 +472,9 @@ internal sealed class AdvanceAdapter(DeductionsDbContext db, IClock clock) : IAp
 {
     public const string ScreenCode = "deduction.advance";
 
+    /// <summary>The advance's code: it is approved and its schedule made (finance then pays it).</summary>
+    public const string ApproveAdvance = "approve_advance";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static readonly string DefaultDefinition = JsonSerializer.Serialize(
@@ -441,6 +511,10 @@ internal sealed class AdvanceAdapter(DeductionsDbContext db, IClock clock) : IAp
                 {
                     type = "approval", id = "finance", label = "المالية", nameAr = "المالية", nameEn = "Finance",
                     assignees = new[] { new { kind = "Permission", permission = DeductionPermissions.ApproveFinance } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "approve-advance", label = "اعتماد السلفة وجدولة أقساطها", action = ApproveAdvance },
+                    },
                 },
             },
         },
@@ -458,7 +532,17 @@ internal sealed class AdvanceAdapter(DeductionsDbContext db, IClock clock) : IAp
             new("above_cap", "يتجاوز السقف", "Above the cap", RecordFieldType.Boolean, Updatable: false),
             new("manager", "المدير المباشر", "Direct manager", RecordFieldType.User, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد السلف", "Advance approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد السلف", "Advance approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                ApproveAdvance,
+                "اعتماد السلفة وجدولة أقساطها",
+                "Approve the advance and schedule its installments",
+                "تصبح حالة السلفة «معتمدة» بانتظار صرف المالية، وتُجدوَل أقساطها المتساوية من الشهر الأول المختار (الهللات على آخر قسط).",
+                "The advance is «approved», waiting for finance to pay it, and its equal installments are scheduled from the first month chosen (the cents on the last).",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -490,22 +574,46 @@ internal sealed class AdvanceAdapter(DeductionsDbContext db, IClock clock) : IAp
         return Result.Success();
     }
 
+    /// <summary>«Approve the advance» (the process runs it, by default on finance's approval). Run again on an approved one, it does nothing.</summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != ApproveAdvance)
+        {
+            return RecordActionResult.Failed($"An advance has no action \"{action}\".");
+        }
+
+        if (await db.Advances.Include(x => x.Installments).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { } a)
+        {
+            return RecordActionResult.Failed("The advance no longer exists.");
+        }
+
+        if (a.Status is AdvanceStatus.Approved or AdvanceStatus.Disbursed or AdvanceStatus.Settled)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (a.Status != AdvanceStatus.InApproval)
+        {
+            return RecordActionResult.Failed("The advance is not in approval.");
+        }
+
+        db.Installments.AddRange(a.Approve(null, clock.UtcNow));
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>The approval ended: a rejection or return sets the state; approved, its code already approved it.</summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
-        if (await db.Advances.Include(x => x.Installments).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: AdvanceStatus.InApproval } a)
+        if (await db.Advances.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: AdvanceStatus.InApproval } a)
         {
             return;
         }
 
-        if (end == ApprovalEnd.Approved)
-        {
-            db.Installments.AddRange(a.Approve(comment, clock.UtcNow));
-        }
-        else
-        {
-            a.Ended(end == ApprovalEnd.Rejected ? AdvanceStatus.Rejected : AdvanceStatus.Returned, comment, clock.UtcNow);
-        }
-
+        a.Ended(
+            end == ApprovalEnd.Rejected ? AdvanceStatus.Rejected : AdvanceStatus.Returned,
+            end == ApprovalEnd.Approved ? "انتهى الاعتماد دون اعتماد السلفة؛ أعد إرسال الطلب." : comment,
+            clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

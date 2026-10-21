@@ -14,6 +14,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Deductions.Application;
 
+/// <summary>What may change on an applied penalty or deduction (not yet deducted), with the reason for the change.</summary>
+public sealed record PenaltyAmendInput(Guid? PenaltyTypeId, DateOnly ViolationDate, string Description, string? Statement, decimal? Days, decimal? Amount, string Period, bool AboveCap, string AmendReason);
+
 public sealed record PenaltyInput(Guid EmployeeId, string Category, Guid? PenaltyTypeId, DateOnly ViolationDate, string Description, string? Statement, decimal? Days, decimal? Amount, string Period, bool AboveCap);
 
 public sealed record PenaltyPreview(
@@ -181,6 +184,81 @@ internal sealed class PenaltyService(
         return await SendAsync(penalty, legalEntity, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Changes an applied penalty or deduction not yet deducted (its kind's own permission and a reason): its fields,
+    /// checked as a request is (the limits per violation and per month). A payroll month already calculated is
+    /// calculated again to follow it.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, PenaltyAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Penalties.FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false) is not { } penalty)
+        {
+            return Result.Failure(DeductionErrors.PenaltyNotFound);
+        }
+
+        if (!(await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(DeductionPermissions.AmendOf(penalty.Category)))
+        {
+            return Result.Failure(DeductionErrors.CategoryForbidden);
+        }
+
+        if (!penalty.IsAmendable)
+        {
+            return Result.Failure(DeductionErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(input.AmendReason))
+        {
+            return Result.Failure(DeductionErrors.AmendReason);
+        }
+
+        var request = new PenaltyInput(penalty.EmployeeId, penalty.Category.ToString(), input.PenaltyTypeId, input.ViolationDate, input.Description, input.Statement, input.Days, input.Amount, input.Period, input.AboveCap);
+        var preview = await PreviewAsync(request, id, cancellationToken).ConfigureAwait(false);
+        if (preview.IsFailure)
+        {
+            return Result.Failure(preview.Error);
+        }
+
+        if (Refusal(preview.Value) is { } refused)
+        {
+            return Result.Failure(refused);
+        }
+
+        var amended = penalty.Amend(
+            penalty.Category == PenaltyCategory.Other ? null : input.PenaltyTypeId, Enum.Parse<PenaltyEffect>(preview.Value.Effect), input.ViolationDate, input.Description, input.Statement,
+            input.Days, input.Amount, input.Period, preview.Value.NeedsAboveCap.Count > 0 && input.AboveCap, input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Cancels an applied penalty or deduction not yet deducted (its kind's own permission and a reason).</summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        if (await db.Penalties.FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false) is not { } penalty)
+        {
+            return Result.Failure(DeductionErrors.PenaltyNotFound);
+        }
+
+        if (!(await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(DeductionPermissions.CancelApprovedOf(penalty.Category)))
+        {
+            return Result.Failure(DeductionErrors.CategoryForbidden);
+        }
+
+        var canceled = penalty.CancelApproved(reason ?? string.Empty, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     private static Error? Refusal(PenaltyPreview p) => (p.Problems.Count > 0 ? p.Problems[0] : null) switch
     {
         null => null,
@@ -211,6 +289,9 @@ internal abstract class PenaltyAdapterBase(DeductionsDbContext db, IClock clock)
 {
     protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>The record's code: the penalty or deduction is applied (the payroll deducts it in its month).</summary>
+    public const string ApplyAction = "apply_deduction";
+
     public abstract ApprovalScreen Screen { get; }
 
     protected static object Stage(string id, string ar, string en, string permission) => new
@@ -218,6 +299,16 @@ internal abstract class PenaltyAdapterBase(DeductionsDbContext db, IClock clock)
         type = "approval", id, label = ar, nameAr = ar, nameEn = en,
         assignees = new[] { new { kind = "Permission", permission } }, rule = "Any",
     };
+
+    /// <summary>The last stage: its approval runs the record's code.</summary>
+    protected static object LastStage(string id, string ar, string en, string permission, string actionLabel) => new
+    {
+        type = "approval", id, label = ar, nameAr = ar, nameEn = en,
+        assignees = new[] { new { kind = "Permission", permission } }, rule = "Any",
+        onApprove = new object[] { new { type = "action", id = "apply", label = actionLabel, action = ApplyAction } },
+    };
+
+    protected static RecordAction Apply(string ar, string en, string descriptionAr, string descriptionEn) => new(ApplyAction, ar, en, descriptionAr, descriptionEn, Required: true);
 
     protected static IReadOnlyList<RecordField> Fields() =>
     [
@@ -256,6 +347,35 @@ internal abstract class PenaltyAdapterBase(DeductionsDbContext db, IClock clock)
         return Result.Success();
     }
 
+    /// <summary>«Apply» (the process runs it, by default on the last stage's approval). Run again on an applied record, it does nothing.</summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != ApplyAction)
+        {
+            return RecordActionResult.Failed($"A penalty has no action \"{action}\".");
+        }
+
+        if (await db.Penalties.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { } p)
+        {
+            return RecordActionResult.Failed("The penalty no longer exists.");
+        }
+
+        if (p.Status == PenaltyStatus.Applied)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (p.Status != PenaltyStatus.InApproval)
+        {
+            return RecordActionResult.Failed("The penalty is not in approval.");
+        }
+
+        p.Ended(PenaltyStatus.Applied, null, clock.UtcNow);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>The approval ended: a rejection or return sets the state; approved, its code already applied it.</summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         if (await db.Penalties.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: PenaltyStatus.InApproval } p)
@@ -263,7 +383,10 @@ internal abstract class PenaltyAdapterBase(DeductionsDbContext db, IClock clock)
             return;
         }
 
-        p.Ended(end switch { ApprovalEnd.Approved => PenaltyStatus.Applied, ApprovalEnd.Rejected => PenaltyStatus.Rejected, _ => PenaltyStatus.Returned }, comment, clock.UtcNow);
+        p.Ended(
+            end == ApprovalEnd.Rejected ? PenaltyStatus.Rejected : PenaltyStatus.Returned,
+            end == ApprovalEnd.Approved ? "انتهى الاعتماد دون تطبيقه؛ أعد إرساله." : comment,
+            clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
@@ -274,12 +397,20 @@ internal sealed class PenaltyAdapter(DeductionsDbContext db, IClock clock) : Pen
     public const string ScreenCode = "deduction.penalty";
 
     private static readonly string Definition = JsonSerializer.Serialize(
-        new { startCondition = (object?)null, steps = new[] { Stage("hr", "الموارد البشرية", "HR", DeductionPermissions.ApproveHr), Stage("management", "الإدارة العليا", "Senior management", DeductionPermissions.ApproveManagement) } },
+        new { startCondition = (object?)null, steps = new[] { Stage("hr", "الموارد البشرية", "HR", DeductionPermissions.ApproveHr), LastStage("management", "الإدارة العليا", "Senior management", DeductionPermissions.ApproveManagement, "اعتماد الجزاء وإدراجه في مسير شهره") } },
         JsonOptions);
 
     public override ApprovalScreen Screen { get; } = new(
         ScreenCode, "الجزاءات", "Penalties", "/hr/penalties/{id}", Fields(),
-        DefaultProcess: new DefaultApprovalProcess("اعتماد الجزاءات", "Penalty approval", Definition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد الجزاءات", "Penalty approval", Definition),
+        Actions:
+        [
+            Apply(
+                "اعتماد الجزاء وإدراجه في مسير شهره",
+                "Apply the penalty in its payroll month",
+                "تصبح حالة الجزاء «مطبَّق»، ويخصمه مسير رواتب شهره (أو يُسجَّل إنذارًا).",
+                "The penalty is «applied», and its month's payroll deducts it (or it stands as a warning)."),
+        ]);
 }
 
 /// <summary>Another deduction (damage, custody…): HR, then finance.</summary>
@@ -288,12 +419,20 @@ internal sealed class OtherDeductionAdapter(DeductionsDbContext db, IClock clock
     public const string ScreenCode = "deduction.other";
 
     private static readonly string Definition = JsonSerializer.Serialize(
-        new { startCondition = (object?)null, steps = new[] { Stage("hr", "الموارد البشرية", "HR", DeductionPermissions.ApproveHr), Stage("finance", "المالية", "Finance", DeductionPermissions.ApproveFinance) } },
+        new { startCondition = (object?)null, steps = new[] { Stage("hr", "الموارد البشرية", "HR", DeductionPermissions.ApproveHr), LastStage("finance", "المالية", "Finance", DeductionPermissions.ApproveFinance, "اعتماد الخصم وإدراجه في مسير شهره") } },
         JsonOptions);
 
     public override ApprovalScreen Screen { get; } = new(
         ScreenCode, "الخصومات الأخرى", "Other deductions", "/hr/penalties/{id}", Fields(),
-        DefaultProcess: new DefaultApprovalProcess("اعتماد الخصومات الأخرى", "Other deduction approval", Definition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد الخصومات الأخرى", "Other deduction approval", Definition),
+        Actions:
+        [
+            Apply(
+                "اعتماد الخصم وإدراجه في مسير شهره",
+                "Apply the deduction in its payroll month",
+                "تصبح حالة الخصم «مطبَّق»، ويخصمه مسير رواتب شهره.",
+                "The deduction is «applied», and its month's payroll deducts it."),
+        ]);
 }
 
 /// <summary>The month's deductions for the staff payroll (the payroll applies the cap and defers the rest).</summary>

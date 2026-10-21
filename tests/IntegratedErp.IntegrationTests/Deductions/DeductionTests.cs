@@ -25,7 +25,7 @@ public sealed class DeductionTests(TestDatabase database)
 
         var hr = await UserAsync(tenantId, "مسؤول الموارد البشرية", "staff.view", "staff.manage", "staff.structure.manage", "staff.salaries.view", "deductions.view", "deductions.manage", "deductions.settings");
         var hrApprover = await UserAsync(tenantId, "اعتماد الموارد البشرية", "deductions.view", "deductions.approve.hr");
-        var finance = await UserAsync(tenantId, "المالية", "deductions.view", "deductions.approve.finance", "deductions.disburse");
+        var finance = await UserAsync(tenantId, "المالية", "deductions.view", "deductions.approve.finance", "deductions.disburse", "deductions.other.amend", "deductions.other.cancel_approved");
         var management = await UserAsync(tenantId, "الإدارة العليا", "deductions.view", "deductions.approve.management");
         var managerUser = await UserAsync(tenantId, "المدير المباشر", "deductions.view");
 
@@ -76,7 +76,16 @@ public sealed class DeductionTests(TestDatabase database)
         await ApproveAsync(tenantId, finance);
         using (var scope3 = database.Scope(tenantId, user: finance.ToString()))
         {
+            // Changed after its approval, before it is paid: over two months, then back to three (its schedule made again).
+            var change = new AdvanceAmendInput(input.Amount, 2, input.FirstPeriod, input.Reason, true, " ");
+            var amending = scope3.ServiceProvider.GetRequiredService<AdvanceService>();
+            Assert.Equal("validation.deduction_amend_reason", (await amending.AmendAsync(id, change, default)).Error.Code);
+            Assert.True((await amending.AmendAsync(id, change with { AmendReason = "طلب الموظف شهرين" }, default)).IsSuccess);
+            Assert.Equal(2, (await scope3.ServiceProvider.GetRequiredService<DeductionQueries>().AdvanceAsync(id, default))!.Installments.Count);
+            Assert.True((await amending.AmendAsync(id, change with { Months = 3, AmendReason = "عاد إلى ثلاثة أشهر" }, default)).IsSuccess);
+
             var detail = (await scope3.ServiceProvider.GetRequiredService<DeductionQueries>().AdvanceAsync(id, default))!;
+            Assert.Equal("عاد إلى ثلاثة أشهر", detail.AmendNote);
             Assert.Equal(("Approved", true), (detail.Advance.Status, detail.Advance.AboveCap));
             Assert.Equal([("2026-11", 1333.36m), ("2026-12", 1333.36m), ("2027-01", 1333.38m)], detail.Installments.Select(i => (i.Period, i.Amount)));
 
@@ -84,6 +93,7 @@ public sealed class DeductionTests(TestDatabase database)
             var service = scope3.ServiceProvider.GetRequiredService<AdvanceService>();
             Assert.Equal("conflict.deduction_not_open", (await service.SettleAsync(id, new NoteInput("سداد"), default)).Error.Code);
             Assert.True((await service.DisburseAsync(id, new DisburseInput(new DateOnly(2026, 10, 20), "Transfer", "TR-1001"), default)).IsSuccess);
+            Assert.Equal("conflict.deduction_not_amendable", (await service.CancelApprovedAsync(id, "بعد الصرف", default)).Error.Code);
             var kpis = await scope3.ServiceProvider.GetRequiredService<DeductionQueries>().AdvanceKpisAsync(default);
             Assert.Equal((4000.10m, 1, 0), (kpis.OpenBalance, kpis.OpenEmployees, kpis.ToDisburse));
 
@@ -138,6 +148,24 @@ public sealed class DeductionTests(TestDatabase database)
             Assert.Equal(("Settled", 0m), (detail.Advance.Status, detail.Advance.Remaining));
             var december = Assert.Single(await scope6.ServiceProvider.GetRequiredService<IStaffDeductions>().MonthAsync("2026-12", default), m => m.EmployeeId == mona);
             Assert.Equal(0m, december.AdvanceDue);
+
+            // HR has no permission to cancel an applied deduction.
+            var other = (await scope6.ServiceProvider.GetRequiredService<DeductionQueries>().PenaltiesAsync(null, mona, null, default)).Single(p => p.Category == "Other").Id;
+            Assert.Equal("forbidden.deduction_category", (await scope6.ServiceProvider.GetRequiredService<PenaltyService>().CancelApprovedAsync(other, "خطأ", default)).Error.Code);
+        }
+
+        using (var scope7 = database.Scope(tenantId, user: finance.ToString()))
+        {
+            // Finance may change and cancel other deductions (not penalties) before they are deducted.
+            var service = scope7.ServiceProvider.GetRequiredService<PenaltyService>();
+            var rows = await scope7.ServiceProvider.GetRequiredService<DeductionQueries>().PenaltiesAsync(null, mona, null, default);
+            var (other, penalty) = (rows.Single(p => p.Category == "Other").Id, rows.Single(p => p.Category == "Penalty" && p.Status == "Applied").Id);
+            Assert.Equal("forbidden.deduction_category", (await service.CancelApprovedAsync(penalty, "خطأ", default)).Error.Code);
+            Assert.True((await service.AmendAsync(other, new PenaltyAmendInput(null, new DateOnly(2026, 10, 15), "تلف جهاز", null, null, 400, "2026-12", false, "قيمة الإصلاح الفعلية"), default)).IsSuccess);
+            var month = scope7.ServiceProvider.GetRequiredService<IStaffDeductions>();
+            Assert.Equal(400m, Assert.Single(await month.MonthAsync("2026-12", default), m => m.EmployeeId == mona).OtherAmount);
+            Assert.True((await service.CancelApprovedAsync(other, "أصلحه الموظف على حسابه", default)).IsSuccess);
+            Assert.Equal(0m, Assert.Single(await month.MonthAsync("2026-12", default), m => m.EmployeeId == mona).OtherAmount);
         }
     }
 

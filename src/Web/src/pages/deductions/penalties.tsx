@@ -1,3 +1,5 @@
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import Add from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
@@ -44,13 +46,14 @@ import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCar
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
-import { Money, usePeople, usePeriods, type Person } from './advances';
+import { Money, NoteDialog, usePeople, usePeriods, type Person } from './advances';
 
 const look: Record<PenaltyStatus, { color: string; tint: string }> = {
   InApproval: { color: hr.primary, tint: '#EFF6FF' },
   Returned: { color: '#B45309', tint: '#FEF3C7' },
   Rejected: { color: '#B91C1C', tint: '#FEE2E2' },
   Applied: { color: hr.success, tint: '#D1FAE5' },
+  Cancelled: { color: '#B91C1C', tint: '#FEE2E2' },
 };
 
 export function PenaltyStatusBadge({ status }: { status: PenaltyStatus }) {
@@ -73,7 +76,23 @@ const kindName = (r: PenaltyRow, t: (k: string) => string, ar: boolean) => (r.ca
  * deduction (damage, lost custody): the employee, the date, the description and the employee's statement, the payroll
  * month, with the legal limits and the month's deductions shown before sending.
  */
-export function PenaltyDialog({ category, employee, penalty, onClose, onSent }: { category: PenaltyCategory; employee?: Person; penalty?: PenaltyDetail; onClose: () => void; onSent: (id: string) => void }) {
+/** A new penalty or deduction, a returned one sent again, or (amend) an applied one changed before it is deducted, with the reason. */
+export function PenaltyDialog({
+  category,
+  employee,
+  penalty,
+  amend = false,
+  onClose,
+  onSent,
+}: {
+  category: PenaltyCategory;
+  employee?: Person;
+  penalty?: PenaltyDetail;
+  amend?: boolean;
+  onClose: () => void;
+  onSent: (id: string) => void;
+}) {
+  const [amendReason, setAmendReason] = useState('');
   const { t, i18n } = useTranslation();
   const ar = i18n.language === 'ar';
   const monthName = useMonthName();
@@ -144,6 +163,12 @@ export function PenaltyDialog({ category, employee, penalty, onClose, onSent }: 
     setBusy(true);
     setError(null);
     try {
+      if (p && amend) {
+        const { employeeId: _employee, category: _category, ...fields } = input;
+        await deductionsApi.amendPenalty(p.id, { ...fields, amendReason: amendReason.trim() });
+        onSent(p.id);
+        return;
+      }
       const r = p ? await deductionsApi.resubmitPenalty(p.id, input) : await deductionsApi.sendPenalty(input);
       onSent(r.id);
     } catch (f) {
@@ -157,7 +182,7 @@ export function PenaltyDialog({ category, employee, penalty, onClose, onSent }: 
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth>
       <HrScope>
-        <DialogTitle sx={{ fontWeight: 700 }}>{p ? p.penaltyNo : other ? t('deductions.other.new') : t('deductions.penalty.new')}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{p ? (amend ? t('deductions.amend.penaltyTitle', { no: p.penaltyNo }) : p.penaltyNo) : other ? t('deductions.other.new') : t('deductions.penalty.new')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
             <Autocomplete
@@ -244,13 +269,16 @@ export function PenaltyDialog({ category, employee, penalty, onClose, onSent }: 
             </Box>
           )}
           <Alert severity="info" sx={{ py: 0 }}>
-            {other ? t('deductions.other.route') : t('deductions.penalty.route')}
+            {amend ? t('deductions.amend.penaltyHint') : other ? t('deductions.other.route') : t('deductions.penalty.route')}
           </Alert>
+          {amend && (
+            <TextField size="small" required multiline minRows={2} label={t('deductions.amend.reason')} value={amendReason} onChange={(e) => setAmendReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          )}
           <ErrorMessage messageKey={error} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
-          <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || !canSend} onClick={() => void send()}>
-            {t('deductions.send')}
+          <Button variant="contained" startIcon={amend ? <EditNoteOutlinedIcon /> : <SendOutlinedIcon />} disabled={busy || !canSend || (amend && !amendReason.trim())} onClick={() => void send()}>
+            {amend ? t('deductions.amend.save') : t('deductions.send')}
           </Button>
           <Button disabled={busy} onClick={onClose}>
             {t('common.cancel')}
@@ -437,6 +465,8 @@ export function PenaltyPage() {
   const [d, setD] = useState<PenaltyDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [amending, setAmending] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const approval = useRecordApproval(d?.approval?.instanceId);
   useCrumb(d?.penalty.penaltyNo, `/hr/penalties/${id}`);
   const reload = useCallback(async () => {
@@ -462,6 +492,8 @@ export function PenaltyPage() {
   const other = p.category === 'Other';
   const done = () => {
     setEditing(false);
+    setAmending(false);
+    setCancelling(false);
     void reload();
     void approval.reload();
   };
@@ -484,6 +516,16 @@ export function PenaltyPage() {
                 {t('deductions.resubmit')}
               </Button>
             )}
+            {d.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('deductions.amend.action')}
+              </Button>
+            )}
+            {d.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelling(true)}>
+                {other ? t('deductions.amend.cancelOther') : t('deductions.amend.cancelPenalty')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: (th) => (th.direction === 'rtl' ? 'scaleX(-1)' : 'none') }} />} onClick={() => navigate(-1)}>
               {t('common.back')}
             </Button>
@@ -492,6 +534,16 @@ export function PenaltyPage() {
       />
       <ErrorMessage messageKey={error} />
       {d.approval && <ApprovalBar status={d.approval} detail={approval.detail} onChanged={done} />}
+      {d.amendedAt && p.status === 'Applied' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('deductions.amend.amendedBy', { by: d.amendedByName, date: date(d.amendedAt) })} — {d.amendNote}
+        </Alert>
+      )}
+      {d.canceledAt && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('deductions.amend.canceledBy', { by: d.canceledByName, date: date(d.canceledAt) })} — {d.lastComment}
+        </Alert>
+      )}
       {d.lastComment && (p.status === 'Returned' || p.status === 'Rejected') && (
         <Alert severity={p.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: 1.5 }}>
           {d.lastComment}
@@ -513,6 +565,18 @@ export function PenaltyPage() {
         <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{p.effect === 'Warning' ? t('deductions.penalty.warningNote') : t('deductions.penalty.effectNote')}</Typography>
       </Box>
       {editing && <PenaltyDialog category={p.category} penalty={d} onClose={() => setEditing(false)} onSent={done} />}
+      {amending && <PenaltyDialog category={p.category} penalty={d} amend onClose={() => setAmending(false)} onSent={done} />}
+      {cancelling && (
+        <NoteDialog
+          title={other ? t('deductions.amend.cancelOther') : t('deductions.amend.cancelPenalty')}
+          hint={t('deductions.amend.cancelPenaltyHint')}
+          onClose={() => setCancelling(false)}
+          onSave={async (note) => {
+            await deductionsApi.cancelApprovedPenalty(p.id, note);
+            done();
+          }}
+        />
+      )}
     </HrScope>
   );
 }

@@ -29,6 +29,10 @@ internal static class DeductionEndpoints
             .RequirePermission(DeductionPermissions.Manage, companyWide: true);
         group.MapPost("/advances/{id:guid}/resubmit", async (Guid id, AdvanceInput input, AdvanceService service, CancellationToken ct) => Saved(await service.ResubmitAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(DeductionPermissions.Manage, companyWide: true);
+        group.MapPut("/advances/{id:guid}/amend", async (Guid id, AdvanceAmendInput input, AdvanceService service, CancellationToken ct) => ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(DeductionPermissions.AdvanceAmend, companyWide: true);
+        group.MapPost("/advances/{id:guid}/cancel-approved", async (Guid id, NoteInput input, AdvanceService service, CancellationToken ct) => ToHttp(await service.CancelApprovedAsync(id, input.Note, ct).ConfigureAwait(false)))
+            .RequirePermission(DeductionPermissions.AdvanceCancelApproved, companyWide: true);
         group.MapPost("/advances/{id:guid}/disburse", async (Guid id, DisburseInput input, AdvanceService service, CancellationToken ct) => ToHttp(await service.DisburseAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(DeductionPermissions.Disburse, companyWide: true);
         group.MapPost("/advances/{id:guid}/settle", async (Guid id, NoteInput input, AdvanceService service, CancellationToken ct) => ToHttp(await service.SettleAsync(id, input, ct).ConfigureAwait(false)))
@@ -51,6 +55,12 @@ internal static class DeductionEndpoints
         group.MapPost("/penalties/{id:guid}/resubmit", async (Guid id, PenaltyInput input, PenaltyService service, CancellationToken ct) => Saved(await service.ResubmitAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(DeductionPermissions.Manage, companyWide: true);
 
+        // A penalty and another deduction each have their own permissions to change or cancel them (checked by the service).
+        group.MapPut("/penalties/{id:guid}/amend", async (Guid id, PenaltyAmendInput input, PenaltyService service, CancellationToken ct) => ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(DeductionPermissions.View, companyWide: true);
+        group.MapPost("/penalties/{id:guid}/cancel-approved", async (Guid id, NoteInput input, PenaltyService service, CancellationToken ct) => ToHttp(await service.CancelApprovedAsync(id, input.Note, ct).ConfigureAwait(false)))
+            .RequirePermission(DeductionPermissions.View, companyWide: true);
+
         group.MapGet("/employees/{id:guid}", async (Guid id, DeductionQueries queries, CancellationToken ct) => Results.Ok(await queries.EmployeeAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(DeductionPermissions.View, companyWide: true);
 
@@ -72,6 +82,7 @@ internal static class DeductionEndpoints
         error.Message,
         statusCode: error.Code.StartsWith("not_found.", StringComparison.Ordinal) ? StatusCodes.Status404NotFound
             : error.Code.StartsWith("conflict.", StringComparison.Ordinal) ? StatusCodes.Status409Conflict
+            : error.Code.StartsWith("forbidden.", StringComparison.Ordinal) ? StatusCodes.Status403Forbidden
             : StatusCodes.Status400BadRequest,
         title: error.Code);
 }

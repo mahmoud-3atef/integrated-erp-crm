@@ -140,6 +140,9 @@ public enum AdvanceStatus
     Disbursed,
 
     Settled,
+
+    /// <summary>Cancelled after its approval, before it was paid (its schedule was removed).</summary>
+    Cancelled,
 }
 
 /// <summary>A salary advance: requested, approved, paid by finance, then deducted over the months chosen.</summary>
@@ -202,7 +205,22 @@ public sealed class Advance : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    /// <summary>Cancelled after its approval: when and by whom (the reason is the last comment).</summary>
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
     public IReadOnlyList<AdvanceInstallment> Installments => installments;
+
+    /// <summary>Approved and not yet paid: it may still be changed or cancelled (with their own permissions and a reason).</summary>
+    public bool IsAmendable => Status == AdvanceStatus.Approved;
 
     public decimal Remaining => installments.Where(i => i.Status is InstallmentStatus.Scheduled or InstallmentStatus.Deferred).Sum(i => i.Amount - i.Deducted);
 
@@ -262,6 +280,67 @@ public sealed class Advance : ITenantOwned
         DecidedAt = at;
     }
 
+    /// <summary>
+    /// Changed after its approval, before it is paid: the amount, the months, the first month and the reason (checked as
+    /// a request is); its schedule is made again. Returns the installments removed and the new ones.
+    /// </summary>
+    public Result<AdvanceSchedule> Amend(decimal amount, int months, string firstPeriod, string reason, bool aboveCap, string amendReason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure<AdvanceSchedule>(DeductionErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(amendReason) || amendReason.Trim().Length > 500)
+        {
+            return Result.Failure<AdvanceSchedule>(DeductionErrors.AmendReason);
+        }
+
+        // The request's own checks; it stays approved.
+        var set = Set(amount, months, firstPeriod, reason, aboveCap, SalaryAtRequest, ManagerUserId);
+        if (set.IsFailure)
+        {
+            return Result.Failure<AdvanceSchedule>(set.Error);
+        }
+
+        var removed = installments.ToList();
+        Status = AdvanceStatus.Approved;
+        AwaitingApproval = false;
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = amendReason.Trim();
+        installments.Clear();
+        var each = decimal.Floor(Amount / Months * 100) / 100;
+        for (var n = 0; n < Months; n++)
+        {
+            installments.Add(AdvanceInstallment.Of(Id, Periods.Add(FirstPeriod, n), n == Months - 1 ? Amount - (each * (Months - 1)) : each));
+        }
+
+        return Result.Success(new AdvanceSchedule(removed, installments.ToList()));
+    }
+
+    /// <summary>Cancelled after its approval, before it is paid. Returns the installments removed.</summary>
+    public Result<IReadOnlyList<AdvanceInstallment>> CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure<IReadOnlyList<AdvanceInstallment>>(DeductionErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure<IReadOnlyList<AdvanceInstallment>>(DeductionErrors.AmendReason);
+        }
+
+        var removed = installments.ToList();
+        installments.Clear();
+        Status = AdvanceStatus.Cancelled;
+        LastComment = reason.Trim();
+        CanceledAt = at;
+        CanceledByName = by;
+        return Result.Success<IReadOnlyList<AdvanceInstallment>>(removed);
+    }
+
     public Result Disburse(DateOnly on, string method, string? reference, string by)
     {
         if (Status != AdvanceStatus.Approved || string.IsNullOrWhiteSpace(method) || method.Length > 50 || (reference?.Length ?? 0) > 100)
@@ -319,6 +398,9 @@ public sealed class Advance : ITenantOwned
         }
     }
 }
+
+/// <summary>An advance's schedule made again: the installments removed and the new ones.</summary>
+public sealed record AdvanceSchedule(IReadOnlyList<AdvanceInstallment> Removed, IReadOnlyList<AdvanceInstallment> Added);
 
 public enum InstallmentStatus
 {
@@ -401,6 +483,9 @@ public enum PenaltyStatus
     Returned,
     Rejected,
     Applied,
+
+    /// <summary>Cancelled after its approval, before the payroll deducted it.</summary>
+    Cancelled,
 }
 
 /// <summary>A penalty decision for a violation, or another deduction, through approval and into a payroll month.</summary>
@@ -518,6 +603,69 @@ public sealed class Penalty : ITenantOwned
     }
 
     public void Defer() => Deferrals++;
+
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    /// <summary>Cancelled after its approval: when and by whom (the reason is the last comment).</summary>
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
+    /// <summary>Applied and not yet deducted by a payroll (or a settlement): it may still be changed or cancelled.</summary>
+    public bool IsAmendable => Status == PenaltyStatus.Applied && DeductedIn is null;
+
+    /// <summary>Changed after its approval, before it is deducted: its fields as a request has them (checked the same way).</summary>
+    public Result Amend(Guid? typeId, PenaltyEffect effect, DateOnly violationDate, string description, string? statement, decimal? days, decimal? amount, string period, bool aboveCap, string amendReason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(DeductionErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(amendReason) || amendReason.Trim().Length > 500)
+        {
+            return Result.Failure(DeductionErrors.AmendReason);
+        }
+
+        // The request's own checks; it stays applied.
+        var set = Set(typeId, effect, violationDate, description, statement, days, amount, period, aboveCap);
+        if (set.IsFailure)
+        {
+            return set;
+        }
+
+        Status = PenaltyStatus.Applied;
+        AwaitingApproval = false;
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = amendReason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after its approval, before it is deducted.</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(DeductionErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(DeductionErrors.AmendReason);
+        }
+
+        Status = PenaltyStatus.Cancelled;
+        LastComment = reason.Trim();
+        CanceledAt = at;
+        CanceledByName = by;
+        return Result.Success();
+    }
 }
 
 /// <summary>Payroll months as "2026-11".</summary>
@@ -558,4 +706,7 @@ public static class DeductionErrors
     public static readonly Error NotOpen = Error.Conflict("deduction_not_open", "Only a paid advance not yet settled can be settled early, with a note.");
     public static readonly Error NotPostponable = Error.Conflict("deduction_not_postponable", "Only a scheduled installment not yet deducted can be postponed, with a note.");
     public static readonly Error NotReturned = Error.Conflict("deduction_not_returned", "Only a returned request can be sent again.");
+    public static readonly Error NotAmendable = Error.Conflict("deduction_not_amendable", "Only an approved advance not yet paid, or a penalty or deduction not yet deducted, can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("deduction_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error CategoryForbidden = new("forbidden.deduction_category", "You do not have this permission for this kind of deduction.");
 }

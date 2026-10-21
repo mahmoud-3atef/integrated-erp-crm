@@ -569,7 +569,10 @@
     "forbidden_movement_type": "You do not have this permission for this type of action.",
     "conflict_leave_not_amendable": "Only an approved leave can be changed or cancelled after its approval.",
     "validation_leave_amend_reason": "Give the reason (500 characters at most).",
-    "conflict_leave_settled": "A settlement was made from this leave: cancel the settlement first."
+    "conflict_leave_settled": "A settlement was made from this leave: cancel the settlement first.",
+    "conflict_deduction_not_amendable": "Only an approved advance not yet paid, or a penalty or deduction not yet deducted, can be changed or cancelled after its approval.",
+    "validation_deduction_amend_reason": "Give the reason (500 characters at most).",
+    "forbidden_deduction_category": "You do not have this permission for this kind of deduction."
   },
   "menu": {
     "label": "Main menu",
@@ -4310,7 +4313,8 @@
       "Rejected": "Rejected",
       "Approved": "Awaiting payment",
       "Disbursed": "Being deducted",
-      "Settled": "Settled"
+      "Settled": "Settled",
+      "Cancelled": "Cancelled"
     },
     "installmentStatus": {
       "Scheduled": "Due",
@@ -4323,7 +4327,8 @@
       "InApproval": "In approval",
       "Returned": "Returned",
       "Rejected": "Rejected",
-      "Applied": "Applied"
+      "Applied": "Applied",
+      "Cancelled": "Cancelled"
     },
     "effects": {
       "Warning": "Warning",
@@ -4522,6 +4527,22 @@
       "days": "Penalty days this year",
       "advances": "Advances",
       "penalties": "Penalties and deductions"
+    },
+    "amend": {
+      "action": "Change after approval",
+      "reason": "Reason for the change",
+      "save": "Save the change",
+      "advanceTitle": "Change approved advance {{no}}",
+      "penaltyTitle": "Change {{no}} after approval",
+      "advanceHint": "The advance is checked again as a request is (the cap, the months), and its installments are scheduled again. It cannot change once paid. The change and its reason are recorded.",
+      "penaltyHint": "It is checked again as a request is (the limits per violation and per month). It cannot change once a payroll deducted it; if its month's payroll is calculated, calculate it again. The change and its reason are recorded.",
+      "cancelAdvance": "Cancel the approved advance",
+      "cancelAdvanceHint": "The advance is cancelled before it is paid and its installments are removed. Give the reason.",
+      "cancelPenalty": "Cancel the applied penalty",
+      "cancelOther": "Cancel the applied deduction",
+      "cancelPenaltyHint": "It is cancelled before it is deducted, so its month's payroll does not deduct it; if that payroll is calculated, calculate it again. Give the reason.",
+      "amendedBy": "Changed after approval by {{by}} on {{date}}",
+      "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
     }
   },
   "staffPayroll": {

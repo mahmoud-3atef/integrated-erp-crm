@@ -2,12 +2,12 @@
 import { request } from './auth';
 import type { ApprovalStatus } from './workflow';
 
-export type AdvanceStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Approved' | 'Disbursed' | 'Settled';
+export type AdvanceStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Approved' | 'Disbursed' | 'Settled' | 'Cancelled';
 export type InstallmentStatus = 'Scheduled' | 'Deferred' | 'Deducted' | 'Postponed' | 'Settled';
 export type PenaltyEffect = 'Warning' | 'DeductDays' | 'DeductAmount' | 'Suspension';
 export const penaltyEffects: PenaltyEffect[] = ['Warning', 'DeductDays', 'DeductAmount', 'Suspension'];
 export type PenaltyCategory = 'Penalty' | 'Other';
-export type PenaltyStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Applied';
+export type PenaltyStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Applied' | 'Cancelled';
 
 export interface DeductionSettings {
   advanceCapPercent: number;
@@ -87,6 +87,14 @@ export interface AdvanceDetail {
   lastComment: string | null;
   installments: Installment[];
   approval: ApprovalStatus | null;
+  /** Approved and not yet paid or deducted: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
 }
 
 export interface AdvanceInput {
@@ -140,6 +148,14 @@ export interface PenaltyDetail {
   createdByName: string;
   lastComment: string | null;
   approval: ApprovalStatus | null;
+  /** Approved and not yet paid or deducted: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
 }
 
 export interface PenaltyInput {
@@ -191,6 +207,8 @@ export const deductionsApi = {
   previewAdvance: (input: AdvanceInput, advanceId?: string) => request<AdvancePreview>('POST', `${base}/advances/preview${qs({ advanceId })}`, input),
   sendAdvance: (input: AdvanceInput) => request<{ id: string }>('POST', `${base}/advances`, input),
   resubmitAdvance: (id: string, input: AdvanceInput) => request<{ id: string }>('POST', `${base}/advances/${id}/resubmit`, input),
+  amendAdvance: (id: string, input: Omit<AdvanceInput, 'employeeId'> & { amendReason: string }) => request<void>('PUT', `${base}/advances/${id}/amend`, input),
+  cancelApprovedAdvance: (id: string, note: string) => request<void>('POST', `${base}/advances/${id}/cancel-approved`, { note }),
   disburse: (id: string, input: { paidOn: string; method: string; reference: string | null }) => request<void>('POST', `${base}/advances/${id}/disburse`, input),
   settle: (id: string, note: string) => request<void>('POST', `${base}/advances/${id}/settle`, { note }),
   postpone: (id: string, installmentId: string, note: string) => request<void>('POST', `${base}/advances/${id}/installments/${installmentId}/postpone`, { note }),
@@ -199,6 +217,8 @@ export const deductionsApi = {
   previewPenalty: (input: PenaltyInput, penaltyId?: string) => request<PenaltyPreview>('POST', `${base}/penalties/preview${qs({ penaltyId })}`, input),
   sendPenalty: (input: PenaltyInput) => request<{ id: string }>('POST', `${base}/penalties`, input),
   resubmitPenalty: (id: string, input: PenaltyInput) => request<{ id: string }>('POST', `${base}/penalties/${id}/resubmit`, input),
+  amendPenalty: (id: string, input: Omit<PenaltyInput, 'employeeId' | 'category'> & { amendReason: string }) => request<void>('PUT', `${base}/penalties/${id}/amend`, input),
+  cancelApprovedPenalty: (id: string, note: string) => request<void>('POST', `${base}/penalties/${id}/cancel-approved`, { note }),
   employee: (id: string) => request<EmployeeDeductions>('GET', `${base}/employees/${id}`),
   setup: () => request<DeductionSetup>('GET', `${base}/setup`),
   saveSettings: (input: DeductionSettings) => request<void>('PUT', `${base}/settings`, input),

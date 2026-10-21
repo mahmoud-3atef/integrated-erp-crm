@@ -1,3 +1,5 @@
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import Add from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
@@ -67,6 +69,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 export type Person = { id: string; nameAr: string; nameEn: string };
 
 const look: Record<AdvanceStatus, { color: string; tint: string }> = {
+  Cancelled: { color: '#B91C1C', tint: '#FEE2E2' },
   InApproval: { color: hr.primary, tint: '#EFF6FF' },
   Returned: { color: '#B45309', tint: '#FEF3C7' },
   Rejected: { color: '#B91C1C', tint: '#FEE2E2' },
@@ -148,7 +151,8 @@ export function Kpi({ accent, icon, label, value, parts }: { accent: HrAccent; i
  * preview — the salary and the cap (for those who may see salaries), the installment, the month's deductions, the
  * conditions — and «above the cap» for the approvers to decide when the cap is passed.
  */
-export function AdvanceDialog({ employee, advance, onClose, onSent }: { employee?: Person; advance?: AdvanceDetail; onClose: () => void; onSent: (id: string) => void }) {
+/** A new advance, a returned one sent again, or (amend) an approved one changed before it is paid, with the reason. */
+export function AdvanceDialog({ employee, advance, amend = false, onClose, onSent }: { employee?: Person; advance?: AdvanceDetail; amend?: boolean; onClose: () => void; onSent: (id: string) => void }) {
   const { t, i18n } = useTranslation();
   const ar = i18n.language === 'ar';
   const monthName = useMonthName();
@@ -163,6 +167,7 @@ export function AdvanceDialog({ employee, advance, onClose, onSent }: { employee
   const periods = usePeriods(a?.firstPeriod);
   const [first, setFirst] = useState(a?.firstPeriod ?? shiftPeriod(periodOf(new Date()), 1));
   const [reason, setReason] = useState(advance?.reason ?? '');
+  const [amendReason, setAmendReason] = useState('');
   const [aboveCap, setAboveCap] = useState(a?.aboveCap ?? false);
   const [preview, setPreview] = useState<AdvancePreview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -194,6 +199,11 @@ export function AdvanceDialog({ employee, advance, onClose, onSent }: { employee
     setBusy(true);
     setError(null);
     try {
+      if (a && amend) {
+        await deductionsApi.amendAdvance(a.id, { amount: input.amount, months: input.months, firstPeriod: input.firstPeriod, reason: input.reason, aboveCap: input.aboveCap, amendReason: amendReason.trim() });
+        onSent(a.id);
+        return;
+      }
       const r = a ? await deductionsApi.resubmitAdvance(a.id, input) : await deductionsApi.sendAdvance(input);
       onSent(r.id);
     } catch (f) {
@@ -215,7 +225,7 @@ export function AdvanceDialog({ employee, advance, onClose, onSent }: { employee
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth>
       <HrScope>
-        <DialogTitle sx={{ fontWeight: 700 }}>{a ? a.advanceNo : t('deductions.advance.new')}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{a ? (amend ? t('deductions.amend.advanceTitle', { no: a.advanceNo }) : a.advanceNo) : t('deductions.advance.new')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
             <Autocomplete
@@ -306,12 +316,16 @@ export function AdvanceDialog({ employee, advance, onClose, onSent }: { employee
             )}
           </Box>
           <TextField size="small" required multiline minRows={2} label={t('deductions.advance.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
-          {preview && <Alert severity="info" sx={{ py: 0 }}>{preview.managerLinked ? t('deductions.advance.route.manager', { name: preview.managerName }) : t('deductions.advance.route.hr')}</Alert>}
+          {preview && !amend && <Alert severity="info" sx={{ py: 0 }}>{preview.managerLinked ? t('deductions.advance.route.manager', { name: preview.managerName }) : t('deductions.advance.route.hr')}</Alert>}
+          {amend && <Alert severity="info" sx={{ py: 0 }}>{t('deductions.amend.advanceHint')}</Alert>}
+          {amend && (
+            <TextField size="small" required multiline minRows={2} label={t('deductions.amend.reason')} value={amendReason} onChange={(e) => setAmendReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          )}
           <ErrorMessage messageKey={error} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
-          <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || !canSend} onClick={() => void send()}>
-            {t('deductions.send')}
+          <Button variant="contained" startIcon={amend ? <EditNoteOutlinedIcon /> : <SendOutlinedIcon />} disabled={busy || !canSend || (amend && !amendReason.trim())} onClick={() => void send()}>
+            {amend ? t('deductions.amend.save') : t('deductions.send')}
           </Button>
           <Button disabled={busy} onClick={onClose}>
             {t('common.cancel')}
@@ -483,7 +497,7 @@ export function AdvancesPage() {
 }
 
 /** A note for an early settlement or a postponed installment. */
-function NoteDialog({ title, hint, onClose, onSave }: { title: string; hint: string; onClose: () => void; onSave: (note: string) => Promise<void> }) {
+export function NoteDialog({ title, hint, onClose, onSave }: { title: string; hint: string; onClose: () => void; onSave: (note: string) => Promise<void> }) {
   const { t } = useTranslation();
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -596,7 +610,7 @@ export function AdvancePage() {
   const { date } = useCommercialFormat();
   const [d, setD] = useState<AdvanceDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<null | 'edit' | 'disburse' | 'settle' | Installment>(null);
+  const [dialog, setDialog] = useState<null | 'edit' | 'amend' | 'cancelApproved' | 'disburse' | 'settle' | Installment>(null);
   const approval = useRecordApproval(d?.approval?.instanceId);
   useCrumb(d?.advance.advanceNo, `/hr/advances/${id}`);
   const reload = useCallback(async () => {
@@ -645,6 +659,16 @@ export function AdvancePage() {
                 {t('deductions.resubmit')}
               </Button>
             )}
+            {d.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setDialog('amend')}>
+                {t('deductions.amend.action')}
+              </Button>
+            )}
+            {d.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setDialog('cancelApproved')}>
+                {t('deductions.amend.cancelAdvance')}
+              </Button>
+            )}
             {a.status === 'Approved' && can('deductions.disburse', true) && (
               <Button variant="contained" startIcon={<PaymentsOutlinedIcon />} onClick={() => setDialog('disburse')}>
                 {t('deductions.disburse.action')}
@@ -658,6 +682,16 @@ export function AdvancePage() {
       />
       <ErrorMessage messageKey={error} />
       {d.approval && <ApprovalBar status={d.approval} detail={approval.detail} onChanged={done} />}
+      {d.amendedAt && a.status === 'Approved' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('deductions.amend.amendedBy', { by: d.amendedByName, date: date(d.amendedAt) })} — {d.amendNote}
+        </Alert>
+      )}
+      {d.canceledAt && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('deductions.amend.canceledBy', { by: d.canceledByName, date: date(d.canceledAt) })} — {d.lastComment}
+        </Alert>
+      )}
       {d.lastComment && (a.status === 'Returned' || a.status === 'Rejected') && (
         <Alert severity={a.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: 1.5 }}>
           {d.lastComment}
@@ -761,6 +795,18 @@ export function AdvancePage() {
         </Box>
       )}
       {dialog === 'edit' && <AdvanceDialog advance={d} onClose={() => setDialog(null)} onSent={done} />}
+      {dialog === 'amend' && <AdvanceDialog advance={d} amend onClose={() => setDialog(null)} onSent={done} />}
+      {dialog === 'cancelApproved' && (
+        <NoteDialog
+          title={t('deductions.amend.cancelAdvance')}
+          hint={t('deductions.amend.cancelAdvanceHint')}
+          onClose={() => setDialog(null)}
+          onSave={async (note) => {
+            await deductionsApi.cancelApprovedAdvance(a.id, note);
+            done();
+          }}
+        />
+      )}
       {dialog === 'disburse' && <DisburseDialog advance={a} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog === 'settle' && (
         <NoteDialog

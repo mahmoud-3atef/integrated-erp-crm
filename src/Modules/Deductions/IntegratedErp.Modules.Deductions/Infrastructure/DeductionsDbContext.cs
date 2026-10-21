@@ -75,6 +75,9 @@ internal sealed class AdvanceConfiguration : IEntityTypeConfiguration<Advance>
         builder.Property(a => a.PaymentReference).HasMaxLength(100);
         builder.Property(a => a.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(a => a.LastComment).HasMaxLength(2000);
+        builder.Property(a => a.AmendedByName).HasMaxLength(200);
+        builder.Property(a => a.AmendNote).HasMaxLength(500);
+        builder.Property(a => a.CanceledByName).HasMaxLength(200);
         builder.Ignore(a => a.Remaining);
         builder.HasMany(a => a.Installments).WithOne().HasForeignKey(i => i.AdvanceId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(a => a.Installments).UsePropertyAccessMode(PropertyAccessMode.Field);
@@ -119,6 +122,9 @@ internal sealed class PenaltyConfiguration : IEntityTypeConfiguration<Penalty>
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(p => p.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(p => p.LastComment).HasMaxLength(2000);
+        builder.Property(p => p.AmendedByName).HasMaxLength(200);
+        builder.Property(p => p.AmendNote).HasMaxLength(500);
+        builder.Property(p => p.CanceledByName).HasMaxLength(200);
         builder.Property(p => p.DeductedIn).HasMaxLength(40);
         builder.Property(p => p.DeductedAmount).HasPrecision(18, 2);
         builder.HasIndex(p => new { p.TenantId, p.PenaltyNo }).IsUnique();

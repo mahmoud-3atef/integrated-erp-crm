@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Deductions.Domain;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
@@ -55,6 +56,16 @@ internal static class DeductionPermissions
     public const string ApproveHr = "deductions.approve.hr";
     public const string ApproveFinance = "deductions.approve.finance";
     public const string ApproveManagement = "deductions.approve.management";
+    public const string AdvanceAmend = "deductions.advance.amend";
+    public const string AdvanceCancelApproved = "deductions.advance.cancel_approved";
+    public const string PenaltyAmend = "deductions.penalty.amend";
+    public const string PenaltyCancelApproved = "deductions.penalty.cancel_approved";
+    public const string OtherAmend = "deductions.other.amend";
+    public const string OtherCancelApproved = "deductions.other.cancel_approved";
+
+    public static string AmendOf(PenaltyCategory category) => category == PenaltyCategory.Other ? OtherAmend : PenaltyAmend;
+
+    public static string CancelApprovedOf(PenaltyCategory category) => category == PenaltyCategory.Other ? OtherCancelApproved : PenaltyCancelApproved;
 
     private const string GroupAr = "السلف والجزاءات";
     private const string GroupEn = "Advances and penalties";
@@ -68,5 +79,11 @@ internal static class DeductionPermissions
         new(ApproveHr, GroupAr, GroupEn, "اعتماد السلف والجزاءات (الموارد البشرية)", "Approve advances and penalties (HR)"),
         new(ApproveFinance, GroupAr, GroupEn, "اعتماد السلف والخصومات (المالية)", "Approve advances and deductions (finance)"),
         new(ApproveManagement, GroupAr, GroupEn, "اعتماد الجزاءات (الإدارة العليا)", "Approve penalties (senior management)"),
+        new(AdvanceAmend, GroupAr, GroupEn, "تعديل سلفة معتمدة قبل صرفها", "Change an approved advance before it is paid"),
+        new(AdvanceCancelApproved, GroupAr, GroupEn, "إلغاء سلفة معتمدة قبل صرفها", "Cancel an approved advance before it is paid"),
+        new(PenaltyAmend, GroupAr, GroupEn, "تعديل جزاء مطبَّق قبل خصمه", "Change an applied penalty before it is deducted"),
+        new(PenaltyCancelApproved, GroupAr, GroupEn, "إلغاء جزاء مطبَّق قبل خصمه", "Cancel an applied penalty before it is deducted"),
+        new(OtherAmend, GroupAr, GroupEn, "تعديل خصم آخر مطبَّق قبل خصمه", "Change an applied other deduction before it is deducted"),
+        new(OtherCancelApproved, GroupAr, GroupEn, "إلغاء خصم آخر مطبَّق قبل خصمه", "Cancel an applied other deduction before it is deducted"),
     ];
 }

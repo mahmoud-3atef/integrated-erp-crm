@@ -184,6 +184,20 @@ namespace IntegratedErp.Modules.Deductions.Infrastructure.Migrations
                         .HasColumnType("nvarchar(40)")
                         .HasColumnName("advance_no");
 
+                    b.Property<string>("AmendNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("amend_note");
+
+                    b.Property<DateTimeOffset?>("AmendedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("amended_at");
+
+                    b.Property<string>("AmendedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("amended_by_name");
+
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -192,6 +206,15 @@ namespace IntegratedErp.Modules.Deductions.Infrastructure.Migrations
                     b.Property<bool>("AwaitingApproval")
                         .HasColumnType("bit")
                         .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset?>("CanceledAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("canceled_at");
+
+                    b.Property<string>("CanceledByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("canceled_by_name");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset")
@@ -424,6 +447,20 @@ namespace IntegratedErp.Modules.Deductions.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("above_cap");
 
+                    b.Property<string>("AmendNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("amend_note");
+
+                    b.Property<DateTimeOffset?>("AmendedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("amended_at");
+
+                    b.Property<string>("AmendedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("amended_by_name");
+
                     b.Property<decimal?>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -432,6 +469,15 @@ namespace IntegratedErp.Modules.Deductions.Infrastructure.Migrations
                     b.Property<bool>("AwaitingApproval")
                         .HasColumnType("bit")
                         .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset?>("CanceledAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("canceled_at");
+
+                    b.Property<string>("CanceledByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("canceled_by_name");
 
                     b.Property<string>("Category")
                         .IsRequired()
