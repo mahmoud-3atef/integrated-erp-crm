@@ -1,3 +1,4 @@
+using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Staff.Domain;
@@ -9,11 +10,13 @@ namespace IntegratedErp.Modules.Staff.Application;
 /// <summary>Applies an approved employment action to the employee's file (kept apart from the service so the approval engine can call it).</summary>
 internal sealed class StaffActionApplier(StaffDbContext db, ICurrentUser user, IClock clock)
 {
-    /// <summary>The approved action changes the file (called by the approval's end).</summary>
+    /// <summary>The approved action changes the file (called by its code step); the file before it is kept on the action.</summary>
     public async Task ApplyAsync(StaffAction action, string? comment, CancellationToken cancellationToken)
     {
         var employee = await db.Employees.FirstAsync(e => e.Id == action.EmployeeId, cancellationToken).ConfigureAwait(false);
         var by = $"{user.DisplayName} · {action.ActionNo}";
+        var activeContracts = await db.Contracts.Where(c => c.EmployeeId == employee.Id && c.Status == ContractStatus.Active).Select(c => c.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        action.KeepPrior(JsonSerializer.Serialize(new PriorFile(employee.Snapshot(), activeContracts)));
         switch (action.Kind)
         {
             case StaffActionKind.Promotion:
@@ -59,6 +62,30 @@ internal sealed class StaffActionApplier(StaffDbContext db, ICurrentUser user, I
 
         action.Applied(comment, clock.UtcNow);
     }
+
+    /// <summary>
+    /// Takes an applied action back: the file as it was before it, the contracts it renewed or ended active again (the
+    /// one it made removed), and the salary it set removed.
+    /// </summary>
+    public async Task UndoAsync(StaffAction action, CancellationToken cancellationToken)
+    {
+        var prior = JsonSerializer.Deserialize<PriorFile>(action.PriorFile!)!;
+        var employee = await db.Employees.FirstAsync(e => e.Id == action.EmployeeId, cancellationToken).ConfigureAwait(false);
+        employee.Restore(prior.File);
+        db.Contracts.RemoveRange(await db.Contracts.Where(c => c.ActionId == action.Id).ToListAsync(cancellationToken).ConfigureAwait(false));
+        foreach (var contract in await db.Contracts.Where(c => prior.ActiveContracts.Contains(c.Id) && c.Status != ContractStatus.Active).ToListAsync(cancellationToken).ConfigureAwait(false))
+        {
+            contract.Reactivate();
+        }
+
+        var mark = $"{action.ActionNo}:";
+        db.Salaries.RemoveRange(await db.Salaries
+            .Where(s => s.EmployeeId == action.EmployeeId && s.Source == SalarySource.Change && s.Reason != null && s.Reason.StartsWith(mark))
+            .ToListAsync(cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>The file before an action, and the contracts active then.</summary>
+    private sealed record PriorFile(EmployeeSnapshot File, IReadOnlyList<Guid> ActiveContracts);
 
     private async Task RenewAsync(StaffEmployee employee, StaffAction action, string by, CancellationToken cancellationToken)
     {

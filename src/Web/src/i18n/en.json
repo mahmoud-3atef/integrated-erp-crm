@@ -572,7 +572,12 @@
     "conflict_leave_settled": "A settlement was made from this leave: cancel the settlement first.",
     "conflict_deduction_not_amendable": "Only an approved advance not yet paid, or a penalty or deduction not yet deducted, can be changed or cancelled after its approval.",
     "validation_deduction_amend_reason": "Give the reason (500 characters at most).",
-    "forbidden_deduction_category": "You do not have this permission for this kind of deduction."
+    "forbidden_deduction_category": "You do not have this permission for this kind of deduction.",
+    "conflict_staff_action_not_amendable": "Only an applied action whose prior file was kept can be changed or cancelled after its approval.",
+    "validation_staff_action_amend_reason": "Give the reason (500 characters at most).",
+    "conflict_staff_action_later": "Another action of the employee was applied after this one: cancel it first.",
+    "conflict_staff_action_locked": "A payroll run (approved or in approval) or a settlement already used the employee's file from that day.",
+    "forbidden_staff_action_kind": "You do not have this permission for this kind of action."
   },
   "menu": {
     "label": "Main menu",
@@ -3577,7 +3582,8 @@
       "InApproval": "In approval",
       "Returned": "Returned",
       "Rejected": "Rejected",
-      "Applied": "Applied"
+      "Applied": "Applied",
+      "Cancelled": "Cancelled"
     },
     "new": "New employment action",
     "choose": "Choose the action",
@@ -3626,11 +3632,24 @@
       "salary": "Salary",
       "probation": "Probation ends",
       "contract": "Contract ends",
-      "acting": "Acting"
+      "acting": "Acting",
+      "actingUntil": "Acting until",
+      "actingAllowance": "Acting allowance"
     },
     "actingValue": "{{title}} until {{date}} · allowance {{amount}}",
     "contractValue": "{{kind}}{{months}}",
-    "ends": "Employment ends"
+    "ends": "Employment ends",
+    "amend": {
+      "action": "Change after approval",
+      "cancelAction": "Cancel the applied action",
+      "title": "Change applied action {{no}}",
+      "hint": "The action is taken back from the employee's file, then applied again with its new day and values. Not allowed when another action of the employee was applied after it, nor when a payroll run (approved or in approval) or a settlement already used the file from that day. The change and its reason are recorded.",
+      "reason": "Reason for the change or cancellation",
+      "save": "Save the change",
+      "cancelHint": "The employee's file goes back as it was before the action (job, salary, acting, probation, contract, employment). Not allowed when another action was applied after it, nor when a payroll run or a settlement already used the file from that day.",
+      "amendedBy": "Changed after approval by {{by}} on {{date}}",
+      "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
+    }
   },
   "staffContracts": {
     "title": "Contracts",

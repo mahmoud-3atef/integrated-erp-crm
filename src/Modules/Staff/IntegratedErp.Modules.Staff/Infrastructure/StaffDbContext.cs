@@ -62,6 +62,10 @@ internal sealed class StaffActionConfiguration : IEntityTypeConfiguration<StaffA
         builder.Property(a => a.Reason).HasMaxLength(1000).IsRequired();
         builder.Property(a => a.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(a => a.LastComment).HasMaxLength(2000);
+        builder.Property(a => a.PriorFile).HasMaxLength(4000);
+        builder.Property(a => a.AmendedByName).HasMaxLength(200);
+        builder.Property(a => a.AmendNote).HasMaxLength(500);
+        builder.Property(a => a.CanceledByName).HasMaxLength(200);
         builder.OwnsOne(a => a.NewSalary, s =>
         {
             foreach (var name in new[] { nameof(SalaryValues.Basic), nameof(SalaryValues.Housing), nameof(SalaryValues.Food), nameof(SalaryValues.Transport), nameof(SalaryValues.Mobile), nameof(SalaryValues.Project), nameof(SalaryValues.Other) })

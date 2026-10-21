@@ -6,6 +6,8 @@ import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutli
 import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
@@ -44,6 +46,7 @@ const statusLook: Record<ActionStatus, { color: string; tint: string }> = {
   Returned: { color: '#B45309', tint: '#FEF3C7' },
   Rejected: { color: hr.danger, tint: '#FEE2E2' },
   Applied: { color: hr.success, tint: '#D1FAE5' },
+  Cancelled: { color: hr.danger, tint: '#FEE2E2' },
 };
 
 export function ActionStatusBadge({ status }: { status: ActionStatus }) {
@@ -237,6 +240,8 @@ export function StaffActionPage() {
   const ar = i18n.language === 'ar';
   const [a, setA] = useState<StaffActionDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [amending, setAmending] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const approval = useRecordApproval(a?.approval?.instanceId);
   useCrumb(a?.actionNo, `/hr/actions/${id}`);
   const reload = useCallback(async () => {
@@ -300,6 +305,16 @@ export function StaffActionPage() {
                 {t('staffActions.resubmit')}
               </Button>
             )}
+            {a.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('staffActions.amend.action')}
+              </Button>
+            )}
+            {a.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelling('')}>
+                {t('staffActions.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: (th) => (th.direction === 'rtl' ? 'scaleX(-1)' : 'none') }} />} onClick={() => navigate(-1)}>
               {t('common.back')}
             </Button>
@@ -307,6 +322,16 @@ export function StaffActionPage() {
         }
       />
       <ErrorMessage messageKey={error} />
+      {a.amendedAt && a.status === 'Applied' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('staffActions.amend.amendedBy', { by: a.amendedByName, date: date(a.amendedAt.slice(0, 10)) })} — {a.amendNote}
+        </Alert>
+      )}
+      {a.canceledAt && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('staffActions.amend.canceledBy', { by: a.canceledByName, date: date(a.canceledAt.slice(0, 10)) })}
+        </Alert>
+      )}
       {a.approval && (
         <ApprovalBar
           status={a.approval}
@@ -351,7 +376,132 @@ export function StaffActionPage() {
           {a.lastComment && <Alert severity={a.status === 'Applied' ? 'success' : 'warning'} sx={{ mt: 1.25 }}>{a.lastComment}</Alert>}
         </Box>
       </Box>
+      {amending && (
+        <ActionAmendDialog
+          action={a}
+          onClose={() => setAmending(false)}
+          onSaved={() => {
+            setAmending(false);
+            void reload();
+          }}
+        />
+      )}
+      {cancelling !== null && (
+        <Dialog open onClose={() => setCancelling(null)} maxWidth="xs" fullWidth>
+          <HrScope>
+            <DialogTitle sx={{ fontWeight: 700 }}>{t('staffActions.amend.cancelAction')}</DialogTitle>
+            <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+              <Typography sx={{ fontSize: 13 }}>{t('staffActions.amend.cancelHint')}</Typography>
+              <TextField size="small" required multiline minRows={2} label={t('staffActions.amend.reason')} value={cancelling} onChange={(e) => setCancelling(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+              <Button
+                variant="contained"
+                color="error"
+                disabled={!cancelling.trim()}
+                onClick={() =>
+                  void staffApi
+                    .cancelApprovedAction(a.id, cancelling.trim())
+                    .then(() => (setCancelling(null), reload()))
+                    .catch((f) => (setCancelling(null), setError(errorKey(f))))
+                }
+              >
+                {t('staffActions.amend.cancelAction')}
+              </Button>
+              <Button onClick={() => setCancelling(null)}>{t('common.back')}</Button>
+            </DialogActions>
+          </HrScope>
+        </Dialog>
+      )}
     </HrScope>
+  );
+}
+
+/**
+ * Changing an applied action (its kind's own permission): taken back and applied again with its new effective day and
+ * values (the salary, the acting's end and allowance, the probation's end, the renewal's months or end).
+ */
+function ActionAmendDialog({ action: a, onClose, onSaved }: { action: StaffActionDetail; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const [effectiveFrom, setEffectiveFrom] = useState(a.effectiveFrom);
+  const [salary, setSalary] = useState<Record<keyof SalaryValues, string>>(
+    () => Object.fromEntries(salaryKeys.map((k) => [k, a.newSalary ? String(a.newSalary[k]) : '0'])) as Record<keyof SalaryValues, string>,
+  );
+  const [allowance, setAllowance] = useState(a.actingAllowance === null ? '' : String(a.actingAllowance));
+  const [actingUntil, setActingUntil] = useState(a.actingUntil ?? '');
+  const [probationEnds, setProbationEnds] = useState(a.newProbationEndsOn ?? '');
+  const [months, setMonths] = useState(a.newContractMonths === null ? '' : String(a.newContractMonths));
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const withSalary = a.newSalary !== null && a.canSeeSalary;
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await staffApi.amendAction(a.id, {
+        effectiveFrom,
+        newSalary: withSalary ? (Object.fromEntries(salaryKeys.map((k) => [k, Number(salary[k]) || 0])) as unknown as SalaryValues) : null,
+        actingAllowance: a.kind === 'Acting' ? Number(allowance) || 0 : null,
+        actingUntil: a.kind === 'Acting' ? actingUntil || null : null,
+        newProbationEndsOn: a.kind === 'ExtendProbation' ? probationEnds || null : null,
+        newContractMonths: a.kind === 'RenewContract' && months ? Number(months) : null,
+        newContractEndsOn: a.kind === 'RenewContract' && !months ? a.newContractEndsOn : null,
+        amendReason: why.trim(),
+      });
+      onSaved();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth>
+      <HrScope>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('staffActions.amend.title', { no: a.actionNo })}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          <Alert severity="info">{t('staffActions.amend.hint')}</Alert>
+          <TextField size="small" type="date" label={t('staffActions.effectiveFrom')} value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          {withSalary && (
+            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' } }}>
+              {salaryKeys.map((k) => (
+                <TextField
+                  key={k}
+                  size="small"
+                  type="number"
+                  label={t(`staff.profile.fields.${salaryLabel[k]}`)}
+                  value={salary[k]}
+                  onChange={(e) => setSalary((s) => ({ ...s, [k]: e.target.value }))}
+                  slotProps={{ htmlInput: { min: 0, step: '0.01', dir: 'ltr' } }}
+                />
+              ))}
+            </Box>
+          )}
+          {a.kind === 'Acting' && (
+            <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
+              <TextField size="small" type="date" label={t('staffActions.field.actingUntil')} value={actingUntil} onChange={(e) => setActingUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+              <TextField size="small" type="number" label={t('staffActions.field.actingAllowance')} value={allowance} onChange={(e) => setAllowance(e.target.value)} slotProps={{ htmlInput: { min: 0, dir: 'ltr' } }} sx={{ flex: 1 }} />
+            </Stack>
+          )}
+          {a.kind === 'ExtendProbation' && (
+            <TextField size="small" type="date" label={t('staffActions.field.probation')} value={probationEnds} onChange={(e) => setProbationEnds(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          )}
+          {a.kind === 'RenewContract' && a.newContractKind !== 'Open' && (
+            <TextField size="small" type="number" label={t('staff.profile.fields.months')} value={months} onChange={(e) => setMonths(e.target.value)} slotProps={{ htmlInput: { min: 1, dir: 'ltr' } }} />
+          )}
+          <TextField size="small" required multiline minRows={2} label={t('staffActions.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <ErrorMessage messageKey={error} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+          <Button variant="contained" startIcon={<EditNoteOutlinedIcon />} disabled={busy || !why.trim() || !effectiveFrom} onClick={() => void save()}>
+            {t('staffActions.amend.save')}
+          </Button>
+          <Button disabled={busy} onClick={onClose}>
+            {t('common.back')}
+          </Button>
+        </DialogActions>
+      </HrScope>
+    </Dialog>
   );
 }
 

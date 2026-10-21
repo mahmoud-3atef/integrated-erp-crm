@@ -1,3 +1,5 @@
+using IntegratedErp.Modules.Staff.Contracts;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Time;
@@ -29,8 +31,124 @@ public sealed record ActionInput(
 /// approval process (HR reviews, management approves by default), and applied to the file when approved — the job,
 /// a salary from the effective date, the probation, or the contract (a renewal is a new contract).
 /// </summary>
-internal sealed class StaffActionService(StaffDbContext db, IApprovalService approvals, NumberSequenceService numbering, ICurrentUser user, IClock clock)
+/// <summary>What may change on an applied action: its effective day and its kind's values, with the reason for the change.</summary>
+public sealed record ActionAmendInput(
+    DateOnly EffectiveFrom,
+    SalaryValues? NewSalary,
+    decimal? ActingAllowance,
+    DateOnly? ActingUntil,
+    DateOnly? NewProbationEndsOn,
+    int? NewContractMonths,
+    DateOnly? NewContractEndsOn,
+    string AmendReason);
+
+internal sealed class StaffActionService(
+    StaffDbContext db,
+    IApprovalService approvals,
+    NumberSequenceService numbering,
+    StaffActionApplier applier,
+    IPermissionService permissions,
+    IEnumerable<IStaffFileLocks> locks,
+    ICurrentUser user,
+    IClock clock)
 {
+    /// <summary>
+    /// Changes an applied action (its kind's own permission and a reason): it is taken back, its effective day and values
+    /// change, and it is applied again. Not when a later action of the employee was applied, nor when a payroll run or a
+    /// settlement already used the file from its (old or new) day.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, ActionAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Actions.FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false) is not { } action)
+        {
+            return Result.Failure(StaffErrors.ActionNotFound);
+        }
+
+        if (await HeldAsync(action, StaffPermissions.ActionAmend(action.Kind), input.AmendReason, Min(action.EffectiveFrom, input.EffectiveFrom), cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            return Result.Failure(held);
+        }
+
+        // Taken back and saved (applying reads the contracts as stored), then applied again: one transaction.
+        var comment = action.LastComment;
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await applier.UndoAsync(action, cancellationToken).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var amended = action.Amend(
+            input.EffectiveFrom, input.NewSalary, input.ActingAllowance, input.ActingUntil, input.NewProbationEndsOn, input.NewContractMonths, input.NewContractEndsOn,
+            input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended; // rolled back: the file stays as it was
+        }
+
+        await applier.ApplyAsync(action, comment, cancellationToken).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Cancels an applied action (its kind's own permission and a reason): the employee's file is put back as it was before it.</summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        if (await db.Actions.FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false) is not { } action)
+        {
+            return Result.Failure(StaffErrors.ActionNotFound);
+        }
+
+        if (await HeldAsync(action, StaffPermissions.ActionCancelApproved(action.Kind), reason, action.EffectiveFrom, cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            return Result.Failure(held);
+        }
+
+        await applier.UndoAsync(action, cancellationToken).ConfigureAwait(false);
+        var canceled = action.CancelApproved(reason!, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    private static DateOnly Min(DateOnly a, DateOnly b) => a < b ? a : b;
+
+    /// <summary>Why an applied action cannot be changed or cancelled now (null when it can).</summary>
+    private async Task<Error?> HeldAsync(StaffAction action, string permission, string? reason, DateOnly from, CancellationToken cancellationToken)
+    {
+        if (!(await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(permission))
+        {
+            return StaffErrors.ActionKindForbidden;
+        }
+
+        if (!action.IsAmendable)
+        {
+            return StaffErrors.ActionNotAmendable;
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return StaffErrors.ActionAmendReason;
+        }
+
+        if (await db.Actions.AnyAsync(a => a.EmployeeId == action.EmployeeId && a.Id != action.Id && a.Status == StaffActionStatus.Applied && a.AppliedAt > action.AppliedAt, cancellationToken).ConfigureAwait(false))
+        {
+            return StaffErrors.ActionLater;
+        }
+
+        foreach (var lockSource in locks)
+        {
+            if (await lockSource.LockedFromAsync(action.EmployeeId, from, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                return StaffErrors.ActionLocked;
+            }
+        }
+
+        return null;
+    }
+
     public async Task<Result<Guid>> RequestAsync(Guid employeeId, ActionInput input, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);

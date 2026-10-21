@@ -17,6 +17,9 @@ internal sealed class StaffActionAdapter(StaffDbContext db, StaffActionApplier a
 {
     public const string ScreenCode = "staff.action";
 
+    /// <summary>The action's code: it is applied to the employee's file.</summary>
+    public const string ApplyAction = "apply_action";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static readonly string DefaultDefinition = JsonSerializer.Serialize(
@@ -36,6 +39,10 @@ internal sealed class StaffActionAdapter(StaffDbContext db, StaffActionApplier a
                     type = "approval", id = "management", label = "اعتماد الإدارة العليا",
                     nameAr = "اعتماد الإدارة العليا", nameEn = "Management approval",
                     assignees = new[] { new { kind = "Permission", permission = StaffPermissions.ActionsApprove } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "apply-action", label = "تطبيق الإجراء على ملف الموظف", action = ApplyAction },
+                    },
                 },
             },
         },
@@ -66,7 +73,17 @@ internal sealed class StaffActionAdapter(StaffDbContext db, StaffActionApplier a
             new("new_salary", "الراتب الجديد", "New salary", RecordFieldType.Money, Updatable: false),
             new("old_salary", "الراتب الحالي", "Current salary", RecordFieldType.Money, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد الإجراءات الوظيفية", "Employment actions approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد الإجراءات الوظيفية", "Employment actions approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                ApplyAction,
+                "تطبيق الإجراء على ملف الموظف",
+                "Apply the action to the employee's file",
+                "يتغيّر ملف الموظف بما في الإجراء (الوظيفة والإدارة، أو الراتب من تاريخ السريان، أو التكليف، أو التجربة، أو العقد، أو انتهاء الخدمة)، ويُحفظ ما كان عليه قبله، وتصبح حالة الإجراء «مطبَّق».",
+                "The employee's file changes as the action says (job and department, salary from its effective day, acting, probation, contract, or the end of employment); the file before it is kept, and the action is «applied».",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -109,6 +126,36 @@ internal sealed class StaffActionAdapter(StaffDbContext db, StaffActionApplier a
         return Result.Success();
     }
 
+    /// <summary>«Apply the action» (the process runs it, by default on management's approval). Run again on an applied one, it does nothing.</summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != ApplyAction)
+        {
+            return RecordActionResult.Failed($"An employment action has no action \"{action}\".");
+        }
+
+        var record = await db.Actions.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return RecordActionResult.Failed("The employment action no longer exists.");
+        }
+
+        if (record.Status == StaffActionStatus.Applied)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (!record.IsInApproval)
+        {
+            return RecordActionResult.Failed("The employment action is not in approval.");
+        }
+
+        await applier.ApplyAsync(record, null, cancellationToken).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>The approval ended: a rejection or return sets the state; approved, its code already applied it.</summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         var action = await db.Actions.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
@@ -117,15 +164,7 @@ internal sealed class StaffActionAdapter(StaffDbContext db, StaffActionApplier a
             return;
         }
 
-        if (end == ApprovalEnd.Approved)
-        {
-            await applier.ApplyAsync(action, comment, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            action.Ended(end == ApprovalEnd.Rejected, comment);
-        }
-
+        action.Ended(end == ApprovalEnd.Rejected, end == ApprovalEnd.Approved ? "انتهى الاعتماد دون تطبيق الإجراء؛ أعد إرساله." : comment);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

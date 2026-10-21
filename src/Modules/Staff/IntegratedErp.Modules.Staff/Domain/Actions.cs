@@ -115,6 +115,9 @@ public sealed class StaffContract : ITenantOwned
 
     public void Renewed() => Status = ContractStatus.Renewed;
 
+    /// <summary>The action that renewed or ended it was taken back.</summary>
+    public void Reactivate() => Status = ContractStatus.Active;
+
     public void End() => Status = ContractStatus.Ended;
 }
 
@@ -153,6 +156,9 @@ public enum StaffActionStatus
 
     /// <summary>Approved and applied to the employee's file.</summary>
     Applied,
+
+    /// <summary>Cancelled after it was applied: the file is back as it was before it.</summary>
+    Cancelled,
 }
 
 /// <summary>
@@ -233,6 +239,101 @@ public sealed class StaffAction : ITenantOwned
     public DateTimeOffset? AppliedAt { get; private set; }
 
     public string? LastComment { get; private set; }
+
+    /// <summary>The file before it was applied (JSON of <see cref="EmployeeSnapshot"/> and the contracts it touched), to take it back.</summary>
+    public string? PriorFile { get; private set; }
+
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
+    /// <summary>Applied with the file before it kept: it can be taken back (changed or cancelled after its approval).</summary>
+    public bool IsAmendable => Status == StaffActionStatus.Applied && PriorFile is not null;
+
+    public void KeepPrior(string priorFile) => PriorFile = priorFile;
+
+    /// <summary>
+    /// Changed after its approval (taken back first, applied again after): the effective day and the values of its kind
+    /// — the salary, the acting's end and allowance, the probation's new end, the renewal's months or end.
+    /// </summary>
+    public Result Amend(DateOnly effectiveFrom, SalaryValues? newSalary, decimal? actingAllowance, DateOnly? actingUntil, DateOnly? newProbationEndsOn, int? newContractMonths, DateOnly? newContractEndsOn, string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(StaffErrors.ActionNotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(StaffErrors.ActionAmendReason);
+        }
+
+        var valid = Kind switch
+        {
+            StaffActionKind.SalaryChange => newSalary is not null,
+            StaffActionKind.Acting => actingUntil is { } until && until >= effectiveFrom && actingAllowance is >= 0,
+            StaffActionKind.ExtendProbation => newProbationEndsOn is { } e && e > (OldProbationEndsOn ?? effectiveFrom),
+            StaffActionKind.RenewContract => NewContractKind == ContractKind.Open || newContractMonths is > 0 || newContractEndsOn is not null,
+            _ => true,
+        };
+        if (!valid)
+        {
+            return Result.Failure(StaffErrors.ActionFields);
+        }
+
+        EffectiveFrom = effectiveFrom;
+        if (Kind is StaffActionKind.SalaryChange || (NewSalary is not null && newSalary is not null))
+        {
+            NewSalary = newSalary;
+        }
+
+        if (Kind == StaffActionKind.Acting)
+        {
+            (ActingAllowance, ActingUntil) = (actingAllowance, actingUntil);
+        }
+
+        if (Kind == StaffActionKind.ExtendProbation)
+        {
+            NewProbationEndsOn = newProbationEndsOn;
+        }
+
+        if (Kind == StaffActionKind.RenewContract)
+        {
+            (NewContractMonths, NewContractEndsOn) = (newContractMonths, newContractEndsOn);
+        }
+
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = reason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after it was applied (the file was put back as it was before it).</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(StaffErrors.ActionNotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(StaffErrors.ActionAmendReason);
+        }
+
+        Status = StaffActionStatus.Cancelled;
+        LastComment = reason.Trim();
+        CanceledAt = at;
+        CanceledByName = by;
+        return Result.Success();
+    }
 
     public bool IsEditable => Status is StaffActionStatus.Draft or StaffActionStatus.Returned && !AwaitingApproval;
 

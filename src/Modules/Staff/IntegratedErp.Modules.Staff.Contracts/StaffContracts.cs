@@ -97,3 +97,13 @@ public interface IStaffPayroll
     /// <summary>Ends the employment on its last day (an approved end-of-service settlement, 4.11): the employee has left.</summary>
     Task<bool> EndEmploymentAsync(Guid employeeId, DateOnly lastDay, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Documents of other modules that already used an employee's file from a day (an approved payroll run, a settlement):
+/// an employment action from that day cannot be changed or cancelled after its approval while one of them stands.
+/// </summary>
+public interface IStaffFileLocks
+{
+    /// <summary>The number of such a document, if any.</summary>
+    Task<string?> LockedFromAsync(Guid employeeId, DateOnly from, CancellationToken cancellationToken);
+}

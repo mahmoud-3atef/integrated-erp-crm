@@ -476,6 +476,28 @@ public sealed class StaffEmployee : ITenantOwned
 
     public void ExtendProbation(DateOnly until) => ProbationEndsOn = until;
 
+    /// <summary>What an employment action may change in the file, as it was before it (kept to take the action back).</summary>
+    public EmployeeSnapshot Snapshot() => new(
+        Status, EndedOn, ProbationEndsOn, LegalEntityId, DepartmentId, PositionId, ActingPositionId, ActingUntil, ActingAllowance, ContractStartsOn, ContractMonths, ContractEndsOn);
+
+    /// <summary>The file as it was before an employment action taken back.</summary>
+    public void Restore(EmployeeSnapshot s)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        Status = s.Status;
+        EndedOn = s.EndedOn;
+        ProbationEndsOn = s.ProbationEndsOn;
+        LegalEntityId = s.LegalEntityId;
+        DepartmentId = s.DepartmentId;
+        PositionId = s.PositionId;
+        ActingPositionId = s.ActingPositionId;
+        ActingUntil = s.ActingUntil;
+        ActingAllowance = s.ActingAllowance;
+        ContractStartsOn = s.ContractStartsOn;
+        ContractMonths = s.ContractMonths;
+        ContractEndsOn = s.ContractEndsOn;
+    }
+
     public void EndEmployment(DateOnly on)
     {
         Status = StaffStatus.Left;
@@ -625,6 +647,21 @@ public sealed class StaffSalary : ITenantOwned
         Basic == v.Basic && Housing == v.Housing && Food == v.Food && Transport == v.Transport && Mobile == v.Mobile && Project == v.Project && Other == v.Other;
 }
 
+/// <summary>The part of an employee's file an employment action changes.</summary>
+public sealed record EmployeeSnapshot(
+    StaffStatus Status,
+    DateOnly? EndedOn,
+    DateOnly? ProbationEndsOn,
+    Guid? LegalEntityId,
+    Guid? DepartmentId,
+    Guid? PositionId,
+    Guid? ActingPositionId,
+    DateOnly? ActingUntil,
+    decimal? ActingAllowance,
+    DateOnly? ContractStartsOn,
+    int? ContractMonths,
+    DateOnly? ContractEndsOn);
+
 public sealed record SalaryValues(decimal Basic, decimal Housing, decimal Food, decimal Transport, decimal Mobile, decimal Project, decimal Other);
 
 public static class StaffErrors
@@ -646,6 +683,11 @@ public static class StaffErrors
     public static readonly Error PositionElsewhere = Error.Validation("staff_position_department", "The position belongs to another department.");
     public static readonly Error InUse = Error.Conflict("staff_in_use", "It is in use: move what uses it first.");
     public static readonly Error ActionNotFound = Error.NotFound("staff_action", "Action not found.");
+    public static readonly Error ActionNotAmendable = Error.Conflict("staff_action_not_amendable", "Only an applied action (applied since it can be taken back) can be changed or cancelled after its approval.");
+    public static readonly Error ActionAmendReason = Error.Validation("staff_action_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error ActionLater = Error.Conflict("staff_action_later", "The employee has an action applied after this one: cancel it first.");
+    public static readonly Error ActionLocked = Error.Conflict("staff_action_locked", "A payroll run or a settlement already used the employee's file from that day.");
+    public static readonly Error ActionKindForbidden = new("forbidden.staff_action_kind", "You do not have this permission for this kind of action.");
     public static readonly Error ActionFields = Error.Validation("staff_action_fields", "Fill what this action needs (and it applies to the employee's current state).");
     public static readonly Error ActionNotEditable = Error.Conflict("staff_action_not_editable", "Only a draft or returned action can be sent.");
     public static readonly Error ActionOpen = Error.Conflict("staff_action_open", "The employee already has an action in approval.");

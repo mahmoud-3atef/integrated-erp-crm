@@ -111,6 +111,11 @@ internal static class StaffEndpoints
                 await queries.GetAsync(id, ct).ConfigureAwait(false) is { } action ? Results.Ok(action) : Results.NotFound())
             .RequirePermission(StaffPermissions.View, companyWide: true);
 
+        // Each kind of action has its own permissions to change or cancel it after its approval (checked by the service).
+        group.MapPut("/actions/{id:guid}/amend", async (Guid id, ActionAmendInput input, StaffActionService service, CancellationToken ct) => ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.View, companyWide: true);
+        group.MapPost("/actions/{id:guid}/cancel-approved", async (Guid id, ActionCancelInput input, StaffActionService service, CancellationToken ct) => ToHttp(await service.CancelApprovedAsync(id, input.Reason, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.View, companyWide: true);
         group.MapPost("/actions/{id:guid}/resubmit", async (Guid id, StaffActionService service, CancellationToken ct) => ToHttp(await service.ResubmitAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(StaffPermissions.Manage, companyWide: true);
 
@@ -153,6 +158,9 @@ internal static class StaffEndpoints
         error.Message,
         statusCode: error.Code.StartsWith("not_found.", StringComparison.Ordinal) ? StatusCodes.Status404NotFound
             : error.Code.StartsWith("conflict.", StringComparison.Ordinal) ? StatusCodes.Status409Conflict
+            : error.Code.StartsWith("forbidden.", StringComparison.Ordinal) ? StatusCodes.Status403Forbidden
             : StatusCodes.Status400BadRequest,
         title: error.Code);
 }
+
+public sealed record ActionCancelInput(string Reason);

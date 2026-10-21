@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Staff.Domain;
 using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
@@ -59,6 +60,30 @@ internal static class StaffPermissions
     public const string ActionsReview = "staff.actions.review";
     public const string ActionsApprove = "staff.actions.approve";
 
+    /// <summary>The kinds of employment action, each with its own permissions to change or cancel it after its approval.</summary>
+    private static readonly (StaffActionKind Kind, string Key, string Ar, string En)[] ActionKinds =
+    [
+        (StaffActionKind.Promotion, "promotion", "ترقية", "Promotion"),
+        (StaffActionKind.Transfer, "transfer", "نقل", "Transfer"),
+        (StaffActionKind.SalaryChange, "salary_change", "تعديل راتب", "Salary change"),
+        (StaffActionKind.Acting, "acting", "تكليف", "Acting"),
+        (StaffActionKind.ConfirmProbation, "confirm_probation", "تثبيت بعد التجربة", "Confirm after probation"),
+        (StaffActionKind.ExtendProbation, "extend_probation", "تمديد التجربة", "Extend probation"),
+        (StaffActionKind.EndProbation, "end_probation", "إنهاء خلال التجربة", "End during probation"),
+        (StaffActionKind.RenewContract, "renew_contract", "تجديد العقد", "Contract renewal"),
+        (StaffActionKind.NotRenew, "not_renew", "عدم تجديد العقد", "Contract not renewed"),
+    ];
+
+    public static string ActionAmend(StaffActionKind kind) => $"staff.actions.{ActionKinds.First(k => k.Kind == kind).Key}.amend";
+
+    public static string ActionCancelApproved(StaffActionKind kind) => $"staff.actions.{ActionKinds.First(k => k.Kind == kind).Key}.cancel_approved";
+
+    private static IEnumerable<PermissionDefinition> ActionAmendments() => ActionKinds.SelectMany(k => new PermissionDefinition[]
+    {
+        new(ActionAmend(k.Kind), GroupAr, GroupEn, $"تعديل إجراء «{k.Ar}» المطبَّق", $"Change an applied «{k.En}» action"),
+        new(ActionCancelApproved(k.Kind), GroupAr, GroupEn, $"إلغاء إجراء «{k.Ar}» المطبَّق (يعود الملف كما كان)", $"Cancel an applied «{k.En}» action (the file goes back as it was)"),
+    });
+
     private const string GroupAr = "الموارد البشرية";
     private const string GroupEn = "Human resources";
 
@@ -73,5 +98,6 @@ internal static class StaffPermissions
         new(BulkUpdate, GroupAr, GroupEn, "تحديث بيانات الموظفين بملف Excel", "Update the staff's data from an Excel file"),
         new(ActionsReview, GroupAr, GroupEn, "مراجعة الإجراءات الوظيفية (الموارد البشرية)", "Review employment actions (HR)"),
         new(ActionsApprove, GroupAr, GroupEn, "اعتماد الإجراءات الوظيفية (الإدارة العليا)", "Approve employment actions (management)"),
+        .. ActionAmendments(),
     ];
 }

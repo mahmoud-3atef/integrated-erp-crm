@@ -214,7 +214,7 @@ export interface StaffQuery {
 
 export const actionKinds = ['Promotion', 'Transfer', 'SalaryChange', 'Acting', 'ConfirmProbation', 'ExtendProbation', 'EndProbation', 'RenewContract', 'NotRenew'] as const;
 export type ActionKind = (typeof actionKinds)[number];
-export type ActionStatus = 'Draft' | 'InApproval' | 'Returned' | 'Rejected' | 'Applied';
+export type ActionStatus = 'Draft' | 'InApproval' | 'Returned' | 'Rejected' | 'Applied' | 'Cancelled';
 
 export interface ActionRow {
   id: string;
@@ -267,6 +267,26 @@ export interface StaffActionDetail {
   canResubmit: boolean;
   canSeeSalary: boolean;
   approval: ApprovalStatus | null;
+  /** An applied action: may be changed or cancelled by the holders of its kind's own permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
+}
+
+/** What may change on an applied action: its effective day and its kind's values, with the reason. */
+export interface ActionAmendInput {
+  effectiveFrom: string;
+  newSalary: SalaryValues | null;
+  actingAllowance: number | null;
+  actingUntil: string | null;
+  newProbationEndsOn: string | null;
+  newContractMonths: number | null;
+  newContractEndsOn: string | null;
+  amendReason: string;
 }
 
 export interface Contract {
@@ -341,6 +361,8 @@ export const staffApi = {
   actions: (q: { employeeId?: string; status?: string }) => request<ActionRow[]>('GET', `${base}/actions?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()}`),
   action: (id: string) => request<StaffActionDetail>('GET', `${base}/actions/${id}`),
   resubmit: (id: string) => request<void>('POST', `${base}/actions/${id}/resubmit`),
+  amendAction: (id: string, input: ActionAmendInput) => request<void>('PUT', `${base}/actions/${id}/amend`, input),
+  cancelApprovedAction: (id: string, reason: string) => request<void>('POST', `${base}/actions/${id}/cancel-approved`, { reason }),
   catalog: () => request<Catalog>('GET', `${base}/catalog`),
   saveDepartment: (id: string | null, input: { nameAr: string; nameEn: string | null; parentId: string | null; costCenter: string | null; managerId: string | null; sortOrder: number; isActive: boolean }) =>
     request<{ id: string }>(id ? 'PUT' : 'POST', id ? `${base}/departments/${id}` : `${base}/departments`, input),

@@ -41,7 +41,14 @@ public sealed record ActionDto(
     string? LastComment,
     bool CanResubmit,
     bool CanSeeSalary,
-    ApprovalStatusInfo? Approval);
+    ApprovalStatusInfo? Approval,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record ContractDto(Guid Id, string Kind, DateOnly StartsOn, int? Months, DateOnly? EndsOn, int ProbationDays, int NoticeDays, string Status, Guid? ActionId, string? Notes, string CreatedByName, DateTimeOffset CreatedAt);
 
@@ -97,14 +104,22 @@ internal sealed class StaffActionQueries(StaffDbContext db, IApprovalService app
         var seeSalary = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(StaffPermissions.SalariesView);
         var s = a.NewSalary;
         var approval = await approvals.StatusAsync(StaffActionAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        var canManage = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(StaffPermissions.Manage);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var canManage = granted.Has(StaffPermissions.Manage);
         return new ActionDto(
             a.Id, a.ActionNo, a.EmployeeId, a.EmployeeName, employeeNo, a.Kind.ToString(), a.EffectiveFrom, a.Reason, a.Status.ToString(), a.AwaitingApproval,
             before, after, seeSalary ? a.OldSalaryTotal : null, seeSalary ? s : null,
             seeSalary && s is not null ? s.Basic + s.Housing + s.Food + s.Transport + s.Mobile + s.Project + s.Other : null,
             seeSalary ? a.ActingAllowance : null, a.ActingUntil, a.OldProbationEndsOn, a.NewProbationEndsOn, a.OldContractEndsOn,
             a.NewContractKind?.ToString(), a.NewContractMonths, a.NewContractEndsOn,
-            a.CreatedByName, a.CreatedAt, a.AppliedAt, a.LastComment, canManage && a.Status == StaffActionStatus.Returned, seeSalary, approval);
+            a.CreatedByName, a.CreatedAt, a.AppliedAt, a.LastComment, canManage && a.Status == StaffActionStatus.Returned, seeSalary, approval,
+            CanAmend: a.IsAmendable && granted.Has(StaffPermissions.ActionAmend(a.Kind)),
+            CanCancelApproved: a.IsAmendable && granted.Has(StaffPermissions.ActionCancelApproved(a.Kind)),
+            AmendedAt: a.AmendedAt,
+            AmendedByName: a.AmendedByName,
+            AmendNote: a.AmendNote,
+            CanceledAt: a.CanceledAt,
+            CanceledByName: a.CanceledByName);
     }
 
     public async Task<IReadOnlyList<ContractDto>> ContractsAsync(Guid employeeId, CancellationToken cancellationToken) =>

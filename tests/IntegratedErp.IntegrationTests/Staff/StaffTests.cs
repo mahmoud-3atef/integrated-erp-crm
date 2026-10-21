@@ -47,7 +47,8 @@ public sealed class StaffTests(TestDatabase database)
             ["new_name"] = "A WORKER", ["new_empidnumber"] = "BSS0999", ["new_idnumber"] = "2570418465", ["statuscode"] = 100000000, ["new_employeetype"] = 2, ["new_totalsalary"] = 1500m,
         }, created: Created2025);
         await SyncAsync(tenantId, crm);
-        var hr = await HrAsync(tenantId, "مسؤول الموارد البشرية", "staff.view", "staff.manage", "staff.structure.manage", "staff.salaries.view", "staff.salaries.manage");
+        var hr = await HrAsync(tenantId, "مسؤول الموارد البشرية", "staff.view", "staff.manage", "staff.structure.manage", "staff.salaries.view", "staff.salaries.manage",
+            "staff.actions.renew_contract.amend", "staff.actions.renew_contract.cancel_approved", "staff.actions.promotion.cancel_approved");
         var approver = await HrAsync(tenantId, "المعتمد", "staff.view", "staff.actions.review", "staff.actions.approve");
 
         using var scope2 = database.Scope(tenantId, user: hr.ToString());
@@ -131,8 +132,34 @@ public sealed class StaffTests(TestDatabase database)
             contracts.Select(c => (c.Status, c.StartsOn, c.EndsOn)));
         Assert.Equal(new DateOnly(2027, 12, 31), (await queries.ProfileAsync(second, default))!.ContractEndsOn);
         Assert.Equal(["ConfirmProbation", "Promotion", "RenewContract"], (await actionQueries.ListAsync(null, "Applied", default)).Select(a => a.Kind).Order());
-        _ = confirm;
-        _ = renew;
+
+        // A fresh scope: the one above still holds the actions as they were before their approval.
+        using var scope3 = database.Scope(tenantId, user: hr.ToString());
+        actions = scope3.ServiceProvider.GetRequiredService<StaffActionService>();
+        actionQueries = scope3.ServiceProvider.GetRequiredService<StaffActionQueries>();
+        queries = scope3.ServiceProvider.GetRequiredService<StaffQueries>();
+
+        // Each kind has its own permissions: HR may not cancel a confirmation.
+        Assert.Equal("forbidden.staff_action_kind", (await actions.CancelApprovedAsync(confirm, "خطأ", default)).Error.Code);
+
+        // The renewal changed after its approval (six months, not twelve): taken back and applied again.
+        var change = new ActionAmendInput(new DateOnly(2026, 12, 31), null, null, null, null, 6, null, " ");
+        Assert.Equal("validation.staff_action_amend_reason", (await actions.AmendAsync(renew, change, default)).Error.Code);
+        Assert.True((await actions.AmendAsync(renew, change with { AmendReason = "اتفاق على ستة أشهر" }, default)).IsSuccess);
+        contracts = await actionQueries.ContractsAsync(second, default);
+        Assert.Equal([("Active", new DateOnly(2027, 1, 1), (DateOnly?)new DateOnly(2027, 6, 30)), ("Renewed", new DateOnly(2025, 1, 1), new DateOnly(2026, 12, 31))],
+            contracts.Select(c => (c.Status, c.StartsOn, c.EndsOn)));
+
+        // Then cancelled: the old contract is active again and the file ends where it did.
+        Assert.True((await actions.CancelApprovedAsync(renew, "لم يُوقَّع العقد", default)).IsSuccess);
+        Assert.Equal([("Active", new DateOnly(2025, 1, 1), (DateOnly?)new DateOnly(2026, 12, 31))], (await actionQueries.ContractsAsync(second, default)).Select(c => (c.Status, c.StartsOn, c.EndsOn)));
+        Assert.Equal(new DateOnly(2026, 12, 31), (await queries.ProfileAsync(second, default))!.ContractEndsOn);
+
+        // The promotion cancelled: the job and the salary are back as before it.
+        Assert.True((await actions.CancelApprovedAsync(promotion.Value, "أُلغيت الترقية", default)).IsSuccess);
+        profile = (await queries.ProfileAsync(manzoor, default))!;
+        Assert.Equal(("محاسب", 4050m), (profile.JobTitle!.NameAr, profile.Salary!.Total));
+        Assert.Equal("Cancelled", (await actionQueries.GetAsync(promotion.Value, default))!.Status);
     }
 
     /// <summary>The HR user (who holds both review and approve here) takes their open task and approves it.</summary>

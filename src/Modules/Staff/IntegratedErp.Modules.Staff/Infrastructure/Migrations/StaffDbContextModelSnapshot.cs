@@ -379,6 +379,20 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasColumnType("nvarchar(40)")
                         .HasColumnName("action_no");
 
+                    b.Property<string>("AmendNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("amend_note");
+
+                    b.Property<DateTimeOffset?>("AmendedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("amended_at");
+
+                    b.Property<string>("AmendedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("amended_by_name");
+
                     b.Property<DateTimeOffset?>("AppliedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("applied_at");
@@ -386,6 +400,15 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                     b.Property<bool>("AwaitingApproval")
                         .HasColumnType("bit")
                         .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset?>("CanceledAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("canceled_at");
+
+                    b.Property<string>("CanceledByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("canceled_by_name");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset")
@@ -475,6 +498,11 @@ namespace IntegratedErp.Modules.Staff.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("old_salary_total");
+
+                    b.Property<string>("PriorFile")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("prior_file");
 
                     b.Property<string>("Reason")
                         .IsRequired()
