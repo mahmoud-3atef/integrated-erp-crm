@@ -1,5 +1,6 @@
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import AddIcon from '@mui/icons-material/Add';
+import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
@@ -40,6 +41,7 @@ import {
   type RecipientKind,
   type Step,
   type StopStep,
+  type ActionStep,
   type UpdateStep,
 } from '../../api/workflow';
 import { tokens } from '../../app/theme';
@@ -52,6 +54,7 @@ const icons: Record<StepType, ReactNode> = {
   approval: <HowToRegOutlinedIcon />,
   condition: <AccountTreeOutlinedIcon />,
   update: <EditNoteOutlinedIcon />,
+  action: <BoltOutlinedIcon />,
   notify: <NotificationsActiveOutlinedIcon />,
   stop: <StopCircleOutlinedIcon />,
 };
@@ -60,6 +63,7 @@ const colors: Record<StepType, string> = {
   approval: tokens.navy700,
   condition: tokens.gold,
   update: tokens.teal,
+  action: '#7C3AED',
   notify: tokens.info,
   stop: tokens.danger,
 };
@@ -73,6 +77,8 @@ export function newStep(type: StepType): Step {
       return { type, id, branches: [{ condition: { matchAll: true, rules: [] }, steps: [] }], else: [] };
     case 'update':
       return { type, id, changes: [] };
+    case 'action':
+      return { type, id, action: '' };
     case 'notify':
       return { type, id, to: [{ kind: 'Submitter' }], titleAr: '', titleEn: '', bodyAr: '', bodyEn: '' };
     default:
@@ -118,7 +124,7 @@ export function StepListEditor({ steps, onChange, emptyHint }: { steps: Step[]; 
             {t('process.addStep')}
           </Button>
           <Menu anchorEl={menu} open={menu !== null} onClose={() => setMenu(null)}>
-            {(['approval', 'condition', 'update', 'notify', 'stop'] as StepType[]).map((type) => (
+            {(['approval', 'condition', 'update', 'action', 'notify', 'stop'] as StepType[]).map((type) => (
               <MenuItem
                 key={type}
                 onClick={() => {
@@ -211,6 +217,7 @@ function StepCard({ step, number, onChange, onRemove, onMove, isFirst, isLast }:
           {step.type === 'approval' && <ApprovalEditor step={step} onChange={onChange} />}
           {step.type === 'condition' && <ConditionStepEditor step={step} onChange={onChange} />}
           {step.type === 'update' && <UpdateEditor step={step} onChange={onChange} />}
+          {step.type === 'action' && <ActionEditor step={step} onChange={onChange} />}
           {step.type === 'notify' && <NotifyEditor step={step} onChange={onChange} />}
           {step.type === 'stop' && <StopEditor step={step} onChange={onChange} />}
         </Box>
@@ -245,6 +252,10 @@ function useStepSummary(step: Step) {
         return field ? localName(field, i18n.language) : label(c.fieldKey);
       });
       return `${table}: ${names.join('، ') || t('process.noChanges')}`;
+    }
+    case 'action': {
+      const action = screen.actions?.find((a) => a.key === step.action);
+      return action ? localName(action, i18n.language) : t('process.noAction');
     }
     case 'notify':
       return (i18n.language === 'ar' ? step.titleAr : step.titleEn) || '—';
@@ -449,6 +460,40 @@ function ConditionStepEditor({ step, onChange }: { step: ConditionStep; onChange
 // ---------------------------------------------------------------- Update record
 
 const recordTable = '__record';
+
+/** «تنفيذ إجراء»: one of the screen's actions, by name (its module's code); what it does is shown under it. */
+function ActionEditor({ step, onChange }: { step: ActionStep; onChange: (step: Step) => void }) {
+  const { t, i18n } = useTranslation();
+  const ar = i18n.language === 'ar';
+  const { screen, readOnly } = useEditor();
+  const actions = screen.actions ?? [];
+  const chosen = actions.find((a) => a.key === step.action);
+  return (
+    <Stack spacing={1.25} sx={{ mt: 1 }}>
+      <TextField
+        select
+        size="small"
+        label={t('process.action')}
+        value={chosen ? step.action : ''}
+        disabled={readOnly || actions.length === 0}
+        helperText={actions.length === 0 ? t('process.noActions') : t('process.actionHint')}
+        onChange={(e) => onChange({ ...step, action: e.target.value })}
+      >
+        {actions.map((a) => (
+          <MenuItem key={a.key} value={a.key}>
+            {localName(a, i18n.language)}
+            {a.required && ` — ${t('process.requiredAction')}`}
+          </MenuItem>
+        ))}
+      </TextField>
+      {chosen && (
+        <Typography sx={{ fontSize: 12.5, color: tokens.gray600, bgcolor: tokens.gray50, borderRadius: 1, p: 1.25, lineHeight: 1.8 }}>
+          {ar ? chosen.descriptionAr : chosen.descriptionEn}
+        </Typography>
+      )}
+    </Stack>
+  );
+}
 
 function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: Step) => void }) {
   const { t, i18n } = useTranslation();

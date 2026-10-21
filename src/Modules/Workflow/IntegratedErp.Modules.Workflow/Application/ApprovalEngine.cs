@@ -76,6 +76,7 @@ internal sealed partial class ApprovalEngine(
         }
 
         await EnsureDefaultProcessAsync(adapter.Screen, cancellationToken).ConfigureAwait(false);
+        await RequiredActions.UpgradeAsync(db, adapter.Screen, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
         var processes = await db.Processes.AsNoTracking().Include(p => p.Versions)
             .Where(p => p.Screen == submission.Screen && p.IsActive && (submission.ProcessId == null || p.Id == submission.ProcessId))
@@ -541,7 +542,7 @@ internal sealed partial class ApprovalEngine(
                     var index = condition.Branches.ToList().FindIndex(b => FieldValues.Matches(b.Condition, fields, values));
                     cursor.Advance(condition, index >= 0 ? $"b{index}" : ProcessCursor.Else, definition);
                     break;
-                case UpdateStep or NotifyStep:
+                case UpdateStep or NotifyStep or ActionStep:
                     cursor.Advance(step, null, definition);
                     break;
                 default:
@@ -680,6 +681,33 @@ internal sealed partial class ApprovalEngine(
                     // Changes of a related table are recorded as "table.field" so the history says which table changed.
                     var recorded = update.Target is { } table ? changes.ToDictionary(c => $"{table}.{c.Key}", c => c.Value, StringComparer.Ordinal) : changes;
                     History(instance, HistoryKind.RecordUpdated, details: JsonSerializer.Serialize(recorded), stepId: step.Id);
+                    cursor.Advance(step, null, definition);
+                    break;
+                }
+
+                case ActionStep act:
+                {
+                    // The module's own work, run as the user whose decision reached this step.
+                    var declared = adapter.Screen.RecordActions.FirstOrDefault(a => a.Key == act.Action);
+                    var ran = declared is null
+                        ? RecordActionResult.Failed($"The screen has no action \"{act.Action}\".")
+                        : await adapter.RunAsync(instance.RecordId, act.Action, cancellationToken).ConfigureAwait(false);
+                    History(instance, HistoryKind.ActionRun, actor: true, outcome: ran.Ok ? "Done" : ran.ReturnToSubmitter ? "Returned" : "Failed", comment: ran.Message,
+                        details: JsonSerializer.Serialize(new { action = act.Action, nameAr = declared?.NameAr, nameEn = declared?.NameEn }), stepId: step.Id);
+                    if (!ran.Ok)
+                    {
+                        if (ran.ReturnToSubmitter)
+                        {
+                            await CompleteAsync(instance, adapter, InstanceStatus.Returned, ran.Message, cancellationToken).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            Fail(instance, step, ran.Message ?? "The action failed.");
+                        }
+
+                        return;
+                    }
+
                     cursor.Advance(step, null, definition);
                     break;
                 }
@@ -829,6 +857,31 @@ internal sealed partial class ApprovalEngine(
         foreach (var open in await db.WorkItems.Where(w => w.InstanceId == instance.Id && w.Status == WorkItemStatus.Pending).ToListAsync(cancellationToken).ConfigureAwait(false))
         {
             open.Close(now);
+        }
+
+        // An approval running a version published before the screen's required actions existed: they run now, at its end
+        // (in the history), so an approved record is never left without them (e.g. a returned worker not housed).
+        if (status == InstanceStatus.Approved && adapter.Screen.RecordActions.Any(a => a.Required))
+        {
+            var ran = db.History.Local.Where(h => h.InstanceId == instance.Id).Select(h => (h.Kind, h.Outcome, h.Details))
+                .Concat((await db.History.AsNoTracking().Where(h => h.InstanceId == instance.Id && h.Kind == nameof(HistoryKind.ActionRun))
+                    .Select(h => new { h.Kind, h.Outcome, h.Details }).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(h => (h.Kind, h.Outcome, h.Details)))
+                .Where(h => h.Kind == nameof(HistoryKind.ActionRun) && h.Outcome == "Done" && h.Details is not null)
+                .Select(h => JsonDocument.Parse(h.Details!).RootElement.GetProperty("action").GetString())
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (var required in adapter.Screen.RecordActions.Where(a => a.Required && !ran.Contains(a.Key)))
+            {
+                var result = await adapter.RunAsync(instance.RecordId, required.Key, cancellationToken).ConfigureAwait(false);
+                History(instance, HistoryKind.ActionRun, actor: true, outcome: result.Ok ? "Done" : "Failed",
+                    comment: result.Message ?? "نُفّذ عند الاعتماد: نسخة المسار سابقة لإضافة الإجراء / Run at the approval: the process version predates the action.",
+                    details: JsonSerializer.Serialize(new { action = required.Key, nameAr = required.NameAr, nameEn = required.NameEn }));
+                if (!result.Ok && result.ReturnToSubmitter)
+                {
+                    status = InstanceStatus.Returned;
+                    comment = result.Message;
+                    break;
+                }
+            }
         }
 
         instance.Complete(status, now);

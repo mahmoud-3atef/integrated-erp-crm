@@ -274,6 +274,20 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             manager = await PersonAsync("مدير العمليات", "operations.return.approve");
         }
 
+        // The company's process was published before the order declared its «house the worker» action (as on the server).
+        using (var scope = database.Scope(tenantId, user: "setup"))
+        {
+            var screen = scope.ServiceProvider.GetServices<IApprovalRecordAdapter>().Single(a => a.Screen.Code == ReturnOrderAdapter.ScreenCode).Screen;
+            var definition = DefinitionJson.Read(screen.DefaultProcess!.DefinitionJson);
+            var old = definition with { Steps = definition.Steps.Select(s => s is ApprovalStep a ? a with { OnApprove = a.OnApprove.Where(x => x is not ActionStep).ToList() } : s).ToList() };
+            Assert.Empty(DefinitionRules.Walk(old.Steps).OfType<ActionStep>());
+            var process = new ApprovalProcess(screen.Code, "اعتماد أمر الرجيع", "Return order approval", 100, DefinitionJson.Write(old));
+            process.Publish("setup", DateTimeOffset.UtcNow);
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            workflow.Processes.Add(process);
+            await workflow.SaveChangesAsync();
+        }
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
         Guid orderId, workerId, roomId;
         using (var scope = database.Scope(tenantId, user: creator.ToString()))
@@ -330,6 +344,15 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             Assert.All(timeline.Skip(1), p => Assert.True(p.FromOldSystem && p.EndsOn <= today));
             var period = timeline[0];
             Assert.Equal(("Housing", today, (DateOnly?)null, false, detail.Summary.OrderNo), (period.Kind, period.StartsOn, period.EndsOn, period.PaySalary, period.SourceNo));
+
+            // The process got the action (a new version by the system) and the approval ran it, as its history says.
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var upgraded = await workflow.Processes.AsNoTracking().Include(p => p.Versions).SingleAsync(p => p.Screen == ReturnOrderAdapter.ScreenCode);
+            Assert.Equal((2, RequiredActions.PublishedBy), (upgraded.CurrentVersion, upgraded.Current!.PublishedBy));
+            Assert.Contains(DefinitionRules.Walk(DefinitionJson.Read(upgraded.Current.Definition).Steps).OfType<ActionStep>(), a => a.Action == ReturnOrderAdapter.HouseWorker);
+            var instance = await workflow.Instances.AsNoTracking().SingleAsync(i => i.RecordId == orderId);
+            Assert.Contains(await workflow.History.AsNoTracking().Where(h => h.InstanceId == instance.Id).ToListAsync(),
+                h => h.Kind == nameof(HistoryKind.ActionRun) && h.Outcome == "Done" && h.Details!.Contains(ReturnOrderAdapter.HouseWorker, StringComparison.Ordinal));
 
             // The worker's actions timeline opens the period's document: the return order is among the worker's documents.
             var documents = await scope.ServiceProvider.GetRequiredService<WorkerDocuments>().ForAsync(workerId, default);

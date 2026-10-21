@@ -811,7 +811,8 @@
       "Canceled": "Approval canceled",
       "Failed": "Stopped with an error",
       "Retried": "Retried",
-      "Reassigned": "Reassigned"
+      "Reassigned": "Reassigned",
+      "ActionRun": "Action run"
     },
     "decided": {
       "Approved": "Approved",
@@ -1026,14 +1027,16 @@
       "condition": "Condition",
       "update": "Update record",
       "notify": "Send notification",
-      "stop": "Stop process"
+      "stop": "Stop process",
+      "action": "Run an action"
     },
     "typeHint": {
       "approval": "A task for people to approve, reject or return",
       "condition": "If / else if / else on field values",
       "update": "Set a field or change the record's status",
       "notify": "In-system notification and email",
-      "stop": "End the process as approved, rejected or canceled"
+      "stop": "End the process as approved, rejected or canceled",
+      "action": "Run one of the screen's pieces of work, e.g. housing the worker or opening the work period."
     },
     "assignee": {
       "Role": "Role",
@@ -1077,7 +1080,12 @@
       "hint": "The chosen process starts on this record at once, whatever its start condition, with you as the submitter. An approval of the record that stopped with an error is canceled and replaced.",
       "none": "No active process for this screen. Create one in Approval processes.",
       "start": "Run"
-    }
+    },
+    "action": "Action",
+    "actionHint": "The system's own code, chosen by name, run at its place in the process as the user whose decision reached it.",
+    "noActions": "This screen has no actions.",
+    "noAction": "No action chosen",
+    "requiredAction": "required"
   },
   "myApprovals": {
     "title": "My submissions",

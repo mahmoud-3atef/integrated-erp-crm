@@ -58,10 +58,14 @@ public sealed record ApprovalScreen(
     string LinkTemplate,
     IReadOnlyList<RecordField> Fields,
     IReadOnlyList<RecordRelation>? Relations = null,
-    DefaultApprovalProcess? DefaultProcess = null)
+    DefaultApprovalProcess? DefaultProcess = null,
+    IReadOnlyList<RecordAction>? Actions = null)
 {
     [JsonIgnore]
     public IReadOnlyList<RecordRelation> RelatedTables => Relations ?? [];
+
+    [JsonIgnore]
+    public IReadOnlyList<RecordAction> RecordActions => Actions ?? [];
 
     public string LinkTo(Guid recordId) => LinkTemplate.Replace("{id}", recordId.ToString(), StringComparison.Ordinal);
 }
@@ -79,6 +83,28 @@ public sealed record DefaultApprovalProcess(string NameAr, string NameEn, string
 /// the owning module applies the change (through that table's module contract when it belongs to another module).
 /// </summary>
 public sealed record RecordRelation(string Key, string NameAr, string NameEn, IReadOnlyList<RecordField> Fields);
+
+/// <summary>
+/// A named piece of the module's own work a process runs at its place (an «action» step): e.g. a return order's
+/// «house the worker» — opening the housing period and putting the worker in the room. The process chooses where it
+/// runs; the code is the module's. <paramref name="Required"/>: a process of the screen must run it (publishing one
+/// without it is refused), because the record means nothing without it.
+/// </summary>
+public sealed record RecordAction(string Key, string NameAr, string NameEn, string DescriptionAr, string DescriptionEn, bool Required = false);
+
+/// <summary>
+/// What an action did. Not <paramref name="Ok"/>: with <paramref name="ReturnToSubmitter"/> the approval ends returned to
+/// the submitter with the message (the record needs a change, e.g. a date overlapping another period); otherwise the
+/// approval fails at the step and an administrator retries it.
+/// </summary>
+public sealed record RecordActionResult(bool Ok, string? Message = null, bool ReturnToSubmitter = false)
+{
+    public static RecordActionResult Done { get; } = new(true);
+
+    public static RecordActionResult SendBack(string message) => new(false, message, true);
+
+    public static RecordActionResult Failed(string message) => new(false, message);
+}
 
 /// <summary>How an approval ended, as told to the module that owns the record.</summary>
 public enum ApprovalEnd
@@ -109,6 +135,13 @@ public interface IApprovalRecordAdapter
     /// (already type-checked by the engine). Must be idempotent and save its changes.
     /// </summary>
     Task<Result> ApplyAsync(Guid recordId, string? relation, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Runs one of the screen's declared actions on the record (an «action» step), as the user whose decision reached it.
+    /// Must be idempotent (a retried approval may run it again) and save its changes.
+    /// </summary>
+    Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken) =>
+        Task.FromResult(RecordActionResult.Failed($"The screen has no action \"{action}\"."));
 
     /// <summary>The approval of the record ended; the module sets its own final state and saves it.</summary>
     Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken);

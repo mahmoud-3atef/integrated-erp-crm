@@ -60,6 +60,33 @@ public sealed class ProcessDefinitionTests
     }
 
     [Fact]
+    public void An_action_step_runs_only_a_declared_action_and_a_required_one_must_be_in_the_process()
+    {
+        var screen = Screen with
+        {
+            Actions =
+            [
+                new RecordAction("house_worker", "تسكين العامل", "House the worker", "يفتح فترة السكن", "Opens the housing period", Required: true),
+                new RecordAction("notify_sales", "إبلاغ المبيعات", "Tell sales", "—", "—"),
+            ],
+        };
+        static ProcessDefinition With(params Step[] onApprove) => new(null, [Stage("a", onApprove)]);
+        var house = new ActionStep { Id = "x", Action = "house_worker" };
+
+        Assert.True(DefinitionRules.Validate(With(house), screen).IsSuccess);
+        Assert.Contains("not an action", DefinitionRules.Validate(With(house, new ActionStep { Id = "y", Action = "delete_all" }), screen).Error.Message, StringComparison.Ordinal);
+        Assert.Contains("must run the action", DefinitionRules.Validate(With(new ActionStep { Id = "y", Action = "notify_sales" }), screen).Error.Message, StringComparison.Ordinal);
+
+        // A process published before the action existed gets it at its end (once).
+        var old = With();
+        var upgraded = IntegratedErp.Modules.Workflow.Application.RequiredActions.WithRequired(old, screen);
+        var added = Assert.IsType<ActionStep>(upgraded.Steps[^1]);
+        Assert.Equal(("house_worker", 2), (added.Action, upgraded.Steps.Count));
+        Assert.True(DefinitionRules.Validate(upgraded, screen).IsSuccess);
+        Assert.Same(upgraded, IntegratedErp.Modules.Workflow.Application.RequiredActions.WithRequired(upgraded, screen));
+    }
+
+    [Fact]
     public void An_update_step_may_change_only_a_declared_related_table()
     {
         static ProcessDefinition With(UpdateStep update) => new(null, [Stage("a", update)]);

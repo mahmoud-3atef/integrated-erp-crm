@@ -97,3 +97,19 @@ Purchase order: requester -> budget owner -> procurement -> finance. Supports pa
 
 ## 10. AI Agent operating instructions
 READ and understand this document first. Inspect the existing frontend framework, component conventions, workflow contracts, permission model, and design tokens. Produce a gap analysis and proposed implementation plan for user review. **DO NOT edit source code, create migrations, install dependencies, or change live workflows without explicit user authorization.** This specification defines UI/UX expectations, not authorization to implement.
+
+## ملحق: خطوة «تنفيذ إجراء» (21 أكتوبر 2026، بموافقة المستخدم)
+
+**المشكلة:** كان أثر الاعتماد على السجل مكتوبًا في الكود عند انتهاء الاعتماد، ولا يظهر في المسار ولا يُعدَّل منه. مثال ذلك تسكين العامل عند اعتماد أمر الرجيع.
+
+**الحل:**
+- **الإجراءات:** كل شاشة تعرّف إجراءاتها (`ApprovalScreen.Actions`، والنوع `RecordAction`). لكل إجراء مفتاح، واسم عربي وإنجليزي، ووصف، والكود خلفه في الموديول (`IApprovalRecordAdapter.RunAsync`).
+- **الخطوة الجديدة `action`:** «تنفيذ إجراء» في محرر المسارات. يُختار الإجراء بالاسم من قائمة الشاشة فقط، ولا يُكتب كود من المحرر.
+  - تُنفَّذ الخطوة في مكانها من المسار، باسم من وصل قراره إليها.
+  - تُسجَّل في السجل بالنوع `ActionRun`.
+  - إن فشلت الخطوة وجب تعديل السجل، فيعود السجل لمنشئه مع السبب، أو يفشل الاعتماد ويعيد المسؤول المحاولة.
+- **الإجراء الأساسي** (`Required`): لا يُنشر مسار لا يحتويه.
+- **المسارات المنشورة من قبل:** يُنشر لها النظام إصدارًا جديدًا يضيف الإجراءات الأساسية في آخرها، ويحتفظ بمسودة المصمم.
+- **الاعتمادات الجارية على إصدار قديم:** يُنفَّذ الإجراء الأساسي عند انتهائها بالاعتماد، ويُسجَّل ذلك في السجل.
+- **أمر الرجيع (أول شاشة):** إجراؤه `house_worker`، أي «تسكين العامل وإتمام الأمر». المسار الافتراضي يشغّله بعد اعتماد مدير العمليات. الصورة: [wf-process-action-step.png](assets/wf-process-action-step.png).
+- **التالي:** التسليم، والنقل، والحركات، ثم الموارد البشرية والرواتب، ثم الفوترة.

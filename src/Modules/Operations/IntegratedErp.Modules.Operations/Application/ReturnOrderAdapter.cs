@@ -85,6 +85,10 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
                     type = "approval", id = "operations-manager", label = "اعتماد مدير العمليات",
                     nameAr = "اعتماد مدير العمليات", nameEn = "Operations manager's approval",
                     assignees = new[] { new { kind = "Permission", permission = OperationsPermissions.ReturnApprove } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "house-worker", label = "تسكين العامل وإتمام الأمر", action = HouseWorker },
+                    },
                 },
             },
         },
@@ -106,7 +110,20 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
             new("customer_wish", "رغبة العميل", "The customer's wish", RecordFieldType.Choice, Updatable: true, Wishes),
             new("status", "حالة الأمر", "Order status", RecordFieldType.Choice, Updatable: true, Statuses),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد أمر الرجيع", "Return order approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد أمر الرجيع", "Return order approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                HouseWorker,
+                "تسكين العامل وإتمام الأمر",
+                "House the worker and complete the order",
+                "يفتح للعامل فترة سكن في سجل الفترات من تاريخ الوصول (براتب أو بدونه كما في الأمر)، ويسكّنه في الغرفة المختارة، وتصبح حالة الأمر «تم التسكين». إن تداخل التاريخ مع فترة أخرى يعود الأمر لمنشئه للتعديل.",
+                "Opens the worker's housing period from the arrival day (paid or not as the order says), puts them in the chosen room, and the order is «in housing». A date overlapping another period sends the order back to its creator.",
+                Required: true),
+        ]);
+
+    /// <summary>The order's one action: the worker into housing (the order means nothing without it).</summary>
+    public const string HouseWorker = "house_worker";
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -188,6 +205,66 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
         return Result.Success();
     }
 
+    /// <summary>
+    /// «House the worker» (the process runs it, by default after the operations manager's approval): the housing period
+    /// first, then the order is completed and the worker put in the chosen room. Run again on a completed order, it does
+    /// nothing. A date overlapping the worker's timeline sends the order back to its creator with the reason.
+    /// </summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != HouseWorker)
+        {
+            return RecordActionResult.Failed($"A return order has no action \"{action}\".");
+        }
+
+        var order = await db.ReturnOrders.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return RecordActionResult.Failed("The return order no longer exists.");
+        }
+
+        if (order.Status == ReturnStatus.Completed)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (!order.IsInApproval || order.WorkerId is null || order.ArrivedOn is null)
+        {
+            return RecordActionResult.Failed("The return order is not in approval (or has no worker or arrival day).");
+        }
+
+        var opened = await ledger.StartHousingAsync(
+            new HousingStartRequest(order.WorkerId.Value, order.ArrivedOn.Value, !order.StopSalary, order.HousingName, SourceType, order.Id, order.OrderNo),
+            cancellationToken).ConfigureAwait(false);
+        if (opened.IsFailure)
+        {
+            return RecordActionResult.SendBack(opened.Error.Code == "conflict.period_overlap"
+                ? "لم يكتمل التسكين: تاريخ الوصول يتداخل مع فترة أخرى في سجل فترات العامل. عدّل التاريخ وأعد الإرسال."
+                : $"لم يكتمل التسكين: {opened.Error.Message}");
+        }
+
+        order.Complete(user.DisplayName, null, clock.UtcNow);
+        if (order.RoomId is { } roomId)
+        {
+            // The worker is in housing now: into the chosen room from the arrival day.
+            var housed = await housing.AssignAsync(
+                new RoomAssignRequest(order.WorkerId.Value, roomId, order.ArrivedOn.Value, SourceType, order.OrderNo), cancellationToken).ConfigureAwait(false);
+            if (housed.IsFailure)
+            {
+                order.RoomNotAssigned(housed.Error.Code == "conflict.housing_room_full"
+                    ? "لم يُسكَّن في الغرفة المختارة لامتلائها؛ سكّنه من شاشة المساكن."
+                    : "لم يُسكَّن في الغرفة المختارة؛ سكّنه من شاشة المساكن.");
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>
+    /// The approval ended: a rejection, return or cancel sets the order's state. Approved, the order was already completed
+    /// by its «house the worker» action (the engine runs a required action an older process version lacks before it ends).
+    /// </summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         var order = await db.ReturnOrders.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
@@ -199,31 +276,8 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
         switch (end)
         {
             case ApprovalEnd.Approved:
-                if (order.Complete(user.DisplayName, comment, clock.UtcNow).IsSuccess)
-                {
-                    var opened = await ledger.StartHousingAsync(
-                        new HousingStartRequest(order.WorkerId!.Value, order.ArrivedOn!.Value, !order.StopSalary, order.HousingName, SourceType, order.Id, order.OrderNo),
-                        cancellationToken).ConfigureAwait(false);
-                    if (opened.IsFailure)
-                    {
-                        order.ReturnForFix(opened.Error.Code == "conflict.period_overlap"
-                            ? "لم يكتمل التسكين: تاريخ الوصول يتداخل مع فترة أخرى في سجل فترات العامل. عدّل التاريخ وأعد الحفظ."
-                            : $"لم يكتمل التسكين: {opened.Error.Message}");
-                    }
-                    else if (order.RoomId is { } roomId)
-                    {
-                        // The worker is in housing now: into the chosen room from the arrival day.
-                        var housed = await housing.AssignAsync(
-                            new RoomAssignRequest(order.WorkerId.Value, roomId, order.ArrivedOn.Value, SourceType, order.OrderNo), cancellationToken).ConfigureAwait(false);
-                        if (housed.IsFailure)
-                        {
-                            order.RoomNotAssigned(housed.Error.Code == "conflict.housing_room_full"
-                                ? "لم يُسكَّن في الغرفة المختارة لامتلائها؛ سكّنه من شاشة المساكن."
-                                : "لم يُسكَّن في الغرفة المختارة؛ سكّنه من شاشة المساكن.");
-                        }
-                    }
-                }
-
+                // Not housed (its action did not complete it): back to its creator rather than approved without housing.
+                order.ApprovalEnded(ReturnStatus.Returned, "انتهى الاعتماد دون تسكين العامل؛ أعد إرسال الأمر.");
                 break;
             case ApprovalEnd.Rejected:
                 order.ApprovalEnded(ReturnStatus.Rejected, comment);

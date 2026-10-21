@@ -45,6 +45,12 @@ internal sealed class ProcessService(WorkflowDbContext db, ApprovalEngine engine
 
     public async Task<IReadOnlyList<ProcessSummaryDto>> ListAsync(CancellationToken cancellationToken)
     {
+        // A process published before its screen declared required actions gets them first (and shows them).
+        foreach (var screen in engine.Screens)
+        {
+            await RequiredActions.UpgradeAsync(db, screen, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        }
+
         var processes = await db.Processes.AsNoTracking().Include(p => p.Versions)
             .OrderBy(p => p.Screen).ThenBy(p => p.Priority).ThenBy(p => p.NameEn)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

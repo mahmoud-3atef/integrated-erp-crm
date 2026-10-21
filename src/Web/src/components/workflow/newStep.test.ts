@@ -2,10 +2,10 @@ import { newStep } from './StepListEditor';
 
 describe('process editor steps', () => {
   it('creates each step type with a unique id and the shape the server expects', () => {
-    const steps = (['approval', 'condition', 'update', 'notify', 'stop'] as const).map(newStep);
+    const steps = (['approval', 'condition', 'update', 'action', 'notify', 'stop'] as const).map(newStep);
 
     expect(new Set(steps.map((s) => s.id)).size).toBe(steps.length);
-    expect(steps.map((s) => s.type)).toEqual(['approval', 'condition', 'update', 'notify', 'stop']);
+    expect(steps.map((s) => s.type)).toEqual(['approval', 'condition', 'update', 'action', 'notify', 'stop']);
 
     const approval = steps[0];
     if (approval?.type !== 'approval') throw new Error('expected an approval stage');

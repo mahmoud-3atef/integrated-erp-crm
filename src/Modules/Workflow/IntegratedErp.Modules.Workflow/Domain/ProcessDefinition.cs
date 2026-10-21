@@ -22,6 +22,7 @@ public sealed record ProcessDefinition(ConditionGroup? StartCondition, IReadOnly
 [JsonDerivedType(typeof(ApprovalStep), "approval")]
 [JsonDerivedType(typeof(ConditionStep), "condition")]
 [JsonDerivedType(typeof(UpdateStep), "update")]
+[JsonDerivedType(typeof(ActionStep), "action")]
 [JsonDerivedType(typeof(NotifyStep), "notify")]
 [JsonDerivedType(typeof(StopStep), "stop")]
 public abstract record Step
@@ -120,6 +121,12 @@ public sealed record UpdateStep : Step
 
 public sealed record FieldChange(string FieldKey, string? Value = null, string? FromField = null);
 
+/// <summary>Runs one of the screen's declared actions (its module's code, chosen by name) at this place in the process.</summary>
+public sealed record ActionStep : Step
+{
+    public required string Action { get; init; }
+}
+
 public enum RecipientKind
 {
     Submitter,
@@ -202,6 +209,14 @@ public static class DefinitionRules
         }
 
         CheckList(definition.Steps, 1);
+
+        // The screen's required actions (e.g. a return order's housing) must be somewhere in the process.
+        var actions = Walk(definition.Steps, 1).OfType<ActionStep>().Select(a => a.Action).ToHashSet(StringComparer.Ordinal);
+        foreach (var required in screen.RecordActions.Where(a => a.Required && !actions.Contains(a.Key)))
+        {
+            errors.Add($"The process must run the action «{required.NameAr}» ({required.NameEn}).");
+        }
+
         return errors.Count == 0
             ? Result.Success()
             : Result.Failure(Error.Validation("process_invalid", string.Join(" ", errors.Take(5))));
@@ -290,6 +305,14 @@ public static class DefinitionRules
                         }
 
                         CheckList(c.Else, depth + 1);
+                        break;
+
+                    case ActionStep act:
+                        if (screen.RecordActions.All(a => a.Key != act.Action))
+                        {
+                            errors.Add($"\"{act.Action}\" is not an action of this screen.");
+                        }
+
                         break;
 
                     case UpdateStep u:

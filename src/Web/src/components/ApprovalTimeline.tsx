@@ -2,6 +2,7 @@ import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
@@ -29,6 +30,7 @@ const look: Record<string, { icon: ReactNode; color: string }> = {
   Reassigned: { icon: <SwapHorizIcon />, color: tokens.gold },
   ConditionEvaluated: { icon: <AccountTreeOutlinedIcon />, color: tokens.gold },
   RecordUpdated: { icon: <EditNoteOutlinedIcon />, color: tokens.teal },
+  ActionRun: { icon: <BoltOutlinedIcon />, color: '#7C3AED' },
   Notified: { icon: <NotificationsNoneOutlinedIcon />, color: tokens.info },
   Completed: { icon: <FlagOutlinedIcon />, color: tokens.navy800 },
   Canceled: { icon: <BlockIcon />, color: tokens.gray500 },

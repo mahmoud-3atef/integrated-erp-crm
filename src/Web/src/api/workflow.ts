@@ -30,6 +30,16 @@ export interface RecordRelation {
   fields: RecordField[];
 }
 
+/** A named piece of the module's own work a process runs at its place («تنفيذ إجراء»); a required one must be in the process. */
+export interface RecordAction {
+  key: string;
+  nameAr: string;
+  nameEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
+  required: boolean;
+}
+
 export interface Screen {
   code: string;
   nameAr: string;
@@ -37,6 +47,7 @@ export interface Screen {
   linkTemplate: string;
   fields: RecordField[];
   relations: RecordRelation[] | null;
+  actions?: RecordAction[] | null;
 }
 
 // ---------------------------------------------------------------- Process definition (same JSON as the server)
@@ -107,6 +118,14 @@ export interface UpdateStep {
   changes: { fieldKey: string; value?: string | null; fromField?: string | null }[];
 }
 
+export interface ActionStep {
+  type: 'action';
+  id: string;
+  label?: string | null;
+  /** The key of one of the screen's actions. */
+  action: string;
+}
+
 export interface NotifyStep {
   type: 'notify';
   id: string;
@@ -125,7 +144,7 @@ export interface StopStep {
   outcome: 'Approved' | 'Rejected' | 'Canceled';
 }
 
-export type Step = ApprovalStep | ConditionStep | UpdateStep | NotifyStep | StopStep;
+export type Step = ApprovalStep | ConditionStep | UpdateStep | ActionStep | NotifyStep | StopStep;
 
 export interface ProcessDefinition {
   startCondition: ConditionGroup | null;

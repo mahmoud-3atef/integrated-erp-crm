@@ -410,6 +410,9 @@ public enum HistoryKind
     Delegated,
     ConditionEvaluated,
     RecordUpdated,
+
+    /// <summary>An «action» step ran the module's action on the record.</summary>
+    ActionRun,
     Notified,
     Completed,
     Canceled,
