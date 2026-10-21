@@ -39,7 +39,7 @@ internal static class AttendanceEndpoints
             .RequirePermission(AttendancePermissions.Manage, companyWide: true);
 
         group.MapPost("/months/{period}/reopen", async (string period, ReopenInput input, MonthClosing closing, CancellationToken ct) => ToHttp(await closing.ReopenAsync(period, input, ct).ConfigureAwait(false)))
-            .RequirePermission(AttendancePermissions.MonthClose, companyWide: true);
+            .RequirePermission(AttendancePermissions.MonthReopen, companyWide: true);
 
         group.MapGet("/months/{period}/overtime", async (string period, AttendanceQueries queries, CancellationToken ct) =>
                 await queries.OvertimeAsync(period, ct).ConfigureAwait(false) is { } list ? Results.Ok(list) : Results.NotFound())
@@ -52,6 +52,10 @@ internal static class AttendanceEndpoints
         group.MapPost("/overtime", async (OvertimeInput input, OvertimeService service, CancellationToken ct) => Saved(await service.RequestAsync(input, ct).ConfigureAwait(false)))
             .RequirePermission(AttendancePermissions.Manage, companyWide: true);
 
+        group.MapPut("/overtime/{id:guid}/amend", async (Guid id, OvertimeAmendInput input, OvertimeService service, CancellationToken ct) => ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(AttendancePermissions.OvertimeAmend, companyWide: true);
+        group.MapPost("/overtime/{id:guid}/cancel-approved", async (Guid id, ReopenInput input, OvertimeService service, CancellationToken ct) => ToHttp(await service.CancelApprovedAsync(id, input.Reason, ct).ConfigureAwait(false)))
+            .RequirePermission(AttendancePermissions.OvertimeCancelApproved, companyWide: true);
         group.MapPost("/overtime/{id:guid}/resubmit", async (Guid id, OvertimeInput input, OvertimeService service, CancellationToken ct) => Saved(await service.ResubmitAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(AttendancePermissions.Manage, companyWide: true);
 

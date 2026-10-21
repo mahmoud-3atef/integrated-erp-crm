@@ -216,7 +216,7 @@ export type LateFrom = 'GraceEnd' | 'ShiftStart';
 export type MinutesSource = 'Company' | 'Device' | 'Shift';
 export const minutesSources: MinutesSource[] = ['Company', 'Device', 'Shift'];
 
-export type OvertimeStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Approved';
+export type OvertimeStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Approved' | 'Cancelled';
 
 export interface Overtime {
   id: string;
@@ -233,6 +233,14 @@ export interface Overtime {
   decidedAt: string | null;
   lastComment: string | null;
   approval: ApprovalStatus | null;
+  /** Approved, its month open: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
 }
 
 export interface Assignment {
@@ -328,6 +336,8 @@ export const attendanceApi = {
   overtime: (id: string) => request<Overtime>('GET', `${base}/overtime/${id}`),
   requestOvertime: (input: { employeeId: string; date: string; minutes: number; reason: string }) => request<{ id: string }>('POST', `${base}/overtime`, input),
   resubmitOvertime: (id: string, input: { employeeId: string; date: string; minutes: number; reason: string }) => request<{ id: string }>('POST', `${base}/overtime/${id}/resubmit`, input),
+  amendOvertime: (id: string, input: { date: string; minutes: number; reason: string; amendReason: string }) => request<void>('PUT', `${base}/overtime/${id}/amend`, input),
+  cancelApprovedOvertime: (id: string, reason: string) => request<void>('POST', `${base}/overtime/${id}/cancel-approved`, { reason }),
 };
 
 /** "2026-09" for a date; the month before/after. */

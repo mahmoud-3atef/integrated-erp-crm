@@ -224,6 +224,9 @@ public enum OvertimeStatus
     Returned,
     Rejected,
     Approved,
+
+    /// <summary>Cancelled after its approval (its month still open).</summary>
+    Cancelled,
 }
 
 /// <summary>Overtime asked for one employee and day, counted once approved (factor 1.5 in the payroll by default).</summary>
@@ -303,5 +306,63 @@ public sealed class OvertimeRequest : ITenantOwned
         AwaitingApproval = false;
         LastComment = comment;
         DecidedAt = at;
+    }
+
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
+    /// <summary>Changed after its approval: the day, the minutes and the reason (with the reason for the change).</summary>
+    public Result Amend(DateOnly date, int minutes, string reason, string amendReason, string by, DateTimeOffset at)
+    {
+        if (Status != OvertimeStatus.Approved)
+        {
+            return Result.Failure(AttendanceErrors.OvertimeNotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(amendReason) || amendReason.Trim().Length > 500)
+        {
+            return Result.Failure(AttendanceErrors.AmendReason);
+        }
+
+        // The request's own checks; it stays approved.
+        var set = Set(date, minutes, reason);
+        if (set.IsFailure)
+        {
+            return set;
+        }
+
+        Status = OvertimeStatus.Approved;
+        AwaitingApproval = false;
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = amendReason.Trim();
+        return Result.Success();
+    }
+
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (Status != OvertimeStatus.Approved)
+        {
+            return Result.Failure(AttendanceErrors.OvertimeNotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(AttendanceErrors.AmendReason);
+        }
+
+        Status = OvertimeStatus.Cancelled;
+        LastComment = reason.Trim();
+        CanceledAt = at;
+        CanceledByName = by;
+        return Result.Success();
     }
 }

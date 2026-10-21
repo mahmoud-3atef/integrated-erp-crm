@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.Modules.Attendance.Domain;
 using IntegratedErp.Modules.Attendance.Infrastructure;
 using IntegratedErp.Modules.Organization.Contracts;
@@ -138,12 +139,19 @@ public sealed record OvertimeDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? DecidedAt,
     string? LastComment,
-    ApprovalStatusInfo? Approval);
+    ApprovalStatusInfo? Approval,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 public sealed record ExceptionDto(Guid EmployeeId, string EmployeeNo, string? NameAr, string NameEn, string? DepartmentAr, string? DepartmentEn, DateOnly Date, string Status, TimeOnly? In, TimeOnly? Out, string? DeviceStatus);
 
 /// <summary>The attendance month (per commercial registration or all), its employees, an employee's days, and the exceptions.</summary>
-internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals, IEnumerable<IApprovedLeaves> leaveSources, IEnumerable<IApprovedTimeOff> timeOffSources)
+internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory staff, ILegalEntityDirectory legalEntities, AttendanceSetup setup, IApprovalService approvals, IEnumerable<IApprovedLeaves> leaveSources, IEnumerable<IApprovedTimeOff> timeOffSources, IPermissionService permissions)
 {
     public async Task<(DateOnly From, DateOnly To)?> PeriodAsync(string period, CancellationToken cancellationToken)
     {
@@ -355,7 +363,17 @@ internal sealed class AttendanceQueries(AttendanceDbContext db, IStaffDirectory 
         }
 
         var approval = await approvals.StatusAsync(OvertimeAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        return new OvertimeDto(o.Id, o.RequestNo, o.EmployeeId, o.EmployeeName, o.Date, o.Minutes, o.Reason, o.Status.ToString(), o.AwaitingApproval, o.CreatedByName, o.CreatedAt, o.DecidedAt, o.LastComment, approval);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var open = o.Status == OvertimeStatus.Approved && !await MonthLock.LockedAsync(db, o.Date, cancellationToken).ConfigureAwait(false);
+        return new OvertimeDto(
+            o.Id, o.RequestNo, o.EmployeeId, o.EmployeeName, o.Date, o.Minutes, o.Reason, o.Status.ToString(), o.AwaitingApproval, o.CreatedByName, o.CreatedAt, o.DecidedAt, o.LastComment, approval,
+            CanAmend: open && granted.Has(AttendancePermissions.OvertimeAmend),
+            CanCancelApproved: open && granted.Has(AttendancePermissions.OvertimeCancelApproved),
+            AmendedAt: o.AmendedAt,
+            AmendedByName: o.AmendedByName,
+            AmendNote: o.AmendNote,
+            CanceledAt: o.CanceledAt,
+            CanceledByName: o.CanceledByName);
     }
 
     public async Task<string?> PeriodOfAsync(Guid monthId, CancellationToken cancellationToken) =>

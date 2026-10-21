@@ -1,5 +1,7 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreTimeOutlinedIcon from '@mui/icons-material/MoreTimeOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { Alert, Autocomplete, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
@@ -21,6 +23,7 @@ export const overtimeLook: Record<OvertimeStatus, { color: string; tint: string 
   Returned: { color: '#B45309', tint: '#FEF3C7' },
   Rejected: { color: '#B91C1C', tint: '#FEE2E2' },
   Approved: { color: hr.success, tint: '#D1FAE5' },
+  Cancelled: { color: '#B91C1C', tint: '#FEE2E2' },
 };
 
 export function OvertimeBadge({ status }: { status: OvertimeStatus }) {
@@ -28,8 +31,9 @@ export function OvertimeBadge({ status }: { status: OvertimeStatus }) {
   return <HrStatusBadge label={t(`overtime.status.${status}`)} {...overtimeLook[status]} />;
 }
 
-/** Requesting overtime (or sending a returned request again): employee, day, hours and the reason. */
-export function OvertimeDialog({ request, onClose, onSent }: { request?: Overtime; onClose: () => void; onSent: (id: string) => void }) {
+/** Requesting overtime, sending a returned request again, or (amend) changing an approved one with the reason. */
+export function OvertimeDialog({ request, amend = false, onClose, onSent }: { request?: Overtime; amend?: boolean; onClose: () => void; onSent: (id: string) => void }) {
+  const [amendReason, setAmendReason] = useState('');
   const { t, i18n } = useTranslation();
   const ar = i18n.language === 'ar';
   const [employee, setEmployee] = useState<{ id: string; nameAr: string; nameEn: string } | null>(request ? { id: request.employeeId, nameAr: request.employeeName, nameEn: request.employeeName } : null);
@@ -52,6 +56,11 @@ export function OvertimeDialog({ request, onClose, onSent }: { request?: Overtim
     setError(null);
     try {
       const input = { employeeId: employee.id, date: day, minutes, reason: reason.trim() };
+      if (request && amend) {
+        await attendanceApi.amendOvertime(request.id, { date: day, minutes, reason: reason.trim(), amendReason: amendReason.trim() });
+        onSent(request.id);
+        return;
+      }
       const r = request ? await attendanceApi.resubmitOvertime(request.id, input) : await attendanceApi.requestOvertime(input);
       onSent(r.id);
     } catch (failure) {
@@ -63,7 +72,7 @@ export function OvertimeDialog({ request, onClose, onSent }: { request?: Overtim
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="xs" fullWidth>
       <HrScope>
-        <DialogTitle sx={{ fontWeight: 700 }}>{request ? request.requestNo : t('overtime.new')}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{request ? (amend ? t('overtime.amend.title', { no: request.requestNo }) : request.requestNo) : t('overtime.new')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Autocomplete
             size="small"
@@ -83,13 +92,21 @@ export function OvertimeDialog({ request, onClose, onSent }: { request?: Overtim
           </Stack>
           <TextField size="small" required multiline minRows={2} label={t('overtime.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
           <Alert severity="info" sx={{ py: 0 }}>
-            {t('overtime.hint')}
+            {amend ? t('overtime.amend.hint') : t('overtime.hint')}
           </Alert>
+          {amend && (
+            <TextField size="small" required multiline minRows={2} label={t('overtime.amend.reason')} value={amendReason} onChange={(e) => setAmendReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          )}
           <ErrorMessage messageKey={error} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
-          <Button variant="contained" startIcon={<SendOutlinedIcon />} disabled={busy || !employee || !reason.trim() || !(minutes >= 15)} onClick={() => void send()}>
-            {t('overtime.send')}
+          <Button
+            variant="contained"
+            startIcon={amend ? <EditNoteOutlinedIcon /> : <SendOutlinedIcon />}
+            disabled={busy || !employee || !reason.trim() || !(minutes >= 15) || (amend && !amendReason.trim())}
+            onClick={() => void send()}
+          >
+            {amend ? t('overtime.amend.save') : t('overtime.send')}
           </Button>
           <Button disabled={busy} onClick={onClose}>
             {t('common.cancel')}
@@ -154,6 +171,8 @@ export function OvertimePage() {
   const [o, setO] = useState<Overtime | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [amending, setAmending] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const approval = useRecordApproval(o?.approval?.instanceId);
   useCrumb(o?.requestNo, `/hr/overtime/${id}`);
   const reload = useCallback(async () => {
@@ -196,6 +215,16 @@ export function OvertimePage() {
                 {t('overtime.resubmit')}
               </Button>
             )}
+            {o.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('overtime.amend.action')}
+              </Button>
+            )}
+            {o.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelling('')}>
+                {t('overtime.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: (th) => (th.direction === 'rtl' ? 'scaleX(-1)' : 'none') }} />} onClick={() => navigate(-1)}>
               {t('common.back')}
             </Button>
@@ -212,6 +241,16 @@ export function OvertimePage() {
             void approval.reload();
           }}
         />
+      )}
+      {o.amendedAt && o.status === 'Approved' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('overtime.amend.amendedBy', { by: o.amendedByName, date: date(o.amendedAt) })} — {o.amendNote}
+        </Alert>
+      )}
+      {o.canceledAt && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('overtime.amend.canceledBy', { by: o.canceledByName, date: date(o.canceledAt) })}
+        </Alert>
       )}
       {o.lastComment && o.status !== 'Approved' && (
         <Alert severity={o.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: 1.5 }}>
@@ -235,6 +274,44 @@ export function OvertimePage() {
         ))}
         <Typography sx={{ fontSize: 12, color: hr.textMuted }}>{t('overtime.factor')}</Typography>
       </Box>
+      {amending && (
+        <OvertimeDialog
+          request={o}
+          amend
+          onClose={() => setAmending(false)}
+          onSent={() => {
+            setAmending(false);
+            void reload();
+          }}
+        />
+      )}
+      {cancelling !== null && (
+        <Dialog open onClose={() => setCancelling(null)} maxWidth="xs" fullWidth>
+          <HrScope>
+            <DialogTitle sx={{ fontWeight: 700 }}>{t('overtime.amend.cancelAction')}</DialogTitle>
+            <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+              <Typography sx={{ fontSize: 13 }}>{t('overtime.amend.cancelHint')}</Typography>
+              <TextField size="small" required multiline minRows={2} label={t('overtime.amend.reason')} value={cancelling} onChange={(e) => setCancelling(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
+              <Button
+                variant="contained"
+                color="error"
+                disabled={!cancelling.trim()}
+                onClick={() =>
+                  void attendanceApi
+                    .cancelApprovedOvertime(o.id, cancelling.trim())
+                    .then(() => (setCancelling(null), reload()))
+                    .catch((f) => (setCancelling(null), setError(errorKey(f))))
+                }
+              >
+                {t('overtime.amend.cancelAction')}
+              </Button>
+              <Button onClick={() => setCancelling(null)}>{t('common.back')}</Button>
+            </DialogActions>
+          </HrScope>
+        </Dialog>
+      )}
       {editing && (
         <OvertimeDialog
           request={o}

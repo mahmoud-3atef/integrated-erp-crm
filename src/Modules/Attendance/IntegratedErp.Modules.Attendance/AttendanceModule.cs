@@ -54,6 +54,9 @@ internal static class AttendancePermissions
     public const string MonthReview = "attendance.month.review";
     public const string MonthClose = "attendance.month.close";
     public const string OvertimeApprove = "attendance.overtime.approve";
+    public const string OvertimeAmend = "attendance.overtime.amend";
+    public const string OvertimeCancelApproved = "attendance.overtime.cancel_approved";
+    public const string MonthReopen = "attendance.month.reopen";
 
     private const string GroupAr = "الحضور والانصراف";
     private const string GroupEn = "Attendance";
@@ -66,5 +69,8 @@ internal static class AttendancePermissions
         new(MonthReview, GroupAr, GroupEn, "مراجعة حضور الشهر قبل إقفاله", "Review the month's attendance before closing"),
         new(MonthClose, GroupAr, GroupEn, "إقفال حضور الشهر وإعادة فتحه", "Close the month's attendance and reopen it"),
         new(OvertimeApprove, GroupAr, GroupEn, "اعتماد طلبات العمل الإضافي", "Approve overtime requests"),
+        new(OvertimeAmend, GroupAr, GroupEn, "تعديل عمل إضافي معتمد (يومه ودقائقه)", "Change approved overtime (its day and minutes)"),
+        new(OvertimeCancelApproved, GroupAr, GroupEn, "إلغاء عمل إضافي معتمد", "Cancel approved overtime"),
+        new(MonthReopen, GroupAr, GroupEn, "إعادة فتح شهر حضور مُقفَل", "Reopen a closed attendance month"),
     ];
 }

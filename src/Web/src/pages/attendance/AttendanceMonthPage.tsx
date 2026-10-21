@@ -226,7 +226,7 @@ export function AttendanceMonthPage() {
                 </Button>
               </>
             )}
-            {month?.status === 'Closed' && can('attendance.month.close', true) && (
+            {month?.status === 'Closed' && can('attendance.month.reopen', true) && (
               <Button variant="outlined" startIcon={<LockOpenOutlinedIcon />} onClick={() => setClosing('reopen')}>
                 {t('attendance.close.reopen')}
               </Button>

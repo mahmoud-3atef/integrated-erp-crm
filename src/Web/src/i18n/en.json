@@ -577,7 +577,9 @@
     "validation_staff_action_amend_reason": "Give the reason (500 characters at most).",
     "conflict_staff_action_later": "Another action of the employee was applied after this one: cancel it first.",
     "conflict_staff_action_locked": "A payroll run (approved or in approval) or a settlement already used the employee's file from that day.",
-    "forbidden_staff_action_kind": "You do not have this permission for this kind of action."
+    "forbidden_staff_action_kind": "You do not have this permission for this kind of action.",
+    "conflict_attendance_overtime_not_amendable": "Only approved overtime can be changed or cancelled after its approval.",
+    "validation_attendance_amend_reason": "Give the reason (500 characters at most)."
   },
   "menu": {
     "label": "Main menu",
@@ -4040,12 +4042,24 @@
       "InApproval": "In approval",
       "Returned": "Returned",
       "Rejected": "Rejected",
-      "Approved": "Approved"
+      "Approved": "Approved",
+      "Cancelled": "Cancelled"
     },
     "cols": {
       "no": "Number",
       "status": "Status",
       "by": "Requested by"
+    },
+    "amend": {
+      "action": "Change after approval",
+      "cancelAction": "Cancel the approved overtime",
+      "title": "Change approved overtime {{no}}",
+      "hint": "It cannot change while the attendance month is in approval or closed. The change and its reason are recorded.",
+      "reason": "Reason for the change or cancellation",
+      "save": "Save the change",
+      "cancelHint": "Its minutes no longer count in the attendance month. It cannot be cancelled while the month is in approval or closed.",
+      "amendedBy": "Changed after approval by {{by}} on {{date}}",
+      "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
     }
   },
   "leave": {

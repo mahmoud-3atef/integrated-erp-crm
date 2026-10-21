@@ -111,6 +111,14 @@ public sealed class AttendanceTests(TestDatabase database)
             Assert.Equal("Closed", (await scope3.ServiceProvider.GetRequiredService<AttendanceQueries>().MonthAsync("2026-09", null, default))!.Status);
             Assert.True((await scope3.ServiceProvider.GetRequiredService<MonthClosing>().ReopenAsync("2026-09", new ReopenInput("تصحيح بصمة متأخر"), default)).IsSuccess);
             Assert.Null(await scope3.ServiceProvider.GetRequiredService<IAttendanceMonths>().ClosedAsync("2026-09", default));
+
+            // The month open again: the approved overtime changed (three hours), then cancelled.
+            var ot = scope3.ServiceProvider.GetRequiredService<OvertimeService>();
+            var otId = (await scope3.ServiceProvider.GetRequiredService<AttendanceQueries>().OvertimeAsync("2026-09", default))!.Single().Id;
+            Assert.True((await ot.AmendAsync(otId, new OvertimeAmendInput(new DateOnly(2026, 9, 7), 180, "إقفال الربع الثالث", "امتد العمل ساعة"), default)).IsSuccess);
+            Assert.Equal(180, (await scope3.ServiceProvider.GetRequiredService<AttendanceQueries>().OvertimeRequestAsync(otId, default))!.Minutes);
+            Assert.True((await ot.CancelApprovedAsync(otId, "لم يُعمل", default)).IsSuccess);
+            Assert.Equal("Cancelled", (await scope3.ServiceProvider.GetRequiredService<AttendanceQueries>().OvertimeRequestAsync(otId, default))!.Status);
         }
 
         // Matching by the fingerprint number instead: a number taken by another is refused.

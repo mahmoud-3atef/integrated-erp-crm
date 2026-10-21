@@ -525,5 +525,7 @@ public static class AttendanceErrors
     public static readonly Error MonthEmpty = Error.Validation("attendance_month_empty", "The month has no attendance to close.");
     public static readonly Error Reason = Error.Validation("attendance_reason", "Give the reason (500 characters at most).");
     public static readonly Error Overtime = Error.Validation("attendance_overtime_fields", "Overtime is 15 minutes to 12 hours, with its reason.");
+    public static readonly Error OvertimeNotAmendable = Error.Conflict("attendance_overtime_not_amendable", "Only an approved overtime request can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("attendance_amend_reason", "Give the reason (500 characters at most).");
     public static readonly Error OvertimeNotReturned = Error.Conflict("attendance_overtime_not_returned", "Only a returned request can be sent again.");
 }

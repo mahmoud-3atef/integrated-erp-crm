@@ -17,6 +17,9 @@ public sealed record ReopenInput(string Reason);
 
 public sealed record OvertimeInput(Guid EmployeeId, DateOnly Date, int Minutes, string Reason);
 
+/// <summary>What may change on approved overtime: its day, minutes and reason, with the reason for the change.</summary>
+public sealed record OvertimeAmendInput(DateOnly Date, int Minutes, string Reason, string AmendReason);
+
 /// <summary>Whether a day can still change: not once its month is in approval or closed.</summary>
 internal static class MonthLock
 {
@@ -186,6 +189,59 @@ internal sealed class OvertimeService(AttendanceDbContext db, IStaffDirectory st
         return await SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Changes approved overtime (its own permission and a reason). Not while the month of its old or new day is in approval or closed.</summary>
+    public async Task<Result> AmendAsync(Guid id, OvertimeAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (await db.Overtime.FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(AttendanceErrors.OvertimeNotFound);
+        }
+
+        if (await MonthLock.LockedAsync(db, request.Date, cancellationToken).ConfigureAwait(false) || await MonthLock.LockedAsync(db, input.Date, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(AttendanceErrors.MonthLocked);
+        }
+
+        var member = (await staff.MembersAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefault(m => m.Id == request.EmployeeId);
+        if (member is null || !AttendanceBook.Employed(member, input.Date))
+        {
+            return Result.Failure(AttendanceErrors.Overtime);
+        }
+
+        var amended = request.Amend(input.Date, input.Minutes, input.Reason, input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Cancels approved overtime (its own permission and a reason). Not while its month is in approval or closed.</summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        if (await db.Overtime.FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return Result.Failure(AttendanceErrors.OvertimeNotFound);
+        }
+
+        if (await MonthLock.LockedAsync(db, request.Date, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(AttendanceErrors.MonthLocked);
+        }
+
+        var canceled = request.CancelApproved(reason ?? string.Empty, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     private async Task<Result<Guid>> SendAsync(OvertimeRequest request, CancellationToken cancellationToken)
     {
         var legalEntity = (await staff.MembersAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefault(m => m.Id == request.EmployeeId)?.LegalEntityId;
@@ -206,6 +262,9 @@ internal sealed class MonthAdapter(AttendanceDbContext db, IClock clock) : IAppr
 {
     public const string ScreenCode = "attendance.month";
 
+    /// <summary>The month's code: it is closed with its figures (the payroll reads them).</summary>
+    public const string CloseMonth = "close_month";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static readonly string DefaultDefinition = JsonSerializer.Serialize(
@@ -225,6 +284,10 @@ internal sealed class MonthAdapter(AttendanceDbContext db, IClock clock) : IAppr
                     type = "approval", id = "close", label = "إقفال الموارد البشرية",
                     nameAr = "إقفال الموارد البشرية", nameEn = "HR closing",
                     assignees = new[] { new { kind = "Permission", permission = AttendancePermissions.MonthClose } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "close-month", label = "إقفال شهر الحضور", action = CloseMonth },
+                    },
                 },
             },
         },
@@ -240,7 +303,17 @@ internal sealed class MonthAdapter(AttendanceDbContext db, IClock clock) : IAppr
             new("employees", "عدد الموظفين", "Employees", RecordFieldType.Number, Updatable: false),
             new("deduction_days", "أيام الخصم", "Deduction days", RecordFieldType.Number, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد إقفال الحضور", "Attendance closing approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد إقفال الحضور", "Attendance closing approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                CloseMonth,
+                "إقفال شهر الحضور",
+                "Close the attendance month",
+                "يُقفل الشهر بأرقامه المجمّدة (أيام الخصم، والإضافي، والإجازات) فيقرؤها مسير الرواتب، ولا تتغير أيامه بعد ذلك إلا بإعادة فتحه.",
+                "The month is closed with its frozen figures (deduction days, overtime, leave) for the payroll to read; its days no longer change unless it is reopened.",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -275,6 +348,35 @@ internal sealed class MonthAdapter(AttendanceDbContext db, IClock clock) : IAppr
         return Result.Success();
     }
 
+    /// <summary>«Close the month» (the process runs it, by default on the HR closing). Run again on a closed month, it does nothing.</summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != CloseMonth)
+        {
+            return RecordActionResult.Failed($"An attendance month has no action \"{action}\".");
+        }
+
+        if (await db.Months.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { } month)
+        {
+            return RecordActionResult.Failed("The attendance month no longer exists.");
+        }
+
+        if (month.Status == MonthStatus.Closed)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (month.Status != MonthStatus.InApproval)
+        {
+            return RecordActionResult.Failed("The attendance month is not in approval.");
+        }
+
+        month.Close(clock.UtcNow, null);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>The approval ended: not approved, the month is open again; approved, its code already closed it.</summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         if (await db.Months.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: MonthStatus.InApproval } month)
@@ -282,15 +384,7 @@ internal sealed class MonthAdapter(AttendanceDbContext db, IClock clock) : IAppr
             return;
         }
 
-        if (end == ApprovalEnd.Approved)
-        {
-            month.Close(clock.UtcNow, comment);
-        }
-        else
-        {
-            month.BackToOpen(comment);
-        }
-
+        month.BackToOpen(end == ApprovalEnd.Approved ? "انتهى الاعتماد دون إقفال الشهر؛ أعد إرساله." : comment);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
@@ -299,6 +393,9 @@ internal sealed class MonthAdapter(AttendanceDbContext db, IClock clock) : IAppr
 internal sealed class OvertimeAdapter(AttendanceDbContext db, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "attendance.overtime";
+
+    /// <summary>The request's code: the overtime is approved (counted in its month).</summary>
+    public const string ApproveOvertime = "approve_overtime";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -313,6 +410,10 @@ internal sealed class OvertimeAdapter(AttendanceDbContext db, IClock clock) : IA
                     type = "approval", id = "approve", label = "اعتماد الإضافي",
                     nameAr = "اعتماد الإضافي", nameEn = "Overtime approval",
                     assignees = new[] { new { kind = "Permission", permission = AttendancePermissions.OvertimeApprove } }, rule = "Any",
+                    onApprove = new object[]
+                    {
+                        new { type = "action", id = "approve-overtime", label = "اعتماد العمل الإضافي", action = ApproveOvertime },
+                    },
                 },
             },
         },
@@ -328,7 +429,17 @@ internal sealed class OvertimeAdapter(AttendanceDbContext db, IClock clock) : IA
             new("date", "التاريخ", "Date", RecordFieldType.Date, Updatable: false),
             new("hours", "الساعات", "Hours", RecordFieldType.Number, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد العمل الإضافي", "Overtime approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد العمل الإضافي", "Overtime approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                ApproveOvertime,
+                "اعتماد العمل الإضافي",
+                "Approve the overtime",
+                "تصبح حالة الطلب «معتمد»، وتُحسب دقائقه في شهر الحضور فيدفعها مسير الرواتب (بمعامل 1.5 افتراضيًا).",
+                "The request is «approved», and its minutes count in the attendance month for the payroll to pay (factor 1.5 by default).",
+                Required: true),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -358,6 +469,35 @@ internal sealed class OvertimeAdapter(AttendanceDbContext db, IClock clock) : IA
         return Result.Success();
     }
 
+    /// <summary>«Approve the overtime» (the process runs it, by default on its approval). Run again on an approved one, it does nothing.</summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != ApproveOvertime)
+        {
+            return RecordActionResult.Failed($"An overtime request has no action \"{action}\".");
+        }
+
+        if (await db.Overtime.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { } request)
+        {
+            return RecordActionResult.Failed("The overtime request no longer exists.");
+        }
+
+        if (request.Status == OvertimeStatus.Approved)
+        {
+            return RecordActionResult.Done;
+        }
+
+        if (request.Status != OvertimeStatus.InApproval)
+        {
+            return RecordActionResult.Failed("The overtime request is not in approval.");
+        }
+
+        request.Ended(OvertimeStatus.Approved, null, clock.UtcNow);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RecordActionResult.Done;
+    }
+
+    /// <summary>The approval ended: a rejection or return sets the state; approved, its code already approved it.</summary>
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         if (await db.Overtime.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false) is not { Status: OvertimeStatus.InApproval } request)
@@ -365,7 +505,10 @@ internal sealed class OvertimeAdapter(AttendanceDbContext db, IClock clock) : IA
             return;
         }
 
-        request.Ended(end switch { ApprovalEnd.Approved => OvertimeStatus.Approved, ApprovalEnd.Rejected => OvertimeStatus.Rejected, _ => OvertimeStatus.Returned }, comment, clock.UtcNow);
+        request.Ended(
+            end == ApprovalEnd.Rejected ? OvertimeStatus.Rejected : OvertimeStatus.Returned,
+            end == ApprovalEnd.Approved ? "انتهى الاعتماد دون اعتماد الإضافي؛ أعد إرسال الطلب." : comment,
+            clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

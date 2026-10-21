@@ -89,6 +89,9 @@ internal sealed class OvertimeRequestConfiguration : IEntityTypeConfiguration<Ov
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(o => o.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(o => o.LastComment).HasMaxLength(2000);
+        builder.Property(o => o.AmendedByName).HasMaxLength(200);
+        builder.Property(o => o.AmendNote).HasMaxLength(500);
+        builder.Property(o => o.CanceledByName).HasMaxLength(200);
         builder.HasIndex(o => new { o.TenantId, o.RequestNo }).IsUnique();
         builder.HasIndex(o => new { o.TenantId, o.EmployeeId, o.Date });
     }
