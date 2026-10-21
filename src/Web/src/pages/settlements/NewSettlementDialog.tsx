@@ -8,9 +8,9 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { usePeople, type Person } from '../deductions/advances';
 
 /**
- * A new settlement. The company's staff: a vacation one for an approved annual leave without one, or an end-of-service
- * one with the reason and the last day. A worker on the company's sponsorship (4.11ب): the leave's days, or the end
- * with its reason and last day. A fixed-term contract's end is asked for article 77. The server calculates it.
+ * A new settlement. A vacation one is for an approved leave without one: the staff's leave request, or a sponsored
+ * worker's vacation departure (4.11ب). An end-of-service one is for an employee or a sponsored worker, with the reason
+ * and the last day (and a fixed-term contract's end, for article 77). The server calculates it.
  */
 export function NewSettlementDialog({ onClose, onCreated, employee, party: initialParty = 'Staff' }: { onClose: () => void; onCreated: (id: string) => void; employee?: Person; party?: SettlementParty }) {
   const { t, i18n } = useTranslation();
@@ -19,14 +19,13 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
   const [party, setParty] = useState<SettlementParty>(employee ? 'Staff' : initialParty);
   const [kind, setKind] = useState<SettlementKind>(employee ? 'EndOfService' : 'Vacation');
   const [leaves, setLeaves] = useState<SettlementLeave[] | null>(null);
+  const [leavesOf, setLeavesOf] = useState<SettlementParty | null>(null);
   const [leave, setLeave] = useState<SettlementLeave | null>(null);
   const [search, setSearch] = useState('');
   const people = usePeople(search, party === 'Staff' && kind === 'EndOfService' && !employee);
   const [who, setWho] = useState<Person | null>(employee ?? null);
   const [workers, setWorkers] = useState<SettlementWorker[]>([]);
   const [worker, setWorker] = useState<SettlementWorker | null>(null);
-  const [leaveFrom, setLeaveFrom] = useState('');
-  const [leaveTo, setLeaveTo] = useState('');
   const [reason, setReason] = useState<EndReason>('ContractEnd');
   const [lastDay, setLastDay] = useState('');
   const [term, setTerm] = useState<'Indefinite' | 'Fixed'>('Indefinite');
@@ -35,8 +34,12 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (party === 'Staff' && kind === 'Vacation' && leaves === null) settlementsApi.leaves().then(setLeaves).catch((f: unknown) => setError(errorKey(f)));
-  }, [party, kind, leaves]);
+    if (kind !== 'Vacation' || leavesOf === party) return;
+    setLeavesOf(party);
+    setLeaves(null);
+    setLeave(null);
+    (party === 'Worker' ? settlementsApi.workerLeaves() : settlementsApi.leaves()).then(setLeaves).catch((f: unknown) => setError(errorKey(f)));
+  }, [party, kind, leavesOf]);
   useEffect(() => {
     if (party !== 'Worker' || search.trim().length < 2) return;
     const timer = setTimeout(() => settlementsApi.workers(search).then(setWorkers).catch(() => setWorkers([])), 250);
@@ -44,21 +47,16 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
   }, [party, search]);
 
   const endReady = Boolean(lastDay && (term === 'Indefinite' || ends));
-  const ready =
-    party === 'Staff'
-      ? kind === 'Vacation' ? Boolean(leave) : Boolean(who) && endReady
-      : Boolean(worker) && (kind === 'Vacation' ? Boolean(leaveFrom && leaveTo && leaveTo >= leaveFrom) : endReady);
+  const ready = kind === 'Vacation' ? Boolean(leave) : Boolean(party === 'Worker' ? worker : who) && endReady;
   const create = async () => {
     setBusy(true);
     setError(null);
     const end = { reason, lastDay, term, contractEndsOn: term === 'Fixed' ? ends : null };
     try {
       const made =
-        party === 'Worker'
-          ? await settlementsApi.create(kind === 'Vacation' ? { kind, party, employeeId: worker!.id, leaveFrom, leaveTo } : { kind, party, employeeId: worker!.id, ...end })
-          : kind === 'Vacation'
-            ? await settlementsApi.create({ kind, leaveRequestId: leave!.requestId })
-            : await settlementsApi.create({ kind, employeeId: who!.id, ...end });
+        kind === 'Vacation'
+          ? await settlementsApi.create({ kind, party, leaveRequestId: leave!.requestId })
+          : await settlementsApi.create({ kind, party, employeeId: (party === 'Worker' ? worker : who)!.id, ...end });
       onCreated(made.id);
     } catch (f) {
       setError(errorKey(f));
@@ -86,7 +84,7 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
               </ToggleButtonGroup>
             </>
           )}
-          {party === 'Worker' ? (
+          {party === 'Worker' && kind === 'EndOfService' ? (
             <>
               <Typography sx={{ fontSize: 12.5, color: hr.textMuted }}>{t('settlements.create.workerHint')}</Typography>
               <Autocomplete
@@ -117,7 +115,7 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
             </>
           ) : kind === 'Vacation' ? (
             <>
-              <Typography sx={{ fontSize: 12.5, color: hr.textMuted }}>{t('settlements.create.vacationHint')}</Typography>
+              <Typography sx={{ fontSize: 12.5, color: hr.textMuted }}>{t(party === 'Worker' ? 'settlements.create.workerVacationHint' : 'settlements.create.vacationHint')}</Typography>
               <Autocomplete
                 size="small"
                 loading={leaves === null}
@@ -126,7 +124,7 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
                 onChange={(_, v) => setLeave(v)}
                 getOptionLabel={(o) => `${o.name} · ${o.requestNo}`}
                 isOptionEqualToValue={(x, y) => x.requestId === y.requestId}
-                noOptionsText={t('settlements.create.noLeaves')}
+                noOptionsText={t(party === 'Worker' ? 'settlements.create.noWorkerLeaves' : 'settlements.create.noLeaves')}
                 renderOption={(props, o) => (
                   <Box component="li" {...props} key={o.requestId}>
                     <Box>
@@ -139,7 +137,7 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
                     </Box>
                   </Box>
                 )}
-                renderInput={(params) => <TextField {...params} required label={t('settlements.create.leave')} />}
+                renderInput={(params) => <TextField {...params} required label={t(party === 'Worker' ? 'settlements.create.workerLeave' : 'settlements.create.leave')} />}
               />
             </>
           ) : (
@@ -155,12 +153,6 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
               filterOptions={(x) => x}
               renderInput={(params) => <TextField {...params} required label={t('settlements.create.employee')} />}
             />
-          )}
-          {party === 'Worker' && kind === 'Vacation' && (
-            <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
-              {dateField(t('settlements.create.leaveFrom'), leaveFrom, setLeaveFrom)}
-              {dateField(t('settlements.create.leaveTo'), leaveTo, setLeaveTo)}
-            </Stack>
           )}
           {kind === 'EndOfService' && (
             <>

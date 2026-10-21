@@ -169,7 +169,19 @@ export function SettlementPage() {
           <GlassFact label={t('settlements.wage')}>
             <Money value={d.wage} muted />
           </GlassFact>
-          <GlassFact label={t(end ? 'settlements.leaveBalance' : 'settlements.deductionMonth')}>{end ? t('settlements.daysN', { count: d.leaveDays }) : d.period}</GlassFact>
+          {end ? (
+            <GlassFact label={t('settlements.leaveBalance')}>{t('settlements.daysN', { count: d.leaveDays })}</GlassFact>
+          ) : (
+            <GlassFact label={t(worker ? 'settlements.workerLeaveRequest' : 'settlements.leaveRequest')}>
+              {d.leaveRequestId ? (
+                <RouterLink to={worker ? `/operations/movements/${d.leaveRequestId}` : `/hr/leave/${d.leaveRequestId}`} style={{ color: '#fff' }}>
+                  <bdi>{d.leaveRequestNo}</bdi>
+                </RouterLink>
+              ) : (
+                '—'
+              )}
+            </GlassFact>
+          )}
           <GlassFact label={t('settlements.unpaidFrom')}>{d.unpaidDays > 0 ? date(d.unpaidFrom) : t('settlements.allPaid')}</GlassFact>
         </GlassRow>
       </GlassHero>

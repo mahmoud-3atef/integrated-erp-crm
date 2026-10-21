@@ -5672,8 +5672,9 @@
       "workerHint": "Only a worker on the sponsorship of one of the company's registrations (a supplier pays its workers). Only approved work days are paid; housing days are not.",
       "worker": "Worker",
       "noWorkers": "Type the worker's number, name or iqama (company workers only)",
-      "leaveFrom": "First leave day",
-      "leaveTo": "Last leave day"
+      "workerVacationHint": "Choose an approved vacation departure of a sponsored worker without a settlement. The settlement is paid before travelling.",
+      "workerLeave": "Approved leave request (vacation departure)",
+      "noWorkerLeaves": "No approved vacation departure without a settlement for the company workers"
     },
     "daysN": "{{count}} days",
     "itemsN": "{{count}} items",
@@ -5777,6 +5778,8 @@
     "financeSign": "Finance",
     "worker": "Worker",
     "professionProject": "Profession / project",
-    "workerSign": "Worker's signature"
+    "workerSign": "Worker's signature",
+    "leaveRequest": "Leave request",
+    "workerLeaveRequest": "Leave request (vacation departure)"
   }
 }

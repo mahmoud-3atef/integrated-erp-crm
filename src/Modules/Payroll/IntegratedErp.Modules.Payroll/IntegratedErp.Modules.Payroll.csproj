@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\Documents\IntegratedErp.Modules.Documents.Contracts\IntegratedErp.Modules.Documents.Contracts.csproj" />
     <ProjectReference Include="..\..\Leave\IntegratedErp.Modules.Leave.Contracts\IntegratedErp.Modules.Leave.Contracts.csproj" />
     <ProjectReference Include="..\..\Staff\IntegratedErp.Modules.Staff.Contracts\IntegratedErp.Modules.Staff.Contracts.csproj" />
+    <ProjectReference Include="..\..\Operations\IntegratedErp.Modules.Operations.Contracts\IntegratedErp.Modules.Operations.Contracts.csproj" />
     <ProjectReference Include="..\..\Organization\IntegratedErp.Modules.Organization.Contracts\IntegratedErp.Modules.Organization.Contracts.csproj" />
     <ProjectReference Include="..\..\Workflow\IntegratedErp.Modules.Workflow.Contracts\IntegratedErp.Modules.Workflow.Contracts.csproj" />
     <ProjectReference Include="..\..\Workforce\IntegratedErp.Modules.Workforce.Contracts\IntegratedErp.Modules.Workforce.Contracts.csproj" />

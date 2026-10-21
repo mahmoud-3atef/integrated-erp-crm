@@ -259,7 +259,10 @@ public sealed class Settlement : ITenantOwned
         return Result.Success();
     }
 
-    /// <summary>The annual leave it pays in advance: the day before it is the last day of pay it covers.</summary>
+    /// <summary>
+    /// The annual leave it pays in advance (the staff's approved leave request, or a worker's approved vacation departure):
+    /// the day before it is the last day of pay it covers.
+    /// </summary>
     public Result SetLeave(Guid requestId, string requestNo, DateOnly from, DateOnly to)
     {
         if (!IsEditable)
@@ -274,25 +277,6 @@ public sealed class Settlement : ITenantOwned
 
         LeaveRequestId = requestId;
         LeaveRequestNo = requestNo;
-        LeaveFrom = from;
-        LeaveTo = to;
-        LastDay = from.AddDays(-1);
-        return Result.Success();
-    }
-
-    /// <summary>A worker's annual leave it pays in advance (workers' leaves are not requested in this system yet).</summary>
-    public Result SetWorkerLeave(DateOnly from, DateOnly to)
-    {
-        if (!IsEditable)
-        {
-            return Result.Failure(SettlementErrors.NotEditable);
-        }
-
-        if (Kind != SettlementKind.Vacation || Party != SettlementParty.Worker || to < from || to.DayNumber - from.DayNumber >= 120)
-        {
-            return Result.Failure(SettlementErrors.Leave);
-        }
-
         LeaveFrom = from;
         LeaveTo = to;
         LastDay = from.AddDays(-1);
@@ -355,7 +339,7 @@ public sealed class Settlement : ITenantOwned
             return Result.Failure(SettlementErrors.NotEditable);
         }
 
-        if (Wage <= 0 || (Kind == SettlementKind.EndOfService && Reason is null) || (Kind == SettlementKind.Vacation && LeaveFrom is null))
+        if (Wage <= 0 || (Kind == SettlementKind.EndOfService && Reason is null) || (Kind == SettlementKind.Vacation && LeaveRequestId is null))
         {
             return Result.Failure(SettlementErrors.Incomplete);
         }
@@ -498,7 +482,7 @@ public static class SettlementErrors
     public static readonly Error NotFound = Error.NotFound("settlement", "Settlement not found.");
     public static readonly Error NotEditable = Error.Conflict("settlement_not_editable", "Only a draft or returned settlement can be changed.");
     public static readonly Error End = Error.Validation("settlement_end", "Choose the reason and the last day (on or after the joining date); a fixed-term contract needs its end.");
-    public static readonly Error Leave = Error.Validation("settlement_leave", "Choose an approved annual leave of the employee.");
+    public static readonly Error Leave = Error.Validation("settlement_leave", "Choose an approved annual leave (a worker's: an approved vacation departure the company pays).");
     public static readonly Error Manual = Error.Validation("settlement_manual", "The amounts are zero or more; the notes 2,000 characters at most.");
     public static readonly Error Incomplete = Error.Validation("settlement_incomplete", "The settlement needs the salary, and the reason or the leave, before it is sent.");
     public static readonly Error NotPayable = Error.Conflict("settlement_not_payable", "Only an approved settlement is paid.");

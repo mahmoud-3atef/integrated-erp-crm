@@ -175,6 +175,8 @@ export const settlementsApi = {
   },
   get: (id: string) => request<SettlementDetail>('GET', `${base}/${id}`),
   leaves: () => request<SettlementLeave[]>('GET', `${base}/leaves`),
+  /** The workers' approved vacation departures (VD-) without a settlement. */
+  workerLeaves: () => request<SettlementLeave[]>('GET', `${base}/worker-leaves`),
   workers: (search: string) => request<SettlementWorker[]>('GET', `${base}/workers?search=${encodeURIComponent(search)}`),
   create: (input: {
     kind: SettlementKind;
@@ -185,8 +187,6 @@ export const settlementsApi = {
     lastDay?: string;
     term?: string;
     contractEndsOn?: string | null;
-    leaveFrom?: string;
-    leaveTo?: string;
   }) =>
     request<{ id: string }>('POST', base, input),
   update: (id: string, input: SettlementEdit) => request<void>('PUT', `${base}/${id}`, input),

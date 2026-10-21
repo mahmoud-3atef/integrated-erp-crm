@@ -5,6 +5,7 @@ using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Billing.Contracts;
 using IntegratedErp.Modules.Deductions.Contracts;
 using IntegratedErp.Modules.Leave.Contracts;
+using IntegratedErp.Modules.Operations.Contracts;
 using IntegratedErp.Modules.Payroll.Domain;
 using IntegratedErp.Modules.Payroll.Infrastructure;
 using IntegratedErp.Modules.Staff.Contracts;
@@ -15,13 +16,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IntegratedErp.Modules.Payroll.Application;
 
-/// <param name="LeaveRequestId">A staff vacation settlement: the approved annual leave it pays.</param>
+/// <param name="LeaveRequestId">A vacation settlement: the approved annual leave it pays (a worker's: the approved vacation departure).</param>
 /// <param name="EmployeeId">A staff end-of-service settlement: the employee; a worker's settlement: the worker.</param>
 /// <param name="Party">Staff (the default) or Worker.</param>
-/// <param name="LeaveFrom">A worker's vacation settlement: the leave's first and last days.</param>
 public sealed record CreateSettlementInput(
-    string Kind, Guid? LeaveRequestId, Guid? EmployeeId, string? Reason, DateOnly? LastDay, string? Term, DateOnly? ContractEndsOn,
-    string? Party = null, DateOnly? LeaveFrom = null, DateOnly? LeaveTo = null);
+    string Kind, Guid? LeaveRequestId, Guid? EmployeeId, string? Reason, DateOnly? LastDay, string? Term, DateOnly? ContractEndsOn, string? Party = null);
 
 /// <summary>A worker on the company's sponsorship, for the «new settlement» dialog.</summary>
 public sealed record SettlementWorkerDto(Guid Id, string WorkerNo, string Name, string? Sponsor, string Placement, string? ProjectName);
@@ -50,6 +49,7 @@ internal sealed class SettlementService(
     IWorkforceDirectory workforce,
     ITimesheetPayroll timesheets,
     IPeriodLedger ledger,
+    IWorkerVacations vacations,
     IApprovalService approvals,
     NumberSequenceService numbering,
     ICurrentUser user,
@@ -77,6 +77,23 @@ internal sealed class SettlementService(
         return approved.Where(l => !taken.Contains(l.RequestId) && people.ContainsKey(l.EmployeeId))
             .Select(l => new SettlementLeaveDto(l.RequestId, l.RequestNo, l.EmployeeId, people[l.EmployeeId].EmployeeNo, people[l.EmployeeId].Name, l.From, l.To, LeaveDays(l)))
             .OrderBy(l => l.From).ToList();
+    }
+
+    /// <summary>
+    /// The workers' approved leaves (vacation departures from 60 days ago on, paid by the company) with no open
+    /// settlement, of the workers on the company's sponsorship.
+    /// </summary>
+    public async Task<IReadOnlyList<SettlementLeaveDto>> WorkerLeavesAsync(CancellationToken cancellationToken)
+    {
+        var approved = (await vacations.ApprovedAsync(clock.Today.AddDays(-60), null, cancellationToken).ConfigureAwait(false)).Where(v => !v.OnClient).ToList();
+        var taken = await db.Settlements.AsNoTracking().Where(s => s.LeaveRequestId != null && s.Status != SettlementStatus.Cancelled)
+            .Select(s => s.LeaveRequestId!.Value).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var sponsors = await SponsorsAsync(cancellationToken).ConfigureAwait(false);
+        var ours = (await workerSalaries.SalariesAsync(approved.Select(v => v.WorkerId).Distinct().ToList(), cancellationToken).ConfigureAwait(false))
+            .Where(w => w.Sponsor is { } sp && sponsors.ContainsKey(sp.Trim())).Select(w => w.WorkerId).ToHashSet();
+        return approved.Where(v => !taken.Contains(v.MovementId) && ours.Contains(v.WorkerId))
+            .Select(v => new SettlementLeaveDto(v.MovementId, v.MovementNo, v.WorkerId, v.WorkerNo, v.Name, v.LeavesOn, v.ExpectedReturnOn.AddDays(-1), v.ExpectedReturnOn.DayNumber - v.LeavesOn.DayNumber))
+            .ToList();
     }
 
     /// <summary>The workers on the sponsorship of one of the company's registrations matching a search.</summary>
@@ -387,7 +404,24 @@ internal sealed class SettlementService(
     /// <summary>A worker's settlement (4.11ب): only a worker on the sponsorship of one of the company's registrations.</summary>
     private async Task<Result<Guid>> CreateWorkerAsync(SettlementKind kind, CreateSettlementInput input, CancellationToken cancellationToken)
     {
-        if (input.EmployeeId is not { } workerId || await workerSalaries.ServiceAsync(workerId, cancellationToken).ConfigureAwait(false) is not { } w)
+        // A vacation settlement pays an approved leave (a vacation departure the company pays): its worker is the one settled.
+        WorkerVacation? vacation = null;
+        if (kind == SettlementKind.Vacation)
+        {
+            vacation = (await vacations.ApprovedAsync(clock.Today.AddDays(-60), null, cancellationToken).ConfigureAwait(false))
+                .FirstOrDefault(v => v.MovementId == input.LeaveRequestId && !v.OnClient);
+            if (vacation is null)
+            {
+                return Result.Failure<Guid>(SettlementErrors.Leave);
+            }
+
+            if (await db.Settlements.AnyAsync(s => s.LeaveRequestId == vacation.MovementId && s.Status != SettlementStatus.Cancelled, cancellationToken).ConfigureAwait(false))
+            {
+                return Result.Failure<Guid>(SettlementErrors.Exists);
+            }
+        }
+
+        if ((vacation?.WorkerId ?? input.EmployeeId) is not { } workerId || await workerSalaries.ServiceAsync(workerId, cancellationToken).ConfigureAwait(false) is not { } w)
         {
             return Result.Failure<Guid>(SettlementErrors.Employee);
         }
@@ -403,19 +437,7 @@ internal sealed class SettlementService(
             return Result.Failure<Guid>(SettlementErrors.Employee);
         }
 
-        if (kind == SettlementKind.Vacation)
-        {
-            if (input.LeaveFrom is not { } from || input.LeaveTo is null)
-            {
-                return Result.Failure<Guid>(SettlementErrors.Leave);
-            }
-
-            if (await db.Settlements.AnyAsync(s => s.PersonId == workerId && s.Kind == SettlementKind.Vacation && s.LeaveFrom == from && s.Status != SettlementStatus.Cancelled, cancellationToken).ConfigureAwait(false))
-            {
-                return Result.Failure<Guid>(SettlementErrors.Exists);
-            }
-        }
-        else
+        if (kind == SettlementKind.EndOfService)
         {
             if (!Enum.TryParse<EndReason>(input.Reason, out _) || input.LastDay is null)
             {
@@ -428,15 +450,15 @@ internal sealed class SettlementService(
             }
         }
 
-        var on = input.LeaveFrom ?? input.LastDay!.Value;
+        var on = vacation?.LeavesOn ?? input.LastDay!.Value;
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var number = await numbering.NextNumberAsync(db, kind == SettlementKind.Vacation ? VacationSequence : FinalSequence, on, cancellationToken).ConfigureAwait(false);
         var settlement = Settlement.Create(
             number, kind, SettlementParty.Worker,
             new SettlementPerson(w.WorkerId, w.WorkerNo, w.Name, legalEntityId, w.ProjectName, w.ProjectName, w.ProfessionAr, w.ProfessionEn, started),
             user.DisplayName, clock.UtcNow);
-        var set = kind == SettlementKind.Vacation
-            ? settlement.SetWorkerLeave(input.LeaveFrom!.Value, input.LeaveTo!.Value)
+        var set = vacation is not null
+            ? settlement.SetLeave(vacation.MovementId, vacation.MovementNo, vacation.LeavesOn, vacation.ExpectedReturnOn.AddDays(-1))
             : settlement.SetEnd(Enum.Parse<EndReason>(input.Reason!), input.LastDay!.Value, Term(input.Term), input.ContractEndsOn ?? w.ContractEndsOn);
         if (set.IsFailure)
         {

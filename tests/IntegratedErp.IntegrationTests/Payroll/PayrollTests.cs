@@ -9,6 +9,7 @@ using IntegratedErp.Modules.Identity.Domain;
 using IntegratedErp.Modules.Identity.Infrastructure;
 using IntegratedErp.Modules.Organization.Application.Organization;
 using IntegratedErp.Modules.Organization.Application.Settings;
+using IntegratedErp.Modules.Operations.Application;
 using IntegratedErp.Modules.Payroll.Application;
 using IntegratedErp.Modules.Workforce.Infrastructure;
 using IntegratedErp.Modules.Workflow.Application;
@@ -200,6 +201,36 @@ public sealed class PayrollTests(TestDatabase database)
             Assert.Equal(0, (await queries.GetAsync(run07, default))!.Totals.Workers);
             Assert.Contains((await queries.ExclusionsAsync(run07, default))!, e => e is { Kind: "PaidElsewhere", WorkerNo: "BSS0802" } && e.Reference == settlementNo);
         }
+
+        // A worker's vacation settlement pays an approved leave request: BSS0801's vacation departure (VD-), 30 days.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+        Guid w1Id, departure;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            w1Id = await scope.ServiceProvider.GetRequiredService<WorkforceDbContext>().Workers.AsNoTracking().Where(w => w.WorkerNo == "BSS0801").Select(w => w.Id).SingleAsync();
+            var saved = await scope.ServiceProvider.GetRequiredService<MovementService>().CreateAsync(
+                new MovementInput("VacationDeparture", w1Id, today.AddDays(10), today.AddDays(40), "Regular", null, null, null, null, false, null, null, null, null, null), default);
+            Assert.True(saved.IsSuccess, saved.IsFailure ? saved.Error.Code : null);
+            departure = saved.Value.Id;
+            Assert.DoesNotContain(await scope.ServiceProvider.GetRequiredService<SettlementService>().WorkerLeavesAsync(default), l => l.RequestId == departure); // not approved yet
+        }
+
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var settlements = scope.ServiceProvider.GetRequiredService<SettlementService>();
+            var leave = Assert.Single(await settlements.WorkerLeavesAsync(default), l => l.RequestId == departure);
+            Assert.Equal((w1Id, 30m), (leave.EmployeeId, leave.Days));
+            Assert.Equal("validation.settlement_leave", (await settlements.CreateAsync(new CreateSettlementInput("Vacation", Guid.NewGuid(), null, null, null, null, null, "Worker"), default)).Error.Code);
+            var id = (await settlements.CreateAsync(new CreateSettlementInput("Vacation", departure, null, null, null, null, null, "Worker"), default)).Value;
+            Assert.Equal("conflict.settlement_exists", (await settlements.CreateAsync(new CreateSettlementInput("Vacation", departure, null, null, null, null, null, "Worker"), default)).Error.Code);
+
+            var s = (await scope.ServiceProvider.GetRequiredService<SettlementQueries>().GetAsync(id, default))!;
+            Assert.Equal((departure, leave.RequestNo, w1Id, today.AddDays(10), today.AddDays(39)), (s.LeaveRequestId!.Value, s.LeaveRequestNo!, s.PersonId, s.LeaveFrom!.Value, s.LeaveTo!.Value));
+            Assert.StartsWith("VD-", s.LeaveRequestNo, StringComparison.Ordinal);
+            Assert.Equal((30m, 1500m), (s.LeaveDays, s.Lines.Single(l => l.Code == "leave_allowance").Amount));
+            Assert.DoesNotContain(await settlements.WorkerLeavesAsync(default), l => l.RequestId == departure);
+        }
     }
 
     /// <summary>The approver takes their one open task and approves it.</summary>
@@ -230,9 +261,11 @@ public sealed class PayrollTests(TestDatabase database)
         }
 
         return (
-            await PersonAsync("مسؤول الرواتب", "billing.timesheets.manage", "payroll.workers.manage", "payroll.settings.manage", "payroll.settlements.view", "payroll.settlements.manage"),
+            await PersonAsync("مسؤول الرواتب", "billing.timesheets.manage", "payroll.workers.manage", "payroll.settings.manage", "payroll.settlements.view", "payroll.settlements.manage",
+                "operations.movements.view", "operations.movements.manage"),
             await PersonAsync("المعتمد", "billing.timesheets.approve", "payroll.workers.review", "payroll.workers.finance", "payroll.workers.approve",
-                "payroll.settlements.view", "payroll.settlements.approve.operations", "payroll.settlements.approve.payroll", "payroll.settlements.approve.finance"));
+                "payroll.settlements.view", "payroll.settlements.approve.operations", "payroll.settlements.approve.payroll", "payroll.settlements.approve.finance",
+                "operations.movements.view", "operations.movements.approve"));
     }
 
     private static Guid Worker(FakeCrm crm, string number, int? sponsor) =>

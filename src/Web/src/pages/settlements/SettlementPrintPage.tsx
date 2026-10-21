@@ -89,7 +89,7 @@ export function SettlementPrintPage() {
           ? fact(t('settlements.col.reason'), t(`settlements.reason.${d.reason}`))
           : fact(t('settlements.annualLeave'), `${date(d.leaveFrom)} – ${date(d.leaveTo)}`)}
         {end ? fact(t('settlements.create.lastDay'), date(d.lastDay)) : fact(t('settlements.kpi.leaveDays'), t('settlements.daysN', { count: d.leaveDays }))}
-        {end ? fact(t('settlements.kpi.service'), years(d.serviceYears)) : fact(t('settlements.deductionMonth'), d.period)}
+        {end ? fact(t('settlements.kpi.service'), years(d.serviceYears)) : fact(t(d.party === 'Worker' ? 'settlements.workerLeaveRequest' : 'settlements.leaveRequest'), <bdi>{d.leaveRequestNo ?? '—'}</bdi>)}
         {fact(t('settlements.wage'), `${sar(d.wage)} ${t('settlements.sar')}`)}
       </Box>
       {table(t('settlements.dues'), d.lines.filter((l) => l.side === 'Addition'), d.totalAdditions)}

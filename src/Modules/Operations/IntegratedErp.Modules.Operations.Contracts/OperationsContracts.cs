@@ -17,6 +17,19 @@ public static class OperationsContracts
 /// <param name="Reason"><c>ClientNoReason</c>, <c>WorkerRefuses</c>, <c>Sick</c>, <c>WorkerAbused</c>, <c>ContractCanceled</c> or <c>Other</c>.</param>
 public sealed record HousingEntryFact(Guid? WorkerId, string WorkerNo, string Name, DateOnly ArrivedOn, string Entry, string Reason, Guid? ProjectCrmId, string? ProjectName, string? HousingName);
 
+/// <summary>
+/// A worker's leave as operations approved it (a vacation departure, VD-): when they leave and are expected back (the
+/// first day back). <paramref name="OnClient"/>: a leave the customer pays.
+/// </summary>
+public sealed record WorkerVacation(Guid MovementId, string MovementNo, Guid WorkerId, string WorkerNo, string Name, DateOnly LeavesOn, DateOnly ExpectedReturnOn, bool OnClient);
+
+/// <summary>The workers' approved leaves, for their vacation settlements (4.11ب).</summary>
+public interface IWorkerVacations
+{
+    /// <summary>The approved vacation departures leaving from a day on (one worker's, or everyone's).</summary>
+    Task<IReadOnlyList<WorkerVacation>> ApprovedAsync(DateOnly from, Guid? workerId, CancellationToken cancellationToken);
+}
+
 public interface IHousingEntries
 {
     /// <summary>The approved housing orders whose arrival falls in a period.</summary>
