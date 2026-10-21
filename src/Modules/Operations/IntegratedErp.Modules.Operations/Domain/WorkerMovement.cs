@@ -42,6 +42,9 @@ public enum MovementStatus
     /// <summary>Approved and applied to the worker's timeline.</summary>
     Executed,
     Canceled,
+
+    /// <summary>Cancelled after its execution: the period it opened was taken back (with the reason).</summary>
+    CanceledAfterApproval,
 }
 
 public enum VacationKind
@@ -215,9 +218,23 @@ public sealed class WorkerMovement : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The last change after the execution: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
     public decimal TotalPrice => Salary + ServiceFee + Housing + Transport;
 
     public bool IsEditable => Status == MovementStatus.Returned && !AwaitingApproval;
+
+    /// <summary>An executed movement: it may still be changed or cancelled (with its type's own permissions and a reason).</summary>
+    public bool IsAmendable => Status == MovementStatus.Executed;
 
     public bool IsOpen => Status is MovementStatus.InApproval or MovementStatus.Returned;
 
@@ -303,6 +320,54 @@ public sealed class WorkerMovement : ITenantOwned
         LastComment = comment;
     }
 
+    /// <summary>Changed after the execution: its date, the expected return (a vacation), the place and the notes (with the reason).</summary>
+    public Result Amend(DateOnly effectiveOn, DateOnly? expectedReturnOn, string? place, string? notes, string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(MovementErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(MovementErrors.AmendReason);
+        }
+
+        if (Type == MovementType.VacationDeparture && expectedReturnOn is { } back && back <= effectiveOn)
+        {
+            return Result.Failure(MovementErrors.ExpectedReturn);
+        }
+
+        EffectiveOn = effectiveOn;
+        ExpectedReturnOn = Type == MovementType.VacationDeparture ? expectedReturnOn : ExpectedReturnOn;
+        Place = Clean(place, 200);
+        Notes = Clean(notes, 1000);
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = reason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after the execution (the period it opened was taken back).</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(MovementErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(MovementErrors.AmendReason);
+        }
+
+        Status = MovementStatus.CanceledAfterApproval;
+        CanceledAt = at;
+        CanceledByName = by;
+        LastComment = reason.Trim();
+        return Result.Success();
+    }
+
     public Result Cancel(string? comment)
     {
         if (!IsEditable)
@@ -349,6 +414,11 @@ public static class MovementErrors
 {
     public static readonly Error NotFound = Error.NotFound("movement", "Movement not found.");
     public static readonly Error NotEditable = Error.Conflict("movement_not_editable", "Only a returned movement can be changed or canceled.");
+    public static readonly Error NotAmendable = Error.Conflict("movement_not_amendable", "Only an executed movement can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("movement_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error LaterPeriod = Error.Conflict("movement_later_period", "The worker has an action after this one: cancel it first.");
+    public static readonly Error PeriodOverlap = Error.Conflict("movement_period_overlap", "The new date overlaps another period of the worker.");
+    public static readonly Error TypeForbidden = new("forbidden.movement_type", "You do not have this permission for this type of action.");
     public static readonly Error Type = Error.Validation("movement_type", "Choose the movement.");
     public static readonly Error Worker = Error.Validation("movement_worker", "Choose the worker.");
     public static readonly Error NotAllowed = Error.Validation("movement_not_allowed", "This movement is not possible from where the worker is now.");

@@ -561,7 +561,12 @@
     "validation_transfer_amend_reason": "Give the reason (500 characters at most).",
     "not_found_transfer_line": "The worker is not on this order.",
     "conflict_transfer_later_period": "A worker of the order has an action after it: cancel it first.",
-    "conflict_transfer_period_overlap": "The new transfer date overlaps another period of a worker."
+    "conflict_transfer_period_overlap": "The new transfer date overlaps another period of a worker.",
+    "conflict_movement_not_amendable": "Only an executed action can be changed or cancelled after its approval.",
+    "validation_movement_amend_reason": "Give the reason (500 characters at most).",
+    "conflict_movement_later_period": "The worker has an action after this one: cancel it first.",
+    "conflict_movement_period_overlap": "The new date overlaps another period in the worker's timeline.",
+    "forbidden_movement_type": "You do not have this permission for this type of action."
   },
   "menu": {
     "label": "Main menu",
@@ -2930,7 +2935,8 @@
       "Returned": "Returned",
       "Rejected": "Rejected",
       "Executed": "Executed",
-      "Canceled": "Canceled"
+      "Canceled": "Canceled",
+      "CanceledAfterApproval": "Canceled after approval"
     },
     "states": {
       "Working": "On the job",
@@ -2965,6 +2971,18 @@
       "deliveryWhen": "Available when the worker is in housing or new",
       "inHousing": "The worker is already in housing",
       "returnWhen": "Available when the worker is on the job"
+    },
+    "amend": {
+      "action": "Change after approval",
+      "cancelAction": "Cancel the approved action",
+      "title": "Change approved action {{no}}",
+      "hint": "The period the action opened in the worker's timeline moves with its new date, and the period before it ends that day. The change and its reason are recorded.",
+      "reason": "Reason for the change or cancellation",
+      "save": "Save the change",
+      "cancelTitle": "Cancel approved action {{no}}",
+      "cancelHint": "The period the action opened is removed from the worker's timeline, their period before is open again, and they go back to their housing room if this action took them out of it. Not allowed if the worker has a later action.",
+      "amendedBy": "Changed after approval by {{by}} on {{date}}",
+      "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
     }
   },
   "alerts": {

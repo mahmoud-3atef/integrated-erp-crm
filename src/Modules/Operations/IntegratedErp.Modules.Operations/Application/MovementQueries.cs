@@ -55,7 +55,14 @@ public sealed record MovementDetailDto(
     string? LastComment,
     IReadOnlyList<PeriodInfo> Timeline,
     ApprovalStatusInfo? Approval,
-    bool CanEdit);
+    bool CanEdit,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 internal sealed class MovementQueries(OperationsDbContext db, IPeriodLedger ledger, IApprovalService approvals, IPermissionService permissions)
 {
@@ -79,7 +86,7 @@ internal sealed class MovementQueries(OperationsDbContext db, IPeriodLedger ledg
         {
             "Open" => query.Where(m => m.Status == MovementStatus.InApproval || m.Status == MovementStatus.Returned),
             "Executed" => query.Where(m => m.Status == MovementStatus.Executed),
-            "Closed" => query.Where(m => m.Status == MovementStatus.Rejected || m.Status == MovementStatus.Canceled),
+            "Closed" => query.Where(m => m.Status == MovementStatus.Rejected || m.Status == MovementStatus.Canceled || m.Status == MovementStatus.CanceledAfterApproval),
             _ => query,
         };
         if (!string.IsNullOrWhiteSpace(search))
@@ -107,12 +114,20 @@ internal sealed class MovementQueries(OperationsDbContext db, IPeriodLedger ledg
 
         var timeline = (await ledger.PeriodsAsync(m.WorkerId, cancellationToken).ConfigureAwait(false)).Take(8).ToList();
         var approval = await approvals.StatusAsync(MovementAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
-        var canManage = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(OperationsPermissions.MovementsManage);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var canManage = granted.Has(OperationsPermissions.MovementsManage);
         return new MovementDetailDto(
             m.Id, m.MovementNo, m.Type.ToString(), m.Status.ToString(), m.AwaitingApproval, m.WorkerId, m.WorkerNo, m.WorkerName, m.IqamaNo, m.FromPlacement,
             m.FromProjectName, m.OpensPeriod, m.EffectiveOn, m.ExpectedReturnOn, m.VacationKind?.ToString(), m.ReturnTo?.ToString(), m.ProjectId, m.ProjectName,
             m.PackageNo, m.Salary, m.ServiceFee, m.Housing, m.Transport, m.TotalPrice, m.IsSpecialPrice, m.SpecialReason, m.PaySalary,
             m.SuspensionReason?.ToString(), m.ExitKind?.ToString(), m.Place, m.DelayReason, m.Notes, m.CreatedByName, m.CreatedAt, m.ExecutedAt,
-            m.ExecutedByName, m.LastComment, timeline, approval, CanEdit: canManage && m.IsEditable);
+            m.ExecutedByName, m.LastComment, timeline, approval, CanEdit: canManage && m.IsEditable,
+            CanAmend: granted.Has(OperationsPermissions.MovementAmend(m.Type)) && m.IsAmendable,
+            CanCancelApproved: granted.Has(OperationsPermissions.MovementCancelApproved(m.Type)) && m.IsAmendable,
+            AmendedAt: m.AmendedAt,
+            AmendedByName: m.AmendedByName,
+            AmendNote: m.AmendNote,
+            CanceledAt: m.CanceledAt,
+            CanceledByName: m.CanceledByName);
     }
 }

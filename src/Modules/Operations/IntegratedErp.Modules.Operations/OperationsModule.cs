@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Operations.Domain;
 using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Modules;
 using IntegratedErp.BuildingBlocks.Numbering;
@@ -95,6 +96,29 @@ internal static class OperationsPermissions
     public const string MovementsView = "operations.movements.view";
     public const string MovementsManage = "operations.movements.manage";
     public const string MovementsApprove = "operations.movements.approve";
+
+    /// <summary>The types of worker action, each with its own permissions to change or cancel it after its approval.</summary>
+    private static readonly (MovementType Type, string Key, string Ar, string En)[] MovementTypes =
+    [
+        (MovementType.Arrival, "arrival", "دخول جديد (حديث الوصول)", "New arrival"),
+        (MovementType.VacationDeparture, "vacation_departure", "مغادرة إجازة", "Vacation departure"),
+        (MovementType.VacationReturn, "vacation_return", "العودة من الإجازة", "Return from vacation"),
+        (MovementType.Absconding, "absconding", "بلاغ انقطاع", "Absconding report"),
+        (MovementType.AbscondingReturn, "absconding_return", "عودة بعد انقطاع", "Return after absconding"),
+        (MovementType.Suspension, "suspension", "إيقاف", "Suspension"),
+        (MovementType.SuspensionLift, "suspension_lift", "رفع الإيقاف", "Suspension lifted"),
+        (MovementType.FinalExit, "final_exit", "خروج نهائي", "Final exit"),
+    ];
+
+    public static string MovementAmend(MovementType type) => $"operations.movements.{MovementTypes.First(t => t.Type == type).Key}.amend";
+
+    public static string MovementCancelApproved(MovementType type) => $"operations.movements.{MovementTypes.First(t => t.Type == type).Key}.cancel_approved";
+
+    private static IEnumerable<PermissionDefinition> MovementAmendments() => MovementTypes.SelectMany(t => new PermissionDefinition[]
+    {
+        new(MovementAmend(t.Type), GroupAr, GroupEn, $"تعديل إجراء «{t.Ar}» المعتمد (تاريخه وملاحظاته…)", $"Change an approved «{t.En}» action (its date, notes…)"),
+        new(MovementCancelApproved(t.Type), GroupAr, GroupEn, $"إلغاء إجراء «{t.Ar}» المعتمد", $"Cancel an approved «{t.En}» action"),
+    });
     public const string ShowroomView = "operations.showroom.view";
 
     private const string GroupAr = "العمليات";
@@ -122,5 +146,6 @@ internal static class OperationsPermissions
         new(MovementsView, GroupAr, GroupEn, "عرض حركات العمال (الوصول والإجازات والانقطاع والإيقاف والخروج)", "View worker movements (arrival, vacation, absconding, suspension, exit)"),
         new(MovementsManage, GroupAr, GroupEn, "إنشاء حركات العمال وتعديلها وإلغاؤها", "Create, edit and cancel worker movements"),
         new(MovementsApprove, GroupAr, GroupEn, "اعتماد حركات العمال (مدير العمليات)", "Approve worker movements (operations manager)"),
+        .. MovementAmendments(),
     ];
 }

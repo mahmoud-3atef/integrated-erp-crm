@@ -1,3 +1,5 @@
+using IntegratedErp.BuildingBlocks.Security;
+using IntegratedErp.Modules.Housing.Contracts;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Time;
@@ -30,6 +32,9 @@ public sealed record MovementInput(
 
 public sealed record SavedMovementDto(Guid Id, string? SubmitError);
 
+/// <summary>What may change on an executed movement: its date, the expected return (a vacation), the place and notes, with the reason.</summary>
+public sealed record MovementAmendInput(DateOnly EffectiveOn, DateOnly? ExpectedReturnOn, string? Place, string? Notes, string AmendReason);
+
 /// <summary>The movements a worker can have now, from where they are, and what a return to work would cost.</summary>
 public sealed record MovementOptionsDto(
     WorkerCard Worker,
@@ -55,6 +60,8 @@ internal sealed class MovementService(
     DeliveryOrderService delivery,
     IApprovalService approvals,
     NumberSequenceService numbering,
+    IHousingRooms housing,
+    IPermissionService permissions,
     ICurrentUser user,
     IClock clock)
 {
@@ -190,6 +197,103 @@ internal sealed class MovementService(
             return Result.Failure(started.Error);
         }
 
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Changes an executed movement (its type's own permission and a reason): its date (the period it opened moves, the
+    /// one before it ends that day, never overlapping), the expected return of a vacation, the place and the notes.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, MovementAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var m = await db.Movements.FirstOrDefaultAsync(x => x.Id == id, cancellationToken).ConfigureAwait(false);
+        if (m is null)
+        {
+            return Result.Failure(MovementErrors.NotFound);
+        }
+
+        if (!(await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(OperationsPermissions.MovementAmend(m.Type)))
+        {
+            return Result.Failure(MovementErrors.TypeForbidden);
+        }
+
+        if (!m.IsAmendable)
+        {
+            return Result.Failure(MovementErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(input.AmendReason))
+        {
+            return Result.Failure(MovementErrors.AmendReason);
+        }
+
+        var place = m.OpensPeriod == "Work" ? null : input.Place;
+        if (input.EffectiveOn != m.EffectiveOn || place != m.Place)
+        {
+            var moved = await ledger.AmendAsync(new PeriodAmendRequest(m.WorkerId, m.Id, input.EffectiveOn, m.PaySalary, place, m.MovementNo), cancellationToken).ConfigureAwait(false);
+            if (moved.IsFailure)
+            {
+                return Result.Failure(moved.Error.Code == "conflict.period_overlap" ? MovementErrors.PeriodOverlap : moved.Error);
+            }
+        }
+
+        var amended = m.Amend(input.EffectiveOn, input.ExpectedReturnOn, input.Place, input.Notes, input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Cancels an executed movement (its type's own permission and a reason): the period it opened is taken back — only
+    /// when the worker has no action after it — the one before it is open again, and a worker who left their housing room
+    /// with it goes back to it.
+    /// </summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        var m = await db.Movements.FirstOrDefaultAsync(x => x.Id == id, cancellationToken).ConfigureAwait(false);
+        if (m is null)
+        {
+            return Result.Failure(MovementErrors.NotFound);
+        }
+
+        if (!(await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(OperationsPermissions.MovementCancelApproved(m.Type)))
+        {
+            return Result.Failure(MovementErrors.TypeForbidden);
+        }
+
+        if (!m.IsAmendable)
+        {
+            return Result.Failure(MovementErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Result.Failure(MovementErrors.AmendReason);
+        }
+
+        var undone = await ledger.UndoAsync(m.WorkerId, m.Id, cancellationToken).ConfigureAwait(false);
+        if (undone.IsFailure)
+        {
+            return Result.Failure(undone.Error.Code == "conflict.period_not_last" ? MovementErrors.LaterPeriod : undone.Error);
+        }
+
+        if (MovementAdapter.LeavesHousing(m))
+        {
+            await housing.ReopenAsync([m.WorkerId], m.EffectiveOn, cancellationToken).ConfigureAwait(false);
+        }
+
+        var canceled = m.CancelApproved(reason, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
 

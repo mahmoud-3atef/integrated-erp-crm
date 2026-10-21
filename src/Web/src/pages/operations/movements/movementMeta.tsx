@@ -159,7 +159,7 @@ export function Transition({ from, fromLabel, fromSub, to, toLabel, toSub, big =
   );
 }
 
-const statusTone: Record<MovementStatus, Tone> = { InApproval: 'warning', Returned: 'info', Rejected: 'danger', Executed: 'success', Canceled: 'neutral' };
+const statusTone: Record<MovementStatus, Tone> = { InApproval: 'warning', Returned: 'info', Rejected: 'danger', Executed: 'success', Canceled: 'neutral', CanceledAfterApproval: 'danger' };
 
 export function MovementStatusBadge({ status }: { status: MovementStatus }) {
   const { t } = useTranslation();

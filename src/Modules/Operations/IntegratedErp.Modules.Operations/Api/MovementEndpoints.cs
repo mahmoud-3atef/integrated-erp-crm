@@ -53,6 +53,14 @@ internal static class MovementEndpoints
                 ToHttp(await service.SubmitAsync(id, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.MovementsManage, companyWide: true);
 
+        // Each type of action has its own permissions to change or cancel it after its approval (checked by the service).
+        group.MapPut("/{id:guid}/amend", async (Guid id, MovementAmendInput input, MovementService service, CancellationToken ct) =>
+                ToHttp(await service.AmendAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.MovementsView, companyWide: true);
+        group.MapPost("/{id:guid}/cancel-approved", async (Guid id, CancelRequest r, MovementService service, CancellationToken ct) =>
+                ToHttp(await service.CancelApprovedAsync(id, r.Comment, ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.MovementsView, companyWide: true);
+
         group.MapPost("/{id:guid}/cancel", async (Guid id, CancelRequest? r, MovementService service, CancellationToken ct) =>
                 ToHttp(await service.CancelAsync(id, r?.Comment, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.MovementsManage, companyWide: true);
@@ -64,6 +72,7 @@ internal static class MovementEndpoints
         error.Message,
         statusCode: error.Code.StartsWith("not_found.", StringComparison.Ordinal) ? StatusCodes.Status404NotFound
             : error.Code.StartsWith("conflict.", StringComparison.Ordinal) ? StatusCodes.Status409Conflict
+            : error.Code.StartsWith("forbidden.", StringComparison.Ordinal) ? StatusCodes.Status403Forbidden
             : StatusCodes.Status400BadRequest,
         title: error.Code);
 }

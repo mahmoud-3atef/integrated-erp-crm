@@ -40,7 +40,7 @@ internal sealed class WorkerMovementConfiguration : IEntityTypeConfiguration<Wor
         builder.Property(m => m.Id).ValueGeneratedNever();
         builder.Property(m => m.MovementNo).HasMaxLength(30).IsRequired();
         builder.Property(m => m.Type).HasConversion<string>().HasMaxLength(30);
-        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(m => m.WorkerNo).HasMaxLength(50).IsRequired();
         builder.Property(m => m.WorkerName).HasMaxLength(300).IsRequired();
         builder.Property(m => m.IqamaNo).HasMaxLength(50);
@@ -63,6 +63,9 @@ internal sealed class WorkerMovementConfiguration : IEntityTypeConfiguration<Wor
         builder.Property(m => m.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(m => m.ExecutedByName).HasMaxLength(200);
         builder.Property(m => m.LastComment).HasMaxLength(2000);
+        builder.Property(m => m.AmendedByName).HasMaxLength(200);
+        builder.Property(m => m.AmendNote).HasMaxLength(500);
+        builder.Property(m => m.CanceledByName).HasMaxLength(200);
         builder.Ignore(m => m.TotalPrice);
         builder.Ignore(m => m.OpensPeriod);
         builder.HasIndex(m => new { m.TenantId, m.MovementNo }).IsUnique();

@@ -7,7 +7,7 @@ import type { WorkerPeriod } from './workforce';
 
 export const movementTypes = ['Arrival', 'VacationDeparture', 'VacationReturn', 'Absconding', 'AbscondingReturn', 'Suspension', 'SuspensionLift', 'FinalExit'] as const;
 export type MovementType = (typeof movementTypes)[number];
-export type MovementStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Executed' | 'Canceled';
+export type MovementStatus = 'InApproval' | 'Returned' | 'Rejected' | 'Executed' | 'Canceled' | 'CanceledAfterApproval';
 export type PeriodKind = 'Housing' | 'Work' | 'Vacation' | 'ClientVacation' | 'Absconded' | 'Suspended' | 'Out';
 export type ReturnTarget = 'Housing' | 'SameProject' | 'NewProject';
 export const suspensionReasons = ['Sickness', 'Investigation', 'Prison', 'Other'] as const;
@@ -79,6 +79,23 @@ export interface MovementDetail {
   timeline: WorkerPeriod[];
   approval: ApprovalStatus | null;
   canEdit: boolean;
+  /** An executed action: may be changed or cancelled by the holders of its type's own permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
+}
+
+/** What may change on an executed action: its date, the expected return (a vacation), the place and notes, with the reason. */
+export interface MovementAmendInput {
+  effectiveOn: string;
+  expectedReturnOn: string | null;
+  place: string | null;
+  notes: string | null;
+  amendReason: string;
 }
 
 export interface MovementOptions {
@@ -133,4 +150,6 @@ export const movementsApi = {
   update: (id: string, input: MovementInput) => request<{ id: string; submitError: string | null }>('PUT', `${base}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${base}/${id}/submit`),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${base}/${id}/cancel`, { comment }),
+  amend: (id: string, input: MovementAmendInput) => request<void>('PUT', `${base}/${id}/amend`, input),
+  cancelApproved: (id: string, reason: string) => request<void>('POST', `${base}/${id}/cancel-approved`, { comment: reason }),
 };

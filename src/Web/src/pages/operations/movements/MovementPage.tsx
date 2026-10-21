@@ -1,6 +1,8 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
@@ -44,6 +46,8 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
   useCrumb(m?.movementNo, `/operations/movements/${id}`);
   const [wizard, setWizard] = useState(editing);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [amending, setAmending] = useState(false);
+  const [cancelingApproved, setCancelingApproved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const approval = useRecordApproval(m?.approval?.instanceId);
@@ -95,6 +99,16 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
                 </Button>
               </>
             )}
+            {m.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('movements.amend.action')}
+              </Button>
+            )}
+            {m.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelingApproved('')}>
+                {t('movements.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/operations/movements')}>
               {t('common.back')}
             </Button>
@@ -106,6 +120,16 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
       {m.lastComment && (m.status === 'Returned' || m.status === 'Rejected') && (
         <Alert severity={m.status === 'Rejected' ? 'error' : 'warning'} sx={{ mb: `${tokens.gap}px` }}>
           {t('operations.delivery.lastComment')}: {m.lastComment}
+        </Alert>
+      )}
+      {m.amendedAt && m.status === 'Executed' && (
+        <Alert severity="info" sx={{ mb: `${tokens.gap}px` }}>
+          {t('movements.amend.amendedBy', { by: m.amendedByName, date: date(m.amendedAt) })} — {m.amendNote}
+        </Alert>
+      )}
+      {m.status === 'CanceledAfterApproval' && (
+        <Alert severity="warning" sx={{ mb: `${tokens.gap}px` }}>
+          {t('movements.amend.canceledBy', { by: m.canceledByName, date: date(m.canceledAt) })} — {m.lastComment}
         </Alert>
       )}
       {m.approval && (
@@ -254,6 +278,63 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
         />
       )}
 
+      {amending && (
+        <MovementAmendDialog
+          movement={m}
+          onClose={() => setAmending(false)}
+          onSaved={() => {
+            setAmending(false);
+            void reload();
+          }}
+        />
+      )}
+
+      {cancelingApproved !== null && (
+        <Dialog open onClose={() => setCancelingApproved(null)} maxWidth="sm" fullWidth>
+          <DialogTitle>{t('movements.amend.cancelTitle', { no: m.movementNo })}</DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t('movements.amend.cancelHint')}
+            </Alert>
+            <TextField
+              required
+              label={t('movements.amend.reason')}
+              value={cancelingApproved}
+              onChange={(e) => setCancelingApproved(e.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              slotProps={{ htmlInput: { maxLength: 500 } }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelingApproved(null)}>{t('common.close')}</Button>
+            <Button
+              color="error"
+              variant="contained"
+              disabled={busy || !cancelingApproved.trim()}
+              onClick={() =>
+                void (async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await movementsApi.cancelApproved(m.id, cancelingApproved.trim());
+                    setCancelingApproved(null);
+                    await reload();
+                  } catch (failure) {
+                    setError(errorKey(failure));
+                  } finally {
+                    setBusy(false);
+                  }
+                })()
+              }
+            >
+              {t('movements.amend.cancelAction')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
       {canceling !== null && (
         <Dialog open onClose={() => setCanceling(null)} maxWidth="xs" fullWidth>
           <DialogTitle>{t('movements.cancelTitle', { no: m.movementNo })}</DialogTitle>
@@ -287,5 +368,65 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
         </Dialog>
       )}
     </Box>
+  );
+}
+
+/**
+ * Changing an executed action (its type's own permission): its date (the period it opened moves with it), the expected
+ * return of a vacation, the place (not for a return to work) and the notes, with the reason for the change.
+ */
+function MovementAmendDialog({ movement: m, onClose, onSaved }: { movement: MovementDetail; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const [effectiveOn, setEffectiveOn] = useState(m.effectiveOn);
+  const [expectedReturnOn, setExpectedReturnOn] = useState(m.expectedReturnOn ?? '');
+  const [place, setPlace] = useState(m.place ?? '');
+  const [notes, setNotes] = useState(m.notes ?? '');
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await movementsApi.amend(m.id, {
+        effectiveOn,
+        expectedReturnOn: expectedReturnOn || null,
+        place: place.trim() || null,
+        notes: notes.trim() || null,
+        amendReason: why.trim(),
+      });
+      onSaved();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{t('movements.amend.title', { no: m.movementNo })}</DialogTitle>
+      <DialogContent dividers>
+        <Stack sx={{ gap: 2 }}>
+          <Alert severity="info">{t('movements.amend.hint')}</Alert>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
+            <TextField required type="date" label={t(`movements.dateLabel.${m.type}`)} value={effectiveOn} onChange={(e) => setEffectiveOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            {m.type === 'VacationDeparture' && (
+              <TextField type="date" label={t('movements.expectedReturn')} value={expectedReturnOn} onChange={(e) => setExpectedReturnOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            )}
+          </Stack>
+          {m.opensPeriod !== 'Work' && (
+            <TextField label={t(m.type === 'Absconding' ? 'movements.lastPlace' : 'movements.housingPlace')} value={place} onChange={(e) => setPlace(e.target.value)} slotProps={{ htmlInput: { maxLength: 200 } }} />
+          )}
+          <TextField label={t('movements.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} multiline minRows={2} slotProps={{ htmlInput: { maxLength: 1000 } }} />
+          <TextField required label={t('movements.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} multiline minRows={2} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          {error && <Alert severity="error">{t(error)}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
+        <Button variant="contained" disabled={busy || !why.trim() || !effectiveOn} onClick={() => void save()}>
+          {t('movements.amend.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

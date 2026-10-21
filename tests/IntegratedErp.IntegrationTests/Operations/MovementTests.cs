@@ -143,6 +143,36 @@ public sealed class MovementTests(TestDatabase database)
             var detail = (await scope.ServiceProvider.GetRequiredService<MovementQueries>().GetAsync(list.Rows.First(r => r.Type == "FinalExit").Id, default))!;
             Assert.Equal(("Executed", "Out", "Housing"), (detail.Status, detail.OpensPeriod, detail.FromPlacement));
             Assert.StartsWith("EX-", detail.MovementNo, StringComparison.Ordinal);
+            Assert.False(detail.CanCancelApproved); // the creator has no permission on any type
+
+            // Each type has its own permissions to change or cancel it after its approval.
+            var service = scope.ServiceProvider.GetRequiredService<MovementService>();
+            var arrival = list.Rows.Single(r => r.Type == "Arrival").Id;
+            Assert.Equal("forbidden.movement_type", (await service.AmendAsync(arrival, new MovementAmendInput(today.AddDays(1), null, "سكن الملز", null, "وصل في اليوم التالي"), default)).Error.Code);
+        }
+
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<MovementService>();
+            var ledger = scope.ServiceProvider.GetRequiredService<IPeriodLedger>();
+            var list = await scope.ServiceProvider.GetRequiredService<MovementQueries>().ListAsync(null, "Executed", null, default);
+            var arrival = list.Rows.Single(r => r.Type == "Arrival").Id;
+            var exit = list.Rows.Single(r => r.Type == "FinalExit").Id;
+            var suspension = list.Rows.Single(r => r.Type == "Suspension").Id;
+
+            // The arrival changed (the manager may change arrivals): its housing period follows the new day and place.
+            Assert.Equal("validation.movement_amend_reason", (await service.AmendAsync(arrival, new MovementAmendInput(today.AddDays(1), null, "سكن الملز", null, " "), default)).Error.Code);
+            Assert.True((await service.AmendAsync(arrival, new MovementAmendInput(today.AddDays(1), null, "سكن الملز", null, "وصل في اليوم التالي"), default)).IsSuccess);
+            Assert.Equal(("Housing", today.AddDays(1), "سكن الملز"), Head(await ledger.PeriodsAsync(b, default)) is var hb ? (hb.Kind, hb.StartsOn, hb.ProjectName) : default);
+            var amended = (await scope.ServiceProvider.GetRequiredService<MovementQueries>().GetAsync(arrival, default))!;
+            Assert.Equal(("وصل في اليوم التالي", true, false), (amended.AmendNote, amended.CanAmend, amended.CanCancelApproved));
+
+            // A final exit cancelled (the manager may cancel final exits, not suspensions): C is back in housing.
+            Assert.Equal("forbidden.movement_type", (await service.CancelApprovedAsync(suspension, "خطأ", default)).Error.Code);
+            Assert.True((await service.CancelApprovedAsync(exit, "لم يغادر", default)).IsSuccess);
+            Assert.Equal(("Housing", (DateOnly?)null), Head(await ledger.PeriodsAsync(c, default)) is var hc ? (hc.Kind, hc.EndsOn) : default);
+            Assert.Equal("CanceledAfterApproval", (await scope.ServiceProvider.GetRequiredService<MovementQueries>().GetAsync(exit, default))!.Status);
+            Assert.Equal("conflict.movement_not_amendable", (await service.CancelApprovedAsync(exit, "مرة أخرى", default)).Error.Code);
         }
     }
 
@@ -191,7 +221,7 @@ public sealed class MovementTests(TestDatabase database)
             return user.Id;
         }
 
-        return (await PersonAsync("منسق العمليات", "operations.movements.manage", "commercial.prices.manage"), await PersonAsync("مدير العمليات", "operations.movements.approve"));
+        return (await PersonAsync("منسق العمليات", "operations.movements.manage", "commercial.prices.manage"), await PersonAsync("مدير العمليات", "operations.movements.approve", "operations.movements.arrival.amend", "operations.movements.final_exit.cancel_approved"));
     }
 
     private static Guid Worker(FakeCrm crm, string number, Guid nationality, Guid profession, int status, Guid? project, string? projectName) =>
