@@ -233,7 +233,8 @@ function ActionCard({ period: p, current, document, onOpen }: { period: WorkerPe
   const housing = p.kind === 'Housing';
   const days = periodDays(p);
   const late = lateDays(p, document);
-  const title = p.projectName ?? t(housing ? 'workforce.actions.housing' : `workforce.periods.kinds.${p.kind}`);
+  // A housing card as the old screen's: titled «السكن», its type and document only (no housing name, reason or pay).
+  const title = housing ? t('workforce.actions.housing') : (p.projectName ?? t(`workforce.periods.kinds.${p.kind}`));
   const by = document?.createdByName ?? (p.fromOldSystem ? t('workforce.periods.oldSystem') : null);
   const kind = t(priced ? 'workforce.actions.kindWork' : housing ? 'workforce.actions.kindHousing' : 'workforce.actions.kindOther');
   const daysKey = days === 1 ? 'daysOne' : days === 2 ? 'daysTwo' : days >= 3 && days <= 10 ? 'daysFew' : 'daysMany';
@@ -259,10 +260,8 @@ function ActionCard({ period: p, current, document, onOpen }: { period: WorkerPe
               <span className="timeline-type">
                 {icon}
                 {priced ? t('workforce.actions.workStart') : t(`workforce.periods.kinds.${p.kind}`)}
-                {document?.reason ? ` · ${t(`operations.return.reasons.${document.reason}`, { defaultValue: document.reason })}` : ''}
               </span>
               {current && <span className="timeline-current-pill">{t('workforce.actions.current')}</span>}
-              {housing && <span className="timeline-chip">{t(p.paySalary ? 'workforce.periods.salaryPaid' : 'workforce.periods.salaryStopped')}</span>}
               {p.isSpecialPrice ? (
                 <span className="timeline-chip">{t('commercial.prices.status.Special')}</span>
               ) : (
