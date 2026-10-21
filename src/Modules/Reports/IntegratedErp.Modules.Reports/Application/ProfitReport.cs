@@ -36,7 +36,10 @@ public sealed record CostPartsDto(
     decimal SupplierWork,
     int IdleDays,
     decimal IdleCost,
-    IReadOnlyList<ExpenseItemDto> Expenses);
+    IReadOnlyList<ExpenseItemDto> Expenses,
+    decimal? DailyPrice = null,
+    decimal LostRevenue = 0,
+    decimal LostProfit = 0);
 
 /// <summary>One worker's month: their days, what was billed for them, and what they cost.</summary>
 /// <param name="Source"><c>Company</c>, <c>Supplier</c> or <c>Unknown</c>.</param>
@@ -62,6 +65,12 @@ internal sealed record WorkerMonth(
     public decimal Cost => WorkCost + IdleCost + Expenses;
 
     public decimal Profit => Revenue - Cost;
+
+    /// <summary>What the days in housing would have been billed (outside the profit).</summary>
+    public decimal LostRevenue => Parts.LostRevenue;
+
+    /// <summary>The lost revenue less what those days would have cost to work (outside the profit).</summary>
+    public decimal LostProfit => Parts.LostProfit;
 }
 
 /// <param name="CompanyCost">Of the workers' cost: the company workers' salaries (and their expenses) on the project's days.</param>
@@ -100,14 +109,25 @@ internal sealed record MonthProfit(
     public decimal Profit => CostedRevenue - Cost;
 
     public decimal? Margin => CostedRevenue > 0 ? Math.Round(Profit * 100 / CostedRevenue, 1) : null;
+
+    /// <summary>The days in housing (all the workers).</summary>
+    public int HousingDays => Workers.Sum(w => w.HousingDays);
+
+    /// <summary>What the days in housing would have been billed at each worker's last price: an opportunity, not in the profit.</summary>
+    public decimal LostRevenue => Workers.Sum(w => w.LostRevenue);
+
+    public decimal LostProfit => Workers.Sum(w => w.LostProfit);
+
+    /// <summary>Housing days of workers never billed yet (no price to value them).</summary>
+    public int UnpricedHousingDays => Workers.Where(w => w.Parts.DailyPrice is null).Sum(w => w.HousingDays);
 }
 
 /// <summary>
 /// The company's profit and loss of an invoiced month (docs/03-migration-plan/16), worker by worker:
 /// <list type="bullet">
 /// <item>revenue: the worker's lines on the month's project invoices (before VAT);</item>
-/// <item>a company worker's cost: the salary due on those lines, or the salary ÷ 30 for each day on the job not billed
-/// (days in housing are unpaid);</item>
+/// <item>a company worker's cost: the net salary on those lines with the advance installments added back (days in
+/// housing are unpaid; days on the job not on them count with the invoice they are billed on);</item>
 /// <item>a supplier's worker: the agreed cost — fixed monthly (the days in housing are paid too: the idle cost) or by
 /// the days on the job;</item>
 /// <item>expenses: a worker's are shared by the projects they worked on, a project's are its own, the rest the company's.</item>
@@ -177,6 +197,11 @@ internal sealed class ProfitReport(
         var projectExpenses = shares.Where(s => s.ProjectCrmId is not null).GroupBy(s => s.ProjectCrmId!.Value).ToDictionary(g => g.Key, g => g.Sum(s => s.Amount));
         var linesByWorker = lines.ToLookup(l => l.WorkerCrmId);
 
+        // Each worker's last price billed up to the month's end: a day in housing would have been billed at it ÷ 30.
+        var lastPrice = finance.Lines.Where(l => l.SalesPrice > 0)
+            .Join(finance.Invoices.Where(i => i.To <= last), l => l.InvoiceCrmId, i => i.CrmId, (l, i) => (l.WorkerCrmId, i.To, l.SalesPrice))
+            .GroupBy(x => x.WorkerCrmId).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.To).First().SalesPrice);
+
         var workers = new List<WorkerMonth>();
         var allocated = new Dictionary<Guid, Slot>();
         decimal companySalaries = 0, supplierCosts = 0, idle = 0, allocatedExpenses = 0, unallocated = 0;
@@ -230,6 +255,16 @@ internal sealed class ProfitReport(
                 companySalaries += work;
             }
 
+            // The days in housing: the revenue they would have brought, and that less what working them would have cost (a
+            // supplier's fixed cost is paid anyway, so its days lose the whole revenue).
+            decimal? dailyPrice = lastPrice.TryGetValue(d.CrmId, out var price) ? price / 30m : null;
+            var housing = Math.Min(d.HousingDays, monthDays);
+            var lostRevenue = (dailyPrice ?? 0) * housing;
+            var wouldCost = source == "Supplier"
+                ? (info?.SupplierMonthlyCost is { } m && info.ByWorkingDays == true ? m / monthDays * housing : 0)
+                : (info?.Salary ?? d.Salary) / 30m * housing;
+            var lostProfit = dailyPrice is null ? 0 : lostRevenue - wouldCost;
+
             var expense = workerExpenses.GetValueOrDefault(d.WorkerId);
             if (d.WorkDays > 0)
             {
@@ -244,7 +279,8 @@ internal sealed class ProfitReport(
                 Math.Round(revenue, 2), Math.Round(work, 2), Math.Round(idleCost, 2), Math.Round(expense, 2), missing,
                 new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(netSalary, 2), Math.Round(advance, 2), Math.Round(billedSalary, 2), billedDays, unbilledDays,
                     source == "Supplier" ? info?.SupplierMonthlyCost : null, source == "Supplier" ? info?.ByWorkingDays : null, monthDays,
-                    source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList())));
+                    source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList(),
+                    dailyPrice is null ? null : Math.Round(dailyPrice.Value, 2), Math.Round(lostRevenue, 2), Math.Round(lostProfit, 2))));
 
             // A company worker's salary goes to the projects of the invoices it came from; a supplier's cost and the worker's
             // expenses to the projects by the days on each.

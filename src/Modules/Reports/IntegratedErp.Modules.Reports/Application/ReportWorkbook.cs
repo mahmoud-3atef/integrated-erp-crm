@@ -20,8 +20,8 @@ internal static class ReportWorkbook
     public static byte[] Waiting(IReadOnlyList<WaitingRowDto> rows) => Build("بانتظار التسليم", ["رقم العامل", "العامل", "في السكن منذ", "الأيام", "السكن", "آخر مشروع", "مدير المشروع"],
         rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Since.ToDateTime(TimeOnly.MinValue), r.Days, r.Housing, r.FromProject, r.Manager }).ToList());
 
-    public static byte[] WorkerProfit(IReadOnlyList<WorkerProfitDto> rows) => Build("ربحية العمالة", ["رقم العامل", "العامل", "المصدر", "المورد", "المشاريع", "أيام العمل", "أيام السكن", "الإيراد", "التكلفة", "منها أيام السكن", "المصاريف", "الربح", "ملاحظة"],
-        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Source switch { "Company" => "كفالة الشركة", "Supplier" => "مورد", _ => "غير محدد" }, r.Supplier, r.Projects, r.WorkDays, r.HousingDays, r.Revenue, r.Cost, r.IdleCost, r.Expenses, r.Profit, r.CostMissing ? "تكلفة المورد غير مدخلة" : null }).ToList());
+    public static byte[] WorkerProfit(IReadOnlyList<WorkerProfitDto> rows) => Build("ربحية العمالة", ["رقم العامل", "العامل", "المصدر", "المورد", "المشاريع", "أيام العمل", "أيام السكن", "الإيراد", "التكلفة", "منها أيام السكن", "المصاريف", "الربح", "الإيراد الضائع (أيام السكن)", "ملاحظة"],
+        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Source switch { "Company" => "كفالة الشركة", "Supplier" => "مورد", _ => "غير محدد" }, r.Supplier, r.Projects, r.WorkDays, r.HousingDays, r.Revenue, r.Cost, r.IdleCost, r.Expenses, r.Profit, r.LostRevenue, r.CostMissing ? "تكلفة المورد غير مدخلة" : null }).ToList());
 
     private static string Reason(string reason) => reason switch
     {

@@ -163,6 +163,7 @@ function OverviewTab({ data, onOpen, onTab }: { data: CeoOverview; onOpen: (o: O
   if (a.losingProjects) lines.push(mark('ceo.ins.losing', { count: a.losingProjects, total: money(Math.abs(a.losingTotal)) }));
   if (a.unbilledProjects) lines.push(mark('ceo.ins.unbilled', { count: a.unbilledWorkers, projects: a.unbilledProjects }));
   if (data.uncostedWorkers) lines.push(mark('ceo.ins.uncosted', { count: data.uncostedWorkers, revenue: money(data.uncostedRevenue) }));
+  if (data.lostRevenue.value) lines.push(mark('ceo.ins.lost', { revenue: money(data.lostRevenue.value), days: f.n(data.housingDays), profit: money(data.lostProfit.value ?? 0) }));
   if (data.collectionRate.value !== null) lines.push(mark('ceo.ins.collection', { rate: data.collectionRate.value }));
 
   const steps = [
@@ -182,7 +183,7 @@ function OverviewTab({ data, onOpen, onTab }: { data: CeoOverview; onOpen: (o: O
         <Kpi index={2} label={t('ceo.kpi.profit')} icon={<TrendingUpOutlinedIcon />} figure={data.profit} unit={t('exec.sar')} money good="up" spark={data.trend.map((x) => x.profit)} />
         <Kpi index={3} label={t('ceo.kpi.margin')} icon={<PercentOutlinedIcon />} figure={data.margin} unit="%" good="up" note={data.uncostedWorkers ? t('ceo.kpi.marginNote', { count: data.uncostedWorkers }) : undefined} />
         <Kpi index={4} label={t('ceo.kpi.idle')} icon={<BedOutlinedIcon />} figure={data.idleCost} unit={t('exec.sar')} money good="down" note={t('ceo.kpi.idleNote', { count: f.n(data.idleDays) })} onClick={() => onOpen({ title: t('ceo.kpi.idle'), query: { housing: true } })} />
-        <Kpi index={5} label={t('ceo.kpi.onJob')} icon={<EngineeringOutlinedIcon />} value={data.onJob} unit={t('exec.worker')} note={t('ceo.kpi.inHousing', { count: data.inHousing })} onClick={() => onTab('workforce')} />
+        <Kpi index={5} label={t('ceo.kpi.lost')} icon={<HourglassBottomOutlinedIcon />} figure={data.lostRevenue} unit={t('exec.sar')} money good="down" note={t('ceo.kpi.lostNote', { days: f.n(data.housingDays), profit: f.n(data.lostProfit.value ?? 0) })} onClick={() => onOpen({ title: t('ceo.kpi.lost'), query: { lost: true } })} />
       </Hero>
       <Ticker lines={lines} />
 
@@ -228,6 +229,7 @@ function OverviewTab({ data, onOpen, onTab }: { data: CeoOverview; onOpen: (o: O
             {a.losingProjects > 0 && <AlertRow tone={negative} icon={<TrendingDownOutlinedIcon />} text={t('ceo.alerts.losing', { count: a.losingProjects, total: f.n(Math.abs(a.losingTotal)), worst: a.worstProject ?? '—', loss: f.n(Math.abs(a.worstLoss ?? 0)) })} onClick={() => onTab('profit')} />}
             {a.unbilledProjects > 0 && <AlertRow tone={accents.amber} icon={<ReceiptLongOutlinedIcon />} text={t('ceo.alerts.unbilled', { count: a.unbilledWorkers, projects: a.unbilledProjects, largest: a.unbilledLargest ?? '—' })} onClick={() => onTab('profit')} />}
             {a.suppliersInHousing > 0 && <AlertRow tone={negative} icon={<BedOutlinedIcon />} text={a.dailyIdleCost > 0 ? t('ceo.alerts.housing', { count: a.suppliersInHousing, daily: f.n(a.dailyIdleCost) }) : t('ceo.alerts.housingNoCost', { count: a.suppliersInHousing })} onClick={() => onOpen({ title: t('ceo.kpi.idle'), query: { housing: true, source: 'Supplier' } })} />}
+            {(data.lostRevenue.value ?? 0) > 0 && <AlertRow tone={accents.amber} icon={<HourglassBottomOutlinedIcon />} text={t('ceo.alerts.lost', { revenue: f.n(data.lostRevenue.value ?? 0), days: f.n(data.housingDays), profit: f.n(data.lostProfit.value ?? 0) })} onClick={() => onOpen({ title: t('ceo.kpi.lost'), query: { lost: true } })} />}
             {a.missingCosts > 0 && <AlertRow tone={tokens.info} icon={<ReportProblemOutlinedIcon />} text={t('ceo.alerts.missing', { count: a.missingCosts, revenue: f.n(a.uncostedRevenue) })} link="/workforce/supplier-costs" />}
             {!a.losingProjects && !a.unbilledProjects && !a.suppliersInHousing && !a.missingCosts && <Empty />}
           </Stack>
@@ -429,6 +431,7 @@ function ProfitTab({ month, onOpen }: { month: string; onOpen: (o: Open) => void
                   <TableCell align="right">{t('ceo.col.revenue')}</TableCell>
                   <TableCell align="right">{t('ceo.col.cost')}</TableCell>
                   <TableCell align="right">{t('ceo.col.idle')}</TableCell>
+                  <TableCell align="right">{t('ceo.col.lost')}</TableCell>
                   <TableCell align="right">{t('ceo.col.profit')}</TableCell>
                 </TableRow>
               </TableHead>
@@ -444,6 +447,9 @@ function ProfitTab({ month, onOpen }: { month: string; onOpen: (o: Open) => void
                     <TableCell align="right">
                       {f.n(s.idleCost)}
                       <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('ceo.profit.idleDays', { count: f.n(s.idleDays) })}</Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ color: s.lostRevenue ? accents.amber : undefined, fontWeight: 700 }}>
+                      {f.n(s.lostRevenue)}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 800, color: s.missingCosts === s.workers ? tokens.gray500 : profitColor(s.profit) }}>
                       {s.missingCosts === s.workers ? '—' : <bdi>{f.n(s.profit)}</bdi>}
@@ -477,7 +483,7 @@ function WorkforceTab({ data, month }: { data: CeoOverview; month: string }) {
       <Hero>
         <Kpi index={0} label={t('ceo.kpi.onJob')} icon={<EngineeringOutlinedIcon />} value={data.onJob} unit={t('exec.worker')} />
         <Kpi index={1} label={t('ceo.work.inHousing')} icon={<BedOutlinedIcon />} value={data.inHousing} unit={t('exec.worker')} onClick={() => navigate('/housing/showroom')} note={t('ceo.work.toHousing')} />
-        <Kpi index={2} label={t('ceo.work.suppliersInHousing')} icon={<LocalShippingOutlinedIcon />} value={data.alerts.suppliersInHousing} unit={t('exec.worker')} note={data.alerts.dailyIdleCost ? t('ceo.work.daily', { amount: f.n(data.alerts.dailyIdleCost) }) : undefined} />
+        <Kpi index={2} label={t('ceo.kpi.lost')} icon={<HourglassBottomOutlinedIcon />} figure={data.lostRevenue} unit={t('exec.sar')} money good="down" note={t('ceo.kpi.lostNote', { days: f.n(data.housingDays), profit: f.n(data.lostProfit.value ?? 0) })} />
         <Kpi index={3} label={t('ceo.kpi.idle')} icon={<HourglassBottomOutlinedIcon />} figure={data.idleCost} unit={t('exec.sar')} money good="down" note={t('ceo.kpi.idleNote', { count: f.n(data.idleDays) })} />
         <Kpi index={4} label={t('ceo.work.movement')} icon={<SwapHorizOutlinedIcon />} figure={moves?.net ?? { value: null, previous: null }} unit={t('exec.worker')} good="up" note={moves ? t('ceo.work.moves', { starts: f.n(moves.starts.value ?? 0), returns: f.n(moves.returns.value ?? 0) }) : t('ceo.work.toMovement')} onClick={() => navigate('/reports/movement')} />
         <Kpi index={5} label={t('ceo.work.unbilled')} icon={<ReceiptLongOutlinedIcon />} value={data.alerts.unbilledWorkers} unit={t('exec.worker')} note={t('ceo.work.unbilledNote', { count: data.alerts.unbilledProjects })} />
@@ -538,8 +544,8 @@ function WorkersList({ month, query, withFilters }: { month: string; query: Work
   const [rows, setRows] = useState<WorkerProfit[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<'all' | 'losing' | 'housing' | 'Supplier' | 'Company'>('all');
-  const q: WorkerProfitQuery = { ...query, search, ...(view === 'losing' ? { losing: true } : view === 'housing' ? { housing: true } : view === 'Supplier' || view === 'Company' ? { source: view } : {}) };
+  const [view, setView] = useState<'all' | 'losing' | 'lost' | 'housing' | 'Supplier' | 'Company'>('all');
+  const q: WorkerProfitQuery = { ...query, search, ...(view === 'losing' ? { losing: true } : view === 'lost' ? { lost: true } : view === 'housing' ? { housing: true } : view === 'Supplier' || view === 'Company' ? { source: view } : {}) };
   const key = JSON.stringify(q);
   useEffect(() => {
     if (!can('workforce.workers.salary', true)) return;
@@ -553,7 +559,7 @@ function WorkersList({ month, query, withFilters }: { month: string; query: Work
       <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1, mb: 1.5, alignItems: { md: 'center' } }}>
         {withFilters && (
           <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap' }}>
-            {(['all', 'losing', 'housing', 'Supplier', 'Company'] as const).map((k) => (
+            {(['all', 'losing', 'lost', 'housing', 'Supplier', 'Company'] as const).map((k) => (
               <ButtonBase key={k} onClick={() => setView(k)} aria-pressed={view === k} sx={{ px: 1.5, py: 0.5, borderRadius: 99, fontSize: 12.5, fontWeight: 700, border: `1px solid ${view === k ? tokens.navy800 : tokens.gray200}`, bgcolor: view === k ? tokens.navy800 : '#fff', color: view === k ? '#fff' : tokens.navy800 }}>
                 {t(`ceo.work.view.${k}`)}
               </ButtonBase>
@@ -583,6 +589,7 @@ function WorkersList({ month, query, withFilters }: { month: string; query: Work
                 <TableCell align="right">{t('ceo.col.revenue')}</TableCell>
                 <TableCell align="right">{t('ceo.col.cost')}</TableCell>
                 <TableCell align="right">{t('ceo.col.profit')}</TableCell>
+                <TableCell align="right">{t('ceo.col.lost')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -630,6 +637,9 @@ function WorkersList({ month, query, withFilters }: { month: string; query: Work
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 800, color: w.costMissing ? tokens.gray500 : profitColor(w.profit) }}>
                     {w.costMissing ? '—' : <bdi>{f.n(w.profit)}</bdi>}
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: w.lostRevenue ? accents.amber : tokens.gray500, fontWeight: w.lostRevenue ? 700 : 400 }}>
+                    {w.lostRevenue ? f.n(w.lostRevenue) : w.housingDays && w.parts.dailyPrice === null ? <Tooltip title={t('ceo.work.noPrice')}><span>—</span></Tooltip> : '0'}
                   </TableCell>
                 </TableRow>
               ))}

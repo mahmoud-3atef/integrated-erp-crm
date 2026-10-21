@@ -84,9 +84,9 @@ internal static class ReportsEndpoints
             .RequirePermission(ReportsPermissions.ProfitView, companyWide: true);
 
         // A worker's cost shows a company worker's salary: the salaries' permission too.
-        group.MapGet("/workers", async (string? month, Guid? project, string? supplier, string? source, bool? losing, bool? housing, string? search, bool? excel, CeoReport report, CancellationToken ct) =>
+        group.MapGet("/workers", async (string? month, Guid? project, string? supplier, string? source, bool? losing, bool? housing, bool? lost, string? search, bool? excel, CeoReport report, CancellationToken ct) =>
             {
-                var rows = await report.WorkersAsync(Month(month), new WorkerProfitFilter(project, supplier, source, losing == true, housing == true, search), ct).ConfigureAwait(false);
+                var rows = await report.WorkersAsync(Month(month), new WorkerProfitFilter(project, supplier, source, losing == true, housing == true, search, lost == true), ct).ConfigureAwait(false);
                 return excel == true ? Results.File(ReportWorkbook.WorkerProfit(rows), Xlsx, "worker-profit.xlsx") : Results.Ok(rows);
             })
             .RequirePermission(ReportsPermissions.ProfitView, companyWide: true)

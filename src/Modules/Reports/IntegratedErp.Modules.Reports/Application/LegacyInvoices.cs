@@ -35,7 +35,7 @@ internal sealed record LegacyInvoice(
 /// A worker's line on a counted invoice: what was billed for them before VAT and for how many days, the salary due, the
 /// absence deducted from it, the net salary the worker was paid, and the advance installment taken from it.
 /// </summary>
-internal sealed record LegacyLine(Guid InvoiceCrmId, Guid WorkerCrmId, decimal BeforeVat, decimal WorkingDays, decimal DueSalary, decimal AbsentDays, decimal AbsenceDeduction, decimal NetSalary, decimal Advance);
+internal sealed record LegacyLine(Guid InvoiceCrmId, Guid WorkerCrmId, decimal BeforeVat, decimal WorkingDays, decimal DueSalary, decimal AbsentDays, decimal AbsenceDeduction, decimal NetSalary, decimal Advance, decimal SalesPrice);
 
 /// <summary>The old system's invoices and the workers on each (invoice lines), read from the CRM copy.</summary>
 internal sealed record LegacyFinance(IReadOnlyList<LegacyInvoice> Invoices, IReadOnlyDictionary<Guid, HashSet<Guid>> WorkersByInvoice)
@@ -161,7 +161,7 @@ internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory proj
                     var r = document.RootElement;
                     var due = Money(r, "new_duesalary") ?? 0;
                     lines.Add(new LegacyLine(invoice, employee, Money(r, "new_totalwithoutvat") ?? 0, Money(r, "new_workingdays") ?? 0, due,
-                        Money(r, "new_abscentdays") ?? 0, Money(r, "new_absencedeductions") ?? 0, Money(r, "new_nettoemployee") ?? due, Money(r, "new_loanamount") ?? 0));
+                        Money(r, "new_abscentdays") ?? 0, Money(r, "new_absencedeductions") ?? 0, Money(r, "new_nettoemployee") ?? due, Money(r, "new_loanamount") ?? 0, Money(r, "new_salesprice") ?? 0));
                 }
             }
 

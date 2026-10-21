@@ -5321,7 +5321,9 @@
       "idle": "Non-productive workforce cost",
       "idleNote": "{{count}} housing days of supplier workers",
       "onJob": "On the job now",
-      "inHousing": "{{count}} in housing"
+      "inHousing": "{{count}} in housing",
+      "lost": "Revenue lost to housing days",
+      "lostNote": "{{days}} housing days · {{profit}} profit lost"
     },
     "ins": {
       "profit": "The month's gross profit is {{profit}} SAR at a {{margin}}% margin.",
@@ -5330,7 +5332,8 @@
       "losing": "{{count}} losing projects, {{total}} SAR in all.",
       "unbilled": "{{count}} workers worked and were not invoiced, on {{projects}} projects.",
       "uncosted": "{{count}} supplier workers have no cost recorded; their {{revenue}} SAR of revenue is left out of the profit.",
-      "collection": "{{rate}}% of the month's invoices is collected."
+      "collection": "{{rate}}% of the month's invoices is collected.",
+      "lost": "Housing days ({{days}}) lost {{revenue}} SAR of revenue and {{profit}} SAR of profit."
     },
     "flow": {
       "title": "From revenue to profit",
@@ -5352,7 +5355,8 @@
       "unbilled": "{{count}} workers worked and were not invoiced on {{projects}} projects; most on «{{largest}}».",
       "housing": "{{count}} supplier workers are in housing now, costing {{daily}} SAR a day without revenue.",
       "housingNoCost": "{{count}} supplier workers are in housing now (their cost is not recorded).",
-      "missing": "{{count}} supplier workers have no cost recorded; their {{revenue}} SAR of revenue is out of the profit. Enter their cost →"
+      "missing": "{{count}} supplier workers have no cost recorded; their {{revenue}} SAR of revenue is out of the profit. Enter their cost →",
+      "lost": "Housing days ({{days}}) lost {{revenue}} SAR of revenue, {{profit}} SAR of it profit (outside the accounts)."
     },
     "trend": {
       "title": "Revenue, cost and profit by month",
@@ -5411,13 +5415,15 @@
         "losing": "Losing",
         "housing": "With housing days",
         "Supplier": "Supplier workers",
-        "Company": "Company workers"
+        "Company": "Company workers",
+        "lost": "Most revenue lost"
       },
       "search": "Search by worker number or name…",
       "noSalary": "The worker list shows salaries, so it needs the permission to view workers' salaries.",
       "missingTip": "The supplier's cost for this worker is not recorded.",
       "idleOf": "Housing {{amount}}",
-      "more": "The first 500 of {{count}} are shown; download Excel for all."
+      "more": "The first 500 of {{count}} are shown; download Excel for all.",
+      "noPrice": "The worker was never invoiced, so there is no price to value their housing days."
     },
     "col": {
       "project": "Project",
@@ -5431,7 +5437,8 @@
       "supplier": "Supplier",
       "idle": "Housing days' cost",
       "worker": "Worker",
-      "source": "Source"
+      "source": "Source",
+      "lost": "Revenue lost"
     },
     "parts": {
       "title": "The worker's cost in detail",
@@ -5467,7 +5474,16 @@
       "netSalaryHint": "What the worker was actually paid for the month",
       "advance": "Advance installment",
       "advanceHint": "Deducted from the net, but it pays an advance back and saves nothing, so it is added to the cost",
-      "unbilledDays": "{{days}} working days in the period ledger are not on this month's invoice: neither their cost nor their revenue is counted here; they count with the invoice they are billed on."
+      "unbilledDays": "{{days}} working days in the period ledger are not on this month's invoice: neither their cost nor their revenue is counted here; they count with the invoice they are billed on.",
+      "lostTitle": "Housing days: what was lost (outside the profit)",
+      "noPrice": "{{days}} housing days; the worker was never invoiced, so there is no price to value them.",
+      "lostRevenue": "Revenue lost",
+      "lostRevenueHint": "{{days}} housing days × {{daily}} (the last price invoiced ÷ 30)",
+      "lostProfit": "Profit lost",
+      "lostProfitCompany": "The revenue lost less the salary working would have cost (the salary ÷ 30 × the days)",
+      "lostProfitFixed": "The supplier's cost is paid anyway, so all the revenue lost is profit lost",
+      "lostProfitByDays": "The revenue lost less the supplier's cost working would have cost",
+      "lostNote": "An opportunity lost, shown to follow up; it is not deducted from the profit counted."
     }
   }
 }

@@ -303,6 +303,11 @@ export interface CeoOverview {
   margin: Figure;
   idleCost: Figure;
   idleDays: number;
+  /** What the housing days would have been billed (outside the profit). */
+  lostRevenue: Figure;
+  lostProfit: Figure;
+  housingDays: number;
+  unpricedHousingDays: number;
   collectionRate: Figure;
   onJob: number;
   inHousing: number;
@@ -340,6 +345,10 @@ export interface CostParts {
   idleDays: number;
   idleCost: number;
   expenses: ExpenseItem[];
+  /** The last price billed ÷ 30 (null: never billed). */
+  dailyPrice: number | null;
+  lostRevenue: number;
+  lostProfit: number;
 }
 
 export interface ProjectProfit {
@@ -369,6 +378,7 @@ export interface SupplierProfit {
   idleDays: number;
   profit: number;
   missingCosts: number;
+  lostRevenue: number;
 }
 
 export interface CeoProfit {
@@ -401,6 +411,7 @@ export interface WorkerProfit {
   profit: number;
   costMissing: boolean;
   parts: CostParts;
+  lostRevenue: number;
 }
 
 export interface WorkerProfitQuery {
@@ -409,6 +420,7 @@ export interface WorkerProfitQuery {
   source?: WorkerSource | null;
   losing?: boolean;
   housing?: boolean;
+  lost?: boolean;
   search?: string;
 }
 

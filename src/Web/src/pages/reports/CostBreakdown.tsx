@@ -107,6 +107,20 @@ export function WorkerCost({ w }: { w: WorkerProfit }) {
       <Row label={t('ceo.parts.total')} value={f.n(w.cost)} strong />
       <Row label={t('ceo.parts.revenue')} hint={t('ceo.parts.revenueHint')} value={f.n(w.revenue)} />
       <Row label={t('ceo.col.profit')} value={f.n(w.profit)} strong negative={w.profit < 0} />
+      {w.housingDays > 0 && (
+        <Box sx={{ mt: 1.25, p: 1.25, borderRadius: '10px', bgcolor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+          <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: '#92400E' }}>{t('ceo.parts.lostTitle')}</Typography>
+          {p.dailyPrice === null ? (
+            <Typography sx={{ fontSize: 11.5, color: '#92400E' }}>{t('ceo.parts.noPrice', { days: w.housingDays })}</Typography>
+          ) : (
+            <>
+              <Row label={t('ceo.parts.lostRevenue')} hint={t('ceo.parts.lostRevenueHint', { days: w.housingDays, daily: f.n(p.dailyPrice) })} value={f.n(p.lostRevenue)} />
+              <Row label={t('ceo.parts.lostProfit')} hint={t(supplier ? (p.byWorkingDays ? 'ceo.parts.lostProfitByDays' : 'ceo.parts.lostProfitFixed') : 'ceo.parts.lostProfitCompany')} value={f.n(p.lostProfit)} />
+            </>
+          )}
+          <Typography sx={{ fontSize: 11, color: '#92400E', mt: 0.5 }}>{t('ceo.parts.lostNote')}</Typography>
+        </Box>
+      )}
       {p.expenses.length === 0 && <Typography sx={{ fontSize: 11, color: tokens.gray500, mt: 1 }}>{t('ceo.parts.noExpenses')}</Typography>}
     </Box>
   );
