@@ -115,10 +115,18 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
         var history = await db.HistoryPeriods.AsNoTracking().Where(p => p.StartsOn >= from && (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing))
             .Select(p => new { p.WorkerId, p.Kind, p.StartsOn, p.Place }).ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        // No work starts on an inactive project; a worker parked there later still moved before (as the old report counts).
+        // Nothing on the inactive workers' project counts: neither a start on it nor a return from it. A worker parked there
+        // later still moved before (as the old report counts).
         var moves = recorded
             .Concat(history.Where(h => !firstRecorded.TryGetValue(h.WorkerId, out var first) || h.StartsOn < first))
-            .Where(m => !(m.Kind == PeriodKind.Work && options.Value.IsInactiveProject(m.Place)))
+            .GroupBy(m => m.WorkerId)
+            .SelectMany(g =>
+            {
+                var ordered = g.OrderBy(m => m.StartsOn).ToList();
+                return ordered.Where((m, i) => m.Kind == PeriodKind.Work
+                    ? !options.Value.IsInactiveProject(m.Place)
+                    : !options.Value.IsInactiveProject(ordered.Take(i).LastOrDefault(x => x.Kind == PeriodKind.Work)?.Place));
+            })
             .ToLookup(m => new DateOnly(m.StartsOn.Year, m.StartsOn.Month, 1));
         return Enumerable.Range(0, 12).Select(i => from.AddMonths(i))
             .Select(m => new MonthMovesDto(m, moves[m].Count(x => x.Kind == PeriodKind.Work), moves[m].Count(x => x.Kind == PeriodKind.Housing)))
@@ -163,7 +171,13 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                     continue;
                 }
 
+                // A return from the inactive workers' project is not a return.
                 var before = m.Kind == PeriodKind.Housing ? ordered.Take(i).LastOrDefault(x => x.Kind == PeriodKind.Work) : null;
+                if (before is not null && options.Value.IsInactiveProject(before.Place))
+                {
+                    continue;
+                }
+
                 moves.Add(new WorkforceMove(
                     w.Id, w.WorkerNo, w.NameAr ?? w.NameEn, m.Kind == PeriodKind.Work ? "Work" : "Housing", m.StartsOn,
                     m.Kind == PeriodKind.Work ? m.ProjectCrmId : null, m.Place, before?.ProjectCrmId, before?.Place, before?.StartsOn));
@@ -201,7 +215,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
         var open = await db.Periods.AsNoTracking().Where(p => p.EndsOn == null).Select(p => new { p.WorkerId, p.Kind }).ToDictionaryAsync(p => p.WorkerId, p => p.Kind, cancellationToken).ConfigureAwait(false);
 
         // Where each worker is now: an open period recorded here, then the old system's status (as the dashboard counts).
-        var housed = workers.Values.Where(w => open.TryGetValue(w.Id, out var kind) ? kind == PeriodKind.Housing : w.Placement == Placement.Housing).ToList();
+        var housed = workers.Values.Where(w => open.TryGetValue(w.Id, out var kind) ? kind == PeriodKind.Housing && InHousingStatus(w.Placement) : w.Placement == Placement.Housing).ToList();
         var timelines = await TimelinesAsync(housed.Select(w => w.Id).ToHashSet(), cancellationToken).ConfigureAwait(false);
         return housed.Select(w =>
             {
@@ -220,7 +234,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 .Union(db.HistoryPeriods.AsNoTracking().Where(p => (p.Kind == PeriodKind.Work || p.Kind == PeriodKind.Housing) && p.StartsOn < after && (p.EndsOn == null || p.EndsOn > from)).Select(p => p.WorkerId))
                 .ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
         var workers = await db.Workers.AsNoTracking().Where(w => ids.Contains(w.Id) && w.Kind == WorkerKind.Worker)
-            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.CrmId, w.WorkerNo, w.Sponsor, w.Salary, Name = p.NameAr ?? p.NameEn })
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.CrmId, w.WorkerNo, w.Sponsor, w.Salary, w.Placement, Name = p.NameAr ?? p.NameEn })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         var timelines = await TimelinesAsync(workers.Select(w => w.Id).ToHashSet(), cancellationToken).ConfigureAwait(false);
         var today = clock.Today.AddDays(1);
@@ -230,11 +244,17 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 var spans = timelines[w.Id].ToList();
                 var projects = spans.Where(s => s.Kind == PeriodKind.Work && !options.Value.IsInactiveProject(s.Place))
                     .GroupBy(s => (s.ProjectCrmId, s.Place)).Select(g => new ProjectDays(g.Key.ProjectCrmId, g.Key.Place, g.Sum(Overlap))).Where(p => p.Days > 0).ToList();
-                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, spans.Where(s => s.Kind == PeriodKind.Housing).Sum(Overlap));
+                // A stay still open counts only while the worker is in housing: a worker since gone on vacation, transferred
+                // or out has no such days. A stay followed by another move counts as it was.
+                var housing = spans.Where(s => s.Kind == PeriodKind.Housing && (s.EndsOn is not null || InHousingStatus(w.Placement))).Sum(Overlap);
+                return new WorkerDays(w.Id, w.CrmId, w.WorkerNo, w.Name, w.Sponsor, w.Salary.Total, projects, housing);
             })
             .Where(w => w.WorkDays > 0 || w.HousingDays > 0)
             .ToList();
     }
+
+    /// <summary>The statuses of a worker in the company's housing (a new arrival waits there too).</summary>
+    private static bool InHousingStatus(Placement placement) => placement is Placement.Housing or Placement.New;
 
     internal sealed record Span(PeriodKind Kind, DateOnly StartsOn, DateOnly? EndsOn, Guid? ProjectCrmId, string? Place);
 
