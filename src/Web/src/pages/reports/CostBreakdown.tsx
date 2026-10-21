@@ -98,7 +98,7 @@ export function WorkerCost({ w }: { w: WorkerProfit }) {
               {p.advance > 0 && <Row label={t('ceo.parts.advance')} hint={t('ceo.parts.advanceHint')} value={`+${f.n(p.advance)}`} />}
             </>
           )}
-          {p.unbilledDays > 0 && <Row label={t('ceo.parts.unbilledSalary')} hint={t('ceo.parts.unbilledHint', { days: p.unbilledDays, daily: f.n(p.dailySalary) })} value={f.n(p.unbilledSalary)} />}
+          {p.unbilledDays > 0 && <Typography sx={{ fontSize: 11.5, color: tokens.warning, py: 0.5 }}>{t('ceo.parts.unbilledDays', { days: p.unbilledDays })}</Typography>}
           {w.housingDays > 0 && <Typography sx={{ fontSize: 11.5, color: tokens.gray500, py: 0.5 }}>{t('ceo.parts.housingUnpaid', { days: w.housingDays })}</Typography>}
           {w.source === 'Unknown' && <Typography sx={{ fontSize: 11.5, color: tokens.info, py: 0.5 }}>{t('ceo.parts.unknown')}</Typography>}
         </>

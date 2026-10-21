@@ -333,8 +333,6 @@ export interface CostParts {
   billedSalary: number;
   billedDays: number;
   unbilledDays: number;
-  dailySalary: number;
-  unbilledSalary: number;
   supplierMonthly: number | null;
   byWorkingDays: boolean | null;
   monthDays: number;

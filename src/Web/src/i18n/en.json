@@ -5442,8 +5442,6 @@
       "idleHint": "{{days}} housing days × ({{monthly}} ÷ {{monthDays}}): paid to the supplier without revenue",
       "byDaysNote": "The supplier charges by working days, so the housing days ({{days}}) cost nothing.",
       "billedSalaryHint": "As on the old system's invoice for {{days}} working days",
-      "unbilledSalary": "Salary of working days not invoiced",
-      "unbilledHint": "{{days}} days × {{daily}} (the salary ÷ 30)",
       "housingUnpaid": "{{days}} days in housing without salary.",
       "unknown": "No sponsor is recorded for this worker, so their cost is their salary, like the company's workers.",
       "expense": "Expense {{no}}",
@@ -5468,7 +5466,8 @@
       "netSalary": "Net salary paid",
       "netSalaryHint": "What the worker was actually paid for the month",
       "advance": "Advance installment",
-      "advanceHint": "Deducted from the net, but it pays an advance back and saves nothing, so it is added to the cost"
+      "advanceHint": "Deducted from the net, but it pays an advance back and saves nothing, so it is added to the cost",
+      "unbilledDays": "{{days}} working days in the period ledger are not on this month's invoice: neither their cost nor their revenue is counted here; they count with the invoice they are billed on."
     }
   }
 }

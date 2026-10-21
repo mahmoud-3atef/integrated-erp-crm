@@ -30,8 +30,6 @@ public sealed record CostPartsDto(
     decimal BilledSalary,
     decimal BilledDays,
     int UnbilledDays,
-    decimal DailySalary,
-    decimal UnbilledSalary,
     decimal? SupplierMonthly,
     bool? ByWorkingDays,
     int MonthDays,
@@ -189,7 +187,7 @@ internal sealed class ProfitReport(
             var source = info?.Source ?? "Unknown";
             var mine = linesByWorker[d.CrmId].ToList();
             var revenue = mine.Sum(l => l.BeforeVat);
-            decimal work, idleCost = 0, billedSalary = 0, dailySalary = 0, unbilledSalary = 0;
+            decimal work, idleCost = 0, billedSalary = 0;
             decimal billedDays = 0, dueSalary = 0, absentDays = 0, absenceDeduction = 0, netSalary = 0, advance = 0;
             int unbilledDays = 0, paidIdleDays = 0;
             var missing = false;
@@ -217,7 +215,9 @@ internal sealed class ProfitReport(
             }
             else
             {
-                // The net salary on the lines (what the worker was paid), and a day's salary for each day on the job not billed.
+                // The cost of the month's invoice lines only (the net salary paid with the advance installments added back), so
+                // the revenue and the cost come from the same invoice; days on the job not on them are counted, not costed (they
+                // are billed and paid on a later invoice).
                 billedDays = mine.Sum(l => l.WorkingDays);
                 dueSalary = mine.Sum(l => l.DueSalary);
                 absentDays = mine.Sum(l => l.AbsentDays);
@@ -225,10 +225,8 @@ internal sealed class ProfitReport(
                 netSalary = mine.Sum(l => l.NetSalary);
                 advance = mine.Sum(l => l.Advance);
                 billedSalary = netSalary + advance;
-                dailySalary = (info?.Salary ?? d.Salary) / 30m;
                 unbilledDays = (int)Math.Max(0, d.WorkDays - billedDays);
-                unbilledSalary = dailySalary * unbilledDays;
-                work = billedSalary + unbilledSalary;
+                work = billedSalary;
                 companySalaries += work;
             }
 
@@ -244,15 +242,28 @@ internal sealed class ProfitReport(
 
             workers.Add(new WorkerMonth(d.WorkerId, d.WorkerNo, d.Name, source, info?.Supplier ?? d.Sponsor, d.Projects, d.WorkDays, d.HousingDays,
                 Math.Round(revenue, 2), Math.Round(work, 2), Math.Round(idleCost, 2), Math.Round(expense, 2), missing,
-                new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(netSalary, 2), Math.Round(advance, 2), Math.Round(billedSalary, 2), billedDays, unbilledDays, Math.Round(dailySalary, 2), Math.Round(unbilledSalary, 2),
+                new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(netSalary, 2), Math.Round(advance, 2), Math.Round(billedSalary, 2), billedDays, unbilledDays,
                     source == "Supplier" ? info?.SupplierMonthlyCost : null, source == "Supplier" ? info?.ByWorkingDays : null, monthDays,
                     source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList())));
 
-            // The work cost and the worker's expenses go to their projects by the days on each.
+            // A company worker's salary goes to the projects of the invoices it came from; a supplier's cost and the worker's
+            // expenses to the projects by the days on each.
+            Slot SlotOf(Guid? project) => allocated.TryGetValue(project ?? Guid.Empty, out var found) ? found : allocated[project ?? Guid.Empty] = new Slot();
+            if (source != "Supplier")
+            {
+                foreach (var l in mine)
+                {
+                    var slot = SlotOf(invoices[l.InvoiceCrmId].ProjectCrmId);
+                    slot.Cost += l.NetSalary + l.Advance;
+                    slot.Company += l.NetSalary + l.Advance;
+                    slot.Workers.Add(d.WorkerId);
+                }
+            }
+
             foreach (var p in d.Projects)
             {
-                var slot = allocated.TryGetValue(p.ProjectCrmId ?? Guid.Empty, out var found) ? found : allocated[p.ProjectCrmId ?? Guid.Empty] = new Slot();
-                var part = d.WorkDays > 0 ? (work + expense) * p.Days / d.WorkDays : 0;
+                var slot = SlotOf(p.ProjectCrmId);
+                var part = d.WorkDays > 0 ? ((source == "Supplier" ? work : 0) + expense) * p.Days / d.WorkDays : 0;
                 slot.Cost += part;
                 if (source == "Supplier")
                 {
