@@ -20,6 +20,9 @@ public enum ReturnStatus
     /// <summary>Approved: the worker is back in housing (old system: approved, 100000009).</summary>
     Completed,
     Canceled,
+
+    /// <summary>Cancelled after its approval: the housing period it opened was taken back (with the reason).</summary>
+    CanceledAfterApproval,
 }
 
 /// <summary>Why the worker came back (the old system's back reasons).</summary>
@@ -174,6 +177,20 @@ public sealed class ReturnOrder : ITenantOwned
 
     public string? LastComment { get; private set; }
 
+    /// <summary>The last change after the approval: when, by whom and why (each change is in the audit log too).</summary>
+    public DateTimeOffset? AmendedAt { get; private set; }
+
+    public string? AmendedByName { get; private set; }
+
+    public string? AmendNote { get; private set; }
+
+    public DateTimeOffset? CanceledAt { get; private set; }
+
+    public string? CanceledByName { get; private set; }
+
+    /// <summary>An approved order of this system: it may still be changed or cancelled (with their own permissions and a reason).</summary>
+    public bool IsAmendable => Source == DocumentSource.System && Status == ReturnStatus.Completed;
+
     public bool IsEditable => Source == DocumentSource.System && Status is ReturnStatus.UnderPreparation or ReturnStatus.Returned;
 
     public bool IsInApproval => Source == DocumentSource.System && AwaitingApproval
@@ -285,6 +302,47 @@ public sealed class ReturnOrder : ITenantOwned
         LastComment = reason;
     }
 
+    /// <summary>Changed after its approval (the housing period and room were changed with it).</summary>
+    public Result Amend(ReturnDetails details, string reason, string by, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(details);
+        if (!IsAmendable)
+        {
+            return Result.Failure(ReturnErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(ReturnErrors.AmendReason);
+        }
+
+        SetDetails(details with { DelayReason = DelayReason });
+        AmendedAt = at;
+        AmendedByName = by;
+        AmendNote = reason.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Cancelled after its approval (the housing period and room were taken back).</summary>
+    public Result CancelApproved(string reason, string by, DateTimeOffset at)
+    {
+        if (!IsAmendable)
+        {
+            return Result.Failure(ReturnErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+        {
+            return Result.Failure(ReturnErrors.AmendReason);
+        }
+
+        Status = ReturnStatus.CanceledAfterApproval;
+        CanceledAt = at;
+        CanceledByName = by;
+        LastComment = reason.Trim();
+        return Result.Success();
+    }
+
     public Result Cancel(string? comment)
     {
         if (!IsEditable || AwaitingApproval)
@@ -372,4 +430,8 @@ public static class ReturnErrors
     public static readonly Error NotCancelable = Error.Conflict("return_not_cancelable", "This order can no longer be canceled.");
     public static readonly Error NotInApproval = Error.Conflict("return_not_in_approval", "The order is not in approval.");
     public static readonly Error StatusNotSettable = Error.Validation("return_field_not_settable", "A process cannot set this value.");
+    public static readonly Error NotAmendable = Error.Conflict("return_not_amendable", "Only an approved order of this system can be changed or cancelled after its approval.");
+    public static readonly Error AmendReason = Error.Validation("return_amend_reason", "Give the reason (500 characters at most).");
+    public static readonly Error LaterPeriod = Error.Conflict("return_later_period", "The worker has an action after this order: cancel it first.");
+    public static readonly Error PeriodOverlap = Error.Conflict("return_period_overlap", "The new arrival day overlaps another period of the worker.");
 }

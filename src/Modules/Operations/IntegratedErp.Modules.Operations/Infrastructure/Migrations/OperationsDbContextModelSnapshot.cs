@@ -463,6 +463,20 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
+                    b.Property<string>("AmendNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("amend_note");
+
+                    b.Property<DateTimeOffset?>("AmendedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("amended_at");
+
+                    b.Property<string>("AmendedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("amended_by_name");
+
                     b.Property<DateOnly?>("ArrivedOn")
                         .HasColumnType("date")
                         .HasColumnName("arrived_on");
@@ -470,6 +484,15 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                     b.Property<bool>("AwaitingApproval")
                         .HasColumnType("bit")
                         .HasColumnName("awaiting_approval");
+
+                    b.Property<DateTimeOffset?>("CanceledAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("canceled_at");
+
+                    b.Property<string>("CanceledByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("canceled_by_name");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("datetimeoffset")

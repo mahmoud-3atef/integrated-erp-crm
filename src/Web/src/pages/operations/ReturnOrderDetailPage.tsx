@@ -2,6 +2,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
@@ -9,11 +10,12 @@ import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import QuestionAnswerOutlinedIcon from '@mui/icons-material/QuestionAnswerOutlined';
 import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, Switch, TextField } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
+import type { RoomOption } from '../../api/housing';
 import { returnsApi, type ReturnDetail } from '../../api/operations';
 import { useCrumb } from '../../app/breadcrumbs';
 import { tokens } from '../../app/theme';
@@ -51,6 +53,8 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
   const [error, setError] = useState<string | null>(params.get('error'));
   const [busy, setBusy] = useState(false);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [amending, setAmending] = useState(false);
+  const [cancelingApproved, setCancelingApproved] = useState<string | null>(null);
   const approval = useRecordApproval(order?.approval?.instanceId);
 
   const reload = useCallback(async () => {
@@ -120,6 +124,16 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
                 {t('operations.delivery.cancel')}
               </Button>
             )}
+            {order.canAmend && (
+              <Button variant="outlined" startIcon={<EditNoteOutlinedIcon />} onClick={() => setAmending(true)}>
+                {t('operations.return.amend.action')}
+              </Button>
+            )}
+            {order.canCancelApproved && (
+              <Button variant="outlined" color="error" startIcon={<CancelOutlinedIcon />} onClick={() => setCancelingApproved('')}>
+                {t('operations.return.amend.cancelAction')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/operations/return-orders')}>
               {t('common.back')}
             </Button>
@@ -128,6 +142,16 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
       />
 
       <ErrorMessage messageKey={error} />
+      {order.amendedAt && o.status === 'Completed' && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {t('operations.return.amend.amendedBy', { by: order.amendedByName, date: date(order.amendedAt) })} — {order.amendNote}
+        </Alert>
+      )}
+      {o.status === 'CanceledAfterApproval' && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('operations.return.amend.canceledBy', { by: order.canceledByName, date: date(order.canceledAt) })} — {order.lastComment}
+        </Alert>
+      )}
       {o.source === 'System' && o.status === 'UnderPreparation' && order.awaitingApproval && (
         <Alert severity="info" sx={{ mb: `${tokens.gap}px` }}>
           {t('operations.return.creatorHint')}
@@ -238,6 +262,34 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
           </DialogActions>
         </Dialog>
       )}
+      {amending && <AmendDialog order={order} onClose={() => setAmending(false)} onSaved={() => void run(async () => setAmending(false))} />}
+      {cancelingApproved !== null && (
+        <Dialog open onClose={() => setCancelingApproved(null)} fullWidth maxWidth="sm">
+          <DialogTitle>{t('operations.return.amend.cancelTitle', { no: o.orderNo })}</DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t('operations.return.amend.cancelHint')}
+            </Alert>
+            <TextField required label={t('operations.return.amend.reason')} value={cancelingApproved} onChange={(e) => setCancelingApproved(e.target.value)} fullWidth multiline minRows={2} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelingApproved(null)}>{t('common.close')}</Button>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={busy || !cancelingApproved.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await returnsApi.cancelApproved(o.id, cancelingApproved.trim());
+                  setCancelingApproved(null);
+                })
+              }
+            >
+              {t('operations.return.amend.cancelAction')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
       {wizard && (
         <ReturnOrderWizard
           id={o.id}
@@ -254,5 +306,79 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
         />
       )}
     </Box>
+  );
+}
+
+/**
+ * Changing an approved order (its own permission): the arrival day, the reason, the salary in housing, the room and the
+ * notes, with the reason for the change. The housing period and the room move with it on the server.
+ */
+function AmendDialog({ order, onClose, onSaved }: { order: ReturnDetail; onClose: () => void; onSaved: () => void }) {
+  const { t, i18n } = useTranslation();
+  const o = order.summary;
+  const [arrivedOn, setArrivedOn] = useState(o.arrivedOn ?? '');
+  const [reason, setReason] = useState(o.reason);
+  const [reasonNotes, setReasonNotes] = useState(order.reasonNotes ?? '');
+  const [stopSalary, setStopSalary] = useState(o.stopSalary);
+  const [roomId, setRoomId] = useState(order.roomId ?? '');
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
+  const [notes, setNotes] = useState(order.notes ?? '');
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    returnsApi.rooms().then(setRooms).catch(() => setRooms([]));
+  }, []);
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await returnsApi.amend(o.id, {
+        arrivedOn, reason, reasonNotes: reasonNotes.trim() || null, stopSalary, housingName: roomId ? null : o.housingName, notes: notes.trim() || null,
+        roomId: roomId || null, amendReason: why.trim(),
+      });
+      onSaved();
+    } catch (failure) {
+      setError(errorKey(failure));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{t('operations.return.amend.title', { no: o.orderNo })}</DialogTitle>
+      <DialogContent dividers>
+        <Stack sx={{ gap: 2 }}>
+          <Alert severity="info">{t('operations.return.amend.hint')}</Alert>
+          <TextField type="date" required label={t('operations.return.col.arrivedOn')} value={arrivedOn} onChange={(e) => setArrivedOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField select required label={t('operations.return.col.reason')} value={reason} onChange={(e) => setReason(e.target.value)}>
+            {['ClientNoReason', 'WorkerRefuses', 'Sick', 'WorkerAbused', 'ContractCanceled', 'Other'].map((r) => (
+              <MenuItem key={r} value={r}>
+                {t(`operations.return.reasons.${r}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField label={t('operations.return.reasonNotes')} value={reasonNotes} onChange={(e) => setReasonNotes(e.target.value)} multiline minRows={2} />
+          <TextField select label={t('operations.return.room')} value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+            <MenuItem value="">—</MenuItem>
+            {rooms.map((r) => (
+              <MenuItem key={r.id} value={r.id} disabled={r.free <= 0 && r.id !== order.roomId}>
+                <bdi>{r.label}</bdi>
+                {` (${r.free})`}
+              </MenuItem>
+            ))}
+          </TextField>
+          <FormControlLabel control={<Switch checked={stopSalary} onChange={(e) => setStopSalary(e.target.checked)} />} label={t('operations.return.stopSalary')} />
+          <TextField label={t('operations.delivery.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} multiline minRows={2} />
+          <TextField required label={t('operations.return.amend.reason')} value={why} onChange={(e) => setWhy(e.target.value)} multiline minRows={2} slotProps={{ htmlInput: { maxLength: 500 } }} />
+          {error && <Alert severity="error">{t(error)}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
+        <Button variant="contained" disabled={busy || !why.trim() || !arrivedOn} onClick={() => void save()} dir={i18n.dir()}>
+          {t('operations.return.amend.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

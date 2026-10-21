@@ -208,6 +208,20 @@ internal sealed class HousingService(HousingDbContext db, IWorkforceDirectory wo
         return row is null ? null : new RoomInfo(row.Id, row.BuildingId, row.Name, row.Number, row.Capacity, await OccupiedAsync(row.Id, cancellationToken).ConfigureAwait(false), row.Active);
     }
 
+    public async Task<bool> UndoStayAsync(Guid workerId, string sourceType, string sourceNo, CancellationToken cancellationToken)
+    {
+        var stay = await db.Assignments.FirstOrDefaultAsync(
+            a => a.WorkerId == workerId && a.EndsOn == null && a.SourceType == sourceType && a.SourceNo == sourceNo, cancellationToken).ConfigureAwait(false);
+        if (stay is null)
+        {
+            return false;
+        }
+
+        db.Assignments.Remove(stay);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
     public async Task<Result> AssignAsync(RoomAssignRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);

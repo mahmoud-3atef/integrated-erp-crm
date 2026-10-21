@@ -11,6 +11,7 @@ export const returnTone: Record<ReturnStatus, Tone> = {
   Rejected: 'danger',
   Completed: 'success',
   Canceled: 'neutral',
+  CanceledAfterApproval: 'danger',
 };
 
 /** Old housing-order statuses with their own names (waiting for the project supervisor, sent to investigation…). */

@@ -104,6 +104,18 @@ public interface IPeriodLedger
     Task<IReadOnlyList<PeriodInfo>> PeriodsAsync(Guid workerId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Changes the period an approved document opened (the document amended): its first day — the period before it ends
+    /// on the new day, never overlapping another — whether it is paid, and its place.
+    /// </summary>
+    Task<Result> AmendAsync(PeriodAmendRequest amend, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Takes back the period an approved document opened (the document cancelled): only the worker's latest period —
+    /// cancel what came after it first; the period before it is open again.
+    /// </summary>
+    Task<Result> UndoAsync(Guid workerId, Guid sourceId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The work periods overlapping a date range (both days included), as the timelines show them: the old system's
     /// history up to each worker's first period recorded here, then the recorded periods. One project, or all of them
     /// (<paramref name="projectCrmId"/> null). Work on an inactive project ("InActive Employee") is left out.
@@ -135,3 +147,6 @@ public sealed record WorkSpan(
     string SourceType,
     string SourceNo,
     bool FromOldSystem);
+
+/// <summary>The new values of a period a document opened: its first day, whether it is paid (housing), and its place.</summary>
+public sealed record PeriodAmendRequest(Guid WorkerId, Guid SourceId, DateOnly StartsOn, bool PaySalary, string? Place, string SourceNo);

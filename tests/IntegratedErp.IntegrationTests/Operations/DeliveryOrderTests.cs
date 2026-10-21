@@ -369,6 +369,33 @@ public sealed class DeliveryOrderTests(TestDatabase database)
             Assert.Equal((roomId, today, (DateOnly?)null, detail.Summary.OrderNo), (stay.RoomId, stay.StartsOn, stay.EndsOn, stay.SourceNo));
             Assert.DoesNotContain(await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().OnJobAsync(default), w => w.Id == workerId);
         }
+
+        // Changed after the approval (with a reason): the housing period and the room move to the new day, and it is paid.
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<ReturnOrderService>();
+            var change = new ReturnAmendInput(today.AddDays(-2), "Sick", null, false, null, "تصحيح التاريخ", roomId, "");
+            Assert.Equal("validation.return_amend_reason", (await service.AmendAsync(orderId, change, default)).Error.Code);
+            Assert.Equal("validation.return_future", (await service.AmendAsync(orderId, change with { ArrivedOn = today.AddDays(1), AmendReason = "x" }, default)).Error.Code);
+            Assert.True((await service.AmendAsync(orderId, change with { AmendReason = "وصل قبل يومين" }, default)).IsSuccess);
+
+            var detail = (await scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("Completed", today.AddDays(-2), false, "وصل قبل يومين"), (detail.Summary.Status, detail.Summary.ArrivedOn!.Value, detail.Summary.StopSalary, detail.AmendNote!));
+            var period = (await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(workerId, default))[0];
+            Assert.Equal(("Housing", today.AddDays(-2), true), (period.Kind, period.StartsOn, period.PaySalary));
+            var stay = (await scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Housing.Application.HousingQueries>().StaysAsync(workerId, default)).Single();
+            Assert.Equal((roomId, today.AddDays(-2)), (stay.RoomId, stay.StartsOn));
+
+            // Cancelled after the approval: the housing period and the stay are taken back; the worker is on the job again.
+            Assert.Equal("validation.return_amend_reason", (await service.CancelApprovedAsync(orderId, " ", default)).Error.Code);
+            Assert.True((await service.CancelApprovedAsync(orderId, "أُدخل بالخطأ", default)).IsSuccess);
+            detail = (await scope.ServiceProvider.GetRequiredService<ReturnOrderQueries>().GetAsync(orderId, default))!;
+            Assert.Equal(("CanceledAfterApproval", "أُدخل بالخطأ", false), (detail.Summary.Status, detail.LastComment!, detail.CanAmend));
+            Assert.DoesNotContain(await scope.ServiceProvider.GetRequiredService<IPeriodLedger>().PeriodsAsync(workerId, default), p => p.SourceId == orderId);
+            Assert.Empty(await scope.ServiceProvider.GetRequiredService<IntegratedErp.Modules.Housing.Application.HousingQueries>().StaysAsync(workerId, default));
+            Assert.Contains(await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().OnJobAsync(default), w => w.Id == workerId);
+            Assert.Equal("conflict.return_not_amendable", (await service.CancelApprovedAsync(orderId, "مرة أخرى", default)).Error.Code);
+        }
     }
 
     /// <summary>The user's open approval task on the order, approved.</summary>

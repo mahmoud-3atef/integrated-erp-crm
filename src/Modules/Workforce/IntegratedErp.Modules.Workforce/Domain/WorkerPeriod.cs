@@ -110,6 +110,24 @@ public sealed class WorkerPeriod : ITenantOwned
         };
     }
 
+    /// <summary>The document that opened it was amended: its first day, whether it is paid, and its place.</summary>
+    public void Amend(DateOnly startsOn, bool paySalary, string? place)
+    {
+        StartsOn = startsOn;
+        PaySalary = paySalary;
+        ProjectName = Kind == PeriodKind.Work ? ProjectName : place;
+    }
+
+    /// <summary>The next period's first day moved: this one ends then.</summary>
+    public void EndOn(DateOnly nextStartsOn) => EndsOn = nextStartsOn;
+
+    /// <summary>The next period was taken back: this one is open again.</summary>
+    public void Reopen()
+    {
+        EndsOn = null;
+        ClosedByNo = null;
+    }
+
     /// <summary>Closes the period on the day the next one starts (that day belongs to the next period).</summary>
     public Result Close(DateOnly nextStartsOn, string closedByNo)
     {

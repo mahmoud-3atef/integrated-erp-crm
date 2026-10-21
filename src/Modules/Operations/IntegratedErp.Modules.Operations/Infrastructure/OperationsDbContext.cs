@@ -172,6 +172,9 @@ internal sealed class ReturnOrderConfiguration : IEntityTypeConfiguration<Return
         builder.Property(o => o.Notes).HasMaxLength(2000);
         builder.Property(o => o.CreatedByName).HasMaxLength(200).IsRequired();
         builder.Property(o => o.CompletedByName).HasMaxLength(200);
+        builder.Property(o => o.AmendedByName).HasMaxLength(200);
+        builder.Property(o => o.AmendNote).HasMaxLength(500);
+        builder.Property(o => o.CanceledByName).HasMaxLength(200);
         builder.Property(o => o.LastComment).HasMaxLength(2000);
         builder.HasIndex(o => new { o.TenantId, o.OrderNo }).IsUnique();
         builder.HasIndex(o => new { o.TenantId, o.CrmId }).IsUnique().HasFilter("[crm_id] IS NOT NULL");

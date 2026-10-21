@@ -198,7 +198,7 @@ export const operationsApi = {
 
 // ---------------------------------------------------------------- Return orders (worker back to housing)
 
-export type ReturnStatus = 'UnderPreparation' | 'SentToSales' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Completed' | 'Canceled';
+export type ReturnStatus = 'UnderPreparation' | 'SentToSales' | 'SentToOperationsManager' | 'InApproval' | 'Returned' | 'Rejected' | 'Completed' | 'Canceled' | 'CanceledAfterApproval';
 export const returnReasons = ['ClientNoReason', 'WorkerRefuses', 'Sick', 'WorkerAbused', 'ContractCanceled', 'Other'] as const;
 
 export interface ReturnRow {
@@ -248,6 +248,26 @@ export interface ReturnDetail {
   canSubmit: boolean;
   canCancel: boolean;
   roomId: string | null;
+  /** An approved order: may be changed or cancelled by the holders of those permissions (with a reason). */
+  canAmend: boolean;
+  canCancelApproved: boolean;
+  amendedAt: string | null;
+  amendedByName: string | null;
+  amendNote: string | null;
+  canceledAt: string | null;
+  canceledByName: string | null;
+}
+
+/** What may change on an approved return order, with the reason for the change. */
+export interface ReturnAmendInput {
+  arrivedOn: string;
+  reason: string;
+  reasonNotes: string | null;
+  stopSalary: boolean;
+  housingName: string | null;
+  notes: string | null;
+  roomId: string | null;
+  amendReason: string;
 }
 
 export interface ReturnInput {
@@ -280,6 +300,8 @@ export const returnsApi = {
   update: (id: string, input: ReturnInput) => request<SavedOrder>('PUT', `${returnsBase}/${id}`, input),
   submit: (id: string) => request<void>('POST', `${returnsBase}/${id}/submit`),
   cancel: (id: string, comment: string | null) => request<void>('POST', `${returnsBase}/${id}/cancel`, { comment }),
+  amend: (id: string, input: ReturnAmendInput) => request<void>('PUT', `${returnsBase}/${id}/amend`, input),
+  cancelApproved: (id: string, reason: string) => request<void>('POST', `${returnsBase}/${id}/cancel-approved`, { comment: reason }),
 };
 
 // ---------------------------------------------------------------- Transfer orders (between projects)

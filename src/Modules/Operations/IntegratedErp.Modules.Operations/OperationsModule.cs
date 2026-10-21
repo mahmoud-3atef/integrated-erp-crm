@@ -83,6 +83,8 @@ internal static class OperationsPermissions
     public const string ReturnCreate = "operations.return.create";
     public const string ReturnSales = "operations.return.sales";
     public const string ReturnApprove = "operations.return.approve";
+    public const string ReturnAmend = "operations.return.amend";
+    public const string ReturnCancelApproved = "operations.return.cancel_approved";
     public const string TransferView = "operations.transfer.view";
     public const string TransferCreate = "operations.transfer.create";
     public const string TransferApprove = "operations.transfer.approve";
@@ -103,6 +105,8 @@ internal static class OperationsPermissions
         new(ReturnCreate, GroupAr, GroupEn, "إنشاء أوامر الرجيع وتعديلها", "Create and edit return orders"),
         new(ReturnSales, GroupAr, GroupEn, "تسجيل رغبة العميل في أوامر الرجيع (المبيعات)", "Record the customer's wish on return orders (sales)"),
         new(ReturnApprove, GroupAr, GroupEn, "اعتماد أوامر الرجيع (مدير العمليات)", "Approve return orders (operations manager)"),
+        new(ReturnAmend, GroupAr, GroupEn, "تعديل أمر رجيع معتمد (تاريخ الوصول، والراتب، والسكن…)", "Change an approved return order (arrival day, salary, housing…)"),
+        new(ReturnCancelApproved, GroupAr, GroupEn, "إلغاء أمر رجيع معتمد", "Cancel an approved return order"),
         new(TransferView, GroupAr, GroupEn, "عرض أوامر النقل بين المشاريع", "View project transfer orders"),
         new(TransferCreate, GroupAr, GroupEn, "إنشاء أوامر النقل وتعديلها", "Create and edit project transfer orders"),
         new(TransferApprove, GroupAr, GroupEn, "اعتماد أوامر النقل (مدير العمليات)", "Approve project transfer orders (operations manager)"),

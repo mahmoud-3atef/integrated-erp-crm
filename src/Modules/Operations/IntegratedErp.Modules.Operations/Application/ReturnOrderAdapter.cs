@@ -34,6 +34,7 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
         new(nameof(ReturnStatus.Rejected), "مرفوض", "Rejected", Settable: false),
         new(nameof(ReturnStatus.Completed), "تم التسكين", "In housing", Settable: false),
         new(nameof(ReturnStatus.Canceled), "ملغى", "Canceled", Settable: false),
+        new(nameof(ReturnStatus.CanceledAfterApproval), "ملغى بعد الاعتماد", "Canceled after approval", Settable: false),
     ];
 
     private static readonly RecordFieldOption[] Reasons =

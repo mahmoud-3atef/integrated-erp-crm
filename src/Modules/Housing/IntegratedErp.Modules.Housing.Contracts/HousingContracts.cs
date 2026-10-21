@@ -37,6 +37,12 @@ public interface IHousingRooms
     /// </summary>
     Task<Result> AssignAsync(RoomAssignRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Takes back the stay a document opened (the document amended or cancelled), while it is still the worker's current
+    /// stay; false when there is none to take back.
+    /// </summary>
+    Task<bool> UndoStayAsync(Guid workerId, string sourceType, string sourceNo, CancellationToken cancellationToken);
+
     /// <summary>The workers left housing on the given day (delivered, transferred out…): their rooms are free from then.</summary>
     Task ReleaseAsync(IReadOnlyList<Guid> workerIds, DateOnly on, CancellationToken cancellationToken);
 }

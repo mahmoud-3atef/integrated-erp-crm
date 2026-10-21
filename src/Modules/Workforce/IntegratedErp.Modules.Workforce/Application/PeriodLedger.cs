@@ -98,6 +98,49 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
         return Result.Success();
     }
 
+    public async Task<Result> AmendAsync(PeriodAmendRequest amend, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(amend);
+        var mine = await db.Periods.Where(p => p.WorkerId == amend.WorkerId).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (mine.FirstOrDefault(p => p.SourceId == amend.SourceId) is not { } period)
+        {
+            return Result.Failure(Error.NotFound("period", "The document opened no period of the worker."));
+        }
+
+        var before = mine.FirstOrDefault(p => p.Id != period.Id && p.EndsOn == period.StartsOn);
+        var others = mine.Where(p => p.Id != period.Id && p.Id != before?.Id).ToList();
+        var newEnd = period.EndsOn;
+        if (amend.StartsOn >= (newEnd ?? DateOnly.MaxValue) || (before is not null && amend.StartsOn <= before.StartsOn)
+            || others.Any(p => p.StartsOn < (newEnd ?? DateOnly.MaxValue) && (p.EndsOn ?? DateOnly.MaxValue) > amend.StartsOn))
+        {
+            return Result.Failure(Error.Conflict("period_overlap", "The new day overlaps another period of the worker."));
+        }
+
+        period.Amend(amend.StartsOn, amend.PaySalary, amend.Place);
+        before?.EndOn(amend.StartsOn);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    public async Task<Result> UndoAsync(Guid workerId, Guid sourceId, CancellationToken cancellationToken)
+    {
+        var mine = await db.Periods.Where(p => p.WorkerId == workerId).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (mine.FirstOrDefault(p => p.SourceId == sourceId) is not { } period)
+        {
+            return Result.Success(); // nothing to take back
+        }
+
+        if (mine.Any(p => p.Id != period.Id && p.StartsOn >= period.StartsOn))
+        {
+            return Result.Failure(Error.Conflict("period_not_last", "Another period of the worker came after this one: cancel it first."));
+        }
+
+        mine.FirstOrDefault(p => p.Id != period.Id && p.EndsOn == period.StartsOn)?.Reopen();
+        db.Periods.Remove(period);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
     /// <summary>The periods a movement may leave for each kind it opens.</summary>
     private static readonly Dictionary<PeriodKind, PeriodKind[]> From = new()
     {

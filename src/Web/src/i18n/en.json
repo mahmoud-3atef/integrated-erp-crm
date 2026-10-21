@@ -547,7 +547,11 @@
     "validation_expense_project": "The project was not found.",
     "validation_expense_text": "A text is longer than allowed.",
     "validation_expense_cancelled": "The expense is cancelled.",
-    "validation_expense_reason": "Write why the expense is cancelled."
+    "validation_expense_reason": "Write why the expense is cancelled.",
+    "conflict_return_not_amendable": "Only an approved order of this system can be changed or cancelled after its approval.",
+    "validation_return_amend_reason": "Give the reason (500 characters at most).",
+    "conflict_return_later_period": "The worker has an action after this order: cancel it first.",
+    "conflict_return_period_overlap": "The new arrival day overlaps another period of the worker."
   },
   "menu": {
     "label": "Main menu",
@@ -1939,7 +1943,8 @@
         "Returned": "Returned",
         "Rejected": "Rejected",
         "Completed": "In housing",
-        "Canceled": "Canceled"
+        "Canceled": "Canceled",
+        "CanceledAfterApproval": "Canceled after approval"
       },
       "crmStatus": {
         "1": "Waiting for the project supervisor",
@@ -1961,6 +1966,18 @@
         "review": "Review and send",
         "summary": "Return summary",
         "hint": "Choose the returning worker, then the arrival in housing and the reason, then review before sending for approval."
+      },
+      "amend": {
+        "action": "Change after approval",
+        "cancelAction": "Cancel the approved order",
+        "title": "Change approved return order {{no}}",
+        "hint": "The housing period and the room move with the new day, and the work before it ends that day. The change and its reason are recorded.",
+        "reason": "Reason for the change or cancellation",
+        "save": "Save the change",
+        "cancelTitle": "Cancel approved return order {{no}}",
+        "cancelHint": "The housing period the order opened is removed, the work before it is open again, and the worker leaves the room. Not allowed if the worker has a later action.",
+        "amendedBy": "Changed after approval by {{by}} on {{date}}",
+        "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
       }
     },
     "transfer": {

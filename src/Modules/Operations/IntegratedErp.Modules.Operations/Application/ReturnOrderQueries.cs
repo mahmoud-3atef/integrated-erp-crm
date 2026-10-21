@@ -51,7 +51,14 @@ public sealed record ReturnDetailDto(
     bool CanEdit,
     bool CanSubmit,
     bool CanCancel,
-    Guid? RoomId = null);
+    Guid? RoomId = null,
+    bool CanAmend = false,
+    bool CanCancelApproved = false,
+    DateTimeOffset? AmendedAt = null,
+    string? AmendedByName = null,
+    string? AmendNote = null,
+    DateTimeOffset? CanceledAt = null,
+    string? CanceledByName = null);
 
 internal sealed class ReturnOrderQueries(OperationsDbContext db, IReferenceData reference, IApprovalService approvals, IPermissionService permissions)
 {
@@ -116,14 +123,22 @@ internal sealed class ReturnOrderQueries(OperationsDbContext db, IReferenceData 
         var approval = o.Source == DocumentSource.System
             ? await approvals.StatusAsync(ReturnOrderAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false)
             : null;
-        var canCreate = (await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(OperationsPermissions.ReturnCreate);
+        var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        var canCreate = granted.Has(OperationsPermissions.ReturnCreate);
         return new ReturnDetailDto(
             Row(o), profession?.NameAr, profession?.NameEn, nationality?.NameAr, nationality?.NameEn, o.IqamaNo, o.ProjectId, o.WorkStartedOn,
             o.ReasonNotes, o.DelayReason, o.Notes, o.LastComment, o.CompletedAt, o.CompletedByName, approval, o.AwaitingApproval,
             CanEdit: canCreate && o.IsEditable,
             CanSubmit: canCreate && o.IsEditable && !o.AwaitingApproval,
             CanCancel: canCreate && o.IsEditable && !o.AwaitingApproval,
-            RoomId: o.RoomId);
+            RoomId: o.RoomId,
+            CanAmend: granted.Has(OperationsPermissions.ReturnAmend) && o.IsAmendable,
+            CanCancelApproved: granted.Has(OperationsPermissions.ReturnCancelApproved) && o.IsAmendable,
+            AmendedAt: o.AmendedAt,
+            AmendedByName: o.AmendedByName,
+            AmendNote: o.AmendNote,
+            CanceledAt: o.CanceledAt,
+            CanceledByName: o.CanceledByName);
     }
 
     private static ReturnRowDto Row(ReturnOrder o) => new(
@@ -135,7 +150,7 @@ internal sealed class ReturnOrderQueries(OperationsDbContext db, IReferenceData 
     private static bool IsInApproval(string status) =>
         status is nameof(ReturnStatus.SentToSales) or nameof(ReturnStatus.SentToOperationsManager) or nameof(ReturnStatus.InApproval);
 
-    private static bool IsClosed(string status) => status is nameof(ReturnStatus.Rejected) or nameof(ReturnStatus.Canceled);
+    private static bool IsClosed(string status) => status is nameof(ReturnStatus.Rejected) or nameof(ReturnStatus.Canceled) or nameof(ReturnStatus.CanceledAfterApproval);
 
     private static bool Has(string? value, string search) => value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
 }

@@ -23,6 +23,10 @@ public sealed record ReturnInput(
     string? Notes,
     Guid? RoomId = null);
 
+/// <summary>What may change on an approved return order, with the reason for the change.</summary>
+public sealed record ReturnAmendInput(
+    DateOnly ArrivedOn, string Reason, string? ReasonNotes, bool StopSalary, string? HousingName, string? Notes, Guid? RoomId, string AmendReason);
+
 /// <summary>A worker on the job for the return form, with the open return order that already has them (if any).</summary>
 public sealed record OnJobWorkerDto(WorkerCard Worker, string? BusyOrderNo);
 
@@ -37,6 +41,7 @@ internal sealed class ReturnOrderService(
     IApprovalService approvals,
     IHousingRooms housing,
     NumberSequenceService numbering,
+    IPeriodLedger ledger,
     ICurrentUser user,
     IClock clock)
 {
@@ -124,6 +129,124 @@ internal sealed class ReturnOrderService(
             return Result.Failure(started.Error);
         }
 
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Changes an approved order (its own permission and a reason): the housing period moves with the arrival day (the
+    /// work before it ends that day) and takes the salary choice and the housing; the worker moves to the room chosen.
+    /// </summary>
+    public async Task<Result> AmendAsync(Guid id, ReturnAmendInput input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var order = await db.ReturnOrders.FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(ReturnErrors.NotFound);
+        }
+
+        if (!order.IsAmendable || order.WorkerId is not { } workerId)
+        {
+            return Result.Failure(ReturnErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(input.AmendReason))
+        {
+            return Result.Failure(ReturnErrors.AmendReason);
+        }
+
+        if (!ReturnReasons.All.Contains(input.Reason) || (input.Reason == ReturnReasons.Other && string.IsNullOrWhiteSpace(input.ReasonNotes)))
+        {
+            return Result.Failure(input.Reason == ReturnReasons.Other ? Errors.ReasonNotes : Errors.Reason);
+        }
+
+        if (input.ArrivedOn > clock.Today)
+        {
+            return Result.Failure(Errors.Future);
+        }
+
+        var housingName = input.HousingName;
+        if (input.RoomId is { } roomId && roomId != order.RoomId)
+        {
+            var room = await housing.FindAsync(roomId, cancellationToken).ConfigureAwait(false);
+            if (room is null || !room.IsActive)
+            {
+                return Result.Failure(Errors.Room);
+            }
+
+            housingName = room.Label;
+        }
+        else if (input.RoomId is not null)
+        {
+            housingName = order.HousingName;
+        }
+
+        var moved = await ledger.AmendAsync(new PeriodAmendRequest(workerId, order.Id, input.ArrivedOn, !input.StopSalary, housingName, order.OrderNo), cancellationToken).ConfigureAwait(false);
+        if (moved.IsFailure)
+        {
+            return Result.Failure(moved.Error.Code == "conflict.period_overlap" ? ReturnErrors.PeriodOverlap : moved.Error);
+        }
+
+        // The room: the stay this order opened is taken back and opened again from the (new) day, in the (new) room.
+        var roomChanged = input.RoomId != order.RoomId || input.ArrivedOn != order.ArrivedOn;
+        var amended = order.Amend(
+            new ReturnDetails(input.ArrivedOn, input.Reason, input.ReasonNotes, input.StopSalary, housingName, null, input.Notes, input.RoomId),
+            input.AmendReason, user.DisplayName, clock.UtcNow);
+        if (amended.IsFailure)
+        {
+            return amended;
+        }
+
+        if (roomChanged)
+        {
+            await housing.UndoStayAsync(workerId, ReturnOrderAdapter.SourceType, order.OrderNo, cancellationToken).ConfigureAwait(false);
+            if (input.RoomId is { } newRoom
+                && (await housing.AssignAsync(new RoomAssignRequest(workerId, newRoom, input.ArrivedOn, ReturnOrderAdapter.SourceType, order.OrderNo), cancellationToken).ConfigureAwait(false)).IsFailure)
+            {
+                order.RoomNotAssigned("لم يُسكَّن في الغرفة المختارة بعد التعديل؛ سكّنه من شاشة المساكن.");
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Cancels an approved order (its own permission and a reason): the housing period it opened is taken back — only
+    /// when nothing came after it — the work before it is open again, and the worker leaves the room it put them in.
+    /// </summary>
+    public async Task<Result> CancelApprovedAsync(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        var order = await db.ReturnOrders.FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+        if (order is null)
+        {
+            return Result.Failure(ReturnErrors.NotFound);
+        }
+
+        if (!order.IsAmendable || order.WorkerId is not { } workerId)
+        {
+            return Result.Failure(ReturnErrors.NotAmendable);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Result.Failure(ReturnErrors.AmendReason);
+        }
+
+        var undone = await ledger.UndoAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false);
+        if (undone.IsFailure)
+        {
+            return Result.Failure(undone.Error.Code == "conflict.period_not_last" ? ReturnErrors.LaterPeriod : undone.Error);
+        }
+
+        await housing.UndoStayAsync(workerId, ReturnOrderAdapter.SourceType, order.OrderNo, cancellationToken).ConfigureAwait(false);
+        var canceled = order.CancelApproved(reason, user.DisplayName, clock.UtcNow);
+        if (canceled.IsFailure)
+        {
+            return canceled;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
 
