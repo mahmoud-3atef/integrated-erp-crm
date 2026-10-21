@@ -322,6 +322,11 @@ export interface ExpenseItem {
 
 /** How a worker's cost was reached. */
 export interface CostParts {
+  dueSalary: number;
+  absentDays: number;
+  absenceDeduction: number;
+  otherDeductions: number;
+  /** The net salary on the invoice lines: what the worker was paid. */
   billedSalary: number;
   billedDays: number;
   unbilledDays: number;

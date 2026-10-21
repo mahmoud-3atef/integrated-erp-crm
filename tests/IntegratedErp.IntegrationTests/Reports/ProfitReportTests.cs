@@ -70,11 +70,12 @@ public sealed class ProfitReportTests(TestDatabase database)
                 ["new_invoicenumber"] = "INV-P1", ["new_projectid"] = project.ToString(), ["new_projectidname"] = "مشروع الربحية", ["new_todate"] = end, ["createdon"] = end,
                 ["new_totalamount"] = 7000m, ["new_totalvatamount"] = 1050m, ["new_netsalarywithvat"] = 8050m, ["new_totalpaidamount"] = 0m, ["new_labornumber"] = 2, ["statuscode"] = 279640008, ["new_invoicetype"] = 100000000,
             }), "INV-P1", run, DateTimeOffset.UtcNow));
-            foreach (var (worker, due) in new[] { (supplierWorker, 1500m), (companyWorker, 1800m) })
+            // The company worker was absent 10 days: 600 deducted, a 1,200 net salary (the cost).
+            foreach (var (worker, due, net, absence) in new[] { (supplierWorker, 1500m, 1500m, 0m), (companyWorker, 1800m, 1200m, 600m) })
             {
                 db.Records.Add(new StagedRecord("new_invoicdetail", Guid.NewGuid(), null, null, 0, JsonSerializer.Serialize(new Dictionary<string, object?>
                 {
-                    ["new_invoiceid"] = invoice.ToString(), ["new_employeeid"] = worker.ToString(), ["new_totalwithoutvat"] = 3500m, ["new_workingdays"] = (decimal)days, ["new_duesalary"] = due,
+                    ["new_invoiceid"] = invoice.ToString(), ["new_employeeid"] = worker.ToString(), ["new_totalwithoutvat"] = 3500m, ["new_workingdays"] = (decimal)days, ["new_duesalary"] = due, ["new_nettoemployee"] = net, ["new_absencedeductions"] = absence, ["new_abscentdays"] = absence / 60m,
                 }), "line", run, DateTimeOffset.UtcNow));
             }
 
@@ -88,8 +89,8 @@ public sealed class ProfitReportTests(TestDatabase database)
             // Without the supplier's cost the worker's revenue stays out of the profit.
             var before = await report.MonthAsync(month, default);
             Assert.Equal((7000m, 3500m, 1), (before.Revenue, before.UncostedRevenue, before.UncostedWorkers));
-            Assert.Equal(1800m, before.CompanySalaries);
-            Assert.Equal(3500m - 1800m, before.Profit);
+            Assert.Equal(1200m, before.CompanySalaries);
+            Assert.Equal(3500m - 1200m, before.Profit);
         }
 
         using (var scope = database.Scope(tenantId, user: "finance2"))
@@ -102,11 +103,13 @@ public sealed class ProfitReportTests(TestDatabase database)
             var report = scope.ServiceProvider.GetRequiredService<ProfitReport>();
             var m = await report.MonthAsync(month, default);
             Assert.Equal((0m, 0), (m.UncostedRevenue, m.UncostedWorkers));
-            Assert.Equal((3000m, 1800m, 200m), (m.SupplierCosts, m.CompanySalaries, m.ProjectExpenses));
-            Assert.Equal(7000m - 3000m - 1800m - 200m, m.Profit);
+            Assert.Equal((3000m, 1200m, 200m), (m.SupplierCosts, m.CompanySalaries, m.ProjectExpenses));
+            Assert.Equal(7000m - 3000m - 1200m - 200m, m.Profit);
+            var company = m.Workers.Single(w => w.WorkerNo == "BSS0901");
+            Assert.Equal((1800m, 600m, 1200m), (company.Parts.DueSalary, company.Parts.AbsenceDeduction, company.Parts.BilledSalary));
 
             var p = Assert.Single(m.Projects);
-            Assert.Equal((2, 7000m, 4800m, 200m, 2000m), (p.Workers, p.Revenue, p.WorkerCost, p.Expenses, p.Profit));
+            Assert.Equal((2, 7000m, 4200m, 200m, 2600m), (p.Workers, p.Revenue, p.WorkerCost, p.Expenses, p.Profit));
             var supplier = m.Workers.Single(w => w.WorkerNo == "BSS0900");
             Assert.Equal(("Supplier", 3500m, 3000m, 500m), (supplier.Source, supplier.Revenue, supplier.Cost, supplier.Profit));
         }

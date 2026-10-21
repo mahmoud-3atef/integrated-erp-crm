@@ -5441,7 +5441,6 @@
       "idle": "Housing days' cost",
       "idleHint": "{{days}} housing days × ({{monthly}} ÷ {{monthDays}}): paid to the supplier without revenue",
       "byDaysNote": "The supplier charges by working days, so the housing days ({{days}}) cost nothing.",
-      "billedSalary": "Salary due on the invoice line",
       "billedSalaryHint": "As on the old system's invoice for {{days}} working days",
       "unbilledSalary": "Salary of working days not invoiced",
       "unbilledHint": "{{days}} days × {{daily}} (the salary ÷ 30)",
@@ -5460,7 +5459,14 @@
       "supplierWorkersHint": "The suppliers' cost for their days on the project (and their expenses by their days)",
       "missing": "{{count}} supplier workers without a cost (not counted).",
       "projectRevenueHint": "The project's invoices for the month, before VAT",
-      "projectNote": "Click the project to see each worker and their cost in detail."
+      "projectNote": "Click the project to see each worker and their cost in detail.",
+      "dueSalary": "Salary due on the invoice line",
+      "absence": "Absence deduction",
+      "absenceHint": "{{days}} days absent on the invoice",
+      "otherDeductions": "Other deductions",
+      "otherDeductionsHint": "Advances, penalties and others, as on the invoice",
+      "netSalary": "Net salary (the cost)",
+      "netSalaryHint": "What the worker was actually paid for the month"
     }
   }
 }
