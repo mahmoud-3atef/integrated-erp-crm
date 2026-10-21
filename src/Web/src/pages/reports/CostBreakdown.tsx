@@ -94,7 +94,8 @@ export function WorkerCost({ w }: { w: WorkerProfit }) {
               <Row label={t('ceo.parts.dueSalary')} hint={t('ceo.parts.billedSalaryHint', { days: f.n(p.billedDays) })} value={f.n(p.dueSalary)} />
               {p.absenceDeduction > 0 && <Row label={t('ceo.parts.absence')} hint={t('ceo.parts.absenceHint', { days: f.n(p.absentDays) })} value={f.n(-p.absenceDeduction)} negative />}
               {p.otherDeductions > 0 && <Row label={t('ceo.parts.otherDeductions')} hint={t('ceo.parts.otherDeductionsHint')} value={f.n(-p.otherDeductions)} negative />}
-              <Row label={t('ceo.parts.netSalary')} hint={t('ceo.parts.netSalaryHint')} value={f.n(p.billedSalary)} />
+              <Row label={t('ceo.parts.netSalary')} hint={t('ceo.parts.netSalaryHint')} value={f.n(p.netSalary)} />
+              {p.advance > 0 && <Row label={t('ceo.parts.advance')} hint={t('ceo.parts.advanceHint')} value={`+${f.n(p.advance)}`} />}
             </>
           )}
           {p.unbilledDays > 0 && <Row label={t('ceo.parts.unbilledSalary')} hint={t('ceo.parts.unbilledHint', { days: p.unbilledDays, daily: f.n(p.dailySalary) })} value={f.n(p.unbilledSalary)} />}

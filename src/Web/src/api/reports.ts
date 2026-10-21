@@ -326,7 +326,10 @@ export interface CostParts {
   absentDays: number;
   absenceDeduction: number;
   otherDeductions: number;
-  /** The net salary on the invoice lines: what the worker was paid. */
+  netSalary: number;
+  /** Advance installments deducted: added back to the cost. */
+  advance: number;
+  /** The cost of the invoice lines: the net salary plus the advance installments. */
   billedSalary: number;
   billedDays: number;
   unbilledDays: number;

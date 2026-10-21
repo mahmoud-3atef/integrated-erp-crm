@@ -5465,8 +5465,10 @@
       "absenceHint": "{{days}} days absent on the invoice",
       "otherDeductions": "Other deductions",
       "otherDeductionsHint": "Advances, penalties and others, as on the invoice",
-      "netSalary": "Net salary (the cost)",
-      "netSalaryHint": "What the worker was actually paid for the month"
+      "netSalary": "Net salary paid",
+      "netSalaryHint": "What the worker was actually paid for the month",
+      "advance": "Advance installment",
+      "advanceHint": "Deducted from the net, but it pays an advance back and saves nothing, so it is added to the cost"
     }
   }
 }

@@ -18,12 +18,15 @@ public sealed record ExpenseItemDto(string ExpenseNo, string Category, string Ca
 /// lines and a day's salary for the days on the job not billed; for a supplier's the agreed monthly cost by the days on
 /// the job and, when fixed monthly, the days in housing; then their expenses.
 /// </summary>
-/// <param name="BilledSalary">The net salary on the invoice lines (what the worker was paid): the salary due less the absence and the other deductions.</param>
+/// <param name="Advance">The advance installments deducted on the lines: the worker paying back, not a saving, so added back to the cost.</param>
+/// <param name="BilledSalary">The cost of the invoice lines: the net salary paid plus the advance installments.</param>
 public sealed record CostPartsDto(
     decimal DueSalary,
     decimal AbsentDays,
     decimal AbsenceDeduction,
     decimal OtherDeductions,
+    decimal NetSalary,
+    decimal Advance,
     decimal BilledSalary,
     decimal BilledDays,
     int UnbilledDays,
@@ -187,7 +190,7 @@ internal sealed class ProfitReport(
             var mine = linesByWorker[d.CrmId].ToList();
             var revenue = mine.Sum(l => l.BeforeVat);
             decimal work, idleCost = 0, billedSalary = 0, dailySalary = 0, unbilledSalary = 0;
-            decimal billedDays = 0, dueSalary = 0, absentDays = 0, absenceDeduction = 0;
+            decimal billedDays = 0, dueSalary = 0, absentDays = 0, absenceDeduction = 0, netSalary = 0, advance = 0;
             int unbilledDays = 0, paidIdleDays = 0;
             var missing = false;
             if (source == "Supplier")
@@ -219,7 +222,9 @@ internal sealed class ProfitReport(
                 dueSalary = mine.Sum(l => l.DueSalary);
                 absentDays = mine.Sum(l => l.AbsentDays);
                 absenceDeduction = mine.Sum(l => l.AbsenceDeduction);
-                billedSalary = mine.Sum(l => l.NetSalary);
+                netSalary = mine.Sum(l => l.NetSalary);
+                advance = mine.Sum(l => l.Advance);
+                billedSalary = netSalary + advance;
                 dailySalary = (info?.Salary ?? d.Salary) / 30m;
                 unbilledDays = (int)Math.Max(0, d.WorkDays - billedDays);
                 unbilledSalary = dailySalary * unbilledDays;
@@ -239,7 +244,7 @@ internal sealed class ProfitReport(
 
             workers.Add(new WorkerMonth(d.WorkerId, d.WorkerNo, d.Name, source, info?.Supplier ?? d.Sponsor, d.Projects, d.WorkDays, d.HousingDays,
                 Math.Round(revenue, 2), Math.Round(work, 2), Math.Round(idleCost, 2), Math.Round(expense, 2), missing,
-                new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(billedSalary, 2), billedDays, unbilledDays, Math.Round(dailySalary, 2), Math.Round(unbilledSalary, 2),
+                new CostPartsDto(Math.Round(dueSalary, 2), absentDays, Math.Round(absenceDeduction, 2), Math.Round(Math.Max(0, dueSalary - absenceDeduction - billedSalary), 2), Math.Round(netSalary, 2), Math.Round(advance, 2), Math.Round(billedSalary, 2), billedDays, unbilledDays, Math.Round(dailySalary, 2), Math.Round(unbilledSalary, 2),
                     source == "Supplier" ? info?.SupplierMonthlyCost : null, source == "Supplier" ? info?.ByWorkingDays : null, monthDays,
                     source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList())));
 
