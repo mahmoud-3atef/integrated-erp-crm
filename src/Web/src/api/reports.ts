@@ -312,6 +312,30 @@ export interface CeoOverview {
   alerts: CeoAlerts;
 }
 
+export interface ExpenseItem {
+  expenseNo: string;
+  category: string;
+  categoryAr: string;
+  categoryEn: string;
+  amount: number;
+}
+
+/** How a worker's cost was reached. */
+export interface CostParts {
+  billedSalary: number;
+  billedDays: number;
+  unbilledDays: number;
+  dailySalary: number;
+  unbilledSalary: number;
+  supplierMonthly: number | null;
+  byWorkingDays: boolean | null;
+  monthDays: number;
+  supplierWork: number;
+  idleDays: number;
+  idleCost: number;
+  expenses: ExpenseItem[];
+}
+
 export interface ProjectProfit {
   projectCrmId: string | null;
   name: string;
@@ -325,6 +349,9 @@ export interface ProjectProfit {
   margin: number | null;
   unbilledWorkers: number;
   missingCosts: number;
+  companyCost: number;
+  supplierCost: number;
+  expenseItems: ExpenseItem[];
 }
 
 export interface SupplierProfit {
@@ -367,6 +394,7 @@ export interface WorkerProfit {
   expenses: number;
   profit: number;
   costMissing: boolean;
+  parts: CostParts;
 }
 
 export interface WorkerProfitQuery {

@@ -50,6 +50,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { Columns } from '../../components/charts';
 import { accents, appear, card, CardTitle, Empty, Hero, Kpi, Legend, Loading, PrintStyles, Ticker, useFormat, useMark } from './reportKit';
 import { DrillDrawer, FinanceTab } from './ExecutiveReportPage';
+import { ProjectCost, WorkerCost } from './CostBreakdown';
 
 type Tab = 'overview' | 'profit' | 'workforce' | 'finance';
 type Open = { title: string; query: WorkerProfitQuery };
@@ -386,7 +387,7 @@ function ProfitTab({ month, onOpen }: { month: string; onOpen: (o: Open) => void
                     <TableCell align="right">{f.n(p.workDays)}</TableCell>
                     <TableCell align="right">{f.n(p.revenue)}</TableCell>
                     <TableCell align="right">
-                      {f.n(p.cost)}
+                      <ProjectCost p={p} />
                       {p.expenses > 0 && <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('ceo.profit.withExpenses', { amount: f.n(p.expenses) })}</Typography>}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 800, color: profitColor(p.profit) }}>
@@ -622,7 +623,7 @@ function WorkersList({ month, query, withFilters }: { month: string; query: Work
                       </Tooltip>
                     ) : (
                       <>
-                        {f.n(w.cost)}
+                        <WorkerCost w={w} />
                         {w.idleCost > 0 && <Typography sx={{ fontSize: 10.5, color: negative }}>{t('ceo.work.idleOf', { amount: f.n(w.idleCost) })}</Typography>}
                       </>
                     )}

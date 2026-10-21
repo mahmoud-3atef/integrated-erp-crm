@@ -3,11 +3,34 @@ using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.Commercial.Contracts;
 using IntegratedErp.Modules.Expenses.Contracts;
+using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workforce.Contracts;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Reports.Application;
+
+/// <summary>An expense's share in the month, with its category's name.</summary>
+public sealed record ExpenseItemDto(string ExpenseNo, string Category, string CategoryAr, string CategoryEn, decimal Amount);
+
+/// <summary>
+/// How a worker's cost was reached (docs/03-migration-plan/16): for a company worker the salary due on their invoice
+/// lines and a day's salary for the days on the job not billed; for a supplier's the agreed monthly cost by the days on
+/// the job and, when fixed monthly, the days in housing; then their expenses.
+/// </summary>
+public sealed record CostPartsDto(
+    decimal BilledSalary,
+    decimal BilledDays,
+    int UnbilledDays,
+    decimal DailySalary,
+    decimal UnbilledSalary,
+    decimal? SupplierMonthly,
+    bool? ByWorkingDays,
+    int MonthDays,
+    decimal SupplierWork,
+    int IdleDays,
+    decimal IdleCost,
+    IReadOnlyList<ExpenseItemDto> Expenses);
 
 /// <summary>One worker's month: their days, what was billed for them, and what they cost.</summary>
 /// <param name="Source"><c>Company</c>, <c>Supplier</c> or <c>Unknown</c>.</param>
@@ -27,14 +50,17 @@ internal sealed record WorkerMonth(
     decimal WorkCost,
     decimal IdleCost,
     decimal Expenses,
-    bool CostMissing)
+    bool CostMissing,
+    CostPartsDto Parts)
 {
     public decimal Cost => WorkCost + IdleCost + Expenses;
 
     public decimal Profit => Revenue - Cost;
 }
 
-internal sealed record ProjectMonth(Guid? ProjectCrmId, string Name, string? Manager, int Workers, int WorkDays, decimal Revenue, decimal WorkerCost, decimal Expenses, int UnbilledWorkers, int MissingCosts)
+/// <param name="CompanyCost">Of the workers' cost: the company workers' salaries (and their expenses) on the project's days.</param>
+/// <param name="SupplierCost">Of the workers' cost: the suppliers' cost (and the expenses) of their workers on the project's days.</param>
+internal sealed record ProjectMonth(Guid? ProjectCrmId, string Name, string? Manager, int Workers, int WorkDays, decimal Revenue, decimal WorkerCost, decimal Expenses, int UnbilledWorkers, int MissingCosts, decimal CompanyCost, decimal SupplierCost, IReadOnlyList<ExpenseItemDto> ExpenseItems)
 {
     public decimal Cost => WorkerCost + Expenses;
 
@@ -87,6 +113,7 @@ internal sealed class ProfitReport(
     IWorkforceDirectory directory,
     IWorkerCosts costs,
     IExpenseLedger expenses,
+    IReferenceData referenceData,
     IProjectDirectory projects,
     ITenantContext tenant,
     IMemoryCache cache,
@@ -133,6 +160,13 @@ internal sealed class ProfitReport(
 
         var cost = (await costs.CostsAsync(days.Values.Select(d => d.WorkerId).ToList(), last, cancellationToken).ConfigureAwait(false)).ToDictionary(c => c.WorkerId);
         var shares = await expenses.SharesAsync(first, last, cancellationToken).ConfigureAwait(false);
+        var categories = (await referenceData.ListAllAsync("expense_categories", cancellationToken).ConfigureAwait(false))
+            .GroupBy(c => c.Code, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        ExpenseItemDto Item(ExpenseShare s) => categories.TryGetValue(s.Category, out var c)
+            ? new ExpenseItemDto(s.ExpenseNo, s.Category, c.NameAr, c.NameEn, Math.Round(s.Amount, 2))
+            : new ExpenseItemDto(s.ExpenseNo, s.Category, s.Category, s.Category, Math.Round(s.Amount, 2));
+        var workerItems = shares.Where(s => s.ProjectCrmId is null && s.WorkerId is not null).ToLookup(s => s.WorkerId!.Value, Item);
+        var projectItems = shares.Where(s => s.ProjectCrmId is not null).ToLookup(s => s.ProjectCrmId!.Value, Item);
         var workerExpenses = shares.Where(s => s.ProjectCrmId is null && s.WorkerId is not null).GroupBy(s => s.WorkerId!.Value).ToDictionary(g => g.Key, g => g.Sum(s => s.Amount));
         var projectExpenses = shares.Where(s => s.ProjectCrmId is not null).GroupBy(s => s.ProjectCrmId!.Value).ToDictionary(g => g.Key, g => g.Sum(s => s.Amount));
         var linesByWorker = lines.ToLookup(l => l.WorkerCrmId);
@@ -147,7 +181,9 @@ internal sealed class ProfitReport(
             var source = info?.Source ?? "Unknown";
             var mine = linesByWorker[d.CrmId].ToList();
             var revenue = mine.Sum(l => l.BeforeVat);
-            decimal work, idleCost = 0;
+            decimal work, idleCost = 0, billedSalary = 0, dailySalary = 0, unbilledSalary = 0;
+            decimal billedDays = 0;
+            int unbilledDays = 0, paidIdleDays = 0;
             var missing = false;
             if (source == "Supplier")
             {
@@ -157,7 +193,8 @@ internal sealed class ProfitReport(
                     work = daily * d.WorkDays;
                     if (info.ByWorkingDays != true)
                     {
-                        idleCost = daily * Math.Min(d.HousingDays, Math.Max(0, monthDays - d.WorkDays));
+                        paidIdleDays = Math.Min(d.HousingDays, Math.Max(0, monthDays - d.WorkDays));
+                        idleCost = daily * paidIdleDays;
                         idleDays += d.HousingDays;
                     }
                 }
@@ -173,8 +210,12 @@ internal sealed class ProfitReport(
             else
             {
                 // The salary billed on the lines, and a day's salary for each day on the job not billed.
-                var billedDays = mine.Sum(l => l.WorkingDays);
-                work = mine.Sum(l => l.DueSalary) + ((info?.Salary ?? d.Salary) / 30m * Math.Max(0, d.WorkDays - billedDays));
+                billedDays = mine.Sum(l => l.WorkingDays);
+                billedSalary = mine.Sum(l => l.DueSalary);
+                dailySalary = (info?.Salary ?? d.Salary) / 30m;
+                unbilledDays = (int)Math.Max(0, d.WorkDays - billedDays);
+                unbilledSalary = dailySalary * unbilledDays;
+                work = billedSalary + unbilledSalary;
                 companySalaries += work;
             }
 
@@ -189,13 +230,26 @@ internal sealed class ProfitReport(
             }
 
             workers.Add(new WorkerMonth(d.WorkerId, d.WorkerNo, d.Name, source, info?.Supplier ?? d.Sponsor, d.Projects, d.WorkDays, d.HousingDays,
-                Math.Round(revenue, 2), Math.Round(work, 2), Math.Round(idleCost, 2), Math.Round(expense, 2), missing));
+                Math.Round(revenue, 2), Math.Round(work, 2), Math.Round(idleCost, 2), Math.Round(expense, 2), missing,
+                new CostPartsDto(Math.Round(billedSalary, 2), billedDays, unbilledDays, Math.Round(dailySalary, 2), Math.Round(unbilledSalary, 2),
+                    source == "Supplier" ? info?.SupplierMonthlyCost : null, source == "Supplier" ? info?.ByWorkingDays : null, monthDays,
+                    source == "Supplier" ? Math.Round(work, 2) : 0, paidIdleDays, Math.Round(idleCost, 2), workerItems[d.WorkerId].ToList())));
 
             // The work cost and the worker's expenses go to their projects by the days on each.
             foreach (var p in d.Projects)
             {
                 var slot = allocated.TryGetValue(p.ProjectCrmId ?? Guid.Empty, out var found) ? found : allocated[p.ProjectCrmId ?? Guid.Empty] = new Slot();
-                slot.Cost += d.WorkDays > 0 ? (work + expense) * p.Days / d.WorkDays : 0;
+                var part = d.WorkDays > 0 ? (work + expense) * p.Days / d.WorkDays : 0;
+                slot.Cost += part;
+                if (source == "Supplier")
+                {
+                    slot.Supplier += part;
+                }
+                else
+                {
+                    slot.Company += part;
+                }
+
                 slot.Workers.Add(d.WorkerId);
                 slot.Days += p.Days;
                 slot.Missing += missing ? 1 : 0;
@@ -228,7 +282,8 @@ internal sealed class ProfitReport(
                 id, info?.Name ?? invoiceNames.GetValueOrDefault(key) ?? places.GetValueOrDefault(key) ?? "—",
                 string.IsNullOrWhiteSpace(info?.Manager) ? null : info.Manager.Trim(),
                 Math.Max(slot.Workers.Count, billed.Count), slot.Days, Math.Round(revenueByProject.GetValueOrDefault(key), 2),
-                Math.Round(slot.Cost, 2), Math.Round(projectExpenses.GetValueOrDefault(key), 2), unbilled, slot.Missing));
+                Math.Round(slot.Cost, 2), Math.Round(projectExpenses.GetValueOrDefault(key), 2), unbilled, slot.Missing,
+                Math.Round(slot.Company, 2), Math.Round(slot.Supplier, 2), key == Guid.Empty ? [] : projectItems[key].ToList()));
         }
 
         return new MonthProfit(
@@ -246,6 +301,10 @@ internal sealed class ProfitReport(
     private sealed class Slot
     {
         public decimal Cost { get; set; }
+
+        public decimal Company { get; set; }
+
+        public decimal Supplier { get; set; }
 
         public HashSet<Guid> Workers { get; } = [];
 

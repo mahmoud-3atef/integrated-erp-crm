@@ -5432,6 +5432,35 @@
       "idle": "Housing days' cost",
       "worker": "Worker",
       "source": "Source"
+    },
+    "parts": {
+      "title": "The worker's cost in detail",
+      "open": "Cost details",
+      "supplierWork": "The supplier's cost for working days",
+      "supplierWorkHint": "{{monthly}} a month ÷ {{monthDays}} days × {{days}} working days",
+      "idle": "Housing days' cost",
+      "idleHint": "{{days}} housing days × ({{monthly}} ÷ {{monthDays}}): paid to the supplier without revenue",
+      "byDaysNote": "The supplier charges by working days, so the housing days ({{days}}) cost nothing.",
+      "billedSalary": "Salary due on the invoice line",
+      "billedSalaryHint": "As on the old system's invoice for {{days}} working days",
+      "unbilledSalary": "Salary of working days not invoiced",
+      "unbilledHint": "{{days}} days × {{daily}} (the salary ÷ 30)",
+      "housingUnpaid": "{{days}} days in housing without salary.",
+      "unknown": "No sponsor is recorded for this worker, so their cost is their salary, like the company's workers.",
+      "expense": "Expense {{no}}",
+      "total": "Total cost",
+      "revenue": "Revenue",
+      "revenueHint": "Their lines on the month's invoices, before VAT",
+      "noExpenses": "No expenses recorded on the worker this month (residence and insurance fees are recorded on the expenses screen).",
+      "projectTitle": "The project's cost in detail",
+      "projectWorkers": "{{count}} workers · {{days}} working days",
+      "companyWorkers": "Company workers",
+      "companyWorkersHint": "Their salaries for their days on the project (and their expenses by their days)",
+      "supplierWorkers": "Supplier workers",
+      "supplierWorkersHint": "The suppliers' cost for their days on the project (and their expenses by their days)",
+      "missing": "{{count}} supplier workers without a cost (not counted).",
+      "projectRevenueHint": "The project's invoices for the month, before VAT",
+      "projectNote": "Click the project to see each worker and their cost in detail."
     }
   }
 }
