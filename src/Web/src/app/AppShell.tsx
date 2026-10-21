@@ -1,4 +1,5 @@
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
+import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
@@ -170,6 +171,7 @@ const menu: MenuSection[] = [
       { path: '/hr/leave-balances', labelKey: 'menu.hrLeaveBalances', icon: <BalanceOutlinedIcon />, permission: 'leave.view', companyWide: true },
       { path: '/hr/advances', labelKey: 'menu.hrAdvances', icon: <CreditCardOutlinedIcon />, permission: 'deductions.view', companyWide: true },
       { path: '/hr/penalties', labelKey: 'menu.hrPenalties', icon: <GavelOutlinedIcon />, permission: 'deductions.view', companyWide: true },
+      { path: '/hr/settlements', labelKey: 'menu.hrSettlements', icon: <HandshakeOutlinedIcon />, permission: 'payroll.settlements.view', companyWide: true },
       { path: '/hr/shifts', labelKey: 'menu.hrShifts', icon: <EventNoteOutlinedIcon />, permission: 'attendance.view', companyWide: true },
       { path: '/hr/structure', labelKey: 'menu.hrStructure', icon: <AccountTreeOutlinedIcon />, permission: 'staff.view', companyWide: true },
       { path: '/hr/catalog', labelKey: 'menu.hrCatalog', icon: <CategoryOutlinedIcon />, permission: 'staff.view', companyWide: true },

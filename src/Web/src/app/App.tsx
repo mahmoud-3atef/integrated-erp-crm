@@ -33,6 +33,9 @@ import { PayslipsPrintPage } from '../pages/payroll/PayslipsPrintPage';
 import { StaffPaySettingsPage } from '../pages/payroll/staff/StaffPaySettingsPage';
 import { StaffRunPage } from '../pages/payroll/staff/StaffRunPage';
 import { StaffRunsPage } from '../pages/payroll/staff/StaffRunsPage';
+import { SettlementsPage } from '../pages/settlements/SettlementsPage';
+import { SettlementPage } from '../pages/settlements/SettlementPage';
+import { SettlementPrintPage } from '../pages/settlements/SettlementPrintPage';
 import { CatalogPage } from '../pages/staff/CatalogPage';
 import { OrgStructurePage } from '../pages/staff/OrgStructurePage';
 import { StaffDirectoryPage } from '../pages/staff/StaffDirectoryPage';
@@ -164,6 +167,8 @@ export function App() {
                 <Route path="/hr/leave-types" element={<LeaveTypesPage />} />
                 <Route path="/hr/permissions/:id" element={<PermissionPage />} />
                 <Route path="/hr/advances" element={<AdvancesPage />} />
+                <Route path="/hr/settlements" element={<SettlementsPage />} />
+                <Route path="/hr/settlements/:id" element={<SettlementPage />} />
                 <Route path="/hr/advances/:id" element={<AdvancePage />} />
                 <Route path="/hr/penalties" element={<PenaltiesPage />} />
                 <Route path="/hr/penalties/:id" element={<PenaltyPage />} />
@@ -197,6 +202,7 @@ export function App() {
               <Route path="/billing/invoices/:id/print" element={<InvoicePrintPage />} />
               <Route path="/billing/statements/:id/print" element={<StatementPage print />} />
               <Route path="/payroll/staff/:id/payslips" element={<PayslipsPrintPage kind="staff" />} />
+              <Route path="/hr/settlements/:id/print" element={<SettlementPrintPage />} />
               <Route path="/payroll/runs/:id/payslips" element={<PayslipsPrintPage kind="workers" />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/mfa-setup" element={<MfaSetupPage />} />

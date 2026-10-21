@@ -46,6 +46,8 @@ import { EmployeePayrollPanel } from '../payroll/staff/EmployeePayrollPanel';
 import { EmployeeLeavePanel } from '../leave/leave';
 import { EmployeeDeductionsPanel } from '../deductions/settings';
 import { useService } from './staff';
+import { useSession } from '../../app/session';
+import { NewSettlementDialog } from '../settlements/NewSettlementDialog';
 
 // The employee's file after the old system's latest employee screen (content/css/pages/hr-employee-details.css,
 // 2026-10-14): the hero with the facts, the dark overview card, pill tabs, and boxes titled on their border with
@@ -54,7 +56,7 @@ import { useService } from './staff';
 const tone = { navy: '#0a3c58', navySoft: '#eaf3f8', green: '#1f9d55', greenSoft: '#e9f7ef', sky: '#1b6a92', skySoft: '#eaf4fa' } as const;
 type BoxTone = 'navy' | 'green' | 'sky';
 type TabKey = 'data' | 'leave' | 'deductions' | 'payroll' | 'contract' | 'history';
-type Edit = 'personal' | 'job' | 'contract' | 'salary' | 'pay' | 'action' | null;
+type Edit = 'personal' | 'job' | 'contract' | 'salary' | 'pay' | 'action' | 'settlement' | null;
 
 /** The file's fields a change shows, by the stored property's name. */
 const changeLabels: Record<string, string> = {
@@ -71,6 +73,7 @@ export function StaffProfilePage() {
   const { t, i18n } = useTranslation();
   const { date } = useCommercialFormat();
   const service = useService();
+  const { can } = useSession();
   const [p, setP] = useState<StaffProfile | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +169,11 @@ export function StaffProfilePage() {
               {p.canEdit && (
                 <Button variant="contained" startIcon={<Add />} disabled={p.status === 'Left'} onClick={() => setEdit('action')} sx={{ borderRadius: 99, bgcolor: tokens.navy800, boxShadow: '0 6px 14px rgba(10,60,88,.25)', px: 2.5 }}>
                   {t('staff.profile.newAction')}
+                </Button>
+              )}
+              {can('payroll.settlements.manage', true) && p.status !== 'Left' && (
+                <Button variant="outlined" onClick={() => setEdit('settlement')} sx={{ borderRadius: 99, borderColor: tokens.border, color: tokens.navy800 }}>
+                  {t('staff.profile.endService')}
                 </Button>
               )}
             </Stack>
@@ -268,6 +276,9 @@ export function StaffProfilePage() {
       {edit === 'contract' && <ContractDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'salary' && <SalaryDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
       {edit === 'pay' && <PayDetailsDialog profile={p} onClose={() => setEdit(null)} onSaved={done} />}
+      {edit === 'settlement' && (
+        <NewSettlementDialog employee={{ id: p.id, nameAr: p.nameAr ?? p.nameEn, nameEn: p.nameEn }} onClose={() => setEdit(null)} onCreated={(sid) => navigate(`/hr/settlements/${sid}`)} />
+      )}
       {edit === 'action' && <ActionDialog profile={p} departments={departments} onClose={() => setEdit(null)} onSent={(actionId) => navigate(`/hr/actions/${actionId}`)} />}
     </Box>
   );

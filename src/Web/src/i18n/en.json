@@ -617,7 +617,8 @@
     "sections": "Sections",
     "reportsSection": "Reports",
     "executive": "CEO report",
-    "movement": "Workforce movement"
+    "movement": "Workforce movement",
+    "hrSettlements": "Settlements"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -3312,7 +3313,8 @@
         "Hire": "At hiring",
         "Change": "Change"
       },
-      "noIban": "Not recorded yet"
+      "noIban": "Not recorded yet",
+      "endService": "End of service"
     },
     "dialogs": {
       "personal": "Edit basic data",
@@ -4501,7 +4503,8 @@
       "deferred": "Deferred (month's cap)",
       "above_cap": "Approved above the cap",
       "no_gosi_rate": "No GOSI rate",
-      "net_not_positive": "Net zero or less"
+      "net_not_positive": "Net zero or less",
+      "settled": "Days paid in a settlement"
     },
     "items": {
       "Installment": "Advance installment",
@@ -5569,5 +5572,200 @@
       "nextPeriod": "{{days}} working days after the invoice's period: billed in the next period and counted with it."
     },
     "periodHint": "Period {{from}} – {{to}}"
+  },
+  "settlements": {
+    "crumb": "HR › Settlements",
+    "title": "Settlements",
+    "subtitle": "Annual leave and end-of-service settlements of the company's staff and its sponsored workers",
+    "new": "New settlement",
+    "search": "Search by name, number or settlement no.…",
+    "all": "All",
+    "sar": "SAR",
+    "retry": "Retry",
+    "perPage": "Per page",
+    "shown": "Showing {{from}} - {{to}} of {{count}}",
+    "empty": "No settlements yet",
+    "emptyHint": "Create a vacation settlement for an approved annual leave, or an end-of-service settlement for an employee.",
+    "emptyWorkers": "The settlements of the company's sponsored workers come in phase 4.11b.",
+    "noResults": "No matching results",
+    "noResultsHint": "Change the search or the filters.",
+    "kpi": {
+      "drafts": "Drafts",
+      "draftsHint": "Not sent for approval",
+      "inApproval": "In approval",
+      "oldest": "The oldest since {{date}}",
+      "none": "Nothing waiting",
+      "toPay": "Awaiting payment",
+      "paid": "Paid this month",
+      "service": "Service",
+      "serviceHint": "From {{from}} · {{days}} days ({{excluded}} unpaid leave days taken out)",
+      "leaveDays": "Leave days"
+    },
+    "party": {
+      "Staff": "Company staff",
+      "Worker": "Workers"
+    },
+    "kind": {
+      "Vacation": "Annual leave settlement",
+      "EndOfService": "End-of-service settlement"
+    },
+    "status": {
+      "Draft": "Draft",
+      "InApproval": "In approval",
+      "Returned": "Returned for changes",
+      "Approved": "Awaiting payment",
+      "Paid": "Paid",
+      "Cancelled": "Cancelled"
+    },
+    "filter": {
+      "Open": "Drafts and returned",
+      "InApproval": "In approval",
+      "Approved": "Awaiting payment",
+      "Paid": "Paid",
+      "Cancelled": "Cancelled"
+    },
+    "col": {
+      "no": "No.",
+      "name": "Name",
+      "kind": "Kind",
+      "reason": "Reason",
+      "date": "Date",
+      "service": "Service",
+      "additions": "Dues",
+      "deductions": "Deductions",
+      "net": "Net",
+      "status": "Status"
+    },
+    "reason": {
+      "ContractEnd": "Contract ended or not renewed",
+      "EmployerTermination": "Ended by the company without a lawful reason",
+      "Resignation": "Resignation",
+      "ForceMajeure": "Force majeure, or a woman after marrying or giving birth (article 87)",
+      "Death": "Death or disability",
+      "Probation": "Ended in the probation",
+      "Article80": "Dismissed under article 80"
+    },
+    "reasonHint": {
+      "ContractEnd": "The full award (article 84).",
+      "EmployerTermination": "The full award, and article 77's compensation (two months' wage at least).",
+      "Resignation": "Article 85: none under two years, a third to five, two thirds to ten, all after.",
+      "ForceMajeure": "The full award (article 87).",
+      "Death": "The full award.",
+      "Probation": "No award (article 54); the leave balance is paid.",
+      "Article80": "No award; the leave balance is paid (article 111)."
+    },
+    "term": {
+      "Indefinite": "Indefinite contract",
+      "Fixed": "Fixed-term contract"
+    },
+    "annualLeave": "Annual leave",
+    "create": {
+      "vacationHint": "Choose an approved annual leave without a settlement. The settlement is paid before the leave starts.",
+      "leave": "Approved annual leave",
+      "noLeaves": "No approved annual leave without a settlement",
+      "employee": "Employee",
+      "lastDay": "Last working day",
+      "term": "Contract term",
+      "contractEnds": "Contract end date",
+      "submit": "Create and calculate"
+    },
+    "daysN": "{{count}} days",
+    "itemsN": "{{count}} items",
+    "yearsDec": "{{value}} years",
+    "titleEnd": "End-of-service settlement — {{name}}",
+    "titleVacation": "Annual leave settlement — {{name}}",
+    "lastDayOn": "Last working day {{date}}",
+    "print": "Print",
+    "edit": "Edit",
+    "cancel": "Cancel the settlement",
+    "submit": "Send for approval",
+    "pay": "Confirm payment",
+    "dues": "Dues",
+    "deductions": "Deductions",
+    "net": "Net",
+    "netHint": "Paid after finance approval",
+    "paidOn": "Paid on {{date}}",
+    "employee": "Employee",
+    "wage": "Monthly wage used",
+    "leaveBalance": "Unused leave balance",
+    "deductionMonth": "Deductions month",
+    "unpaidFrom": "First unpaid day",
+    "allPaid": "No unpaid days",
+    "negative": "The deductions exceed the dues: the employee owes the company.",
+    "netDue": "Net due",
+    "netFormula": "Dues − deductions",
+    "serverNote": "Every figure is calculated on the server. Other additions, custody and other deductions change only before sending, and each change is audited.",
+    "paidBy": "Paid on {{date}} · {{method}} · {{by}}",
+    "noDues": "No dues.",
+    "noDeductions": "No deductions.",
+    "totalDues": "Total dues",
+    "totalDeductions": "Total deductions",
+    "line": {
+      "unpaid_salary": "Pay of the unpaid days",
+      "leave_allowance": "Leave pay",
+      "leave_balance": "Unused leave pay",
+      "end_of_service": "End-of-service award",
+      "article_77": "Article 77 compensation",
+      "other_addition": "Other additions",
+      "installment": "Advance installment",
+      "penalty_days": "Day penalty",
+      "penalty_amount": "Amount penalty",
+      "suspension": "Suspension",
+      "other_due": "Other approved deduction",
+      "custody": "Custody",
+      "other_deduction": "Other deductions"
+    },
+    "detail": {
+      "unpaid": "{{from}} – {{to}} · {{days}} days × {{rate}}",
+      "leave": "Article 109 · {{days}} days × {{rate}}",
+      "balance": "Article 111 · {{days}} days × {{rate}}",
+      "award": "Articles 84 and 85 · {{years}} · {{share}}",
+      "art77": "15 days' wage a year, two months at least",
+      "art77Fixed": "The wage of the rest of the contract, two months at least",
+      "installment": "{{no}} · {{period}}",
+      "days": "{{no}} · {{days}} days × {{rate}}"
+    },
+    "share": {
+      "all": "The full award",
+      "twoThirds": "Two thirds",
+      "third": "A third",
+      "none": "No award"
+    },
+    "award": {
+      "title": "End-of-service award breakdown",
+      "item": "Item",
+      "period": "Period",
+      "rate": "Rate",
+      "amount": "Amount",
+      "first": "The first five years",
+      "after": "After five years",
+      "half": "Half a month's wage a year",
+      "whole": "A month's wage a year",
+      "full": "The full award (article 84)",
+      "due": "Due: {{reason}}",
+      "note": "Fractions of a year count; a year is 365 days. Unpaid leave above 20 days a year is not service (article 116)."
+    },
+    "fullAdvance": "Deduct the whole rest of the advance (not only the month's installment)",
+    "notes": "Notes",
+    "editHint": "The settlement is recalculated after saving, and the change is audited.",
+    "saveRecalculate": "Save and recalculate",
+    "paidOnLabel": "Payment date",
+    "methodLabel": "Payment method",
+    "referenceLabel": "Reference (transfer or cheque no.)",
+    "confirmPay": "Confirm payment",
+    "method": {
+      "Transfer": "Bank transfer",
+      "Cash": "Cash",
+      "Cheque": "Cheque"
+    },
+    "cancelConfirm": "The settlement is cancelled and not counted. Another can be created afterwards.",
+    "cancelReason": "Reason for cancelling",
+    "jobDepartment": "Job / department",
+    "hireDate": "Joining date",
+    "acknowledgeEnd": "I, {{name}}, acknowledge receiving SAR {{net}}, all my dues for my service with the company up to my last working day, and have no further claims.",
+    "acknowledgeVacation": "I, {{name}}, acknowledge receiving SAR {{net}}, my unpaid salary and the pay of the annual leave above.",
+    "employeeSign": "Employee's signature",
+    "hrSign": "HR",
+    "financeSign": "Finance"
   }
 }
