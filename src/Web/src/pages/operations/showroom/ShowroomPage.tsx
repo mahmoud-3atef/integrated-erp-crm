@@ -191,7 +191,7 @@ export function ShowroomPage() {
           <Button onClick={() => setPicked([])} sx={{ color: 'rgba(255,255,255,.75)' }}>
             {t('showroom.basket.clear')}
           </Button>
-          <Button variant="outlined" startIcon={<PictureAsPdfOutlinedIcon />} onClick={() => window.open(`/operations/showroom/print?ids=${picked.join(',')}`, '_blank')} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap' }}>
+          <Button variant="outlined" startIcon={<PictureAsPdfOutlinedIcon />} onClick={() => window.open(`/housing/showroom/print?ids=${picked.join(',')}`, '_blank')} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap' }}>
             {t('showroom.basket.pdf')}
           </Button>
           {!presentation && can('operations.delivery.create', true) && (

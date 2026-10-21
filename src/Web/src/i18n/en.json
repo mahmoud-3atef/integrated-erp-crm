@@ -561,7 +561,7 @@
     "projects": "Projects",
     "prices": "Price packages",
     "operations": "Operations",
-    "showroom": "Showroom",
+    "showroom": "Housing",
     "deliveryOrders": "Delivery orders",
     "returnOrders": "Return orders",
     "historyIssues": "Period ledger exceptions",
@@ -4973,7 +4973,7 @@
     }
   },
   "showroom": {
-    "noAccess": "You do not have permission to view the showroom.",
+    "noAccess": "You do not have permission to view the housing screen.",
     "present": "Presentation for a customer",
     "presentTitle": "Workers available for immediate delivery",
     "fullscreen": "Full screen",
@@ -5086,7 +5086,7 @@
     }
   },
   "workerProfile": {
-    "toShowroom": "Showroom",
+    "toShowroom": "Housing screen",
     "edit": "Edit the marketing profile",
     "editTitle": "Worker's marketing profile",
     "photos": "Photos ({{count}}/8)",

@@ -187,7 +187,7 @@ export function ShowroomFile({
           )}
 
           <Stack direction="row" sx={{ gap: 1, p: 2.5, position: 'sticky', bottom: 0, bgcolor: '#fff', borderTop: `1px solid ${tokens.gray100}`, mt: 'auto' }}>
-            <Button variant="outlined" startIcon={<PictureAsPdfOutlinedIcon />} onClick={() => window.open(`/operations/showroom/print?ids=${w.id}`, '_blank')}>
+            <Button variant="outlined" startIcon={<PictureAsPdfOutlinedIcon />} onClick={() => window.open(`/housing/showroom/print?ids=${w.id}`, '_blank')}>
               {t('showroom.file.cv')}
             </Button>
             {!presentation && (

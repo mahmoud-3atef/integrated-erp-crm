@@ -109,10 +109,17 @@ const menu: MenuSection[] = [
     ],
   },
   {
+    titleKey: 'menu.housingSection',
+    icon: <ApartmentOutlinedIcon />,
+    items: [
+      { path: '/housing/showroom', labelKey: 'menu.showroom', icon: <StorefrontOutlinedIcon />, permission: 'operations.showroom.view', companyWide: true },
+      { path: '/housing', labelKey: 'menu.housing', icon: <ApartmentOutlinedIcon />, permission: 'housing.view', companyWide: true },
+    ],
+  },
+  {
     titleKey: 'menu.operations',
     icon: <LocalShippingOutlinedIcon />,
     items: [
-      { path: '/operations/showroom', labelKey: 'menu.showroom', icon: <StorefrontOutlinedIcon />, permission: 'operations.showroom.view', companyWide: true },
       { path: '/operations/delivery-orders', labelKey: 'menu.deliveryOrders', icon: <LocalShippingOutlinedIcon />, permission: 'operations.delivery.view', companyWide: true },
       { path: '/operations/return-orders', labelKey: 'menu.returnOrders', icon: <KeyboardReturnOutlinedIcon />, permission: 'operations.return.view', companyWide: true },
       { path: '/operations/transfer-orders', labelKey: 'menu.transferOrders', icon: <SwapHorizIcon />, permission: 'operations.transfer.view', companyWide: true },
@@ -138,11 +145,6 @@ const menu: MenuSection[] = [
       { path: '/payroll/staff', labelKey: 'menu.payrollStaff', icon: <ReceiptLongOutlinedIcon />, permission: 'payroll.staff.view', companyWide: true },
       { path: '/payroll/gosi', labelKey: 'menu.payrollGosi', icon: <ShieldOutlinedIcon />, permission: 'payroll.gosi.view', companyWide: true },
     ],
-  },
-  {
-    titleKey: 'menu.housingSection',
-    icon: <ApartmentOutlinedIcon />,
-    items: [{ path: '/housing', labelKey: 'menu.housing', icon: <ApartmentOutlinedIcon />, permission: 'housing.view', companyWide: true }],
   },
   {
     titleKey: 'menu.workforce',
@@ -313,7 +315,12 @@ function Sidebar({ sections, pinned, onPin, onNavigate }: { sections: MenuSectio
   const navigate = useNavigate();
   const location = useLocation();
   const taskCount = useTaskCount(location.pathname);
-  const current = sections.find((section) => section.titleKey && section.items.some((item) => isActive(item.path, location.pathname)))?.titleKey;
+  // The item whose path matches the page best (/housing/showroom is not also «/housing»).
+  const best = sections
+    .flatMap((section) => section.items.map((item) => item.path))
+    .filter((path) => isActive(path, location.pathname))
+    .sort((a, b) => b.length - a.length)[0];
+  const current = sections.find((section) => section.titleKey && section.items.some((item) => item.path === best))?.titleKey;
   const [openKey, setOpenKey] = useState<string | undefined>(current);
   useEffect(() => setOpenKey(current), [current]);
 
@@ -340,7 +347,7 @@ function Sidebar({ sections, pinned, onPin, onNavigate }: { sections: MenuSectio
     </Box>
   );
   const link = (item: MenuItem, sub: boolean) => {
-    const active = isActive(item.path, location.pathname);
+    const active = item.path === best;
     return (
       <ButtonBase
         key={item.path}

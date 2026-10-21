@@ -114,8 +114,9 @@ export function App() {
                 <Route path="/commercial/prices" element={<PricesPage />} />
                 <Route path="/operations/delivery-orders" element={<DeliveryOrdersPage />} />
                 <Route path="/operations/delivery-orders/new" element={<DeliveryOrdersPage key="new" creating />} />
-                <Route path="/operations/showroom" element={<ShowroomPage />} />
-                <Route path="/operations/showroom/print" element={<ShowroomPrintPage />} />
+                <Route path="/housing/showroom" element={<ShowroomPage />} />
+                <Route path="/housing/showroom/print" element={<ShowroomPrintPage />} />
+                <Route path="/operations/showroom" element={<Navigate to="/housing/showroom" replace />} />
                 <Route path="/operations/delivery-orders/:id" element={<DeliveryOrderDetailPage />} />
                 <Route path="/operations/delivery-orders/:id/edit" element={<DeliveryOrderDetailPage key="edit" editing />} />
                 <Route path="/operations/return-orders" element={<ReturnOrdersPage />} />

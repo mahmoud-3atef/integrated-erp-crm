@@ -104,7 +104,7 @@ internal static class OperationsPermissions
         new(TransferView, GroupAr, GroupEn, "عرض أوامر النقل بين المشاريع", "View project transfer orders"),
         new(TransferCreate, GroupAr, GroupEn, "إنشاء أوامر النقل وتعديلها", "Create and edit project transfer orders"),
         new(TransferApprove, GroupAr, GroupEn, "اعتماد أوامر النقل (مدير العمليات)", "Approve project transfer orders (operations manager)"),
-        new(ShowroomView, GroupAr, GroupEn, "عرض صالة العرض (العمالة المتاحة في السكن)", "View the showroom (workers available in housing)"),
+        new(ShowroomView, GroupAr, GroupEn, "عرض شاشة السكن (العمالة المتاحة)", "View the housing screen (available workers)"),
         new(MovementsView, GroupAr, GroupEn, "عرض حركات العمال (الوصول والإجازات والانقطاع والإيقاف والخروج)", "View worker movements (arrival, vacation, absconding, suspension, exit)"),
         new(MovementsManage, GroupAr, GroupEn, "إنشاء حركات العمال وتعديلها وإلغاؤها", "Create, edit and cancel worker movements"),
         new(MovementsApprove, GroupAr, GroupEn, "اعتماد حركات العمال (مدير العمليات)", "Approve worker movements (operations manager)"),

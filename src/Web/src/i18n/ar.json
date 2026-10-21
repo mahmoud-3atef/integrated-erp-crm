@@ -561,7 +561,7 @@
     "projects": "المشاريع",
     "prices": "الباقات السعرية",
     "operations": "العمليات",
-    "showroom": "صالة العرض",
+    "showroom": "السكن",
     "deliveryOrders": "أوامر التسليم",
     "returnOrders": "أوامر الرجيع",
     "historyIssues": "استثناءات سجل الفترات",
@@ -4973,7 +4973,7 @@
     }
   },
   "showroom": {
-    "noAccess": "ليست لديك صلاحية عرض صالة العرض.",
+    "noAccess": "ليست لديك صلاحية عرض شاشة السكن.",
     "present": "وضع العرض للعميل",
     "presentTitle": "عمالة متاحة للتسليم الفوري",
     "fullscreen": "ملء الشاشة",
@@ -5086,7 +5086,7 @@
     }
   },
   "workerProfile": {
-    "toShowroom": "صالة العرض",
+    "toShowroom": "شاشة السكن",
     "edit": "تعديل الملف التسويقي",
     "editTitle": "الملف التسويقي للعامل",
     "photos": "الصور ({{count}}/8)",

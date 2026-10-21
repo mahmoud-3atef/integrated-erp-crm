@@ -83,7 +83,7 @@ export function WorkerProfileTab({ workerId }: { workerId: string }) {
       <ErrorMessage messageKey={error} />
       <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 1, mb: 2 }}>
         {can('operations.showroom.view', true) && (
-          <Button startIcon={<StorefrontOutlinedIcon />} onClick={() => navigate('/operations/showroom')}>
+          <Button startIcon={<StorefrontOutlinedIcon />} onClick={() => navigate('/housing/showroom')}>
             {t('workerProfile.toShowroom')}
           </Button>
         )}
