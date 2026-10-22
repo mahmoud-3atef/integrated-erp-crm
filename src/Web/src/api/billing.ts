@@ -4,7 +4,42 @@ import type { ApprovalStatus } from './workflow';
 
 export type TimesheetStatus = 'Draft' | 'InApproval' | 'Returned' | 'Approved';
 export type WorkerSource = 'Company' | 'Supplier' | 'Unknown';
-export const adjustmentTypes = ['Absence', 'Overtime', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost', 'InternalAddition', 'InternalDeduction'] as const;
+export const adjustmentTypes = ['Absence', 'Overtime', 'OvertimeAmount', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost', 'OtherDeduction', 'InternalAddition', 'InternalDeduction'] as const;
+
+/** The timesheet's invoice (before VAT, VAT, with VAT) and the workers' net pay and due salary. */
+export interface SheetTotals {
+  invoice: number;
+  vat: number;
+  invoiceTotal: number;
+  net: number;
+  dueSalary: number;
+}
+
+/** A worker's lines together: the invoice and its parts, and the net pay. */
+export interface WorkerTotals {
+  invoice: number;
+  vat: number;
+  invoiceTotal: number;
+  net: number;
+  dueSalary: number;
+  absence: number;
+  overtime: number;
+  fees: number;
+  gosi: number;
+}
+
+export interface VariablesPreview {
+  before: SheetTotals;
+  after: SheetTotals;
+  workers: { workerId: string; before: WorkerTotals; after: WorkerTotals }[];
+}
+
+export interface VariableTotal {
+  workerId: string;
+  type: string;
+  total: number;
+  reason: string;
+}
 export type AdjustmentType = (typeof adjustmentTypes)[number];
 
 export interface MonthProject {
@@ -186,6 +221,8 @@ export const billingApi = {
   get: (id: string) => request<TimesheetDetail>('GET', `${base}/timesheets/${id}`),
   generate: (projectId: string, month: string) => request<{ id: string }>('POST', `${base}/timesheets/generate`, { projectId, month }),
   adjust: (id: string, input: { workerId: string; type: AdjustmentType; value: number; reason: string }) => request<void>('POST', `${base}/timesheets/${id}/adjustments`, input),
+  previewVariables: (id: string, totals: VariableTotal[]) => request<VariablesPreview>('POST', `${base}/timesheets/${id}/variables/preview`, totals),
+  saveVariables: (id: string, totals: VariableTotal[]) => request<void>('POST', `${base}/timesheets/${id}/variables`, totals),
   removeAdjustment: (id: string, adjustmentId: string) => request<void>('DELETE', `${base}/timesheets/${id}/adjustments/${adjustmentId}`),
   submit: (id: string) => request<void>('POST', `${base}/timesheets/${id}/submit`),
   settings: (projectId: string) => request<BillingSettings>('GET', `${base}/projects/${projectId}/settings`),

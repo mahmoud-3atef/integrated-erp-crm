@@ -13,6 +13,19 @@ namespace IntegratedErp.Modules.Billing.Application;
 
 public sealed record GenerateInput(Guid ProjectId, DateOnly Month);
 
+/// <summary>A worker's new total of one variable (an adjustment type), with the reason the save asks for.</summary>
+public sealed record VariableTotal(Guid WorkerId, string Type, decimal Total, string? Reason);
+
+/// <summary>The timesheet's invoice (before VAT, VAT, with VAT) and the workers' net pay and due salary.</summary>
+public sealed record SheetTotalsDto(decimal Invoice, decimal Vat, decimal InvoiceTotal, decimal Net, decimal DueSalary);
+
+/// <summary>A worker's lines together: the invoice and its parts, and the net pay.</summary>
+public sealed record WorkerTotalsDto(decimal Invoice, decimal Vat, decimal InvoiceTotal, decimal Net, decimal DueSalary, decimal Absence, decimal Overtime, decimal Fees, decimal Gosi);
+
+public sealed record WorkerVariablesDto(Guid WorkerId, WorkerTotalsDto Before, WorkerTotalsDto After);
+
+public sealed record VariablesPreviewDto(SheetTotalsDto Before, SheetTotalsDto After, IReadOnlyList<WorkerVariablesDto> Workers);
+
 public sealed record AdjustmentInput(Guid WorkerId, string Type, decimal Value, string Reason);
 
 public sealed record BillingSettingsDto(int CycleStartDay, string DayBasis, decimal OvertimeMultiplier, decimal MonthlyHours, decimal? OvertimeHourlyRate, decimal MaxOvertimeHours, decimal GosiRate, decimal VatRate);
@@ -198,6 +211,81 @@ internal sealed class TimesheetService(
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success(preview);
     }
+
+    /// <summary>
+    /// What the timesheet would come to with workers' new totals of their variables («إضافة متغيرات»): the
+    /// timesheet's totals and each changed worker's pay and invoice, before and after — nothing is saved.
+    /// </summary>
+    public async Task<Result<VariablesPreviewDto>> PreviewVariablesAsync(Guid id, IReadOnlyList<VariableTotal> totals, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(totals);
+        var (timesheet, rules, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        if (timesheet is null)
+        {
+            return Result.Failure<VariablesPreviewDto>(TimesheetErrors.NotFound);
+        }
+
+        if (totals.Any(t => string.IsNullOrEmpty(t.Type) || TypeOf(t.Type) is null))
+        {
+            return Result.Failure<VariablesPreviewDto>(TimesheetErrors.Value);
+        }
+
+        var workers = totals.Select(t => t.WorkerId).ToHashSet();
+        var before = Totals(timesheet, workers);
+        // A preview needs no reason: the save asks for it.
+        var set = timesheet.SetTotals(Parse(totals, "—"), rules!, setting!.MaxOvertimeHours, user.DisplayName, clock.UtcNow);
+        var after = set.IsSuccess ? Totals(timesheet, workers) : before;
+        db.ChangeTracker.Clear();
+        return set.IsFailure
+            ? Result.Failure<VariablesPreviewDto>(set.Error)
+            : Result.Success(new VariablesPreviewDto(before.Sheet, after.Sheet, workers.Select(w => new WorkerVariablesDto(w, before.Workers[w], after.Workers[w])).ToList()));
+    }
+
+    /// <summary>Saves workers' new totals of their variables (each with its reason), all or nothing.</summary>
+    public async Task<Result> SaveVariablesAsync(Guid id, IReadOnlyList<VariableTotal> totals, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(totals);
+        var (timesheet, rules, setting) = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        if (timesheet is null)
+        {
+            return Result.Failure(TimesheetErrors.NotFound);
+        }
+
+        if (totals.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        if (totals.Any(t => string.IsNullOrEmpty(t.Type) || TypeOf(t.Type) is null))
+        {
+            return Result.Failure(TimesheetErrors.Value);
+        }
+
+        var set = timesheet.SetTotals(Parse(totals, null), rules!, setting!.MaxOvertimeHours, user.DisplayName, clock.UtcNow);
+        if (set.IsFailure)
+        {
+            return Result.Failure(set.Error);
+        }
+
+        db.TimesheetAdjustments.RemoveRange(set.Value.Removed);
+        db.TimesheetAdjustments.AddRange(set.Value.Added);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    private static AdjustmentType? TypeOf(string type) => Enum.TryParse<AdjustmentType>(type, out var t) && Enum.IsDefined(t) && !char.IsDigit(type[0]) ? t : null;
+
+    private static List<AdjustmentTotal> Parse(IReadOnlyList<VariableTotal> totals, string? reason) =>
+        totals.Select(t => new AdjustmentTotal(t.WorkerId, TypeOf(t.Type)!.Value, t.Total, reason ?? t.Reason ?? string.Empty)).ToList();
+
+    private static (SheetTotalsDto Sheet, Dictionary<Guid, WorkerTotalsDto> Workers) Totals(Timesheet t, IReadOnlySet<Guid> workers) => (
+        new SheetTotalsDto(t.Lines.Sum(l => l.InvoiceAmount), t.Lines.Sum(l => l.Vat), t.Lines.Sum(l => l.InvoiceTotal), t.Lines.Sum(l => l.WorkerNet), t.Lines.Sum(l => l.PayDueSalary)),
+        workers.ToDictionary(w => w, w =>
+        {
+            var mine = t.Lines.Where(l => l.WorkerId == w).ToList();
+            return new WorkerTotalsDto(mine.Sum(l => l.InvoiceAmount), mine.Sum(l => l.Vat), mine.Sum(l => l.InvoiceTotal), mine.Sum(l => l.WorkerNet),
+                mine.Sum(l => l.DueSalary), mine.Sum(l => l.AbsenceAmount), mine.Sum(l => l.Overtime), mine.Sum(l => l.DueFees), mine.Sum(l => l.Gosi));
+        }));
 
     /// <summary>Sends the timesheet through the company's approval process for timesheets.</summary>
     public async Task<Result> SubmitAsync(Guid id, CancellationToken cancellationToken)

@@ -115,8 +115,8 @@ public sealed class TimesheetTests(TestDatabase database)
                 Assert.Equal(["BSS0701", "BSS0702", "BSS0703"], Enumerable.Range(7, 3).Select(r => ws.Cell(r, 1).GetString()));
                 Assert.Equal(2m, ws.Cell(7, 9).GetValue<decimal>()); // the absence entered on the screen
                 ws.Cell(8, 9).Value = 3; // BSS0702: 3 absent days
-                ws.Cell(8, 11).Value = 250; // and a customer addition
-                ws.Cell(8, 18).Value = "كشف حضور العميل";
+                ws.Cell(8, 12).Value = 250; // and a customer addition
+                ws.Cell(8, 20).Value = "كشف حضور العميل";
                 ws.Cell(9, 10).Value = 4; // BSS0703: overtime, but no reason
             });
             var preview = (await service.PreviewAsync(id, new MemoryStream(filled), default)).Value;
@@ -124,7 +124,7 @@ public sealed class TimesheetTests(TestDatabase database)
 
             // Nothing is applied while the file has a problem.
             Assert.Single((await service.ApplyExcelAsync(id, new MemoryStream(filled), default)).Value.Problems);
-            var fixedFile = Edit(filled, ws => ws.Cell(9, 18).Value = "عمل إضافي معتمد");
+            var fixedFile = Edit(filled, ws => ws.Cell(9, 20).Value = "عمل إضافي معتمد");
             var applied = (await service.ApplyExcelAsync(id, new MemoryStream(fixedFile), default)).Value;
             Assert.Equal((0, 3), (applied.Problems.Count, applied.Changes.Count));
 
@@ -142,15 +142,30 @@ public sealed class TimesheetTests(TestDatabase database)
                 var ws = results.Worksheet("Timesheet");
                 foreach (var (r, l) in sheet.Lines.OrderBy(x => x.WorkerNo, StringComparer.Ordinal).Select((x, n) => (7 + n, x)))
                 {
-                    Assert.Equal((l.WorkerNet, l.InvoiceAmount), (Math.Round((decimal)ws.Cell(r, 19).Value.GetNumber(), 2), Math.Round((decimal)ws.Cell(r, 20).Value.GetNumber(), 2)));
+                    Assert.Equal((l.WorkerNet, l.InvoiceAmount), (Math.Round((decimal)ws.Cell(r, 21).Value.GetNumber(), 2), Math.Round((decimal)ws.Cell(r, 22).Value.GetNumber(), 2)));
                 }
 
-                Assert.Equal(sheet.Invoice.Amount, Math.Round((decimal)ws.Cell(10, 20).Value.GetNumber(), 2));
-                ws.Unprotect("ERP-TIMESHEET-V1");
+                Assert.Equal(sheet.Invoice.Amount, Math.Round((decimal)ws.Cell(10, 22).Value.GetNumber(), 2));
+                ws.Unprotect("ERP-TIMESHEET-V2");
                 ws.Cell(8, 9).Value = 0; // BSS0702 without the absence: 3 days of 1,500 / 30 come back
                 ws.RecalculateAllFormulas();
-                Assert.Equal(supplierLine.InvoiceAmount + 150m, Math.Round((decimal)ws.Cell(8, 20).Value.GetNumber(), 2));
+                Assert.Equal(supplierLine.InvoiceAmount + 150m, Math.Round((decimal)ws.Cell(8, 22).Value.GetNumber(), 2));
             }
+
+            // «إضافة متغيرات»: a preview shows the new figures and saves nothing; the save keeps the totals with their reasons.
+            var sheetBefore = (await queries.GetAsync(id, default))!;
+            var w2 = sheetBefore.Lines.Single(l => l.WorkerNo == "BSS0702").WorkerId;
+            VariableTotal[] variables = [new(w2, "OvertimeAmount", 200, "مكافأة إضافي"), new(w2, "OtherDeduction", 75, "خصم للعميل")];
+            var look = (await service.PreviewVariablesAsync(id, variables, default)).Value;
+            Assert.Equal((200m, 125m), (look.Workers.Single().After.Net - look.Workers.Single().Before.Net, look.Workers.Single().After.Invoice - look.Workers.Single().Before.Invoice));
+            Assert.Equal(sheetBefore.Invoice.Amount + 125m, look.After.Invoice);
+            Assert.Equal(sheetBefore.Invoice.Amount, (await queries.GetAsync(id, default))!.Invoice.Amount);
+            Assert.True((await service.PreviewVariablesAsync(id, [new(w2, "NoSuchType", 1, "x")], default)).IsFailure);
+            Assert.True((await service.SaveVariablesAsync(id, variables, default)).IsSuccess);
+            var sheetAfter = (await queries.GetAsync(id, default))!;
+            Assert.Equal(sheetBefore.Invoice.Amount + 125m, sheetAfter.Invoice.Amount);
+            Assert.Equal((200m, 75m), (sheetAfter.Lines.Single(l => l.WorkerNo == "BSS0702").OvertimeAmount, sheetAfter.Lines.Single(l => l.WorkerNo == "BSS0702").OtherDeductions));
+            Assert.True((await service.SaveVariablesAsync(id, [new(w2, "OvertimeAmount", 0, "إلغاء"), new(w2, "OtherDeduction", 0, "إلغاء")], default)).IsSuccess);
 
             // The old system's checks: a changed locked column, a worker dropped, another timesheet's file.
             Assert.Equal("excel_locked_changed", (await service.PreviewAsync(id, new MemoryStream(Edit(fixedFile, ws => ws.Cell(7, 7).Value = 31)), default)).Value.Problems.Single().Code);
@@ -354,7 +369,7 @@ public sealed class TimesheetTests(TestDatabase database)
     {
         using var workbook = new ClosedXML.Excel.XLWorkbook(new MemoryStream(file));
         var ws = workbook.Worksheet("Timesheet");
-        ws.Unprotect("ERP-TIMESHEET-V1");
+        ws.Unprotect("ERP-TIMESHEET-V2");
         change(ws);
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);

@@ -25,7 +25,9 @@ public sealed record LineInputs(
     decimal FeeDaysAdjust,
     decimal OtherCosts,
     decimal InternalAdditions = 0,
-    decimal InternalDeductions = 0);
+    decimal InternalDeductions = 0,
+    decimal OvertimeAmount = 0,
+    decimal OtherDeductions = 0);
 
 /// <summary>The project's billing rules for overtime, GOSI and VAT.</summary>
 public sealed record BillingRules(decimal OvertimeMultiplier, decimal MonthlyHours, decimal? OvertimeHourlyRate, decimal GosiRate, decimal VatRate, bool CostPlus);
@@ -53,10 +55,10 @@ public sealed record LineAmounts(
 /// <code>
 /// due salary   = R / Q × salary                 absence = salary / Q × absent days   (the salary part only)
 /// due fees     = S / Q × (price − salary)        of which housing = S / Q × housing, transport = S / Q × transport
-/// overtime     = basic / monthly hours × hours × multiplier   (or a fixed hourly rate of the project)
+/// overtime     = basic / monthly hours × hours × multiplier   (or a fixed hourly rate of the project) + an overtime amount
 /// GOSI         = salary × rate                   (Cost Plus only)
 /// invoice      = due salary − absence + overtime + customer additions − customer deductions − customer loans
-///                + due fees + other costs + GOSI;   VAT on it
+///                + due fees + other costs − other deductions + GOSI;   VAT on it
 /// worker's net = the same from the worker's own salary: due − absence + overtime + additions − deductions − loans
 ///                + the company's internal additions − its internal deductions   (the pay only, never the invoice)
 /// </code>
@@ -76,13 +78,13 @@ public static class TimesheetMath
         var dueFees = Round(Math.Abs(s / q * (i.TotalPrice - i.BillSalary)));
         var dueHousing = Round(s / q * i.Housing);
         var dueTransport = Round(s / q * i.Transport);
-        var overtime = i.OvertimeHours <= 0
+        var overtime = (i.OvertimeHours <= 0
             ? 0
             : rules.OvertimeHourlyRate is { } rate
                 ? Round(rate * i.OvertimeHours)
-                : Round((i.BasicSalary > 0 ? i.BasicSalary : i.PaySalary) / (rules.MonthlyHours <= 0 ? 240 : rules.MonthlyHours) * i.OvertimeHours * rules.OvertimeMultiplier);
+                : Round((i.BasicSalary > 0 ? i.BasicSalary : i.PaySalary) / (rules.MonthlyHours <= 0 ? 240 : rules.MonthlyHours) * i.OvertimeHours * rules.OvertimeMultiplier)) + i.OvertimeAmount;
         var gosi = rules.CostPlus && r > 0 ? Round(i.BillSalary * rules.GosiRate) : 0;
-        var invoice = dueSalary - absence + overtime + i.ClientAdditions - i.ClientDeductions - i.CustomerLoans + dueFees + i.OtherCosts + gosi;
+        var invoice = dueSalary - absence + overtime + i.ClientAdditions - i.ClientDeductions - i.CustomerLoans + dueFees + i.OtherCosts - i.OtherDeductions + gosi;
         var vat = Round(invoice * rules.VatRate);
         var payDue = Round(r / q * i.PaySalary);
         var payAbsence = Round(i.PaySalary / q * i.AbsenceDays);

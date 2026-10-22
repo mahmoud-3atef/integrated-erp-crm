@@ -28,6 +28,38 @@ public sealed class TimesheetMathTests
         Assert.Equal((640m, 906.67m, 106.67m, 56.25m, 1602.92m), (second.DueSalary, second.DueFees, second.DueHousing, second.Overtime, second.InvoiceAmount));
     }
 
+    /// <summary>
+    /// The old system's Excel template (ProjectAttendance, September 2026, pro00032), its formulas cell by cell: salary
+    /// 2,000 (basic 1,700), price 5,150, 30 days; 2 absent days, 10 overtime hours, a 300 company loan installment
+    /// (AL: off the pay, back on the invoice), 150 paid by the customer (AO) and 50 deducted by them (AJ).
+    /// </summary>
+    [Fact]
+    public void The_old_excel_template_and_the_system_give_the_same_pay_and_invoice()
+    {
+        static decimal R(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
+        decimal q = 30, r = 30, s = 30, basic = 1700, y = 2000, ac = 5150, ah = 2, aj = 50, al = 300, ao = 150, ap = 10;
+        var ad = R(r / q * y);
+        var ag = R(Math.Abs(s / q * (ac - y)));
+        var ai = R(y / q * ah);
+        var aq = R(basic / (30 * 8) * ap * 1.5m);
+        var ar = ad + ao + aq - (aj + 0 + ai + al) - 0 + 0;
+        var av = ar + ag + 0 + al + 0 + 0 - 0;
+
+        var a = TimesheetMath.Calculate(
+            new LineInputs(30, 30, 2000, 5150, 300, 300, 2000, 1700, ah, ap, ao, aj, 0, 0, 0, InternalDeductions: al), TotalCost);
+        Assert.Equal((ar, av, R(av * 0.15m)), (a.WorkerNet, a.InvoiceAmount, a.Vat));
+    }
+
+    [Fact]
+    public void An_overtime_amount_counts_with_the_hours_and_other_deductions_lower_the_invoice_only()
+    {
+        var plain = TimesheetMath.Calculate(Line(30, 1000, 1500, overtime: 10, basic: 900), TotalCost);
+        var a = TimesheetMath.Calculate(Line(30, 1000, 1500, overtime: 10, basic: 900) with { OvertimeAmount = 200, OtherDeductions = 75 }, TotalCost);
+        Assert.Equal(plain.Overtime + 200, a.Overtime);
+        Assert.Equal(plain.WorkerNet + 200, a.WorkerNet);
+        Assert.Equal(plain.InvoiceAmount + 200 - 75, a.InvoiceAmount);
+    }
+
     [Fact]
     public void Internal_additions_and_deductions_change_the_pay_and_never_the_invoice()
     {

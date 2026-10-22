@@ -22,7 +22,8 @@ public sealed record ExcelPreview(int Rows, IReadOnlyList<ExcelProblem> Problems
 /// </summary>
 internal static class TimesheetWorkbook
 {
-    public const string Marker = "ERP-TIMESHEET-V1";
+    // V2: the overtime amount and the other deductions columns (a V1 file is refused: download the file again).
+    public const string Marker = "ERP-TIMESHEET-V2";
     private const string DataSheet = "Timesheet";
     private const string MetaSheet = "meta";
     private const int HeaderRow = 6;
@@ -33,11 +34,13 @@ internal static class TimesheetWorkbook
     [
         (AdjustmentType.Absence, "الغياب (أيام)", "Absence (days)"),
         (AdjustmentType.Overtime, "الإضافي (ساعات)", "Overtime (hours)"),
+        (AdjustmentType.OvertimeAmount, "الإضافي (مبلغ)", "Overtime (amount)"),
         (AdjustmentType.ClientAddition, "إضافة من العميل", "Customer addition"),
         (AdjustmentType.ClientDeduction, "خصم يطلبه العميل", "Customer deduction"),
         (AdjustmentType.CustomerLoan, "سلفة صرفها العميل", "Customer loan"),
         (AdjustmentType.FeeDays, "تعديل أيام الرسوم (±)", "Fee days (±)"),
         (AdjustmentType.OtherCost, "تكاليف أخرى", "Other costs"),
+        (AdjustmentType.OtherDeduction, "خصومات أخرى (الفاتورة فقط)", "Other deductions (invoice only)"),
         (AdjustmentType.InternalAddition, "إضافة داخلية (للعامل فقط)", "Internal addition (pay only)"),
         (AdjustmentType.InternalDeduction, "خصم داخلي (من العامل فقط)", "Internal deduction (pay only)"),
     ];
@@ -369,11 +372,11 @@ internal static class TimesheetWorkbook
 
         string Input(AdjustmentType type) => ws.Cell(row, Fixed.Length + 1 + Array.FindIndex(Inputs, i => i.Type == type)).Address.ToStringRelative();
         string Helper(string name) => ws.Cell(row, HelperColumn(name)).Address.ToStringRelative();
-        var overtime = $"ROUND({Helper("overtime_hour")}*{Input(AdjustmentType.Overtime)},2)";
+        var overtime = $"(ROUND({Helper("overtime_hour")}*{Input(AdjustmentType.Overtime)},2)+{Input(AdjustmentType.OvertimeAmount)})";
         var customer = $"{Input(AdjustmentType.ClientAddition)}-{Input(AdjustmentType.ClientDeduction)}-{Input(AdjustmentType.CustomerLoan)}";
         var fees = $"ROUND(MAX(0,{Helper("first_days")}+{Input(AdjustmentType.FeeDays)})*{Helper("fee_day")},2)-{Helper("first_fees")}";
         ws.Cell(row, InvoiceColumn).FormulaA1 =
-            $"{Helper("base_invoice")}-ROUND({Helper("bill_day")}*{Input(AdjustmentType.Absence)},2)+{overtime}+{customer}+{fees}+{Input(AdjustmentType.OtherCost)}";
+            $"{Helper("base_invoice")}-ROUND({Helper("bill_day")}*{Input(AdjustmentType.Absence)},2)+{overtime}+{customer}+{fees}+{Input(AdjustmentType.OtherCost)}-{Input(AdjustmentType.OtherDeduction)}";
         ws.Cell(row, PayColumn).FormulaA1 =
             $"{Helper("base_pay")}-ROUND({Helper("pay_day")}*{Input(AdjustmentType.Absence)},2)+{overtime}+{customer}+{Input(AdjustmentType.InternalAddition)}-{Input(AdjustmentType.InternalDeduction)}";
     }

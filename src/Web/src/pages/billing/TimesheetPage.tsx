@@ -44,6 +44,8 @@ import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type Time
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { TimesheetSettingsDialog } from './timesheetSetup';
+import { VariablesDialog } from './VariablesDialog';
+import PlaylistAddOutlinedIcon from '@mui/icons-material/PlaylistAddOutlined';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
 import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
@@ -66,11 +68,13 @@ const daysBetween = (from: string, to: string) => Math.round((Date.parse(to) - D
 const adjustmentColor: Record<AdjustmentType, string> = {
   Absence: '#e03434',
   Overtime: '#1f6fd1',
+  OvertimeAmount: '#3b82c4',
   ClientAddition: '#1f9d55',
   ClientDeduction: '#b8770a',
   CustomerLoan: '#7c4dcc',
   FeeDays: '#0f8f84',
   OtherCost: '#5d6f7b',
+  OtherDeduction: '#8a5a2b',
   InternalAddition: '#17734b',
   InternalDeduction: '#a32a5c',
 };
@@ -124,6 +128,7 @@ export function TimesheetPage() {
   const [tab, setTab] = useState<Tab>('invoice');
   const [adjusting, setAdjusting] = useState<TimesheetLine | null>(null);
   const [settings, setSettings] = useState(false);
+  const [variables, setVariables] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [busy, setBusy] = useState(false);
@@ -212,6 +217,11 @@ export function TimesheetPage() {
               </Button>
             )}
             {canRun && <RunProcessButton screen="billing.timesheet" recordId={sheet.id} title={`${sheet.timesheetNo} — ${sheet.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />}
+            {sheet.canEdit && (
+              <Button variant="contained" startIcon={<PlaylistAddOutlinedIcon />} disabled={busy} onClick={() => setVariables(true)}>
+                {t('timesheets.variables.button')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
               {t('timesheets.excel.download')}
             </Button>
@@ -425,6 +435,16 @@ export function TimesheetPage() {
           onClose={() => setUploading(false)}
           onApplied={() => {
             setUploading(false);
+            void reload();
+          }}
+        />
+      )}
+      {variables && (
+        <VariablesDialog
+          sheet={sheet}
+          onClose={() => setVariables(false)}
+          onSaved={() => {
+            setVariables(false);
             void reload();
           }}
         />

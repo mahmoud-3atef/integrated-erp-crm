@@ -1294,10 +1294,20 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("other_costs");
 
+                    b.Property<decimal>("OtherDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("other_deductions");
+
                     b.Property<decimal>("Overtime")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("overtime");
+
+                    b.Property<decimal>("OvertimeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("overtime_amount");
 
                     b.Property<decimal>("OvertimeHours")
                         .HasPrecision(18, 2)

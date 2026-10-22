@@ -77,7 +77,12 @@ public sealed record TimesheetLineDto(
     decimal InvoiceTotal,
     decimal PayDueSalary,
     decimal PayAbsence,
-    decimal WorkerNet);
+    decimal WorkerNet)
+{
+    public decimal OvertimeAmount { get; init; }
+
+    public decimal OtherDeductions { get; init; }
+}
 
 public sealed record AdjustmentDto(Guid Id, Guid WorkerId, string Type, decimal Value, string Reason, string CreatedByName, DateTimeOffset CreatedAt);
 
@@ -85,7 +90,10 @@ public sealed record AdjustmentDto(Guid Id, Guid WorkerId, string Type, decimal 
 public sealed record InvoicePreviewDto(
     decimal DueSalary, decimal AbsenceAmount, decimal DueFees, decimal DueHousing, decimal DueTransport, decimal Overtime,
     decimal ClientAdditions, decimal ClientDeductions, decimal CustomerLoans, decimal OtherCosts, decimal Gosi,
-    decimal Amount, decimal Vat, decimal Total);
+    decimal Amount, decimal Vat, decimal Total)
+{
+    public decimal OtherDeductions { get; init; }
+}
 
 /// <summary>A worker's month for the payroll or a supplier's statement (all their lines together).</summary>
 public sealed record WorkerPayDto(
@@ -196,14 +204,21 @@ internal sealed class TimesheetQueries(
                     l.Source.ToString(), l.SupplierName, l.LineFrom, l.LineTo, l.WorkDays, l.PackageNo, l.BillSalary, l.TotalPrice, l.Housing, l.HousingBillable,
                     l.Transport, l.TransportBillable, l.IsSpecialPrice, l.PaySalary, l.SourceNo, l.FromOldSystem, l.AbsenceDays, l.OvertimeHours,
                     l.ClientAdditions, l.ClientDeductions, l.CustomerLoans, l.FeeDays, l.OtherCosts, l.InternalAdditions, l.InternalDeductions, l.DueSalary, l.AbsenceAmount, l.DueFees,
-                    l.DueHousing, l.DueTransport, l.Overtime, l.Gosi, l.InvoiceAmount, l.Vat, l.InvoiceTotal, l.PayDueSalary, l.PayAbsence, l.WorkerNet);
+                    l.DueHousing, l.DueTransport, l.Overtime, l.Gosi, l.InvoiceAmount, l.Vat, l.InvoiceTotal, l.PayDueSalary, l.PayAbsence, l.WorkerNet)
+                {
+                    OvertimeAmount = l.OvertimeAmount,
+                    OtherDeductions = l.OtherDeductions,
+                };
             })
             .ToList();
         var invoice = new InvoicePreviewDto(
             t.Lines.Sum(l => l.DueSalary), t.Lines.Sum(l => l.AbsenceAmount), t.Lines.Sum(l => l.DueFees), t.Lines.Sum(l => l.DueHousing),
             t.Lines.Sum(l => l.DueTransport), t.Lines.Sum(l => l.Overtime), t.Lines.Sum(l => l.ClientAdditions), t.Lines.Sum(l => l.ClientDeductions),
             t.Lines.Sum(l => l.CustomerLoans), t.Lines.Sum(l => l.OtherCosts), t.Lines.Sum(l => l.Gosi),
-            t.Lines.Sum(l => l.InvoiceAmount), t.Lines.Sum(l => l.Vat), t.Lines.Sum(l => l.InvoiceTotal));
+            t.Lines.Sum(l => l.InvoiceAmount), t.Lines.Sum(l => l.Vat), t.Lines.Sum(l => l.InvoiceTotal))
+        {
+            OtherDeductions = t.Lines.Sum(l => l.OtherDeductions),
+        };
         var pays = t.Lines.GroupBy(l => l.WorkerId).Select(g =>
             {
                 var l0 = g.First();

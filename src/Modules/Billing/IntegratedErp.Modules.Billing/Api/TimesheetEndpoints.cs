@@ -27,6 +27,15 @@ internal static class TimesheetEndpoints
                 await service.GenerateAsync(input, ct).ConfigureAwait(false) is var result && result.IsSuccess ? Results.Ok(new { id = result.Value }) : Problem(result.Error))
             .RequirePermission(BillingPermissions.TimesheetsManage, companyWide: true);
 
+        // «إضافة متغيرات»: workers' new totals of their variables, previewed (nothing saved), then saved together.
+        group.MapPost("/timesheets/{id:guid}/variables/preview", async (Guid id, VariableTotal[] totals, TimesheetService service, CancellationToken ct) =>
+                await service.PreviewVariablesAsync(id, totals, ct).ConfigureAwait(false) is var r && r.IsSuccess ? Results.Ok(r.Value) : Problem(r.Error))
+            .RequirePermission(BillingPermissions.TimesheetsManage, companyWide: true);
+
+        group.MapPost("/timesheets/{id:guid}/variables", async (Guid id, VariableTotal[] totals, TimesheetService service, CancellationToken ct) =>
+                ToHttp(await service.SaveVariablesAsync(id, totals, ct).ConfigureAwait(false)))
+            .RequirePermission(BillingPermissions.TimesheetsManage, companyWide: true);
+
         group.MapPost("/timesheets/{id:guid}/adjustments", async (Guid id, AdjustmentInput input, TimesheetService service, CancellationToken ct) =>
                 ToHttp(await service.AdjustAsync(id, input, ct).ConfigureAwait(false)))
             .RequirePermission(BillingPermissions.TimesheetsManage, companyWide: true);

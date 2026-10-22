@@ -37,6 +37,9 @@ public enum AdjustmentType
     /// <summary>Overtime hours: added to the invoice and the pay.</summary>
     Overtime,
 
+    /// <summary>An overtime amount (besides or instead of hours): added to the invoice and the pay.</summary>
+    OvertimeAmount,
+
     /// <summary>An amount the customer adds (bonus, allowance): invoice and pay.</summary>
     ClientAddition,
 
@@ -51,6 +54,9 @@ public enum AdjustmentType
 
     /// <summary>Other costs on the customer: invoice only.</summary>
     OtherCost,
+
+    /// <summary>Other deductions for the customer (a discount): off the invoice only.</summary>
+    OtherDeduction,
 
     /// <summary>An amount the company adds to the worker's pay (bonus, allowance): the pay only, not the invoice.</summary>
     InternalAddition,
@@ -396,11 +402,13 @@ public sealed class Timesheet : ITenantOwned
                 line.Apply(
                     lineAbsence,
                     first ? Sum(AdjustmentType.Overtime) : 0,
+                    first ? Sum(AdjustmentType.OvertimeAmount) : 0,
                     first ? Sum(AdjustmentType.ClientAddition) : 0,
                     first ? Sum(AdjustmentType.ClientDeduction) : 0,
                     first ? Sum(AdjustmentType.CustomerLoan) : 0,
                     first ? Sum(AdjustmentType.FeeDays) : 0,
                     first ? Sum(AdjustmentType.OtherCost) : 0,
+                    first ? Sum(AdjustmentType.OtherDeduction) : 0,
                     first ? Sum(AdjustmentType.InternalAddition) : 0,
                     first ? Sum(AdjustmentType.InternalDeduction) : 0,
                     rules);
@@ -543,6 +551,12 @@ public sealed class TimesheetLine : ITenantOwned
 
     public decimal OtherCosts { get; private set; }
 
+    /// <summary>An overtime amount entered as money (besides the hours): invoice and pay.</summary>
+    public decimal OvertimeAmount { get; private set; }
+
+    /// <summary>Other deductions for the customer: off the invoice only.</summary>
+    public decimal OtherDeductions { get; private set; }
+
     /// <summary>The company's own additions to the worker's pay (not billed).</summary>
     public decimal InternalAdditions { get; private set; }
 
@@ -578,11 +592,13 @@ public sealed class TimesheetLine : ITenantOwned
     public decimal WorkerNet { get; private set; }
 
     internal void Apply(
-        decimal absence, decimal overtime, decimal additions, decimal deductions, decimal loans, decimal feeDays, decimal otherCosts,
-        decimal internalAdditions, decimal internalDeductions, BillingRules rules)
+        decimal absence, decimal overtime, decimal overtimeAmount, decimal additions, decimal deductions, decimal loans, decimal feeDays, decimal otherCosts,
+        decimal otherDeductions, decimal internalAdditions, decimal internalDeductions, BillingRules rules)
     {
         AbsenceDays = absence;
         OvertimeHours = overtime;
+        OvertimeAmount = overtimeAmount;
+        OtherDeductions = otherDeductions;
         ClientAdditions = additions;
         ClientDeductions = deductions;
         CustomerLoans = loans;
@@ -593,7 +609,7 @@ public sealed class TimesheetLine : ITenantOwned
         var a = TimesheetMath.Calculate(
             new LineInputs(
                 WorkDays, DayDivisor, BillSalary, TotalPrice, Housing, Transport, PaySalary, BasicSalary, absence, overtime, additions, deductions, loans, feeDays, otherCosts,
-                internalAdditions, internalDeductions),
+                internalAdditions, internalDeductions, overtimeAmount, otherDeductions),
             rules);
         FeeDays = a.FeeDays;
         DueSalary = a.DueSalary;

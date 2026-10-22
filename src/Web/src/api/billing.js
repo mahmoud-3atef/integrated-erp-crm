@@ -1,12 +1,14 @@
 // Monthly project timesheets (src/Modules/Billing/.../Api/TimesheetEndpoints.cs).
 import { request } from './auth';
-export const adjustmentTypes = ['Absence', 'Overtime', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost', 'InternalAddition', 'InternalDeduction'];
+export const adjustmentTypes = ['Absence', 'Overtime', 'OvertimeAmount', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost', 'OtherDeduction', 'InternalAddition', 'InternalDeduction'];
 const base = '/api/v1/billing';
 export const billingApi = {
     month: (month) => request('GET', `${base}/timesheets?month=${month}`),
     get: (id) => request('GET', `${base}/timesheets/${id}`),
     generate: (projectId, month) => request('POST', `${base}/timesheets/generate`, { projectId, month }),
     adjust: (id, input) => request('POST', `${base}/timesheets/${id}/adjustments`, input),
+    previewVariables: (id, totals) => request('POST', `${base}/timesheets/${id}/variables/preview`, totals),
+    saveVariables: (id, totals) => request('POST', `${base}/timesheets/${id}/variables`, totals),
     removeAdjustment: (id, adjustmentId) => request('DELETE', `${base}/timesheets/${id}/adjustments/${adjustmentId}`),
     submit: (id) => request('POST', `${base}/timesheets/${id}/submit`),
     settings: (projectId) => request('GET', `${base}/projects/${projectId}/settings`),
