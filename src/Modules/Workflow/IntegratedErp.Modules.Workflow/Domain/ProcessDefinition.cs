@@ -400,7 +400,8 @@ public static class DefinitionRules
                             }
                             else if (change.FromField is { } from)
                             {
-                                if (!fields.TryGetValue(from, out var source) || source.Type != field.Type)
+                                // From a field of the record or of a related table ("relation.field"), of the same type.
+                                if (!tested.TryGetValue(from, out var source) || source.Type != field.Type)
                                 {
                                     errors.Add($"Field \"{change.FieldKey}\" can only be copied from a field of the same type.");
                                 }

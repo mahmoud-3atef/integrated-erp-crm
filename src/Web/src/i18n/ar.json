@@ -1134,7 +1134,9 @@
     "valueUser": "مستخدم محدد",
     "valueField": "حقل (قيمة ديناميكية)",
     "valueTable": "جدول الحقل",
-    "valueFieldName": "الحقل المقارَن به"
+    "valueFieldName": "الحقل المقارَن به",
+    "readOnlyField": "(للقراءة فقط)",
+    "relatedPlaceholders": "وحقول الجداول المرتبطة بالشكل {الجدول.الحقل}، مثل:"
   },
   "myApprovals": {
     "title": "طلباتي للاعتماد",

@@ -957,6 +957,9 @@ internal sealed partial class ApprovalEngine(
                 case ApprovalStep a:
                     used.UnionWith(a.Assignees.Select(x => RelationOf(x.FieldKey)).OfType<string>());
                     break;
+                case UpdateStep u:
+                    used.UnionWith(u.Changes.Select(c => RelationOf(c.FromField)).OfType<string>());
+                    break;
                 case NotifyStep n:
                     used.UnionWith(n.To.Select(x => RelationOf(x.FieldKey)).OfType<string>());
                     foreach (var text in new[] { n.TitleAr, n.TitleEn, n.BodyAr, n.BodyEn })

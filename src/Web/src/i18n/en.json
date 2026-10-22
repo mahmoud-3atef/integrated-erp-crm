@@ -1134,7 +1134,9 @@
     "valueUser": "A chosen user",
     "valueField": "A field (dynamic value)",
     "valueTable": "The field's table",
-    "valueFieldName": "Compared field"
+    "valueFieldName": "Compared field",
+    "readOnlyField": "(read only)",
+    "relatedPlaceholders": "Related tables’ fields as {table.field}, e.g.:"
   },
   "myApprovals": {
     "title": "My submissions",

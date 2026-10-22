@@ -46,7 +46,7 @@ import {
 } from '../../api/workflow';
 import { tokens } from '../../app/theme';
 import { ConditionEditor } from './ConditionEditor';
-import { FieldValueInput, useEditor, useFieldLabel } from './editorContext';
+import { FieldValueInput, useEditor, useFieldLabel, type EditorData } from './editorContext';
 
 type StepType = Step['type'];
 
@@ -281,7 +281,7 @@ function ApprovalEditor({ step, onChange }: { step: ApprovalStep; onChange: (ste
   const { t, i18n } = useTranslation();
   const { screen, readOnly } = useEditor();
   const set = (change: Partial<ApprovalStep>) => onChange({ ...step, ...change });
-  const userFields = screen.fields.filter((f) => f.type === 'User');
+  const anyUserField = userFields(screen, i18n.language).length > 0;
   const updatable = screen.fields.filter((f) => f.updatable);
   const setAssignee = (index: number, change: Partial<Assignee>) => set({ assignees: step.assignees.map((a, i) => (i === index ? { ...a, ...change } : a)) });
 
@@ -308,7 +308,7 @@ function ApprovalEditor({ step, onChange }: { step: ApprovalStep; onChange: (ste
             <MenuItem value="User">{t('process.assignee.User')}</MenuItem>
             <MenuItem value="Permission">{t('process.assignee.Permission')}</MenuItem>
             <MenuItem value="Submitter">{t('process.assignee.SubmitterConfirms')}</MenuItem>
-            <MenuItem value="UserField" disabled={userFields.length === 0}>
+            <MenuItem value="UserField" disabled={!anyUserField}>
               {t('process.assignee.UserField')}
             </MenuItem>
           </TextField>
@@ -392,6 +392,24 @@ function ApprovalEditor({ step, onChange }: { step: ApprovalStep; onChange: (ste
 }
 
 /** A role, a user, or a user field of the record. */
+/** Every user field a step can name: the record's, and each related table's as "relation.field". */
+function userFields(screen: EditorData['screen'], language: string) {
+  return [
+    ...screen.fields.filter((f) => f.type === 'User').map((f) => ({ value: f.key, label: localName(f, language) })),
+    ...(screen.relations ?? []).flatMap((r) =>
+      r.fields.filter((f) => f.type === 'User').map((f) => ({ value: `${r.key}.${f.key}`, label: `${localName(r, language)} › ${localName(f, language)}` })),
+    ),
+  ];
+}
+
+/** Every field of a type a value can come from: the record's, and each related table's ("relation.field"). */
+function fieldsOfType(screen: EditorData['screen'], language: string, type: string | undefined, except?: string) {
+  return [
+    ...screen.fields.filter((f) => f.type === type && f.key !== except).map((f) => ({ value: f.key, label: localName(f, language) })),
+    ...(screen.relations ?? []).flatMap((r) => r.fields.filter((f) => f.type === type).map((f) => ({ value: `${r.key}.${f.key}`, label: `${localName(r, language)} › ${localName(f, language)}` }))),
+  ];
+}
+
 function PersonPicker({ kind, value, onChange, label }: { kind: AssigneeKind | RecipientKind; value: string | null | undefined; onChange: (value: string) => void; label?: string }) {
   const { t, i18n } = useTranslation();
   const { screen, options, readOnly } = useEditor();
@@ -407,7 +425,7 @@ function PersonPicker({ kind, value, onChange, label }: { kind: AssigneeKind | R
       ? options.roles.map((r) => ({ value: r.id, label: localName(r, i18n.language) }))
       : kind === 'User'
         ? options.members.map((m) => ({ value: m.userAccountId, label: m.displayName }))
-        : screen.fields.filter((f) => f.type === 'User').map((f) => ({ value: f.key, label: localName(f, i18n.language) }));
+        : userFields(screen, i18n.language);
   return (
     <TextField select size="small" label={label ?? t(`process.assignee.${kind}`)} value={value ?? ''} disabled={readOnly} onChange={(e) => onChange(e.target.value)} sx={{ flex: 1 }}>
       {items.map((i) => (
@@ -498,8 +516,8 @@ function ActionEditor({ step, onChange }: { step: ActionStep; onChange: (step: S
 function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: Step) => void }) {
   const { t, i18n } = useTranslation();
   const { screen, readOnly } = useEditor();
-  const relations = (screen.relations ?? []).filter((r) => r.fields.some((f) => f.updatable));
-  const relation = step.target ? (screen.relations ?? []).find((r) => r.key === step.target) : undefined;
+  const relations = screen.relations ?? [];
+  const relation = step.target ? relations.find((r) => r.key === step.target) : undefined;
   const tableFields = relation ? relation.fields : screen.fields;
   const updatable = tableFields.filter((f) => f.updatable);
   const setChange = (index: number, change: Partial<UpdateStep['changes'][number]>) =>
@@ -530,14 +548,20 @@ function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: S
       {updatable.length === 0 && <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('process.nothingUpdatable')}</Typography>}
       {step.changes.map((change, index) => {
         const field = tableFields.find((f) => f.key === change.fieldKey);
-        const sameType = screen.fields.filter((f) => f.type === field?.type && f.key !== field?.key);
+        const sameType = fieldsOfType(screen, i18n.language, field?.type, step.target ? undefined : field?.key);
         const fromField = change.fromField !== null && change.fromField !== undefined;
         return (
           <Stack key={index} direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'center' } }}>
-            <TextField select size="small" label={t('process.field')} value={change.fieldKey} disabled={readOnly} onChange={(e) => setChange(index, { fieldKey: e.target.value, value: null, fromField: null })} sx={{ minWidth: 170 }}>
-              {updatable.map((f) => (
-                <MenuItem key={f.key} value={f.key}>
+            <TextField select size="small" label={t('process.field')} value={change.fieldKey} disabled={readOnly} onChange={(e) => setChange(index, { fieldKey: e.target.value, value: null, fromField: null })} sx={{ minWidth: 200 }}>
+              {/* Every field of the table; the module decides which a process may change (the others are locked). */}
+              {tableFields.map((f) => (
+                <MenuItem key={f.key} value={f.key} disabled={!f.updatable}>
                   {localName(f, i18n.language)}
+                  {!f.updatable && (
+                    <Typography component="span" sx={{ fontSize: 11, color: tokens.gray500, marginInlineStart: 1 }}>
+                      {t('process.readOnlyField')}
+                    </Typography>
+                  )}
                 </MenuItem>
               ))}
             </TextField>
@@ -547,7 +571,7 @@ function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: S
               label={t('process.setTo')}
               value={fromField ? 'field' : 'value'}
               disabled={readOnly || sameType.length === 0}
-              onChange={(e) => setChange(index, e.target.value === 'field' ? { fromField: sameType[0]?.key ?? null, value: null } : { fromField: null })}
+              onChange={(e) => setChange(index, e.target.value === 'field' ? { fromField: sameType[0]?.value ?? null, value: null } : { fromField: null })}
               sx={{ minWidth: 150 }}
             >
               <MenuItem value="value">{t('process.fixedValue')}</MenuItem>
@@ -557,8 +581,8 @@ function UpdateEditor({ step, onChange }: { step: UpdateStep; onChange: (step: S
               {fromField ? (
                 <TextField select size="small" label={t('process.field')} value={change.fromField ?? ''} disabled={readOnly} onChange={(e) => setChange(index, { fromField: e.target.value })}>
                   {sameType.map((f) => (
-                    <MenuItem key={f.key} value={f.key}>
-                      {localName(f, i18n.language)}
+                    <MenuItem key={f.value} value={f.value}>
+                      {f.label}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -598,6 +622,7 @@ function NotifyEditor({ step, onChange }: { step: NotifyStep; onChange: (step: S
   const set = (change: Partial<NotifyStep>) => onChange({ ...step, ...change });
   const setRecipient = (index: number, change: Partial<Recipient>) => set({ to: step.to.map((r, i) => (i === index ? { ...r, ...change } : r)) });
   const placeholders = ['title', 'submitter', ...screen.fields.map((f) => f.key)].map((k) => `{${k}}`).join(' ');
+  const related = (screen.relations ?? []).slice(0, 3).map((r) => `{${r.key}.${r.fields[0]?.key ?? 'name'}}`).join(' ');
 
   return (
     <Stack spacing={1.25} sx={{ mt: 1 }}>
@@ -644,6 +669,11 @@ function NotifyEditor({ step, onChange }: { step: NotifyStep; onChange: (step: S
       <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }} dir="ltr">
         {t('process.placeholders')} {placeholders}
       </Typography>
+      {related && (
+        <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }} dir="ltr">
+          {t('process.relatedPlaceholders')} {related}
+        </Typography>
+      )}
     </Stack>
   );
 }
