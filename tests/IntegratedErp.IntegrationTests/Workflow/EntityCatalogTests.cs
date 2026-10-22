@@ -31,4 +31,22 @@ public sealed class EntityCatalogTests(TestDatabase database)
         Assert.Contains(leave.RelatedTables.Single(r => r.Key == "employee_id/department_id/manager_id").Fields, f => f.Key == "user_id" && f.Type == RecordFieldType.User);
         Assert.DoesNotContain(leave.RelatedTables, r => r.Key.Split(EntityCatalog.PathSeparator).Length > EntityCatalog.MaxDepth);
     }
+
+    [SkippableFact]
+    public async Task A_text_field_lists_its_values_and_a_relation_path_finds_its_table()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        using var scope = database.Scope(system: true);
+        var catalog = scope.ServiceProvider.GetRequiredService<EntityCatalog>();
+
+        // The table at the end of a path, and none for an unknown one.
+        Assert.Equal("staff.employee", catalog.TableAt("leave.request", "employee_id/department_id/manager_id")?.Key);
+        Assert.Null(catalog.TableAt("leave.request", "no_such_field"));
+
+        // A field's values are distinct and sorted; a hidden or unknown field lists nothing.
+        var values = await catalog.ValuesAsync("staff.employee", "nationality_en", CancellationToken.None);
+        Assert.Equal(values.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal), values);
+        Assert.Empty(await catalog.ValuesAsync("staff.employee", "id_number", CancellationToken.None));
+        Assert.Empty(await catalog.ValuesAsync("staff.employee", "no_such_field", CancellationToken.None));
+    }
 }

@@ -1136,7 +1136,9 @@
     "valueTable": "The field's table",
     "valueFieldName": "Compared field",
     "readOnlyField": "(read only)",
-    "relatedPlaceholders": "Related tables’ fields as {table.field}, e.g.:"
+    "relatedPlaceholders": "Related tables’ fields as {table.field}, e.g.:",
+    "valueList": "A value from the field's values",
+    "noFieldValues": "This field has no values in the data yet."
   },
   "myApprovals": {
     "title": "My submissions",

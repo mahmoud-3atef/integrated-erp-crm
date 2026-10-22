@@ -33,6 +33,13 @@ internal static class WorkflowEndpoints
         group.MapGet("/screens", (ProcessService service) => Results.Ok(service.Screens()))
             .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
 
+        // The values a text field of a screen's table (or of a related table) holds, to pick one in a condition.
+        group.MapGet("/screens/{code}/values", async (string code, string? relation, string field, EntityCatalog catalog, ApprovalEngine engine, CancellationToken ct) =>
+                engine.AdapterFor(code) is { } adapter && catalog.TableAt(adapter.Screen.Entity ?? adapter.Screen.Code, relation) is { } table
+                    ? Results.Ok(await catalog.ValuesAsync(table.Key, field, ct).ConfigureAwait(false))
+                    : Results.Ok(Array.Empty<string>()))
+            .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
+
         group.MapGet("/processes", async (ProcessService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(ct).ConfigureAwait(false)))
             .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);

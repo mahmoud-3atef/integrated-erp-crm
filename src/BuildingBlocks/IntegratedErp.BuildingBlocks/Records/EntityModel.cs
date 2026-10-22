@@ -14,6 +14,9 @@ public interface IEntityModel
     EntityDefinition Describe(IModel model);
 
     Task<IReadOnlyDictionary<string, string?>?> ReadAsync(DbContext db, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>The different values of a text field (a column of the table) in its rows, sorted; none for other fields.</summary>
+    Task<IReadOnlyList<string>> ValuesAsync(DbContext db, string fieldKey, int max, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -132,6 +135,26 @@ public sealed class EntityModel<TEntity> : IEntityModel
         var values = new Dictionary<string, string?>(StringComparer.Ordinal);
         Collect(type, entity, string.Empty, values);
         return values;
+    }
+
+    public async Task<IReadOnlyList<string>> ValuesAsync(DbContext db, string fieldKey, int max, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        var type = db.Model.FindEntityType(typeof(TEntity))!;
+        var property = type.GetProperties().FirstOrDefault(p => !p.IsShadowProperty() && p.ClrType == typeof(string) && EntityNames.KeyOf(p.Name) == fieldKey && Shown(p.Name, p));
+        if (property is null)
+        {
+            return [];
+        }
+
+        var name = property.Name;
+        return await db.Set<TEntity>().AsNoTracking()
+            .Select(e => EF.Property<string>(e, name))
+            .Where(v => v != null && v != string.Empty)
+            .Distinct()
+            .OrderBy(v => v)
+            .Take(Math.Clamp(max, 1, 500))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private void Collect(IEntityType type, object instance, string prefix, Dictionary<string, string?> values)

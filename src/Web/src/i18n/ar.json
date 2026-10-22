@@ -1136,7 +1136,9 @@
     "valueTable": "جدول الحقل",
     "valueFieldName": "الحقل المقارَن به",
     "readOnlyField": "(للقراءة فقط)",
-    "relatedPlaceholders": "وحقول الجداول المرتبطة بالشكل {الجدول.الحقل}، مثل:"
+    "relatedPlaceholders": "وحقول الجداول المرتبطة بالشكل {الجدول.الحقل}، مثل:",
+    "valueList": "قيمة من قيم الحقل",
+    "noFieldValues": "لا توجد قيم لهذا الحقل في البيانات بعد."
   },
   "myApprovals": {
     "title": "طلباتي للاعتماد",

@@ -63,6 +63,24 @@ internal sealed class EntityCatalog(IEnumerable<IEntitySource> sources)
         return found;
     }
 
+    /// <summary>The table at the end of a lookup path from a table (null: the table itself), or null when the path is unknown.</summary>
+    public EntityDefinition? TableAt(string entity, string? path)
+    {
+        var current = Find(entity);
+        foreach (var segment in (path ?? string.Empty).Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = current?.Lookups.FirstOrDefault(l => l.FieldKey == segment) is { } lookup ? Find(lookup.Target) : null;
+        }
+
+        return current;
+    }
+
+    /// <summary>The different values a text field holds in its table (to pick one in a condition).</summary>
+    public Task<IReadOnlyList<string>> ValuesAsync(string entity, string fieldKey, CancellationToken cancellationToken) =>
+        Entities.TryGetValue(entity, out var e)
+            ? e.Source.ValuesAsync(entity, fieldKey, 300, cancellationToken)
+            : Task.FromResult<IReadOnlyList<string>>([]);
+
     public Task<IReadOnlyDictionary<string, string?>?> ReadAsync(string entity, Guid id, CancellationToken cancellationToken) =>
         Entities.TryGetValue(entity, out var e) ? e.Source.ReadAsync(entity, id, cancellationToken) : Task.FromResult<IReadOnlyDictionary<string, string?>?>(null);
 

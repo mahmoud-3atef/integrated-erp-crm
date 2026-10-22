@@ -28,6 +28,10 @@ public interface IEntitySource
     /// <summary>The record's values (lookup fields hold the related record's id); null when it does not exist here.</summary>
     Task<IReadOnlyDictionary<string, string?>?> ReadAsync(string entity, Guid id, CancellationToken cancellationToken);
 
+    /// <summary>The different values a text field holds in the table (at most <paramref name="max"/>, sorted), to pick one in a condition.</summary>
+    Task<IReadOnlyList<string>> ValuesAsync(string entity, string fieldKey, int max, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<string>>([]);
+
     /// <summary>Changes updatable fields of a record through the module's rules (already type-checked by the engine).</summary>
     Task<Result> ApplyAsync(string entity, Guid id, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken) =>
         Task.FromResult(Result.Failure(Error.Validation("entity_field_not_settable", "A process cannot change this table.")));

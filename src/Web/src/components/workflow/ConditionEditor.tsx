@@ -1,9 +1,10 @@
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { Box, Button, IconButton, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localName } from '../../api/access';
-import type { ConditionGroup, ConditionRule, FieldType, Operator } from '../../api/workflow';
+import { workflowApi, type ConditionGroup, type ConditionRule, type FieldType, type Operator } from '../../api/workflow';
 import { tokens } from '../../app/theme';
 import { FieldValueInput, useEditor } from './editorContext';
 
@@ -27,6 +28,8 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
   const { t, i18n } = useTranslation();
   const { screen, readOnly } = useEditor();
 
+  // Rules whose value is picked from the field's values (a list) rather than typed.
+  const [picking, setPicking] = useState<Record<number, boolean>>({});
   const update = (index: number, change: Partial<ConditionRule>) =>
     onChange({ ...value, rules: value.rules.map((r, i) => (i === index ? { ...r, ...change } : r)) });
   const relations = screen.relations ?? [];
@@ -64,6 +67,8 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
           const needsValue = rule.operator !== 'IsEmpty' && rule.operator !== 'IsNotEmpty';
           const self = `${rule.relation ?? ''}.${rule.fieldKey}`;
           const dynamic = !!rule.valueFromField && rule.operator !== 'In';
+          // A text field: its value can be picked among those it holds in the data (a list), or typed.
+          const listable = field?.type === 'Text';
           const canBeDynamic = needsValue && rule.operator !== 'In' && firstOfType(field?.type, self) !== null;
           return (
             <Stack key={index} direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'center' } }}>
@@ -132,17 +137,21 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                   select
                   size="small"
                   label={t('process.valueFrom')}
-                  value={dynamic ? 'field' : 'value'}
+                  value={dynamic ? 'field' : (picking[index] ?? false) ? 'list' : 'value'}
                   disabled={readOnly}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setPicking((p) => ({ ...p, [index]: e.target.value === 'list' }));
                     update(
                       index,
                       e.target.value === 'field' ? { ...firstOfType(field?.type, self), value: null, values: null } : { valueFromField: null, valueFromRelation: null },
-                    )
-                  }
+                    );
+                  }}
                   sx={{ minWidth: 150 }}
                 >
-                  <MenuItem value="value">{field?.type === 'User' ? t('process.valueUser') : t('process.valueFixed')}</MenuItem>
+                  <MenuItem value="value">
+                    {field?.type === 'User' ? t('process.valueUser') : field?.type === 'Choice' || field?.type === 'Boolean' ? t('process.valueList') : t('process.valueFixed')}
+                  </MenuItem>
+                  {listable && <MenuItem value="list">{t('process.valueList')}</MenuItem>}
                   <MenuItem value="field">{t('process.valueField')}</MenuItem>
                 </TextField>
               )}
@@ -191,7 +200,10 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                   </TextField>
                 </>
               )}
-              {needsValue && !dynamic && rule.operator !== 'In' && (
+              {needsValue && !dynamic && rule.operator !== 'In' && listable && picking[index] && (
+                <FieldValuesPicker screen={screen.code} relation={rule.relation} field={rule.fieldKey} value={rule.value ?? null} disabled={readOnly} onChange={(v) => update(index, { value: v })} />
+              )}
+              {needsValue && !dynamic && rule.operator !== 'In' && !(listable && picking[index]) && (
                 <Box sx={{ flex: 1, minWidth: 160 }}>
                   <FieldValueInput field={field} value={rule.value} label={field?.type === 'User' ? t('process.valueUser') : t('process.value')} onChange={(v) => update(index, { value: v })} />
                 </Box>
@@ -234,5 +246,42 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
         </Button>
       )}
     </Box>
+  );
+}
+
+/** The values a text field holds in its table (the record's or a related one), to pick one instead of typing it. */
+function FieldValuesPicker({ screen, relation, field, value, disabled, onChange }: { screen: string; relation: string | null | undefined; field: string; value: string | null; disabled: boolean; onChange: (value: string) => void }) {
+  const { t } = useTranslation();
+  const [values, setValues] = useState<string[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    setValues(null);
+    workflowApi
+      .fieldValues(screen, relation, field)
+      .then((v) => live && setValues(v))
+      .catch(() => live && setValues([]));
+    return () => {
+      live = false;
+    };
+  }, [screen, relation, field]);
+  const options = values ?? [];
+  return (
+    <TextField
+      select
+      size="small"
+      label={t('process.value')}
+      value={value && options.includes(value) ? value : ''}
+      disabled={disabled || values === null}
+      helperText={values !== null && options.length === 0 ? t('process.noFieldValues') : undefined}
+      onChange={(e) => onChange(e.target.value)}
+      sx={{ flex: 1, minWidth: 180 }}
+    >
+      {value && !options.includes(value) && <MenuItem value={value}>{value}</MenuItem>}
+      {options.map((v) => (
+        <MenuItem key={v} value={v}>
+          {v}
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }

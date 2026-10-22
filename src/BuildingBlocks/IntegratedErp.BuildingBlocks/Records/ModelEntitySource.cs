@@ -28,6 +28,11 @@ public abstract class ModelEntitySource(DbContext db, IReadOnlyList<IEntityModel
         return all;
     }
 
+    public Task<IReadOnlyList<string>> ValuesAsync(string entity, string fieldKey, int max, CancellationToken cancellationToken) =>
+        models.FirstOrDefault(m => m.Key == entity) is { } model
+            ? model.ValuesAsync(db, fieldKey, max, cancellationToken)
+            : Task.FromResult<IReadOnlyList<string>>([]);
+
     public virtual Task<Result> ApplyAsync(string entity, Guid id, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken) =>
         Task.FromResult(Result.Failure(Error.Validation("entity_field_not_settable", "A process cannot change this table.")));
 

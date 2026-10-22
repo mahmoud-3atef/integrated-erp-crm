@@ -385,6 +385,9 @@ export interface CurrentStage {
 }
 
 export const workflowApi = {
+  /** The values a text field of the screen's table (or of a related table) holds, to pick one. */
+  fieldValues: (screen: string, relation: string | null | undefined, field: string) =>
+    request<string[]>('GET', `${base}/screens/${encodeURIComponent(screen)}/values?field=${encodeURIComponent(field)}${relation ? `&relation=${encodeURIComponent(relation)}` : ''}`),
   currentStages: (screen: string, ids: string[]) => request<CurrentStage[]>('GET', `${base}/current-stages?screen=${encodeURIComponent(screen)}&ids=${ids.join(',')}`),
   screens: () => request<Screen[]>('GET', `${base}/screens`),
   processes: () => request<ProcessSummary[]>('GET', `${base}/processes`),

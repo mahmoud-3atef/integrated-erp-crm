@@ -1,0 +1,34 @@
+import { documentOf, lateDays, periodDays } from './WorkerActions';
+const period = (p) => ({
+    id: 'p', kind: 'Work', projectId: null, projectName: 'P', startsOn: '2026-09-13', endsOn: '2026-09-20', sourceType: 'empwork', sourceId: 'crm-1', sourceNo: 'SW1',
+    closedByNo: null, packageNo: null, salary: null, serviceFee: null, housing: null, transport: null, totalPrice: null, isSpecialPrice: false, paySalary: false, fromOldSystem: true,
+    ...p,
+});
+const doc = (d) => ({ type: 'delivery_order', id: 'd', no: 'DO-1', status: 'Delivered', crmId: null, workStartNo: null, reason: null, createdByName: null, createdAt: null, ...d });
+describe('worker actions', () => {
+    it('opens the document each period came from', () => {
+        const docs = [doc({ id: 'do', workStartNo: 'SW1' }), doc({ type: 'return_order', id: 'ro', crmId: 'crm-h' })];
+        // The old system's work start: its delivery line here; its housing order: the return order copied here.
+        expect(documentOf(period({}), docs)?.id).toBe('do');
+        expect(documentOf(period({ kind: 'Housing', sourceType: 'housing_order', sourceId: 'crm-h' }), docs)?.id).toBe('ro');
+        // Recorded here: the period's own document, even when not in the list.
+        expect(documentOf(period({ sourceType: 'transfer_order', sourceId: 'tr', sourceNo: 'TR-1', fromOldSystem: false }), docs)).toMatchObject({ id: 'tr', no: 'TR-1' });
+        // Nothing to open: a vacation of the old system, a work start not copied here.
+        expect(documentOf(period({ kind: 'Vacation', sourceType: 'vacation' }), docs)).toBeNull();
+        expect(documentOf(period({ sourceNo: 'SW2' }), docs)).toBeNull();
+    });
+    it('marks a returned worker housing order written more than two days after the arrival late, as the old screen', () => {
+        const stay = period({ kind: 'Housing', sourceType: 'housing_order', startsOn: '2026-10-10' });
+        const order = (createdAt, entry = 'ReturnedWorker') => doc({ type: 'return_order', entry, createdAt });
+        expect(lateDays(stay, order('2026-10-14T06:00:00Z'))).toBe(4);
+        expect(lateDays(stay, order('2026-10-12T06:00:00Z'))).toBe(0);
+        // Riyadh's day: written late on the 12th UTC is the 13th there.
+        expect(lateDays(stay, order('2026-10-12T22:00:00Z'))).toBe(3);
+        expect(lateDays(stay, order('2026-10-20T06:00:00Z', 'NewArrival'))).toBe(0);
+        expect(lateDays(period({ startsOn: '2026-10-10' }), order('2026-10-20T06:00:00Z'))).toBe(0);
+    });
+    it('counts the days of a period, its end being the first day after it', () => {
+        expect(periodDays(period({ startsOn: '2026-09-13', endsOn: '2026-09-21' }))).toBe(8);
+        expect(periodDays(period({ startsOn: '2026-09-13', endsOn: '2026-09-13' }))).toBe(0);
+    });
+});
