@@ -94,9 +94,9 @@ export function ManagementDashboardPage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => {
-                  // «السكن» opens the housing screen already built (the user's choice): no second housing report.
+                  // «السكن» opens the housing report already built, the showroom (the user's choice): no second one.
                   if (x.key === 'housing') {
-                    navigate('/housing');
+                    navigate('/housing/showroom');
                     return;
                   }
                   setTab(x.key);

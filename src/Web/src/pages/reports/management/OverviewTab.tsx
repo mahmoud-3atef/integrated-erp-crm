@@ -15,7 +15,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi, type Delivery, type EntryRow, type HousingEntries, type StartRow } from '../../../api/management';
 import type { Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
-import { BarList, DataTable, Donut, HeroTotal, KpiCard, md, Pill, Unknown, useNumbers, VisualCard, type Column } from './mdKit';
+import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column } from './mdKit';
 
 type Inner = 'delivery' | 'housing' | 'arrivals' | 'tracking';
 
@@ -29,33 +29,37 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
 
   return (
     <Stack sx={{ gap: 2 }}>
+      <GlassStrip>
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', xl: 'repeat(6, minmax(0, 1fr))' } }}>
         {!k
-          ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} variant="rounded" height={118} sx={{ mt: '14px', borderRadius: '12px' }} />)
+          ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} variant="rounded" height={118} sx={{ mt: '14px', borderRadius: '12px', bgcolor: 'rgba(255,255,255,.12)' }} />)
           : (
             <>
-              <KpiCard color={md.navyDeep} icon={<AccountTreeOutlinedIcon />} label={t('mgmt.kpi.projects')} value={f.n(k.activeProjects)} unit={t('mgmt.unit.project')} foot={t('mgmt.kpi.projectsFoot')} />
-              <KpiCard color={md.green} icon={<HowToRegOutlinedIcon />} label={t('mgmt.kpi.onJob')} value={f.n(k.onJob)} unit={t('mgmt.unit.worker')} foot={t('mgmt.kpi.onJobFoot')} />
-              <KpiCard color={md.amber} icon={<BedOutlinedIcon />} label={t('mgmt.kpi.housing')} value={f.n(k.inHousing)} unit={t('mgmt.unit.worker')} foot={t('mgmt.kpi.housingFoot')} />
-              <KpiCard color={md.blue} icon={<SwapHorizOutlinedIcon />} label={t('mgmt.kpi.net')} value={f.n(k.net.value ?? 0)} foot={t('mgmt.kpi.netFoot', { starts: f.n(k.starts.value ?? 0), returns: f.n(k.returns.value ?? 0) })} />
+              <KpiCard glass color={md.gold} icon={<AccountTreeOutlinedIcon />} label={t('mgmt.kpi.projects')} value={<Rolling value={k.activeProjects} />} unit={t('mgmt.unit.project')} foot={t('mgmt.kpi.projectsFoot')} />
+              <KpiCard glass color={md.green} icon={<HowToRegOutlinedIcon />} label={t('mgmt.kpi.onJob')} value={<Rolling value={k.onJob} />} unit={t('mgmt.unit.worker')} foot={t('mgmt.kpi.onJobFoot')} />
+              <KpiCard glass color={md.amber} icon={<BedOutlinedIcon />} label={t('mgmt.kpi.housing')} value={<Rolling value={k.inHousing} />} unit={t('mgmt.unit.worker')} foot={t('mgmt.kpi.housingFoot')} />
+              <KpiCard glass color={md.blue} icon={<SwapHorizOutlinedIcon />} label={t('mgmt.kpi.net')} value={<Rolling value={k.net.value ?? 0} />} foot={t('mgmt.kpi.netFoot', { starts: f.n(k.starts.value ?? 0), returns: f.n(k.returns.value ?? 0) })} />
               <KpiCard
+                glass
                 color={md.teal}
                 icon={<DescriptionOutlinedIcon />}
                 label={t('mgmt.kpi.invoiced')}
-                value={k.invoiced.value === null ? <Unknown hint={t('mgmt.noFinance')} /> : f.m(k.invoiced.value)}
+                value={k.invoiced.value === null ? <Unknown hint={t('mgmt.noFinance')} /> : <Rolling value={k.invoiced.value} decimals={2} />}
                 unit={k.invoiced.value === null ? undefined : t('mgmt.unit.sar')}
                 foot={t('mgmt.kpi.invoicedFoot')}
               />
               <KpiCard
+                glass
                 color={md.red}
                 icon={<VolunteerActivismOutlinedIcon />}
                 label={t('mgmt.kpi.rate')}
-                value={rate === null ? <Unknown hint={k.financeVisible ? t('mgmt.noRate') : t('mgmt.noFinance')} /> : `${f.p(rate)}%`}
+                value={rate === null ? <Unknown hint={k.financeVisible ? t('mgmt.noRate') : t('mgmt.noFinance')} /> : <><Rolling value={rate} decimals={1} />%</>}
                 foot={t('mgmt.kpi.rateFoot')}
               />
             </>
           )}
       </Box>
+      </GlassStrip>
 
       <Box sx={{ bgcolor: '#fff', border: `1px solid ${md.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(10,60,88,.05), 0 10px 26px rgba(10,60,88,.07)', p: { xs: 1.5, md: '14px' }, minWidth: 0 }}>
         <Stack direction="row" role="tablist" sx={{ gap: 3, borderBottom: `1px solid ${md.border}`, mb: 2, px: 1, overflowX: 'auto' }}>

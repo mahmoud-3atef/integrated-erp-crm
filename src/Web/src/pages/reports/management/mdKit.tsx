@@ -1,8 +1,10 @@
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { Box, Button, InputAdornment, Stack, TextField, Tooltip, Typography, type SxProps, type Theme } from '@mui/material';
+import { keyframes } from '@emotion/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCountUp } from '../../../components/charts';
 
 /**
  * The old executive dashboard's look (content/css/pages/management-dashboard.css and carepro-design.css), read from
@@ -71,8 +73,43 @@ export function Unknown({ hint }: { hint: string }) {
   );
 }
 
-/** One of the six cards: a white card with its colour's line on top, a round icon standing out of its corner, a foot. */
-export function KpiCard({ color, icon, label, value, unit, foot, onClick }: { color: string; icon: ReactNode; label: string; value: ReactNode; unit?: string; foot: ReactNode; onClick?: () => void }) {
+/** A number counting up from zero when it shows, as on the home page (two decimals for amounts and one for rates). */
+export function Rolling({ value, decimals = 0 }: { value: number; decimals?: 0 | 1 | 2 }) {
+  const scale = 10 ** decimals;
+  const shown = useCountUp(Math.round(value * scale)) / scale;
+  return <>{new Intl.NumberFormat('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(shown)}</>;
+}
+
+const drift = keyframes`0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-18px, 14px); }`;
+
+/**
+ * The six cards' strip (the user's trial, 2026-10-22): a navy gradient with slow glows, as the home page's, and the
+ * cards on it as translucent glass.
+ */
+export function GlassStrip({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: '20px',
+        p: { xs: 1.5, md: '6px 16px 16px' },
+        background: 'linear-gradient(125deg, #072D43 0%, #0A3C58 45%, #0E7C86 100%)',
+        boxShadow: '0 14px 30px rgba(7,45,67,.22)',
+      }}
+    >
+      <Box aria-hidden sx={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -170, insetInlineEnd: -60, background: 'radial-gradient(circle, rgba(43,195,225,.35), transparent 70%)', animation: `${drift} 9s ease-in-out infinite` }} />
+      <Box aria-hidden sx={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', bottom: -150, insetInlineStart: '28%', background: 'radial-gradient(circle, rgba(243,198,97,.22), transparent 70%)', animation: `${drift} 12s ease-in-out infinite reverse` }} />
+      <Box sx={{ position: 'relative' }}>{children}</Box>
+    </Box>
+  );
+}
+
+/**
+ * One of the six cards: its colour's line on top, a round icon standing out of its corner, a foot. `glass`: a
+ * translucent card on the navy strip, in white.
+ */
+export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass }: { color: string; icon: ReactNode; label: string; value: ReactNode; unit?: string; foot: ReactNode; onClick?: () => void; glass?: boolean }) {
   return (
     <Box
       component={onClick ? 'button' : 'div'}
@@ -85,15 +122,17 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick }: { co
         cursor: onClick ? 'pointer' : 'default',
         p: 0,
         mt: '14px',
-        background: 'linear-gradient(180deg, #fff 0%, #FBFDFE 100%)',
-        border: `1px solid ${md.border}`,
+        background: glass ? 'rgba(255,255,255,.1)' : 'linear-gradient(180deg, #fff 0%, #FBFDFE 100%)',
+        border: `1px solid ${glass ? 'rgba(255,255,255,.2)' : md.border}`,
         borderRadius: '12px',
-        boxShadow: `inset 0 3px 0 ${color}, 0 1px 2px rgba(10,60,88,.06), 0 8px 20px rgba(10,60,88,.07)`,
+        backdropFilter: glass ? 'blur(10px) saturate(140%)' : undefined,
+        color: glass ? '#fff' : undefined,
+        boxShadow: glass ? `inset 0 3px 0 ${color}, inset 0 1px 0 rgba(255,255,255,.25)` : `inset 0 3px 0 ${color}, 0 1px 2px rgba(10,60,88,.06), 0 8px 20px rgba(10,60,88,.07)`,
         display: 'flex',
         flexDirection: 'column',
         minWidth: 0,
         transition: 'transform .15s, box-shadow .15s',
-        '&:hover': onClick ? { transform: 'translateY(-2px)' } : undefined,
+        '&:hover': onClick ? { transform: 'translateY(-2px)' } : glass ? { bgcolor: 'rgba(255,255,255,.16)' } : undefined,
         '&:focus-visible': { outline: `2px solid ${color}`, outlineOffset: 2 },
       }}
     >
@@ -110,24 +149,24 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick }: { co
           color: '#fff',
           display: 'grid',
           placeItems: 'center',
-          boxShadow: '0 0 0 4px #E3E7EC, 0 6px 14px rgba(13,74,108,.22)',
+          boxShadow: glass ? '0 0 0 4px rgba(255,255,255,.18), 0 6px 14px rgba(0,0,0,.25)' : '0 0 0 4px #E3E7EC, 0 6px 14px rgba(13,74,108,.22)',
           '& svg': { fontSize: 24 },
         }}
       >
         {icon}
       </Box>
       <Box sx={{ px: 2, pt: 2.25, pb: 1.25, pe: '84px', minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontSize: 12.5, color: md.label }}>{label}</Typography>
-        <Typography component="div" sx={{ fontSize: 24, fontWeight: 700, color: md.navy, lineHeight: 1.3, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
+        <Typography sx={{ fontSize: 12.5, color: glass ? 'rgba(255,255,255,.82)' : md.label }}>{label}</Typography>
+        <Typography component="div" sx={{ fontSize: 24, fontWeight: 700, color: glass ? '#fff' : md.navy, lineHeight: 1.3, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
           <bdi>{value}</bdi>
           {unit && (
-            <Box component="small" sx={{ fontSize: 12, fontWeight: 500, color: md.muted, marginInlineStart: 0.5 }}>
+            <Box component="small" sx={{ fontSize: 12, fontWeight: 500, color: glass ? 'rgba(255,255,255,.7)' : md.muted, marginInlineStart: 0.5 }}>
               {unit}
             </Box>
           )}
         </Typography>
       </Box>
-      <Box sx={{ borderTop: `1px solid ${md.border}`, px: 2, py: 1.25, fontSize: 12.5, fontWeight: 600, color }}>{foot}</Box>
+      <Box sx={{ borderTop: `1px solid ${glass ? 'rgba(255,255,255,.16)' : md.border}`, px: 2, py: 1.25, fontSize: 12.5, fontWeight: 600, color: glass ? 'rgba(255,255,255,.88)' : color }}>{foot}</Box>
     </Box>
   );
 }
