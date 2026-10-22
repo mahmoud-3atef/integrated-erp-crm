@@ -9,6 +9,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\SharedKernel\IntegratedErp.SharedKernel\IntegratedErp.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Modules\Workflow\IntegratedErp.Modules.Workflow.Contracts\IntegratedErp.Modules.Workflow.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="IntegratedErp.UnitTests" />

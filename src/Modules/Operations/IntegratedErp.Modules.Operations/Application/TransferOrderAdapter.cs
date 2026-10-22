@@ -18,14 +18,10 @@ namespace IntegratedErp.Modules.Operations.Application;
 /// default process (the creator confirms ⇒ sent to the operations manager ⇒ transferred), and the end of the approval.
 /// When the last stage approves, every worker's work period moves to the new project in the period ledger.
 /// </summary>
-internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IProjectDirectory projects, IUserDirectory users, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "operations.transfer_order";
     public const string SourceType = "transfer_order";
-
-    /// <summary>The related tables: the project the workers go to, and the one they leave (fields for conditions).</summary>
-    public const string ToProject = "to_project";
-    public const string FromProject = "from_project";
 
 
 
@@ -99,11 +95,6 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
             new("requested_by", "منشئ الأمر", "Created by", RecordFieldType.User, Updatable: false),
             new("status", "حالة الأمر", "Order status", RecordFieldType.Choice, Updatable: true, Statuses),
         ],
-        Relations:
-        [
-            new(ToProject, "المشروع المنقول إليه", "Project moved to", ProjectRecord.Fields),
-            new(FromProject, "المشروع المنقول منه", "Project moved from", ProjectRecord.Fields),
-        ],
         DefaultProcess: new DefaultApprovalProcess("اعتماد أمر النقل", "Transfer order approval", DefaultDefinition),
         Actions:
         [
@@ -143,24 +134,6 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
             ["requested_by"] = o.CreatedBy?.ToString(),
             ["status"] = o.Status.ToString(),
         };
-    }
-
-    /// <summary>The project the order moves its workers to, or the one they leave, as the condition fields say.</summary>
-    public async Task<IReadOnlyDictionary<string, string?>?> ReadRelatedAsync(Guid recordId, string relation, CancellationToken cancellationToken)
-    {
-        var o = await db.TransferOrders.AsNoTracking().Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
-        Guid? id = relation switch
-        {
-            ToProject => o?.ProjectId,
-            FromProject => o?.FromProjectId ?? o?.Lines.Select(l => l.FromProjectId).FirstOrDefault(x => x is not null),
-            _ => null,
-        };
-        if (id is not { } projectId)
-        {
-            return null;
-        }
-
-        return await ProjectRecord.ReadAsync(projects, users, projectId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>A process may set the order's status while it is in approval (e.g. "sent to the operations manager").</summary>

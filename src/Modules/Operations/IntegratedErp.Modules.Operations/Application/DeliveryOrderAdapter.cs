@@ -19,7 +19,7 @@ namespace IntegratedErp.Modules.Operations.Application;
 /// default process (the creator confirms ⇒ sent to the operations manager ⇒ delivered), and the end of the approval.
 /// When the last stage approves, the order is delivered and every worker's work period opens in the period ledger.
 /// </summary>
-internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IHousingRooms housing, IProjectDirectory projects, IUserDirectory users, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IHousingRooms housing, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "operations.delivery_order";
     public const string SourceType = "delivery_order";
@@ -87,7 +87,6 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
             new("requested_by", "منشئ الأمر", "Created by", RecordFieldType.User, Updatable: false),
             new("status", "حالة الأمر", "Order status", RecordFieldType.Choice, Updatable: true, Statuses),
         ],
-        Relations: [new(ProjectRelation, "مشروع الأمر", "The order's project", ProjectRecord.Fields)],
         DefaultProcess: new DefaultApprovalProcess("اعتماد أمر التسليم", "Delivery order approval", DefaultDefinition),
         Actions:
         [
@@ -102,19 +101,6 @@ internal sealed class DeliveryOrderAdapter(OperationsDbContext db, IPeriodLedger
 
     /// <summary>The order's code: the workers' work starts (the order means nothing without it).</summary>
     public const string StartWork = "start_work";
-
-    /// <summary>The related table: the order's project (every field of it, for conditions).</summary>
-    public const string ProjectRelation = "project";
-
-    public async Task<IReadOnlyDictionary<string, string?>?> ReadRelatedAsync(Guid recordId, string relation, CancellationToken cancellationToken)
-    {
-        if (relation != ProjectRelation || await db.DeliveryOrders.AsNoTracking().Where(x => x.Id == recordId).Select(x => x.ProjectId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) is not { } projectId)
-        {
-            return null;
-        }
-
-        return await ProjectRecord.ReadAsync(projects, users, projectId, cancellationToken).ConfigureAwait(false);
-    }
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {

@@ -49,7 +49,8 @@ public sealed record RecordField(
 
 /// <summary>
 /// A screen whose records go through approval processes. <paramref name="LinkTemplate"/> is the in-app page of one
-/// record with <c>{id}</c>.
+/// record with <c>{id}</c>. <paramref name="Entity"/>: the record's table in the entity catalog — the engine then adds
+/// every field of that table and its related tables (through their lookups) to what the screen declares.
 /// </summary>
 public sealed record ApprovalScreen(
     string Code,
@@ -59,7 +60,8 @@ public sealed record ApprovalScreen(
     IReadOnlyList<RecordField> Fields,
     IReadOnlyList<RecordRelation>? Relations = null,
     DefaultApprovalProcess? DefaultProcess = null,
-    IReadOnlyList<RecordAction>? Actions = null)
+    IReadOnlyList<RecordAction>? Actions = null,
+    string? Entity = null)
 {
     [JsonIgnore]
     public IReadOnlyList<RecordRelation> RelatedTables => Relations ?? [];

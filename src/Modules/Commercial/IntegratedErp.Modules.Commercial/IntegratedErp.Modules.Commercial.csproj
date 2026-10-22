@@ -6,6 +6,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Identity\IntegratedErp.Modules.Identity.Contracts\IntegratedErp.Modules.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\IntegratedErp.BuildingBlocks\IntegratedErp.BuildingBlocks.csproj" />
     <ProjectReference Include="..\..\CrmSync\IntegratedErp.Modules.CrmSync.Contracts\IntegratedErp.Modules.CrmSync.Contracts.csproj" />
     <ProjectReference Include="..\..\Organization\IntegratedErp.Modules.Organization.Contracts\IntegratedErp.Modules.Organization.Contracts.csproj" />

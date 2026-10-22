@@ -49,6 +49,7 @@ public sealed class OperationsModule : IModule
         services.AddScoped<MovementService>();
         services.AddScoped<MovementQueries>();
         services.AddScoped<IApprovalRecordAdapter, MovementAdapter>();
+        services.AddScoped<IEntitySource, OperationsEntities>();
         services.AddAlertProvider<MovementAlerts>();
         services.AddPermissions(OperationsPermissions.All);
         services.AddNumberSequences(

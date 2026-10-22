@@ -19,7 +19,7 @@ namespace IntegratedErp.Modules.Operations.Application;
 /// wish ⇒ the operations manager approves ⇒ completed: the worker's work period closes on the arrival day and a housing
 /// period opens in the period ledger.
 /// </summary>
-internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IHousingRooms housing, IProjectDirectory projects, IUserDirectory users, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IHousingRooms housing, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "operations.return_order";
     public const string SourceType = "return_order";
@@ -113,7 +113,6 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
             new("customer_wish", "رغبة العميل", "The customer's wish", RecordFieldType.Choice, Updatable: true, Wishes),
             new("status", "حالة الأمر", "Order status", RecordFieldType.Choice, Updatable: true, Statuses),
         ],
-        Relations: [new(ProjectRelation, "المشروع الذي عاد منه العامل", "The project the worker came back from", ProjectRecord.Fields)],
         DefaultProcess: new DefaultApprovalProcess("اعتماد أمر الرجيع", "Return order approval", DefaultDefinition),
         Actions:
         [
@@ -128,19 +127,6 @@ internal sealed class ReturnOrderAdapter(OperationsDbContext db, IPeriodLedger l
 
     /// <summary>The order's one action: the worker into housing (the order means nothing without it).</summary>
     public const string HouseWorker = "house_worker";
-
-    /// <summary>The related table: the order's project (every field of it, for conditions).</summary>
-    public const string ProjectRelation = "project";
-
-    public async Task<IReadOnlyDictionary<string, string?>?> ReadRelatedAsync(Guid recordId, string relation, CancellationToken cancellationToken)
-    {
-        if (relation != ProjectRelation || await db.ReturnOrders.AsNoTracking().Where(x => x.Id == recordId).Select(x => x.ProjectId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) is not { } projectId)
-        {
-            return null;
-        }
-
-        return await ProjectRecord.ReadAsync(projects, users, projectId, cancellationToken).ConfigureAwait(false);
-    }
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {

@@ -25,6 +25,7 @@ public sealed class WorkflowModule : IModule
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddModuleDbContext<WorkflowDbContext>(configuration, WorkflowDbContext.SchemaName);
+        services.AddScoped<EntityCatalog>();
         services.AddScoped<ApprovalEngine>();
         services.AddScoped<IApprovalService>(sp => sp.GetRequiredService<ApprovalEngine>());
         services.AddScoped<ProcessService>();

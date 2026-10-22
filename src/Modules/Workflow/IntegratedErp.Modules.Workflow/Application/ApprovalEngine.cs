@@ -27,6 +27,7 @@ public enum Decision
 internal sealed partial class ApprovalEngine(
     WorkflowDbContext db,
     IEnumerable<IApprovalRecordAdapter> adapters,
+    EntityCatalog catalog,
     IAccessDirectory access,
     IEnumerable<INotifier> notifiers,
     ITenantContext tenant,
@@ -49,9 +50,14 @@ internal sealed partial class ApprovalEngine(
     private readonly Dictionary<Guid, ProcessDefinition> _definitions = [];
     private Dictionary<Guid, string>? _members;
 
-    public IReadOnlyList<ApprovalScreen> Screens => adapters.Select(a => a.Screen).ToList();
+    private List<IApprovalRecordAdapter>? _adapters;
 
-    public IApprovalRecordAdapter? AdapterFor(string screen) => adapters.FirstOrDefault(a => a.Screen.Code == screen);
+    /// <summary>Each screen's adapter seen through the entity catalog (every field of its table and its related tables).</summary>
+    private List<IApprovalRecordAdapter> Adapters => _adapters ??= adapters.Select(a => (IApprovalRecordAdapter)new CatalogAdapter(a, catalog)).ToList();
+
+    public IReadOnlyList<ApprovalScreen> Screens => Adapters.Select(a => a.Screen).ToList();
+
+    public IApprovalRecordAdapter? AdapterFor(string screen) => Adapters.FirstOrDefault(a => a.Screen.Code == screen);
 
     // ------------------------------------------------------------------ Submit
 
@@ -63,7 +69,7 @@ internal sealed partial class ApprovalEngine(
             return Result.Failure<Guid>(UnknownScreen);
         }
 
-        if (await ReadAsync(adapter, submission.RecordId, cancellationToken).ConfigureAwait(false) is not { } values)
+        if (await adapter.ReadAsync(submission.RecordId, cancellationToken).ConfigureAwait(false) is null)
         {
             return Result.Failure<Guid>(RecordNotFound);
         }
@@ -83,11 +89,14 @@ internal sealed partial class ApprovalEngine(
             .OrderBy(p => p.Priority).ThenBy(p => p.NameEn)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         // A process chosen by an administrator runs whatever its start condition says.
-        var match = processes
+        var candidates = processes
             .Select(p => (Process: p, Version: p.Current))
             .Where(x => x.Version is not null)
             .Select(x => (x.Process, Version: x.Version!, Definition: DefinitionJson.Read(x.Version!.Definition)))
-            .FirstOrDefault(x => submission.ProcessId is not null || FieldValues.Matches(x.Definition.StartCondition, fields, values));
+            .ToList();
+        var used = candidates.SelectMany(c => RelationsUsed(c.Definition.StartCondition)).ToHashSet(StringComparer.Ordinal);
+        var values = await ReadAsync(adapter, submission.RecordId, used, cancellationToken).ConfigureAwait(false) ?? new Dictionary<string, string?>();
+        var match = candidates.FirstOrDefault(x => submission.ProcessId is not null || FieldValues.Matches(x.Definition.StartCondition, fields, values));
         if (match.Process is null)
         {
             return Result.Failure<Guid>(NoProcess);
@@ -920,24 +929,72 @@ internal sealed partial class ApprovalEngine(
         LogStepFailed(logger, instance.Id, error);
     }
 
-    private static Task<IReadOnlyDictionary<string, string?>?> ValuesAsync(ApprovalInstance instance, IApprovalRecordAdapter adapter, CancellationToken cancellationToken) =>
-        ReadAsync(adapter, instance.RecordId, cancellationToken);
+    /// <summary>The instance's record values, with the related tables its process uses.</summary>
+    private async Task<IReadOnlyDictionary<string, string?>?> ValuesAsync(ApprovalInstance instance, IApprovalRecordAdapter adapter, CancellationToken cancellationToken)
+    {
+        var definition = await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false);
+        return await ReadAsync(adapter, instance.RecordId, RelationsUsed(definition), cancellationToken).ConfigureAwait(false);
+    }
 
-    /// <summary>The record's values, and each related table's as "relation.field" (what conditions test).</summary>
-    private static async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(IApprovalRecordAdapter adapter, Guid recordId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The related tables a process reads: those its conditions, assignees, recipients and texts name ("relation.field"
+    /// keys), so only they are read.
+    /// </summary>
+    internal static HashSet<string> RelationsUsed(ProcessDefinition definition)
+    {
+        var used = RelationsUsed(definition.StartCondition);
+        foreach (var step in DefinitionRules.Walk(definition.Steps))
+        {
+            switch (step)
+            {
+                case ConditionStep c:
+                    foreach (var branch in c.Branches)
+                    {
+                        used.UnionWith(RelationsUsed(branch.Condition));
+                    }
+
+                    break;
+                case ApprovalStep a:
+                    used.UnionWith(a.Assignees.Select(x => RelationOf(x.FieldKey)).OfType<string>());
+                    break;
+                case NotifyStep n:
+                    used.UnionWith(n.To.Select(x => RelationOf(x.FieldKey)).OfType<string>());
+                    foreach (var text in new[] { n.TitleAr, n.TitleEn, n.BodyAr, n.BodyEn })
+                    {
+                        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text ?? string.Empty, @"\{([^{}]+)\.[^{}.]+\}"))
+                        {
+                            used.Add(m.Groups[1].Value);
+                        }
+                    }
+
+                    break;
+            }
+        }
+
+        return used;
+    }
+
+    private static HashSet<string> RelationsUsed(ConditionGroup? group) =>
+        (group?.Rules ?? []).SelectMany(r => new[] { r.Relation, r.ValueFromRelation }).OfType<string>().ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>The relation of a "relation.field" key (null for a field of the record).</summary>
+    private static string? RelationOf(string? key) => key is not null && key.LastIndexOf('.') is var dot and > 0 ? key[..dot] : null;
+
+    /// <summary>The record's values, and those related tables' as "relation.field" (what conditions, assignees and texts use).</summary>
+    private static async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(IApprovalRecordAdapter adapter, Guid recordId, HashSet<string> relations, CancellationToken cancellationToken)
     {
         if (await adapter.ReadAsync(recordId, cancellationToken).ConfigureAwait(false) is not { } own)
         {
             return null;
         }
 
-        if (adapter.Screen.RelatedTables.Count == 0)
+        if (relations.Count == 0)
         {
             return own;
         }
 
         var values = new Dictionary<string, string?>(own, StringComparer.Ordinal);
-        foreach (var relation in adapter.Screen.RelatedTables)
+        foreach (var relation in adapter.Screen.RelatedTables.Where(r => relations.Contains(r.Key)))
         {
             if (await adapter.ReadRelatedAsync(recordId, relation.Key, cancellationToken).ConfigureAwait(false) is { } related)
             {

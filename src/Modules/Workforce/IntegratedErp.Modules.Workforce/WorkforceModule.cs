@@ -30,6 +30,7 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<WorkerQueries>();
         services.AddScoped<WorkforceDirectory>();
         services.AddScoped<IWorkforceDirectory>(sp => sp.GetRequiredService<WorkforceDirectory>());
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, WorkforceEntities>();
         services.AddScoped<IWorkerSalaries>(sp => sp.GetRequiredService<WorkforceDirectory>());
         services.AddScoped<IStaffRecords>(sp => sp.GetRequiredService<WorkforceDirectory>());
         services.AddScoped<IPeriodLedger, PeriodLedger>();

@@ -116,6 +116,26 @@ public sealed class TransferOrderTests(TestDatabase database)
             var list = await scope.ServiceProvider.GetRequiredService<TransferOrderQueries>().ListAsync(new DeliveryListFilter(null, "transferred", null, null, true, 1, 50), default);
             Assert.Equal(("مشروع الرياض", 1), (list.Items.Single().FromProjects, list.Totals.Transferred));
 
+            // The entity catalog: every field of the order's table, its projects and their customers (N:1, up to three
+            // levels), and the project's manager as a user — the creator, who manages Jeddah.
+            var adapter = scope.ServiceProvider.GetRequiredService<ApprovalEngine>().AdapterFor(TransferOrderAdapter.ScreenCode)!;
+            Assert.Contains(adapter.Screen.Fields, f => f.Key == "transfer_on" && f.Type == RecordFieldType.Date);
+            Assert.Contains(adapter.Screen.Fields, f => f.Key == "created_by" && f.Type == RecordFieldType.User);
+            var relations = adapter.Screen.RelatedTables.Select(r => r.Key).ToList();
+            Assert.Contains("project_id", relations);
+            Assert.Contains("from_project_id", relations);
+            Assert.Contains("project_id/customer_id", relations);
+            Assert.Contains(adapter.Screen.RelatedTables.Single(r => r.Key == "project_id").Fields, f => f.Key == "manager_user" && f.Type == RecordFieldType.User);
+            var to = (await adapter.ReadRelatedAsync(orderId, "project_id", default))!;
+            Assert.Equal(("مشروع جدة", "mgr.jeddah"), (to["name"], to["manager_login"]));
+            Assert.Equal(creator.ToString(), to["manager_user"]);
+            Assert.Equal("مشروع الرياض", (await adapter.ReadRelatedAsync(orderId, "from_project_id", default))!["name"]);
+
+            // A condition of any step can compare the new project's manager with the order's creator (a dynamic value).
+            var rule = new ConditionRule("manager_user", ConditionOperator.Equals, Relation: "project_id", ValueFromField: "created_by");
+            var checkedRule = DefinitionRules.Validate(new ProcessDefinition(new ConditionGroup(true, [rule]), [new ApprovalStep { Id = "a", NameAr = "أ", NameEn = "A", Assignees = [new Assignee(AssigneeKind.UserField, FieldKey: "project_id.manager_user")] }, new ActionStep { Id = "m", Action = TransferOrderAdapter.MoveWorkers }]), adapter.Screen);
+            Assert.True(checkedRule.IsSuccess, checkedRule.IsFailure ? checkedRule.Error.Message : null);
+
             // Changed after the transfer (with a reason): a day later at a new price; the work period follows.
             var service = scope.ServiceProvider.GetRequiredService<TransferOrderService>();
             var change = new TransferAmendInput(today.AddDays(1), "أحمد", null, null, [new TransferLineChange(detail.Lines.Single().Id, 3400m, null)], "نُقل في اليوم التالي");

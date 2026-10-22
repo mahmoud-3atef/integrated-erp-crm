@@ -443,7 +443,7 @@ public static class DefinitionRules
             }
         }
 
-        bool IsField(string? key, RecordFieldType type) => key is not null && fields.TryGetValue(key, out var f) && f.Type == type;
+        bool IsField(string? key, RecordFieldType type) => key is not null && tested.TryGetValue(key, out var f) && f.Type == type;
     }
 
     /// <summary>Every step in the tree, depth first.</summary>
