@@ -96,7 +96,8 @@ internal sealed class LegacyTimesheetImport(
         var workerIds = details.Values.SelectMany(l => l).Select(d => Id(d, "new_employeeid")).OfType<Guid>().Distinct().ToList();
         var cards = (await workforce.CardsByCrmAsync([], workerIds, cancellationToken).ConfigureAwait(false)).GroupBy(c => c.CrmId).ToDictionary(g => g.Key, g => g.First());
         var imported = (await db.Timesheets.Where(t => t.LegacyInvoiceCrmId != null).Select(t => t.LegacyInvoiceCrmId!.Value).ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
-        var taken = (await db.Timesheets.Select(t => new { t.ProjectId, t.Month }).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(t => (t.ProjectId, t.Month)).ToHashSet();
+        // A month the new system made a timesheet for is skipped; the old invoices of one month each keep their own.
+        var taken = (await db.Timesheets.Where(t => t.LegacyInvoiceCrmId == null).Select(t => new { t.ProjectId, t.Month }).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(t => (t.ProjectId, t.Month)).ToHashSet();
         var settings = await db.ProjectSettings.AsNoTracking().ToDictionaryAsync(s => s.ProjectId, cancellationToken).ConfigureAwait(false);
 
         var skipped = new List<LegacySkipDto>();
@@ -122,7 +123,7 @@ internal sealed class LegacyTimesheetImport(
                 continue;
             }
 
-            if (!taken.Add((project.Id, month)))
+            if (taken.Contains((project.Id, month)))
             {
                 skipped.Add(new(number, project.Name, month, "month_taken"));
                 continue;
@@ -132,7 +133,6 @@ internal sealed class LegacyTimesheetImport(
             if (rows.Count == 0)
             {
                 skipped.Add(new(number, project.Name, month, "no_lines"));
-                taken.Remove((project.Id, month));
                 continue;
             }
 
@@ -187,7 +187,6 @@ internal sealed class LegacyTimesheetImport(
             if (built.Count == 0)
             {
                 skipped.Add(new(number, project.Name, month, "workers_unknown"));
-                taken.Remove((project.Id, month));
                 await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
                 continue;
             }

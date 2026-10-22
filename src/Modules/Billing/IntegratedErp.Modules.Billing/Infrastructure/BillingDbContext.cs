@@ -225,8 +225,8 @@ internal sealed class TimesheetConfiguration : IEntityTypeConfiguration<Timeshee
         builder.Navigation(t => t.Adjustments).HasField("_adjustments").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.HasIndex(t => new { t.TenantId, t.TimesheetNo }).IsUnique();
 
-        // One timesheet per project and month.
-        builder.HasIndex(t => new { t.TenantId, t.ProjectId, t.Month }).IsUnique();
+        // One timesheet per project and month; the old system's invoices keep one each (a project could have several in a month).
+        builder.HasIndex(t => new { t.TenantId, t.ProjectId, t.Month }).IsUnique().HasFilter("[legacy_invoice_crm_id] IS NULL");
     }
 }
 

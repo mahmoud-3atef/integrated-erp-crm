@@ -207,7 +207,7 @@ export function TimesheetsPage() {
             </TableHead>
             <TableBody>
               {rows.map((p) => (
-                <TableRow key={p.projectCrmId} hover sx={[{ cursor: p.timesheetId ? 'pointer' : 'default' }, rowEdge(p.status ? toneColors[timesheetTone[p.status]].fg : tokens.gray300)]} onClick={() => p.timesheetId && navigate(`/billing/timesheets/${p.timesheetId}`)}>
+                <TableRow key={p.timesheetId ?? p.projectCrmId} hover sx={[{ cursor: p.timesheetId ? 'pointer' : 'default' }, rowEdge(p.status ? toneColors[timesheetTone[p.status]].fg : tokens.gray300)]} onClick={() => p.timesheetId && navigate(`/billing/timesheets/${p.timesheetId}`)}>
                   <TableCell sx={{ minWidth: 260 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
                       <Initials name={p.projectName} size={30} />

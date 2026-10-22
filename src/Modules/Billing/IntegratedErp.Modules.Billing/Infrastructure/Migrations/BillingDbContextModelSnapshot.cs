@@ -1100,7 +1100,8 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "ProjectId", "Month")
                         .IsUnique()
-                        .HasDatabaseName("ix_timesheet_tenant_id_project_id_month");
+                        .HasDatabaseName("ix_timesheet_tenant_id_project_id_month")
+                        .HasFilter("[legacy_invoice_crm_id] IS NULL");
 
                     b.ToTable("timesheet", "billing");
                 });

@@ -175,10 +175,12 @@ internal sealed class TimesheetQueries(
             .ToDictionary(i => i.TimesheetId!.Value, i => new InvoiceRefDto(i.Id, i.InvoiceNo, i.Status.ToString()));
         var crmIds = byProject.Keys.Union(sheets.Select(s => s.ProjectCrmId)).ToList();
         var known = (await projects.FindAsync([], crmIds, cancellationToken).ConfigureAwait(false)).ToDictionary(p => p.CrmId);
-        var rows = crmIds.Select(crm =>
+        // A row per timesheet (a project has several when the old system invoiced it more than once in the month), or one without.
+        var rows = crmIds.SelectMany(crm => sheets.Where(s => s.ProjectCrmId == crm).Select(s => (Crm: crm, Sheet: s)).DefaultIfEmpty((crm, null!)))
+            .Select(pair =>
             {
+                var (crm, sheet) = pair;
                 var project = known.GetValueOrDefault(crm);
-                var sheet = sheets.FirstOrDefault(s => s.ProjectCrmId == crm);
                 return new MonthProjectDto(
                     project?.Id, crm, project?.Name ?? sheet?.ProjectName ?? byProject.GetValueOrDefault(crm).Name ?? "—", project?.CustomerName ?? sheet?.CustomerName,
                     project?.Manager, byProject.GetValueOrDefault(crm).Workers, sheet?.Id, sheet?.TimesheetNo, sheet?.Status.ToString(),

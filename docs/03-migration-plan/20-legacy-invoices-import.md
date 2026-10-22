@@ -35,10 +35,11 @@ Approved by the user on 2026-10-22: bring the old system's invoices from June 20
 
 ## Rules
 
+- **One timesheet per invoice.** A project the old system invoiced more than once in a month gets a timesheet for each invoice (the user's decision, 2026-10-22). The «one timesheet per project and month» index now excludes the brought timesheets, and the month page shows a row for each.
 - **Never twice.** An invoice that was already brought is not brought again. A unique index on `(tenant_id, legacy_invoice_crm_id)` enforces this.
 - **Skipped invoices.** These are reported with a reason and not brought:
   - the project is unknown (for example HeadOffice);
-  - the project already has a timesheet for that month (including a second invoice for the same month);
+  - the new system made a timesheet for the project that month;
   - the invoice has no lines;
   - none of its workers are known.
 - **Not regenerated.** A brought timesheet is never generated again from the ledger (`conflict.timesheet_legacy`).
@@ -55,3 +56,9 @@ Approved by the user on 2026-10-22: bring the old system's invoices from June 20
 - **Checked by SQL against the old lines:**
   - Every draft equals the sum of its old lines, both the invoice amount and the net.
   - Two old invoice headers differ from their own lines by a few halalas (0.09 and 0.07): BVP00302 and BVP00620.
+
+## Second run (2026-10-22, after the user's decisions)
+
+- The two test timesheets TS-2026-00008 and TS-2026-00001 were deleted from the test copy, with the test invoice INV00001, their approvals and the draft test payroll run PR-2026-00001 that was built on TS-2026-00008.
+- The import ran again and brought the **27** invoices it had skipped (309 lines, 1,278,582.26 before VAT; 8 balanced). In all: **516** invoices.
+- Only the 4 HeadOffice invoices remain outside.

@@ -429,7 +429,7 @@ public sealed class TimesheetTests(TestDatabase database)
         var july = Invoice("INV00650", 279640003, "2026-06-30T21:00:00Z", "2026-07-30T21:00:00Z");
         Line(july, first, 3000m, 1500m);
         Line(july, second, 2875.40m, 1432.10m); // edited by hand in the old system
-        Invoice("INV00651", 279640003, "2026-06-30T21:00:00Z", "2026-07-30T21:00:00Z"); // a second invoice for the same month
+        Line(Invoice("INV00651", 1, "2026-06-30T21:00:00Z", "2026-07-30T21:00:00Z"), first, 3000m, 1500m); // a second invoice for the same month: its own timesheet
         Line(Invoice("INV00500", 279640004, "2026-04-30T21:00:00Z", "2026-05-30T21:00:00Z"), first, 3000m, 1500m); // before June 2026
         Line(Invoice("INV00652", 279640007, "2026-07-31T21:00:00Z", "2026-08-30T21:00:00Z"), first, 3000m, 1500m); // cancelled
         await SyncAsync(tenantId, crm);
@@ -438,13 +438,14 @@ public sealed class TimesheetTests(TestDatabase database)
         using (var scope = database.Scope(tenantId, user: manager.ToString()))
         {
             var report = await scope.ServiceProvider.GetRequiredService<LegacyTimesheetImport>().ImportAsync(default);
-            Assert.Equal((1, 2, 2, 0), (report.Imported, report.Lines, report.Workers, report.MissingWorkers));
-            Assert.Equal(5875.40m, report.InvoiceAmount);
-            Assert.Equal([("INV00651", "month_taken")], report.Skipped.Select(s => (s.InvoiceNo, s.Reason)));
+            Assert.Equal((2, 3, 2, 0), (report.Imported, report.Lines, report.Workers, report.MissingWorkers));
+            Assert.Equal(8875.40m, report.InvoiceAmount);
+            Assert.Empty(report.Skipped);
             Assert.Equal("INV00650", Assert.Single(report.Balanced).InvoiceNo);
 
             var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
-            var sheet = await db.Timesheets.Include(t => t.Lines).Include(t => t.Adjustments).SingleAsync();
+            Assert.Equal(["INV00650", "INV00651"], await db.Timesheets.OrderBy(t => t.LegacyInvoiceNo).Select(t => t.LegacyInvoiceNo).ToListAsync());
+            var sheet = await db.Timesheets.Include(t => t.Lines).Include(t => t.Adjustments).SingleAsync(t => t.LegacyInvoiceNo == "INV00650");
             Assert.Equal(("INV00650", 279640003, new DateOnly(2026, 7, 1), true), (sheet.LegacyInvoiceNo, sheet.LegacyStatus, sheet.Month, sheet.LegacyIssued));
             Assert.Equal(TimesheetStatus.Draft, sheet.Status);
             Assert.Equal((5875.40m, 2932.10m), (sheet.Lines.Sum(l => l.InvoiceAmount), sheet.Lines.Sum(l => l.WorkerNet)));
@@ -457,6 +458,8 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal(0, again.Imported);
             var regenerate = await scope.ServiceProvider.GetRequiredService<TimesheetService>().GenerateAsync(new GenerateInput(sheet.ProjectId, sheet.Month), default);
             Assert.Equal("conflict.timesheet_legacy", regenerate.Error.Code);
+            var month = await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().MonthAsync(sheet.Month, default);
+            Assert.Equal(["INV00650", "INV00651"], month.Projects.Select(r => r.LegacyInvoiceNo).Order());
         }
     }
 

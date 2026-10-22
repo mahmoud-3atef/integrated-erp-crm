@@ -93,6 +93,7 @@ internal sealed class TimesheetService(
         var (from, to) = TimesheetMath.Cycle(month, setting.CycleStartDay);
         var rules = Rules(setting, project.ContractType);
         var timesheet = await db.Timesheets.Include(t => t.Lines).Include(t => t.Adjustments)
+            .OrderBy(t => t.LegacyInvoiceCrmId != null)
             .FirstOrDefaultAsync(t => t.ProjectId == project.Id && t.Month == month, cancellationToken).ConfigureAwait(false);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         if (timesheet is null)
