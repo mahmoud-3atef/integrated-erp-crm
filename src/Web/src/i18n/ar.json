@@ -3284,7 +3284,24 @@
     "nextStage": "بعد الاعتماد ينتقل إلى: {{name}}",
     "reasonRequired": "السبب مطلوب",
     "sending": "جارٍ الإرسال…",
-    "alreadyProcessed": "تمت معالجة هذه المهمة بالفعل، وحُدّثت الصفحة."
+    "alreadyProcessed": "تمت معالجة هذه المهمة بالفعل، وحُدّثت الصفحة.",
+    "title": "مراحل التعميد",
+    "doneOf": "{{done}} من {{count}} مراحل منتهية",
+    "inProgress": "قيد التعميد",
+    "approve": "موافقة",
+    "approving": "جارٍ الاعتماد…",
+    "plannedShort": "تتحدد بعد اعتماد ما قبلها",
+    "took": {
+      "lessThanMinute": "أقل من دقيقة",
+      "minutes": "{{count}} د",
+      "hours": "{{count}} س",
+      "days": "{{count}} ي"
+    },
+    "noPermissionTitle": "ليست لديك صلاحية على هذه المرحلة",
+    "noPermissionBody": "لا يمكنك اتخاذ قرار في مرحلة «{{stage}}»؛ القرار فيها لمعتمديها فقط.",
+    "understood": "حسنًا",
+    "approvedStage": "تم اعتماد مرحلة «{{stage}}».",
+    "approvedMoved": "تم اعتماد مرحلة «{{stage}}»، وانتقل الطلب إلى «{{next}}»."
   },
   "staff": {
     "title": "الموظفون",

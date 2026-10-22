@@ -1,7 +1,15 @@
 # ERP Global Approval Workflow UI Specification
-Version: 1.1 — 2026-10-19
-Status: Compact inline design approved; implementation NOT authorized.
-Supersedes: v1.0 action layout. Preserve existing approval logic and module contracts.
+Version: 1.2 — 2026-10-22
+Status: Implemented. v1.2 changes approved by the user on 2026-10-22 (see §0).
+Supersedes: v1.1 action layout and visibility. Preserve existing approval logic and module contracts.
+
+## 0. v1.2 changes (user decisions, 2026-10-22)
+Where this section and the rest of the document disagree, this section wins.
+1. **Look:** the old system's approval track («مراحل التعميد»), made compact (about 110px instead of 270px). A header line has the title, «n من m مراحل منتهية», the state chip and «عرض كل المراحل». Each stage is a circle with the decider's initials (a green check badge when done), the stage name, then who and when on one line. Each link carries the time the stage took. The current stage is blue with a ring. A planned stage is a dark «؟» circle on a dashed link. Green #23A455 and red #E03434 come from the old track.
+2. **Buttons:** «موافقة» (green pill) and «رفض» (red pill) sit **side by side after the current stage**, followed by «⋯». This replaces the v1.1 «Approve right / Reject left of the current stage» placement.
+3. **Visibility:** while an approval runs, «موافقة» and «رفض» show to **every** reader of the record. A user without the current task gets a popup («ليست لديك صلاحية على هذه المرحلة») naming the stage and whom it waits for. The server still decides every action; the popup is only the page's answer. The «⋯» menu still lists only the actions the server allows.
+4. **Approve in one click:** «موافقة» decides at once, with no confirmation dialog, and shows «تم اعتماد مرحلة … وانتقل الطلب إلى …». The DecisionDialog opens for approval only when the stage asks for fields on approval. Each click sends its own idempotency key, and the button is disabled while the decision is on its way.
+5. **Reasons:** Reject, Return, Delegate, Reassign and Cancel open the DecisionDialog with a **required** reason (Delegate's reason was optional in v1.1).
 
 ## 1. Purpose and scope
 Define one reusable, Arabic-first, RTL approval and task user experience across every ERP module that has workflow-linked records. This specification extends the approved HR Modern SaaS design and applies globally to payroll, leave, recruitment, procurement, finance, contracts, operations and future modules.

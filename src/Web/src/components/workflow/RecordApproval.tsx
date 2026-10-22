@@ -1,4 +1,5 @@
 import BlockIcon from '@mui/icons-material/Block';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ForwardIcon from '@mui/icons-material/Forward';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ReplayIcon from '@mui/icons-material/Replay';
@@ -79,12 +80,14 @@ export function ApprovalBar({
   loading?: boolean;
   onChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [action, setAction] = useState<Action | null>(null);
   const [drawer, setDrawer] = useState(false);
   const [people, setPeople] = useState<MemberOption[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ key: string; values?: Record<string, string>; severity: 'info' | 'success' } | null>(null);
+  const [denied, setDenied] = useState(false);
+  const [approving, setApproving] = useState(false);
   const actions = detail?.actions;
   const shown = detail?.status ?? status;
   const { fieldName, fieldValue } = useFieldText(detail);
@@ -113,9 +116,54 @@ export function ApprovalBar({
     setAction(next);
   };
 
+  // «موافقة» decides at once (one idempotency key per click, so a double click decides once); a stage asking for
+  // fields on approval opens the dialog for them. The server checks the user may approve either way.
+  const approve = async () => {
+    if (!actions?.canApprove) {
+      setDrawer(false);
+      setDenied(true);
+      return;
+    }
+    if (actions.requiredFields.length > 0 || !detail) {
+      start('Approve');
+      return;
+    }
+    if (approving) {
+      return;
+    }
+    setDrawer(false);
+    setNotice(null);
+    setError(null);
+    setApproving(true);
+    const stage = i18n.language === 'ar' ? shown.currentStepAr : shown.currentStepEn;
+    const next = shown.stages.find((s) => s.state === 'Current')?.rule === 'All' ? undefined : shown.planned?.[0];
+    try {
+      await workflowApi.decide(actions.workItemId ?? '', 'Approve', '', {}, newIdempotencyKey());
+      setNotice(
+        next
+          ? { key: 'approvalBar.approvedMoved', values: { stage: stage ?? '', next: i18n.language === 'ar' ? next.nameAr : next.nameEn }, severity: 'success' }
+          : { key: 'approvalBar.approvedStage', values: { stage: stage ?? '' }, severity: 'success' },
+      );
+      onChanged();
+    } catch (failure) {
+      const code = errorKey(failure);
+      if (alreadyProcessed(code)) {
+        setNotice({ key: 'approvalBar.alreadyProcessed', severity: 'info' });
+        onChanged();
+      } else {
+        setError(code);
+      }
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  // «موافقة» and «رفض» show to every reader while the approval runs; those who may not decide are told so.
+  const running = shown.status === 'InProgress';
   const barActions = {
-    onApprove: actions?.canApprove ? () => start('Approve') : undefined,
-    onReject: actions?.canReject ? () => start('Reject') : undefined,
+    onApprove: running ? () => void approve() : undefined,
+    onReject: running ? () => (actions?.canReject ? start('Reject') : (setDrawer(false), setDenied(true))) : undefined,
+    approving,
     more: [
       ...(actions?.canReturn ? [{ key: 'return', label: t('approval.return'), icon: <ReplyIcon />, color: flow.amber, onClick: () => start('Return') }] : []),
       ...(actions?.canDelegate ? [{ key: 'delegate', label: t('approval.delegate'), icon: <ForwardIcon />, onClick: () => start('Delegate') }] : []),
@@ -128,8 +176,8 @@ export function ApprovalBar({
     <>
       <ErrorMessage messageKey={error} />
       {notice && (
-        <Alert severity="info" onClose={() => setNotice(null)} sx={{ mb: 1.5 }}>
-          {t(notice)}
+        <Alert severity={notice.severity} onClose={() => setNotice(null)} sx={{ mb: 1.5 }}>
+          {t(notice.key, notice.values)}
         </Alert>
       )}
       {detail?.summary.status === 'Failed' && detail.summary.error && (
@@ -159,6 +207,27 @@ export function ApprovalBar({
         fieldName={fieldName}
         fieldValue={fieldValue}
       />
+      <Dialog open={denied} onClose={() => setDenied(false)} maxWidth="xs" fullWidth aria-labelledby="denied-title">
+        <DialogTitle id="denied-title" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: flow.amber }}>
+          <LockOutlinedIcon />
+          {t('approvalBar.noPermissionTitle')}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 14, color: flow.text, lineHeight: 1.8 }}>
+            {t('approvalBar.noPermissionBody', { stage: (i18n.language === 'ar' ? shown.currentStepAr : shown.currentStepEn) ?? '' })}
+          </Typography>
+          {shown.waitingFor.length > 0 && (
+            <Typography sx={{ fontSize: 13, color: flow.textMuted, mt: 1 }}>
+              {t('approvalBar.waitingFor')}: <bdi>{shown.waitingFor.join('، ')}</bdi>
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => setDenied(false)} autoFocus>
+            {t('approvalBar.understood')}
+          </Button>
+        </DialogActions>
+      </Dialog>
       {action && detail && (
         <DecisionDialog
           detail={detail}
@@ -171,7 +240,7 @@ export function ApprovalBar({
           }}
           onAlreadyProcessed={() => {
             setAction(null);
-            setNotice('approvalBar.alreadyProcessed');
+            setNotice({ key: 'approvalBar.alreadyProcessed', severity: 'info' });
             onChanged();
           }}
         />
@@ -220,7 +289,7 @@ function DecisionDialog({
   const [error, setError] = useState<string | null>(null);
   const [key] = useState(newIdempotencyKey);
   const sending = useRef(false);
-  const needsReason = action !== 'Approve' && action !== 'Delegate';
+  const needsReason = action !== 'Approve';
   const pick = action === 'Delegate' || action === 'Reassign';
   const missingField = action === 'Approve' && detail.actions.requiredFields.some((f) => !fields[f.field.key]?.trim());
   const status = detail.status;

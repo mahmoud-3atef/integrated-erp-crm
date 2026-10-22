@@ -1,5 +1,6 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import BlockIcon from '@mui/icons-material/Block';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ForwardIcon from '@mui/icons-material/Forward';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ReplayIcon from '@mui/icons-material/Replay';
@@ -64,12 +65,14 @@ function useFieldText(detail) {
  * Every page with a workflow-linked record uses this one component; none builds its own.
  */
 export function ApprovalBar({ status, detail, loading, onChanged, }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [action, setAction] = useState(null);
     const [drawer, setDrawer] = useState(false);
     const [people, setPeople] = useState([]);
     const [error, setError] = useState(null);
     const [notice, setNotice] = useState(null);
+    const [denied, setDenied] = useState(false);
+    const [approving, setApproving] = useState(false);
     const actions = detail?.actions;
     const shown = detail?.status ?? status;
     const { fieldName, fieldValue } = useFieldText(detail);
@@ -95,9 +98,54 @@ export function ApprovalBar({ status, detail, loading, onChanged, }) {
         setNotice(null);
         setAction(next);
     };
+    // «موافقة» decides at once (one idempotency key per click, so a double click decides once); a stage asking for
+    // fields on approval opens the dialog for them. The server checks the user may approve either way.
+    const approve = async () => {
+        if (!actions?.canApprove) {
+            setDrawer(false);
+            setDenied(true);
+            return;
+        }
+        if (actions.requiredFields.length > 0 || !detail) {
+            start('Approve');
+            return;
+        }
+        if (approving) {
+            return;
+        }
+        setDrawer(false);
+        setNotice(null);
+        setError(null);
+        setApproving(true);
+        const stage = i18n.language === 'ar' ? shown.currentStepAr : shown.currentStepEn;
+        const next = shown.stages.find((s) => s.state === 'Current')?.rule === 'All' ? undefined : shown.planned?.[0];
+        try {
+            await workflowApi.decide(actions.workItemId ?? '', 'Approve', '', {}, newIdempotencyKey());
+            setNotice(next
+                ? { key: 'approvalBar.approvedMoved', values: { stage: stage ?? '', next: i18n.language === 'ar' ? next.nameAr : next.nameEn }, severity: 'success' }
+                : { key: 'approvalBar.approvedStage', values: { stage: stage ?? '' }, severity: 'success' });
+            onChanged();
+        }
+        catch (failure) {
+            const code = errorKey(failure);
+            if (alreadyProcessed(code)) {
+                setNotice({ key: 'approvalBar.alreadyProcessed', severity: 'info' });
+                onChanged();
+            }
+            else {
+                setError(code);
+            }
+        }
+        finally {
+            setApproving(false);
+        }
+    };
+    // «موافقة» and «رفض» show to every reader while the approval runs; those who may not decide are told so.
+    const running = shown.status === 'InProgress';
     const barActions = {
-        onApprove: actions?.canApprove ? () => start('Approve') : undefined,
-        onReject: actions?.canReject ? () => start('Reject') : undefined,
+        onApprove: running ? () => void approve() : undefined,
+        onReject: running ? () => (actions?.canReject ? start('Reject') : (setDrawer(false), setDenied(true))) : undefined,
+        approving,
         more: [
             ...(actions?.canReturn ? [{ key: 'return', label: t('approval.return'), icon: _jsx(ReplyIcon, {}), color: flow.amber, onClick: () => start('Return') }] : []),
             ...(actions?.canDelegate ? [{ key: 'delegate', label: t('approval.delegate'), icon: _jsx(ForwardIcon, {}), onClick: () => start('Delegate') }] : []),
@@ -105,12 +153,12 @@ export function ApprovalBar({ status, detail, loading, onChanged, }) {
             ...(actions?.canCancel ? [{ key: 'cancel', label: t('approval.cancel'), icon: _jsx(BlockIcon, {}), color: tokens.gray600, onClick: () => start('Cancel') }] : []),
         ],
     };
-    return (_jsxs(_Fragment, { children: [_jsx(ErrorMessage, { messageKey: error }), notice && (_jsx(Alert, { severity: "info", onClose: () => setNotice(null), sx: { mb: 1.5 }, children: t(notice) })), detail?.summary.status === 'Failed' && detail.summary.error && (_jsx(Alert, { severity: "error", sx: { mb: 1.5 }, action: actions?.canRetry ? (_jsx(Button, { color: "inherit", size: "small", startIcon: _jsx(ReplayIcon, {}), onClick: () => void retry(), children: t('approval.retry') })) : undefined, children: t('approval.failedBecause', { error: detail.summary.error }) })), _jsx(GlobalCompactApprovalBar, { status: shown, actions: barActions, loadingActions: loading && !detail, onViewAll: () => setDrawer(true) }), _jsx(ApprovalHistoryDrawer, { open: drawer, onClose: () => setDrawer(false), status: shown, title: detail?.summary.title, actions: barActions, canReturn: !!actions?.canReturn, onReturn: () => start('Return'), fieldName: fieldName, fieldValue: fieldValue }), action && detail && (_jsx(DecisionDialog, { detail: detail, action: action, people: people, onClose: () => setAction(null), onDone: () => {
+    return (_jsxs(_Fragment, { children: [_jsx(ErrorMessage, { messageKey: error }), notice && (_jsx(Alert, { severity: notice.severity, onClose: () => setNotice(null), sx: { mb: 1.5 }, children: t(notice.key, notice.values) })), detail?.summary.status === 'Failed' && detail.summary.error && (_jsx(Alert, { severity: "error", sx: { mb: 1.5 }, action: actions?.canRetry ? (_jsx(Button, { color: "inherit", size: "small", startIcon: _jsx(ReplayIcon, {}), onClick: () => void retry(), children: t('approval.retry') })) : undefined, children: t('approval.failedBecause', { error: detail.summary.error }) })), _jsx(GlobalCompactApprovalBar, { status: shown, actions: barActions, loadingActions: loading && !detail, onViewAll: () => setDrawer(true) }), _jsx(ApprovalHistoryDrawer, { open: drawer, onClose: () => setDrawer(false), status: shown, title: detail?.summary.title, actions: barActions, canReturn: !!actions?.canReturn, onReturn: () => start('Return'), fieldName: fieldName, fieldValue: fieldValue }), _jsxs(Dialog, { open: denied, onClose: () => setDenied(false), maxWidth: "xs", fullWidth: true, "aria-labelledby": "denied-title", children: [_jsxs(DialogTitle, { id: "denied-title", sx: { display: 'flex', alignItems: 'center', gap: 1, color: flow.amber }, children: [_jsx(LockOutlinedIcon, {}), t('approvalBar.noPermissionTitle')] }), _jsxs(DialogContent, { children: [_jsx(Typography, { sx: { fontSize: 14, color: flow.text, lineHeight: 1.8 }, children: t('approvalBar.noPermissionBody', { stage: (i18n.language === 'ar' ? shown.currentStepAr : shown.currentStepEn) ?? '' }) }), shown.waitingFor.length > 0 && (_jsxs(Typography, { sx: { fontSize: 13, color: flow.textMuted, mt: 1 }, children: [t('approvalBar.waitingFor'), ": ", _jsx("bdi", { children: shown.waitingFor.join('، ') })] }))] }), _jsx(DialogActions, { children: _jsx(Button, { variant: "contained", onClick: () => setDenied(false), autoFocus: true, children: t('approvalBar.understood') }) })] }), action && detail && (_jsx(DecisionDialog, { detail: detail, action: action, people: people, onClose: () => setAction(null), onDone: () => {
                     setAction(null);
                     onChanged();
                 }, onAlreadyProcessed: () => {
                     setAction(null);
-                    setNotice('approvalBar.alreadyProcessed');
+                    setNotice({ key: 'approvalBar.alreadyProcessed', severity: 'info' });
                     onChanged();
                 } }))] }));
 }
@@ -137,7 +185,7 @@ function DecisionDialog({ detail, action, people, onClose, onDone, onAlreadyProc
     const [error, setError] = useState(null);
     const [key] = useState(newIdempotencyKey);
     const sending = useRef(false);
-    const needsReason = action !== 'Approve' && action !== 'Delegate';
+    const needsReason = action !== 'Approve';
     const pick = action === 'Delegate' || action === 'Reassign';
     const missingField = action === 'Approve' && detail.actions.requiredFields.some((f) => !fields[f.field.key]?.trim());
     const status = detail.status;

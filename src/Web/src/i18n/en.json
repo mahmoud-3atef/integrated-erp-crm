@@ -3284,7 +3284,24 @@
     "nextStage": "After approval it moves to: {{name}}",
     "reasonRequired": "A reason is required",
     "sending": "Sending…",
-    "alreadyProcessed": "This task was already processed. The page has been refreshed."
+    "alreadyProcessed": "This task was already processed. The page has been refreshed.",
+    "title": "Approval stages",
+    "doneOf": "{{done}} of {{count}} stages done",
+    "inProgress": "In approval",
+    "approve": "Approve",
+    "approving": "Approving…",
+    "plannedShort": "Set once the earlier stage is approved",
+    "took": {
+      "lessThanMinute": "Under a minute",
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "days": "{{count}} d"
+    },
+    "noPermissionTitle": "You can't decide this stage",
+    "noPermissionBody": "Only the approvers of the «{{stage}}» stage can decide it.",
+    "understood": "Got it",
+    "approvedStage": "The «{{stage}}» stage is approved.",
+    "approvedMoved": "The «{{stage}}» stage is approved, and the request moved to «{{next}}»."
   },
   "staff": {
     "title": "Employees",

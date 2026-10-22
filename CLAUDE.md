@@ -113,20 +113,21 @@ The names and figures in the image are illustrative. In the real page all stages
 
 ## Global approval bar (binding for every module with workflow-linked records)
 
-The full specification is [docs/02-target-architecture/16-approval-workflow-ui.md](docs/02-target-architecture/16-approval-workflow-ui.md) (v1.1, 19 October 2026). Implementing it needs the user's explicit go-ahead, as in §10 of that spec.
+The full specification is [docs/02-target-architecture/16-approval-workflow-ui.md](docs/02-target-architecture/16-approval-workflow-ui.md) (v1.2, 22 October 2026). Its §0 holds the user's v1.2 decisions and wins over the rest of the spec.
 
 **Layout**
 - One shared `GlobalCompactApprovalBar` sits under the page header and above the KPIs and grids. It is never re-implemented inside a module.
-- On desktop it is one row, about 56–64px high:
-  - Approve sits on the visual right of the current (blue) stage and Reject on its visual left, on the same row.
+- It is the old system's approval track made compact (about 110px): a header line, then the stages as initials circles with the time each took on the links.
+  - «موافقة» and «رفض» sit side by side after the current (blue) stage, followed by «⋯».
   - Completed stages show a green check and upcoming stages are muted.
   - Return, Delegate and similar actions go in a «More» menu.
   - «View all stages» opens an `ApprovalHistoryDrawer` of 480–560px. Only one drawer is open at a time.
 - Many stages collapse into a chip such as «+5 مراحل». The bar supports parallel approvers.
 
 **Actions**
-- Actions appear only for the current authorized actor, from the server's available actions. Everyone else sees a read-only bar.
-- `DecisionDialog`: Reject and Return need a reason, and Return asks for its target step when there is more than one.
+- «موافقة» and «رفض» show to every reader while the approval runs. A user without the task gets a no-permission popup; the server still decides every action. The «⋯» menu lists only the actions the server allows.
+- «موافقة» decides in one click, with no dialog unless the stage asks for fields on approval.
+- `DecisionDialog`: Reject, Return and Delegate need a reason, and Return asks for its target step when there is more than one.
 - Concurrency: show «This task was already processed», refresh, and never allow a double approval.
 
 **Responsive**

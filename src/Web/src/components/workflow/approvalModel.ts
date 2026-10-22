@@ -138,7 +138,7 @@ export const alreadyProcessed = (errorKey: string) =>
   ['errors.conflict_approval_task_closed', 'errors.conflict_approval_changed', 'errors.conflict_approval_finished', 'errors.not_found_approval_task'].includes(errorKey);
 
 /** Rough widths (px) of the bar's parts, to fold just enough stages to fit one row. */
-const widths = { node: 205, planned: 150, current: 300, chip: 100, connector: 32, actions: 300 };
+const widths = { node: 130, planned: 110, current: 155, chip: 100, connector: 30, actions: 210 };
 
 const estimate = (items: BarItem[], withActions: boolean) =>
   items.reduce((sum, item) => sum + (item.kind === 'more' ? widths.chip : item.node.state === 'Current' ? widths.current : item.node.state === 'Planned' ? widths.planned : widths.node), 0) +

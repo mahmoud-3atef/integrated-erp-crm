@@ -1,10 +1,11 @@
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import ReplyIcon from '@mui/icons-material/Reply';
-import { Box, Button, IconButton, ListItemIcon, Menu, MenuItem, Skeleton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton, ListItemIcon, Menu, MenuItem, Skeleton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Fragment, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApprovalStatus } from '../../api/workflow';
@@ -28,6 +29,10 @@ export const flow = {
   text: '#0F2747',
   textMuted: '#64748B',
   border: '#E2E8F0',
+  // The track's own green and red (the old system's approval track): done links and «موافقة», rejections and «رفض».
+  done: '#23A455',
+  doneSoft: '#E9F8EF',
+  rejected: '#E03434',
 };
 
 export const stateLook: Record<StageState, { main: string; soft: string; icon: ReactNode | null }> = {
@@ -52,6 +57,8 @@ export interface BarMenuAction {
 export interface BarActions {
   onApprove?: () => void;
   onReject?: () => void;
+  /** «موافقة» was pressed and the decision is on its way. */
+  approving?: boolean;
   /** Less frequent actions (return, delegate, cancel), in the ⋯ menu beside the current stage. */
   more?: BarMenuAction[];
 }
@@ -84,10 +91,11 @@ export function useStageName() {
 }
 
 /**
- * GlobalCompactApprovalBar (spec 16 §3.1): one row under the page header. Done stages carry a green check, the
- * current one is blue with «اعتماد» on its visual right and «رفض» on its visual left (in Arabic; mirrored in English),
- * the ones ahead are muted, and distant stages fold into chips. Without actions it is read-only; once the approval
- * ended it shows the outcome. «عرض كل المراحل» opens the history drawer.
+ * GlobalCompactApprovalBar (spec 16 §3.1, v1.2): the old system's approval track made compact. A header line (title,
+ * stages done, the approval's state and «عرض كل المراحل»), then the stages: a circle with the initials of who decided
+ * (a green check when done), the stage and who and when beneath, and on each link the time the stage took. The
+ * current stage is blue with «موافقة» and «رفض» side by side after it, for every reader while the approval runs (the
+ * server decides who may; the page answers the others). Distant stages fold into chips.
  */
 export function GlobalCompactApprovalBar({
   status,
@@ -110,19 +118,22 @@ export function GlobalCompactApprovalBar({
   const running = status.status === 'InProgress';
   const canAct = running && !!(actions?.onApprove || actions?.onReject || actions?.more?.length);
   const ended = status.status !== 'InProgress' && status.status !== 'Failed';
-  // Fold distant stages by the room the bar really has (beside the menu, «عرض كل المراحل» and the outcome).
+  const done = nodes.filter((n) => n.state === 'Done').length;
+  const stages = nodes.filter((n) => n.state !== 'Submitted').length;
+  // Fold distant stages by the room the track really has.
   const space = useWidth();
   // The widths are estimates: when the stages still overflow once drawn, fold one more step (again on each resize).
   const [list, setList] = useState<HTMLElement | null>(null);
   const [tighten, setTighten] = useState(0);
   useEffect(() => setTighten(0), [space.width]);
-  const items = fit(nodes, space.width - (phone ? 60 : 190) - (ended ? 130 : 0) - tighten * 120, (canAct || !!loadingActions) && !phone, tighten > 0);
+  const items = fit(nodes, space.width - 24 - tighten * 110, (canAct || !!loadingActions) && !phone, tighten > 0);
   useLayoutEffect(() => {
     if (list && list.scrollWidth > list.clientWidth + 1 && tighten < 8) {
       setTighten((n) => n + 1);
     }
   });
   const endedAt = [...status.history].reverse().find((h) => h.kind === 'Completed')?.at;
+  const state = ended ? outcomeLook(status.status) : { main: flow.blue, soft: flow.blueSoft, icon: null };
 
   return (
     <Box
@@ -136,97 +147,103 @@ export function GlobalCompactApprovalBar({
         borderRadius: '12px',
         boxShadow: '0 1px 2px rgba(15, 39, 71, .05)',
         px: { xs: 1.5, md: 2 },
-        py: 1,
-        minHeight: 58,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5,
+        pt: 1,
+        pb: 1.25,
       }}
     >
-      <Box
-        component="ol"
-        ref={setList}
-        sx={{ listStyle: 'none', m: 0, p: 0, flex: '1 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', overflowX: 'auto', scrollbarWidth: 'thin', py: 0.25 }}
-      >
-        {items.map((item, index) => (
-          <Fragment key={item.kind === 'node' ? item.node.key : `more-${item.side}`}>
-            {index > 0 && <Connector done={doneBefore(items[index - 1])} />}
-            {item.kind === 'more' ? (
-              <MoreChip item={item} onClick={onViewAll} compact={phone} />
-            ) : item.node.state === 'Current' && (canAct || loadingActions) && !phone ? (
-              // Approve / current stage / reject on one row (approve first in reading order: right in Arabic).
-              <Stack component="li" direction="row" sx={{ alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                {loadingActions && !canAct ? (
-                  <>
-                    <Skeleton variant="rounded" width={84} height={34} />
-                    <Node node={item.node} status={status} />
-                    <Skeleton variant="rounded" width={72} height={34} />
-                  </>
-                ) : (
-                  <>
-                    {actions?.onApprove && <ApproveButton onClick={actions.onApprove} />}
-                    <Node node={item.node} status={status} />
-                    {actions?.onReject && <RejectButton onClick={actions.onReject} />}
-                    {!!actions?.more?.length && <MoreMenu items={actions.more} />}
-                  </>
-                )}
-              </Stack>
-            ) : (
-              <Box component="li" sx={{ flex: '0 0 auto' }}>
-                <Node node={item.node} status={status} />
-              </Box>
-            )}
-          </Fragment>
-        ))}
-      </Box>
-
-      {ended && (
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.75, minWidth: 0 }}>
+        <Box aria-hidden sx={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: flow.blueSoft, color: flow.blue, flex: '0 0 auto' }}>
+          <AccountTreeOutlinedIcon sx={{ fontSize: 15 }} />
+        </Box>
+        <Typography component="h2" sx={{ fontSize: 13.5, fontWeight: 800, color: flow.text, whiteSpace: 'nowrap' }}>
+          {t('approvalBar.title')}
+        </Typography>
+        {stages > 0 && (
+          <Typography sx={{ fontSize: 12, color: flow.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {t('approvalBar.doneOf', { done, count: stages })}
+          </Typography>
+        )}
         <Box
           role="status"
           sx={{
+            marginInlineStart: 'auto',
             flex: '0 0 auto',
             display: 'inline-flex',
             alignItems: 'center',
             gap: 0.5,
             px: 1.25,
-            py: 0.4,
+            py: 0.3,
             borderRadius: 999,
-            fontSize: 12.5,
+            fontSize: 12,
             fontWeight: 700,
             whiteSpace: 'nowrap',
-            color: outcomeLook(status.status).main,
-            bgcolor: outcomeLook(status.status).soft,
-            '& svg': { fontSize: 16 },
+            color: state.main,
+            bgcolor: state.soft,
+            '& svg': { fontSize: 15 },
           }}
         >
-          {outcomeLook(status.status).icon}
-          {t(`approval.instance.${status.status}`)}
-          {endedAt && <bdi>{day(endedAt)}</bdi>}
+          {state.icon}
+          {running ? t('approvalBar.inProgress') : t(`approval.instance.${status.status}`)}
+          {ended && endedAt && <bdi>{day(endedAt)}</bdi>}
         </Box>
-      )}
+        <Button
+          size="small"
+          onClick={onViewAll}
+          aria-label={t('approvalBar.viewAll')}
+          startIcon={phone ? undefined : <FormatListBulletedIcon />}
+          sx={{
+            flex: '0 0 auto',
+            height: 28,
+            borderRadius: 999,
+            px: phone ? 0.75 : 1.25,
+            minWidth: phone ? 32 : undefined,
+            fontSize: 12,
+            fontWeight: 700,
+            color: flow.blue,
+            border: `1px solid ${flow.border}`,
+            whiteSpace: 'nowrap',
+            '&:hover': { borderColor: flow.blue, bgcolor: flow.blueSoft },
+          }}
+        >
+          {phone ? <FormatListBulletedIcon fontSize="small" /> : t('approvalBar.viewAll')}
+        </Button>
+      </Stack>
 
-      <Box aria-hidden sx={{ alignSelf: 'stretch', width: '1px', bgcolor: flow.border, my: 0.5, display: { xs: 'none', sm: 'block' } }} />
-      <Button
-        variant="outlined"
-        size="small"
-        onClick={onViewAll}
-        aria-label={t('approvalBar.viewAll')}
-        startIcon={phone ? undefined : <FormatListBulletedIcon />}
-        sx={{
-          flex: '0 0 auto',
-          height: 34,
-          borderRadius: '8px',
-          borderColor: flow.border,
-          color: flow.blue,
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
-          '&:hover': { borderColor: flow.blue, bgcolor: flow.blueSoft },
-          minWidth: phone ? 40 : undefined,
-          px: phone ? 1 : undefined,
-        }}
+      <Box
+        component="ol"
+        ref={setList}
+        sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', alignItems: 'flex-start', overflowX: 'auto', scrollbarWidth: 'thin', pt: 0.5 }}
       >
-        {phone ? <FormatListBulletedIcon fontSize="small" /> : t('approvalBar.viewAll')}
-      </Button>
+        {items.map((item, index) => (
+          <Fragment key={item.kind === 'node' ? item.node.key : `more-${item.side}`}>
+            {index > 0 && <Connector from={items[index - 1]} to={item} />}
+            {item.kind === 'more' ? (
+              <MoreChip item={item} onClick={onViewAll} compact={phone} />
+            ) : (
+              <Box component="li" sx={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+                <Node node={item.node} status={status} />
+                {/* «موافقة» then «رفض», side by side after the current stage. */}
+                {item.node.state === 'Current' && (canAct || loadingActions) && !phone && (
+                  <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, pt: 0.5 }}>
+                    {loadingActions && !canAct ? (
+                      <>
+                        <Skeleton variant="rounded" width={86} height={30} sx={{ borderRadius: 999 }} />
+                        <Skeleton variant="rounded" width={70} height={30} sx={{ borderRadius: 999 }} />
+                      </>
+                    ) : (
+                      <>
+                        {actions?.onApprove && <ApproveButton onClick={actions.onApprove} busy={actions.approving} />}
+                        {actions?.onReject && <RejectButton onClick={actions.onReject} disabled={actions.approving} />}
+                        {!!actions?.more?.length && <MoreMenu items={actions.more} />}
+                      </>
+                    )}
+                  </Stack>
+                )}
+              </Box>
+            )}
+          </Fragment>
+        ))}
+      </Box>
 
       {/* On a phone the decision stays in reach: a sticky area at the bottom of the screen. */}
       {phone && canAct && (
@@ -253,7 +270,12 @@ export function GlobalCompactApprovalBar({
 /** Unicode first-strong isolation, so names keep their own direction inside a sentence. */
 const isolate = (text: string) => String.fromCharCode(0x2068) + text + String.fromCharCode(0x2069);
 
-/** The width of an element, kept up to date (1200px until measured). */
+/** The first letters of a name's first two words («Belal Harbi» → BH), for the stage's circle. */
+export function initials(name: string | null | undefined) {
+  const words = (name ?? '').trim().split(/[\s._-]+/).filter(Boolean);
+  return words.length === 0 ? '' : words.slice(0, 2).map((w) => Array.from(w)[0]!.toUpperCase()).join('');
+}
+
 /** The element's width, measured once it is on the page (it may mount after a loading state) and on every resize. */
 function useWidth() {
   const [element, setElement] = useState<HTMLElement | null>(null);
@@ -269,11 +291,8 @@ function useWidth() {
   return { ref: setElement, width };
 }
 
-/** Whether the line after this item leads on from a done stage (green). */
-const doneBefore = (item: BarItem | undefined) => {
-  const node = item?.kind === 'node' ? item.node : item?.nodes.at(-1);
-  return node?.state === 'Done' || node?.state === 'Submitted';
-};
+const lastOf = (item: BarItem | undefined) => (item?.kind === 'node' ? item.node : item?.nodes.at(-1));
+const firstOf = (item: BarItem | undefined) => (item?.kind === 'node' ? item.node : item?.nodes[0]);
 
 function outcomeLook(status: ApprovalStatus['status']) {
   return status === 'Approved'
@@ -289,37 +308,46 @@ function outcomeLook(status: ApprovalStatus['status']) {
 function Decisions({ actions }: { actions: BarActions }) {
   return (
     <Stack direction="row" sx={{ gap: 1, '& > .MuiButton-root': { flex: 1, height: 44 } }}>
-      {actions.onApprove && <ApproveButton onClick={actions.onApprove} />}
-      {actions.onReject && <RejectButton onClick={actions.onReject} />}
+      {actions.onApprove && <ApproveButton onClick={actions.onApprove} busy={actions.approving} />}
+      {actions.onReject && <RejectButton onClick={actions.onReject} disabled={actions.approving} />}
       {!!actions.more?.length && <MoreMenu items={actions.more} large />}
     </Stack>
   );
 }
 
-function ApproveButton({ onClick }: { onClick: () => void }) {
+const pill = {
+  height: 30,
+  px: 1.75,
+  borderRadius: 999,
+  fontSize: 12.5,
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  color: '#fff',
+  boxShadow: '0 2px 6px rgba(15, 39, 71, .14)',
+  '& .MuiButton-startIcon': { marginInlineEnd: 0.5, '& svg': { fontSize: 16 } },
+  '&:focus-visible': { outline: `2px solid ${flow.blue}`, outlineOffset: 2 },
+} as const;
+
+function ApproveButton({ onClick, busy }: { onClick: () => void; busy?: boolean }) {
   const { t } = useTranslation();
   return (
     <Button
       variant="contained"
       disableElevation
       onClick={onClick}
-      startIcon={<CheckIcon />}
-      sx={{ height: 34, px: 2, borderRadius: '8px', fontWeight: 700, whiteSpace: 'nowrap', bgcolor: flow.green, '&:hover': { bgcolor: '#047857' } }}
+      disabled={busy}
+      startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <CheckIcon />}
+      sx={{ ...pill, bgcolor: flow.done, '&:hover': { bgcolor: '#1b8a47' }, '&.Mui-disabled': { bgcolor: flow.done, color: '#fff', opacity: 0.8 } }}
     >
-      {t('approval.approve')}
+      {busy ? t('approvalBar.approving') : t('approvalBar.approve')}
     </Button>
   );
 }
 
-function RejectButton({ onClick }: { onClick: () => void }) {
+function RejectButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   const { t } = useTranslation();
   return (
-    <Button
-      variant="outlined"
-      onClick={onClick}
-      startIcon={<CloseIcon />}
-      sx={{ height: 34, px: 1.75, borderRadius: '8px', fontWeight: 700, whiteSpace: 'nowrap', color: flow.red, borderColor: '#F3B4B4', '&:hover': { borderColor: flow.red, bgcolor: flow.redSoft } }}
-    >
+    <Button variant="contained" disableElevation onClick={onClick} disabled={disabled} startIcon={<CloseIcon />} sx={{ ...pill, bgcolor: flow.rejected, '&:hover': { bgcolor: '#c42a2a' } }}>
       {t('approval.reject')}
     </Button>
   );
@@ -336,7 +364,7 @@ function MoreMenu({ items, large }: { items: BarMenuAction[]; large?: boolean })
           aria-haspopup="menu"
           aria-expanded={!!anchor}
           onClick={(e) => setAnchor(e.currentTarget)}
-          sx={{ width: large ? 44 : 34, height: large ? 44 : 34, border: `1px solid ${flow.border}`, borderRadius: '8px', color: flow.text }}
+          sx={{ width: large ? 44 : 30, height: large ? 44 : 30, border: `1px solid ${flow.border}`, borderRadius: 999, color: flow.text }}
         >
           <MoreHorizIcon fontSize="small" />
         </IconButton>
@@ -360,9 +388,64 @@ function MoreMenu({ items, large }: { items: BarMenuAction[]; large?: boolean })
   );
 }
 
-/** The line between two stages: green after a done stage, grey toward what is ahead. */
-function Connector({ done }: { done: boolean }) {
-  return <Box component="li" aria-hidden sx={{ flex: '1 1 0', minWidth: 20, height: 2, mx: 1, borderRadius: 2, bgcolor: done ? '#8FD9BC' : flow.border }} />;
+/** How long a stage took, short («22 س», «أقل من دقيقة»). */
+function useDuration() {
+  const { t } = useTranslation();
+  return (from: string, to: string) => {
+    const minutes = (new Date(to).getTime() - new Date(from).getTime()) / 60000;
+    return minutes < 1
+      ? t('approvalBar.took.lessThanMinute')
+      : minutes < 60
+        ? t('approvalBar.took.minutes', { count: Math.round(minutes) })
+        : minutes < 60 * 24
+          ? t('approvalBar.took.hours', { count: Math.round(minutes / 60) })
+          : t('approvalBar.took.days', { count: Math.round(minutes / 60 / 24) });
+  };
+}
+
+/**
+ * The link between two stages, behind the circles: solid green toward a done stage (with the time it took), blue
+ * toward the current one, dashed grey toward what is ahead, dashed red toward a rejection.
+ */
+function Connector({ from, to }: { from: BarItem | undefined; to: BarItem }) {
+  const took = useDuration();
+  const before = lastOf(from);
+  const after = firstOf(to);
+  const state = after?.state;
+  const decided = state === 'Done' || state === 'Rejected' || state === 'Returned';
+  const label = decided && before?.decidedAt && after?.decidedAt ? took(before.decidedAt, after.decidedAt) : null;
+  const look =
+    state === 'Done'
+      ? { background: flow.done }
+      : state === 'Current'
+        ? { background: flow.blue }
+        : state === 'Rejected'
+          ? { background: `repeating-linear-gradient(90deg, ${flow.rejected} 0 7px, transparent 7px 12px)` }
+          : { background: `repeating-linear-gradient(90deg, #8a9aa6 0 5px, transparent 5px 10px)` };
+  return (
+    <Box component="li" aria-hidden sx={{ position: 'relative', flex: '1 1 0', minWidth: 44, maxWidth: 220, height: 34, mx: -1.5 }}>
+      <Box sx={{ position: 'absolute', top: 16, insetInline: 0, height: 2.5, borderRadius: 2, ...look }} />
+      {label && (
+        <Box
+          component="span"
+          sx={{
+            position: 'absolute',
+            top: -1,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            px: 0.75,
+            bgcolor: '#fff',
+            color: state === 'Rejected' ? flow.rejected : flow.textMuted,
+            fontSize: 10.5,
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {label}
+        </Box>
+      )}
+    </Box>
+  );
 }
 
 /** A chip standing for stages folded away («+3 مراحل»); it opens the drawer with all of them. */
@@ -372,7 +455,7 @@ function MoreChip({ item, onClick, compact }: { item: Extract<BarItem, { kind: '
   const allDone = item.nodes.every((n) => n.state === 'Done' || n.state === 'Submitted');
   const label = allDone ? t('approvalBar.moreDone', { count: item.nodes.length }) : t('approvalBar.moreStages', { count: item.nodes.length });
   return (
-    <Box component="li" sx={{ flex: '0 0 auto' }}>
+    <Box component="li" sx={{ flex: '0 0 auto', position: 'relative', zIndex: 1, pt: 0.6 }}>
       <Tooltip title={item.nodes.map(name).join(' ← ')}>
         <Box
           component="button"
@@ -380,18 +463,18 @@ function MoreChip({ item, onClick, compact }: { item: Extract<BarItem, { kind: '
           onClick={onClick}
           aria-label={label}
           sx={{
-            border: 0,
+            border: `1px solid ${allDone ? '#bfe6cc' : flow.border}`,
             cursor: 'pointer',
             font: 'inherit',
             fontSize: 12,
-            fontWeight: 600,
-            color: flow.textMuted,
-            bgcolor: flow.mutedSoft,
+            fontWeight: 700,
+            color: allDone ? '#157a3c' : flow.textMuted,
+            bgcolor: allDone ? flow.doneSoft : flow.mutedSoft,
             borderRadius: 999,
             px: 1.25,
             py: 0.4,
             whiteSpace: 'nowrap',
-            '&:hover': { bgcolor: '#E2E8F0' },
+            '&:hover': { filter: 'brightness(.97)' },
             '&:focus-visible': { outline: `2px solid ${flow.blue}`, outlineOffset: 2 },
           }}
         >
@@ -402,7 +485,7 @@ function MoreChip({ item, onClick, compact }: { item: Extract<BarItem, { kind: '
   );
 }
 
-/** One stage: its mark (check, number, cross…), name and a line on who and when. */
+/** One stage: a circle with the initials of who decided (or who it waits for), its name, then who and when. */
 function Node({ node, status }: { node: StageNode; status: ApprovalStatus }) {
   const { t } = useTranslation();
   const name = useStageName()(node);
@@ -411,17 +494,24 @@ function Node({ node, status }: { node: StageNode; status: ApprovalStatus }) {
   const current = node.state === 'Current';
   const planned = node.state === 'Planned';
   const waiting = status.waitingFor.length ? status.waitingFor : node.assignees;
+  const who = current ? waiting[0] : (node.decidedBy ?? node.assignees[0]);
+  const mark = planned ? '?' : initials(who) || String(node.order);
 
   // Each part isolated in its own <bdi>: Arabic names beside English times (and the reverse) keep their order.
   const names = waiting.slice(0, 2).join('، ') + (waiting.length > 2 ? ` +${waiting.length - 2}` : '');
   const parts: string[] = current
     ? [`${t('approvalBar.waitingFor')} ${isolate(names)}`, node.openedAt ? ago(node.openedAt) : '']
     : planned
-      ? [t('approvalBar.notStarted')]
+      ? [t('approvalBar.plannedShort')]
       : node.state === 'Canceled'
         ? [t('approvalBar.state.Canceled')]
         : [node.decidedBy ?? '', node.decidedAt ? short(node.decidedAt) : ''];
   const detail = parts.filter(Boolean);
+  const circle = current
+    ? { width: 38, height: 38, mt: '-2px', bgcolor: flow.blue, color: '#fff', border: `3px solid ${flow.blue}`, boxShadow: `0 0 0 4px ${flow.blueSoft}` }
+    : planned
+      ? { bgcolor: '#33444f', color: '#cfd9e1', border: '2px dashed #5d6f7d' }
+      : { bgcolor: look.soft, color: look.main === flow.green ? '#157a3c' : look.main, border: `2px solid ${look.main === flow.green ? flow.done : look.main}` };
 
   return (
     <Tooltip
@@ -439,64 +529,98 @@ function Node({ node, status }: { node: StageNode; status: ApprovalStatus }) {
       }
     >
       <Stack
-        direction="row"
         tabIndex={0}
         aria-label={`${name} — ${t(`approvalBar.state.${node.state}`)}${detail.length ? ` — ${detail.join(' · ')}` : ''}`}
         aria-current={current ? 'step' : undefined}
-        sx={{ alignItems: 'center', gap: 1, minWidth: 0, borderRadius: '8px', '&:focus-visible': { outline: `2px solid ${flow.blue}`, outlineOffset: 2 } }}
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          alignItems: 'center',
+          textAlign: 'center',
+          width: current ? 150 : planned ? 104 : 124,
+          gap: '1px',
+          borderRadius: '8px',
+          '&:focus-visible': { outline: `2px solid ${flow.blue}`, outlineOffset: 2 },
+        }}
       >
         <Box
           aria-hidden
           sx={{
-            flex: '0 0 auto',
-            width: 28,
-            height: 28,
+            position: 'relative',
+            width: 34,
+            height: 34,
+            mb: '3px',
             borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
-            fontSize: 13,
-            fontWeight: 700,
-            fontVariantNumeric: 'tabular-nums',
-            '& svg': { fontSize: 16 },
-            ...(current
-              ? { bgcolor: flow.blue, color: '#fff', boxShadow: `0 0 0 4px ${flow.blueSoft}` }
-              : planned
-                ? { bgcolor: '#fff', color: flow.muted, border: `1.5px solid ${flow.border}` }
-                : { bgcolor: look.soft, color: look.main }),
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '.3px',
+            ...circle,
           }}
         >
-          {look.icon ?? node.order}
+          <bdi>{mark}</bdi>
+          {look.icon && !current && !planned && (
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: -4,
+                insetInlineStart: -4,
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                border: '2px solid #fff',
+                bgcolor: look.main === flow.green ? flow.done : look.main,
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                '& svg': { fontSize: 10 },
+              }}
+            >
+              {look.icon}
+            </Box>
+          )}
         </Box>
-        <Box sx={{ minWidth: 0, maxWidth: current ? 230 : 170 }}>
+        <Typography
+          sx={{
+            maxWidth: '100%',
+            fontSize: 12.5,
+            fontWeight: 800,
+            lineHeight: 1.35,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            color: current ? flow.blue : planned ? flow.textMuted : flow.text,
+          }}
+        >
+          {name}
+          {node.round > 1 && (
+            <Box component="span" sx={{ marginInlineStart: 0.5, fontSize: 10.5, fontWeight: 700, color: flow.amber }}>
+              {t('approvalBar.round', { round: node.round })}
+            </Box>
+          )}
+        </Typography>
+        {detail.length > 0 && (
           <Typography
             sx={{
-              fontSize: 13,
-              fontWeight: 700,
+              maxWidth: '100%',
+              fontSize: 11,
               lineHeight: 1.35,
+              color: current ? flow.blue : flow.textMuted,
+              fontWeight: current ? 700 : 400,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: current ? flow.blue : planned ? flow.textMuted : flow.text,
             }}
           >
-            {name}
-            {node.round > 1 && (
-              <Box component="span" sx={{ ml: 0.75, fontSize: 11, fontWeight: 700, color: flow.amber }}>
-                {t('approvalBar.round', { round: node.round })}
-              </Box>
-            )}
+            {detail.map((part, index) => (
+              <Fragment key={index}>
+                {index > 0 && ' · '}
+                <bdi>{part}</bdi>
+              </Fragment>
+            ))}
           </Typography>
-          {detail.length > 0 && (
-            <Typography sx={{ fontSize: 11.5, lineHeight: 1.35, color: flow.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {detail.map((part, index) => (
-                <Fragment key={index}>
-                  {index > 0 && ' · '}
-                  <bdi>{part}</bdi>
-                </Fragment>
-              ))}
-            </Typography>
-          )}
-        </Box>
+        )}
       </Stack>
     </Tooltip>
   );
