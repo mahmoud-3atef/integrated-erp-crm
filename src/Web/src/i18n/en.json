@@ -6031,7 +6031,6 @@
     "to": "To",
     "refresh": "Refresh",
     "phase2": "This part comes in the second phase of moving the dashboard.",
-    "phase3": "This part comes in the third phase of moving the dashboard.",
     "tab": {
       "overview": "Overview",
       "overviewHint": "Indicators and workforce movement",
@@ -6180,6 +6179,73 @@
       "legendInvoiced": "Billed",
       "legendCollected": "Collected",
       "legendRate": "Collection rate"
+    },
+    "tasks": {
+      "total": "All tasks",
+      "done": "Completed",
+      "completion": "Completion {{rate}}%",
+      "open": "Pending now",
+      "openFoot": "Not done yet · click to view",
+      "late": "Late",
+      "lateFoot": "Past their due date · click to view",
+      "onTime": "Done on time",
+      "onTimeFoot": "Of the completed tasks",
+      "all": "All staff's tasks",
+      "ofOwner": "{{name}}'s tasks",
+      "shown": "{{count}} tasks",
+      "empty": "No tasks with this status or type. Try another status or type, or choose «All staff».",
+      "allStaff": "All staff",
+      "allTypes": "All types",
+      "listNote": "The list has every pending task and the latest {{count}} tasks completed in the period.",
+      "staff": "Staff and pending tasks",
+      "staffHint": "Sorted by late, then pending · click to see their tasks",
+      "staffSearch": "Search by staff name",
+      "ownerSub": "{{total}} tasks · {{completion}}% done · {{onTime}}% on time",
+      "oldest": "Oldest pending task: {{count}} days",
+      "lateCount": "{{count}} late",
+      "pending": "Pending",
+      "byType": "Tasks by type",
+      "statuses": "Task statuses",
+      "regarding": "Related record",
+      "doneOn": "Completed on",
+      "since": "{{count}} days ago",
+      "viewOnly": "View only: this task is from the old system and can't be opened or changed here.",
+      "col": {
+        "task": "Task",
+        "owner": "Staff member",
+        "type": "Type",
+        "created": "Created",
+        "due": "Due",
+        "status": "Status"
+      },
+      "type": {
+        "invoice": "Invoices",
+        "deliver": "Worker delivery",
+        "housing": "Housing",
+        "vacation": "Leave",
+        "permission": "Permissions",
+        "other": "Other"
+      },
+      "status": {
+        "done": "Completed",
+        "late": "Late",
+        "open": "Open, on time"
+      },
+      "filter": {
+        "pending": "Pending",
+        "late": "Late",
+        "open": "Open, on time",
+        "done": "Completed",
+        "all": "All"
+      },
+      "timing": {
+        "doneOnTime": "Done on time",
+        "doneLate": "Done {{count}} days late",
+        "late": "{{count}} days late",
+        "lateNoDue": "Open {{count}} days with no due date",
+        "noDue": "No due date",
+        "onTime": "{{count}} days left"
+      }
     }
   }
 }

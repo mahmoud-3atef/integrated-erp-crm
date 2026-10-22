@@ -23,9 +23,54 @@ public sealed record HousingEntriesDto(int Total, IReadOnlyList<RankDto> ByManag
 /// deliveries and the housing entries of a period, by project manager and by project, with their lists. The figures
 /// and the finance come from the executive report's own computations.
 /// </summary>
-internal sealed class ManagementDashboard(IWorkforceReport workforce, IPeriodLedger ledger, IHousingEntries entries, IProjectDirectory projects, IClock clock)
+internal sealed class ManagementDashboard(IWorkforceReport workforce, IPeriodLedger ledger, IHousingEntries entries, IProjectDirectory projects, LegacyTasks legacyTasks, IClock clock)
 {
     private const string NoManager = "—";
+
+    /// <summary>The completed tasks a list shows after the pending ones (the old dashboard's 300).</summary>
+    public const int CompletedShown = 300;
+
+    /// <summary>
+    /// The old system's tasks created or changed in a period (as the old dashboard took them; cancelled ones left out):
+    /// their counts, the staff by late then pending tasks, the types, and the list.
+    /// </summary>
+    public async Task<TasksDto> TasksAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var today = clock.Today;
+        bool In(DateOnly? d) => d is { } x && x >= from && x <= to;
+        var tasks = (await legacyTasks.LoadAsync(cancellationToken).ConfigureAwait(false))
+            .Where(t => !t.Canceled && (In(t.CreatedOn) || In(t.ModifiedOn))).ToList();
+        var completed = tasks.Count(t => t.Completed);
+        var onTime = tasks.Count(TaskRules.OnTime);
+
+        var owners = tasks.GroupBy(t => string.IsNullOrWhiteSpace(t.Owner) ? NoManager : t.Owner, StringComparer.Ordinal)
+            .Select(g =>
+            {
+                var pending = g.Where(t => !t.Completed).ToList();
+                var done = g.Count(t => t.Completed);
+                var oldest = pending.Select(t => t.CreatedOn).OfType<DateOnly>().DefaultIfEmpty(today).Min();
+                return new TaskOwnerDto(g.Key, g.Count(), done, pending.Count, pending.Count(t => TaskRules.Late(t, today)), pending.Count == 0 ? 0 : Math.Max(0, today.DayNumber - oldest.DayNumber),
+                    TaskRules.Rate(done, g.Count()) ?? 0, TaskRules.Rate(g.Count(TaskRules.OnTime), done) ?? 0);
+            })
+            .OrderByDescending(o => o.Overdue).ThenByDescending(o => o.Open).ThenByDescending(o => o.Total).ToList();
+
+        var types = tasks.GroupBy(t => t.Type, StringComparer.Ordinal)
+            .Select(g => new TaskTypeDto(g.Key, g.Count(), g.Count(t => t.Completed), g.Count(t => !t.Completed)))
+            .OrderByDescending(x => x.Total).ToList();
+
+        TaskRowDto Row(LegacyTask t)
+        {
+            var (timing, days) = TaskRules.Timing(t, today);
+            return new TaskRowDto(t.CrmId, t.Subject, string.IsNullOrWhiteSpace(t.Owner) ? NoManager : t.Owner, t.Type, t.Regarding, t.CreatedOn, t.DueOn, t.Completed ? t.ModifiedOn : null,
+                t.Completed ? "done" : TaskRules.Late(t, today) ? "late" : "open", timing, days, t.CreatedOn is { } c ? Math.Max(0, today.DayNumber - c.DayNumber) : 0);
+        }
+
+        var rows = tasks.Where(t => !t.Completed).OrderBy(t => t.DueOn ?? t.CreatedOn).Select(Row)
+            .Concat(tasks.Where(t => t.Completed).OrderByDescending(t => t.ModifiedOn).Take(CompletedShown).Select(Row))
+            .ToList();
+        return new TasksDto(tasks.Count, completed, tasks.Count - completed, tasks.Count(t => TaskRules.Late(t, today)), onTime,
+            TaskRules.Rate(completed, tasks.Count), TaskRules.Rate(onTime, completed), owners, types, rows);
+    }
 
     public async Task<DeliveryDto> DeliveryAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {

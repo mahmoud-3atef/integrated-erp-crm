@@ -16,6 +16,7 @@ import { presetRange } from '../reportKit';
 import { FinanceTab } from './FinanceTab';
 import { md } from './mdKit';
 import { OverviewTab } from './OverviewTab';
+import { TasksTab } from './TasksTab';
 
 type Tab = 'overview' | 'finance' | 'housing' | 'tasks';
 
@@ -146,11 +147,7 @@ export function ManagementDashboardPage() {
       <ErrorMessage messageKey={error} />
       {tab === 'overview' && <OverviewTab from={period[0]} to={period[1]} overview={overview} />}
       {tab === 'finance' && finance && <FinanceTab from={period[0]} to={period[1]} overview={overview} />}
-      {(tab === 'housing' || tab === 'tasks') && (
-        <Alert severity="info" sx={{ borderRadius: '12px' }}>
-          {t(tab === 'housing' ? 'mgmt.phase2' : 'mgmt.phase3')}
-        </Alert>
-      )}
+      {tab === 'tasks' && <TasksTab from={period[0]} to={period[1]} />}
     </Box>
   );
 }

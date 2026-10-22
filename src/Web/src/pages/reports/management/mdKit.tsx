@@ -237,7 +237,7 @@ export function VisualCard({ title, hint, icon, action, children, sx }: { title:
 }
 
 /** A pie as a ring with its legend; clicking a legend line narrows the table to it. */
-export function Donut({ items, selected, onSelect, center, size = 112 }: { items: { key: string; label: string; value: number }[]; selected?: string | null; onSelect?: (key: string) => void; center?: ReactNode; size?: number }) {
+export function Donut({ items, selected, onSelect, center, size = 112, colors = slices }: { items: { key: string; label: string; value: number }[]; selected?: string | null; onSelect?: (key: string) => void; center?: ReactNode; size?: number; colors?: string[] }) {
   const total = items.reduce((s, i) => s + i.value, 0);
   const r = 15.915;
   let offset = 0;
@@ -267,7 +267,7 @@ export function Donut({ items, selected, onSelect, center, size = 112 }: { items
               textAlign: 'start',
             }}
           >
-            <Box sx={{ width: 10, height: 10, borderRadius: '3px', flex: '0 0 auto', bgcolor: slices[index % slices.length] }} />
+            <Box sx={{ width: 10, height: 10, borderRadius: '3px', flex: '0 0 auto', bgcolor: colors[index % colors.length] }} />
             <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.label}>
               <bdi>{item.label}</bdi>
             </Box>
@@ -290,7 +290,7 @@ export function Donut({ items, selected, onSelect, center, size = 112 }: { items
                   cy="21"
                   r={r}
                   fill="none"
-                  stroke={slices[index % slices.length]}
+                  stroke={colors[index % colors.length]}
                   strokeWidth={selected === item.key ? 8.5 : 7}
                   strokeDasharray={`${part} ${100 - part}`}
                   strokeDashoffset={25 - offset}
@@ -360,7 +360,7 @@ export interface Column<T> {
 }
 
 /** The old «exec-table»: a navy header, a search box, Excel, and the rows a page at a time. */
-export function DataTable<T>({ title, badge, rows, columns, excel, empty, page = 25, filters }: { title: string; badge?: ReactNode; rows: T[]; columns: Column<T>[]; excel?: string; empty: string; page?: number; filters?: ReactNode }) {
+export function DataTable<T>({ title, badge, rows, columns, excel, empty, page = 25, filters, onRow }: { title: string; badge?: ReactNode; rows: T[]; columns: Column<T>[]; excel?: string; empty: string; page?: number; filters?: ReactNode; onRow?: (row: T) => void }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [shown, setShown] = useState(page);
@@ -408,7 +408,14 @@ export function DataTable<T>({ title, badge, rows, columns, excel, empty, page =
           </Box>
           <Box component="tbody">
             {found.slice(0, shown).map((row, index) => (
-              <Box component="tr" key={index} sx={{ '&:nth-of-type(even)': { bgcolor: '#F7FAFC' }, '&:hover': { bgcolor: '#EEF5FA' } }}>
+              <Box
+                component="tr"
+                key={index}
+                tabIndex={onRow ? 0 : undefined}
+                onClick={onRow ? () => onRow(row) : undefined}
+                onKeyDown={onRow ? (e: { key: string }) => e.key === 'Enter' && onRow(row) : undefined}
+                sx={{ cursor: onRow ? 'pointer' : 'default', '&:nth-of-type(even)': { bgcolor: '#F7FAFC' }, '&:hover': { bgcolor: '#EEF5FA' }, '&:focus-visible': { outline: `2px solid ${md.navy}`, outlineOffset: -2 } }}
+              >
                 {columns.map((c) => (
                   <Box component="td" key={c.key} sx={{ px: 1.5, py: 1.1, borderTop: `1px solid ${md.border}`, color: md.text, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {c.render(row)}

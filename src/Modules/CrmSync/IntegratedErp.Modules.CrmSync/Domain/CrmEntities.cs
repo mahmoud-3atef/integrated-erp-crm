@@ -4,11 +4,11 @@ namespace IntegratedErp.Modules.CrmSync.Domain;
 
 /// <summary>
 /// One CRM entity copied to staging: its logical name (the CRM view <c>dbo.{Name}</c>, key column <c>{Name}id</c>,
-/// change column <c>modifiedon</c>) and how people call it.
+/// change column <c>modifiedon</c>) and how people call it. An activity (a task) is keyed by <c>activityid</c>: <paramref name="Key"/>.
 /// </summary>
-public sealed partial record CrmEntity(string Name, string NameAr, string NameEn)
+public sealed partial record CrmEntity(string Name, string NameAr, string NameEn, string? Key = null)
 {
-    public string IdColumn => Name + "id";
+    public string IdColumn => Key ?? Name + "id";
 
     /// <summary>CRM logical names are lower-case letters, digits and '_' only; anything else is never put in SQL.</summary>
     public static bool IsValidName(string name) => NamePattern().IsMatch(name);
@@ -41,6 +41,7 @@ public static class CrmEntities
         new("hr_vicrequest", "طلبات الإجازات", "Vacation requests"),
         new("new_invoice", "فواتير المشاريع", "Project invoices"),
         new("new_invoicdetail", "تفاصيل الفواتير", "Invoice lines"),
+        new("task", "المهام", "Tasks", "activityid"),
     ];
 
     public static CrmEntity? Find(string name) => All.FirstOrDefault(e => e.Name == name);

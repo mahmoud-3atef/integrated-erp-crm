@@ -25,6 +25,7 @@ public sealed class ReportsModule : IModule
         services.AddScoped<ExecutiveReport>();
         services.AddScoped<MovementReport>();
         services.AddScoped<ManagementDashboard>();
+        services.AddScoped<LegacyTasks>();
         services.AddScoped<ProfitReport>();
         services.AddScoped<CeoReport>();
         services.AddScoped<WorkerLegacyInvoices>();
