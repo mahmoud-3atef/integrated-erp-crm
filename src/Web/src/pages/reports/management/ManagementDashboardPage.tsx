@@ -5,6 +5,7 @@ import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined';
 import { Alert, Box, Button, ButtonBase, Stack, Typography } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import type { Overview } from '../../../api/reports';
@@ -37,6 +38,7 @@ const tabs: { key: Tab; icon: ReactNode; color: string }[] = [
  */
 export function ManagementDashboardPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { can } = useSession();
   const [tab, setTab] = useState<Tab>('overview');
   const [draft, setDraft] = useState<[string, string]>(() => presetRange('month'));
@@ -69,14 +71,14 @@ export function ManagementDashboardPage() {
     <Box sx={{ color: md.ink }}>
       {/* The tabs and the period on a glass strip; each tab a translucent glass pill, the active one tinted with its colour. */}
       <Stack
-        direction={{ xs: 'column', lg: 'row' }}
+        direction={{ xs: 'column', md: 'row' }}
         sx={{
-          gap: 1.5,
-          alignItems: { lg: 'center' },
+          gap: 1,
+          alignItems: { md: 'center' },
           justifyContent: 'space-between',
-          p: '10px 12px',
-          mb: 2,
-          borderRadius: '18px',
+          p: '6px 8px',
+          mb: 1.75,
+          borderRadius: '16px',
           bgcolor: 'rgba(255,255,255,.55)',
           border: '1px solid rgba(255,255,255,.85)',
           backdropFilter: 'blur(14px) saturate(160%)',
@@ -92,8 +94,13 @@ export function ManagementDashboardPage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => {
+                  // «السكن» opens the housing screen already built (the user's choice): no second housing report.
+                  if (x.key === 'housing') {
+                    navigate('/housing');
+                    return;
+                  }
                   setTab(x.key);
-                  if ((x.key === 'finance' || x.key === 'housing') && defaulted) {
+                  if (x.key === 'finance' && defaulted) {
                     const next: [string, string] = [financeFrom, period[1]];
                     setDefaulted(false);
                     setDraft(next);
@@ -101,10 +108,10 @@ export function ManagementDashboardPage() {
                   }
                 }}
                 sx={{
-                  gap: 1.25,
-                  minHeight: 52,
-                  ps: 1,
-                  pe: 2.25,
+                  gap: 0.75,
+                  minHeight: 40,
+                  ps: 0.75,
+                  pe: 1.75,
                   borderRadius: '14px',
                   textAlign: 'start',
                   color: active ? '#fff' : md.text,
@@ -117,21 +124,20 @@ export function ManagementDashboardPage() {
                   '&:focus-visible': { outline: `2px solid ${x.color}`, outlineOffset: 2 },
                 }}
               >
-                <Box aria-hidden sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 21 } }}>
+                <Box aria-hidden sx={{ width: 26, height: 26, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 19 } }}>
                   {x.icon}
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3 }}>{t(`mgmt.tab.${x.key}`)}</Typography>
-                  <Typography sx={{ fontSize: 11, opacity: active ? 0.85 : 0.7, lineHeight: 1.3, display: { xs: 'none', md: 'block' } }}>{t(`mgmt.tab.${x.key}Hint`)}</Typography>
+                  <Typography title={t(`mgmt.tab.${x.key}Hint`)} sx={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.3 }}>{t(`mgmt.tab.${x.key}`)}</Typography>
                 </Box>
               </ButtonBase>
             );
           })}
         </Stack>
         <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <DateField pickOnly label={t('mgmt.from')} value={draft[0]} onChange={(e) => setDraft(([, b]) => [e.target.value, b])} sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
-          <DateField pickOnly label={t('mgmt.to')} value={draft[1]} onChange={(e) => setDraft(([a]) => [a, e.target.value])} sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
-          <Button variant="contained" disableElevation disabled={!valid} onClick={() => (setDefaulted(false), setPeriod(draft))} sx={{ borderRadius: '999px', px: 2.5, height: 38, bgcolor: md.navy, fontWeight: 700, '&:hover': { bgcolor: md.navyDeep } }}>
+          <DateField pickOnly label={t('mgmt.from')} value={draft[0]} onChange={(e) => setDraft(([, b]) => [e.target.value, b])} size="small" sx={{ width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
+          <DateField pickOnly label={t('mgmt.to')} value={draft[1]} onChange={(e) => setDraft(([a]) => [a, e.target.value])} size="small" sx={{ width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
+          <Button variant="contained" disableElevation disabled={!valid} onClick={() => (setDefaulted(false), setPeriod(draft))} sx={{ borderRadius: '999px', px: 2.25, height: 34, bgcolor: md.navy, fontWeight: 700, '&:hover': { bgcolor: md.navyDeep } }}>
             {t('mgmt.refresh')}
           </Button>
         </Stack>

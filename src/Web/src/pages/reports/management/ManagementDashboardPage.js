@@ -6,6 +6,7 @@ import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined';
 import { Alert, Box, Button, ButtonBase, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import { useSession } from '../../../app/session';
@@ -32,6 +33,7 @@ const tabs = [
  */
 export function ManagementDashboardPage() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { can } = useSession();
     const [tab, setTab] = useState('overview');
     const [draft, setDraft] = useState(() => presetRange('month'));
@@ -59,13 +61,13 @@ export function ManagementDashboardPage() {
         return _jsx(Alert, { severity: "warning", children: t('mgmt.noAccess') });
     const shown = tabs.filter((x) => x.key !== 'finance' || finance);
     const valid = draft[0] && draft[1] && draft[0] <= draft[1];
-    return (_jsxs(Box, { sx: { color: md.ink }, children: [_jsxs(Stack, { direction: { xs: 'column', lg: 'row' }, sx: {
-                    gap: 1.5,
-                    alignItems: { lg: 'center' },
+    return (_jsxs(Box, { sx: { color: md.ink }, children: [_jsxs(Stack, { direction: { xs: 'column', md: 'row' }, sx: {
+                    gap: 1,
+                    alignItems: { md: 'center' },
                     justifyContent: 'space-between',
-                    p: '10px 12px',
-                    mb: 2,
-                    borderRadius: '18px',
+                    p: '6px 8px',
+                    mb: 1.75,
+                    borderRadius: '16px',
                     bgcolor: 'rgba(255,255,255,.55)',
                     border: '1px solid rgba(255,255,255,.85)',
                     backdropFilter: 'blur(14px) saturate(160%)',
@@ -73,18 +75,23 @@ export function ManagementDashboardPage() {
                 }, children: [_jsx(Stack, { direction: "row", role: "tablist", "aria-label": t('mgmt.sections'), sx: { gap: 1, flexWrap: 'wrap' }, children: shown.map((x) => {
                             const active = tab === x.key;
                             return (_jsxs(ButtonBase, { role: "tab", "aria-selected": active, onClick: () => {
+                                    // «السكن» opens the housing screen already built (the user's choice): no second housing report.
+                                    if (x.key === 'housing') {
+                                        navigate('/housing');
+                                        return;
+                                    }
                                     setTab(x.key);
-                                    if ((x.key === 'finance' || x.key === 'housing') && defaulted) {
+                                    if (x.key === 'finance' && defaulted) {
                                         const next = [financeFrom, period[1]];
                                         setDefaulted(false);
                                         setDraft(next);
                                         setPeriod(next);
                                     }
                                 }, sx: {
-                                    gap: 1.25,
-                                    minHeight: 52,
-                                    ps: 1,
-                                    pe: 2.25,
+                                    gap: 0.75,
+                                    minHeight: 40,
+                                    ps: 0.75,
+                                    pe: 1.75,
                                     borderRadius: '14px',
                                     textAlign: 'start',
                                     color: active ? '#fff' : md.text,
@@ -95,6 +102,6 @@ export function ManagementDashboardPage() {
                                     transition: 'background-color .2s, box-shadow .2s',
                                     '&:hover': { bgcolor: active ? `${x.color}D9` : 'rgba(255,255,255,.7)' },
                                     '&:focus-visible': { outline: `2px solid ${x.color}`, outlineOffset: 2 },
-                                }, children: [_jsx(Box, { "aria-hidden": true, sx: { width: 34, height: 34, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 21 } }, children: x.icon }), _jsxs(Box, { children: [_jsx(Typography, { sx: { fontSize: 14, fontWeight: 700, lineHeight: 1.3 }, children: t(`mgmt.tab.${x.key}`) }), _jsx(Typography, { sx: { fontSize: 11, opacity: active ? 0.85 : 0.7, lineHeight: 1.3, display: { xs: 'none', md: 'block' } }, children: t(`mgmt.tab.${x.key}Hint`) })] })] }, x.key));
-                        }) }), _jsxs(Stack, { direction: "row", sx: { gap: 1, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx(DateField, { pickOnly: true, label: t('mgmt.from'), value: draft[0], onChange: (e) => setDraft(([, b]) => [e.target.value, b]), sx: { width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } } }), _jsx(DateField, { pickOnly: true, label: t('mgmt.to'), value: draft[1], onChange: (e) => setDraft(([a]) => [a, e.target.value]), sx: { width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } } }), _jsx(Button, { variant: "contained", disableElevation: true, disabled: !valid, onClick: () => (setDefaulted(false), setPeriod(draft)), sx: { borderRadius: '999px', px: 2.5, height: 38, bgcolor: md.navy, fontWeight: 700, '&:hover': { bgcolor: md.navyDeep } }, children: t('mgmt.refresh') })] })] }), _jsx(ErrorMessage, { messageKey: error }), tab === 'overview' && _jsx(OverviewTab, { from: period[0], to: period[1], overview: overview }), tab === 'finance' && finance && _jsx(FinanceTab, { from: period[0], to: period[1], overview: overview }), (tab === 'housing' || tab === 'tasks') && (_jsx(Alert, { severity: "info", sx: { borderRadius: '12px' }, children: t(tab === 'housing' ? 'mgmt.phase2' : 'mgmt.phase3') }))] }));
+                                }, children: [_jsx(Box, { "aria-hidden": true, sx: { width: 26, height: 26, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 19 } }, children: x.icon }), _jsx(Box, { children: _jsx(Typography, { title: t(`mgmt.tab.${x.key}Hint`), sx: { fontSize: 13.5, fontWeight: 700, lineHeight: 1.3 }, children: t(`mgmt.tab.${x.key}`) }) })] }, x.key));
+                        }) }), _jsxs(Stack, { direction: "row", sx: { gap: 1, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx(DateField, { pickOnly: true, label: t('mgmt.from'), value: draft[0], onChange: (e) => setDraft(([, b]) => [e.target.value, b]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } } }), _jsx(DateField, { pickOnly: true, label: t('mgmt.to'), value: draft[1], onChange: (e) => setDraft(([a]) => [a, e.target.value]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } } }), _jsx(Button, { variant: "contained", disableElevation: true, disabled: !valid, onClick: () => (setDefaulted(false), setPeriod(draft)), sx: { borderRadius: '999px', px: 2.25, height: 34, bgcolor: md.navy, fontWeight: 700, '&:hover': { bgcolor: md.navyDeep } }, children: t('mgmt.refresh') })] })] }), _jsx(ErrorMessage, { messageKey: error }), tab === 'overview' && _jsx(OverviewTab, { from: period[0], to: period[1], overview: overview }), tab === 'finance' && finance && _jsx(FinanceTab, { from: period[0], to: period[1], overview: overview }), (tab === 'housing' || tab === 'tasks') && (_jsx(Alert, { severity: "info", sx: { borderRadius: '12px' }, children: t(tab === 'housing' ? 'mgmt.phase2' : 'mgmt.phase3') }))] }));
 }
