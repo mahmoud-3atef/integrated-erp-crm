@@ -15,18 +15,18 @@ import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers, type Column }
 type StatusFilter = 'pending' | TaskStatus | 'all';
 
 const typeLook: Record<TaskType, { color: string; bg: string }> = {
-  invoice: { color: md.teal, bg: '#E3F4F5' },
-  deliver: { color: '#1F78C8', bg: '#E8F1FB' },
-  housing: { color: md.brown, bg: '#F6ECE2' },
-  vacation: { color: md.amberDeep, bg: '#FDF3E1' },
-  permission: { color: '#7C5CBF', bg: '#F0EBFA' },
-  other: { color: md.muted, bg: '#EEF2F5' },
+  invoice: { color: md.teal, bg: md.glassHi },
+  deliver: { color: '#1F78C8', bg: md.glassHi },
+  housing: { color: md.brown, bg: md.glassHi },
+  vacation: { color: md.amberDeep, bg: md.glassHi },
+  permission: { color: '#7C5CBF', bg: md.glassHi },
+  other: { color: md.muted, bg: md.glassHi },
 };
 
 const statusLook: Record<TaskStatus, { color: string; bg: string }> = {
-  done: { color: md.greenDeep, bg: '#E7F6EC' },
-  late: { color: md.red, bg: '#FDEEEE' },
-  open: { color: md.blue, bg: '#E6F4FA' },
+  done: { color: md.greenDeep, bg: md.glassHi },
+  late: { color: md.red, bg: md.glassHi },
+  open: { color: md.blue, bg: md.glassHi },
 };
 
 /**
@@ -195,7 +195,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
         </Box>
 
         <Box sx={finCard}>
-          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.navy }}>
+          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title }}>
             {t('mgmt.tasks.staff')}
           </Typography>
           <Typography sx={{ fontSize: 11.5, color: md.muted, mb: 1 }}>{t('mgmt.tasks.staffHint')}</Typography>
@@ -215,7 +215,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
                     textAlign: 'start',
                     border: `1px solid ${owner === o.name ? md.navy : md.border}`,
                     boxShadow: `inset -3px 0 0 ${late ? md.red : o.open ? md.blue : md.green}`,
-                    bgcolor: owner === o.name ? '#EEF5FA' : '#fff',
+                    bgcolor: owner === o.name ? md.glassHi : md.glass,
                   }}
                 >
                   <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: md.navy, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, flex: '0 0 auto' }}>
@@ -246,7 +246,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
 
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.4fr) minmax(0, 1fr)' } }}>
         <Box sx={finCard}>
-          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.navy, mb: 1.5 }}>
+          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title, mb: 1.5 }}>
             {t('mgmt.tasks.byType')}
           </Typography>
           <Stack sx={{ gap: 1 }}>
@@ -271,7 +271,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
           </Stack>
         </Box>
         <Box sx={finCard}>
-          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.navy, mb: 1.5 }}>
+          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title, mb: 1.5 }}>
             {t('mgmt.tasks.statuses')}
           </Typography>
           <Donut
@@ -288,7 +288,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
       <Dialog open={!!shown} onClose={() => setShown(null)} maxWidth="sm" fullWidth aria-labelledby="task-title">
         {shown && (
           <>
-            <DialogTitle id="task-title" sx={{ fontWeight: 700, color: md.navy }}>
+            <DialogTitle id="task-title" sx={{ fontWeight: 700, color: md.title }}>
               <bdi>{shown.subject || '—'}</bdi>
             </DialogTitle>
             <DialogContent dividers>
@@ -336,7 +336,7 @@ function Timing({ row }: { row: TaskRow }) {
       ? statusLook.late
       : row.timing === 'doneOnTime'
         ? statusLook.done
-        : { color: md.muted, bg: '#EEF2F5' };
+        : { color: md.muted, bg: md.glassHi };
   return <Pill {...look}>{t(`mgmt.tasks.timing.${row.timing}`, { count: row.timingDays })}</Pill>;
 }
 
@@ -353,7 +353,7 @@ function Chip({ active, onClick, dot, children }: { active: boolean; onClick: ()
   return (
     <ButtonBase
       onClick={onClick}
-      sx={{ gap: 0.75, px: 1.5, py: 0.6, borderRadius: 999, fontSize: 12, fontWeight: 700, color: active ? '#fff' : md.text, bgcolor: active ? md.navy : '#F3F7FA', border: `1px solid ${active ? md.navy : md.border}` }}
+      sx={{ gap: 0.75, px: 1.5, py: 0.6, borderRadius: 999, fontSize: 12, fontWeight: 700, color: active ? '#fff' : md.text, bgcolor: active ? md.navy : md.glassHi, border: `1px solid ${active ? md.navy : md.border}` }}
     >
       {dot && <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: dot }} />}
       {children}
@@ -366,14 +366,14 @@ function TaskKpi({ color, icon, label, value, foot, footColor, valueColor, onCli
     <ButtonBase
       onClick={onClick}
       disabled={!onClick}
-      sx={{ justifyContent: 'flex-start', gap: 1.5, p: '12px 14px', borderRadius: '12px', bgcolor: '#fff', border: `1px solid ${md.border}`, boxShadow: `inset 0 3px 0 ${color}, 0 4px 14px rgba(10,60,88,.07)`, textAlign: 'start' }}
+      sx={{ justifyContent: 'flex-start', gap: 1.5, p: '12px 14px', borderRadius: '12px', bgcolor: md.glass, border: `1px solid ${md.border}`, boxShadow: `inset 0 3px 0 ${color}, 0 4px 14px rgba(10,60,88,.07)`, textAlign: 'start' }}
     >
       <Box aria-hidden sx={{ width: 42, height: 42, borderRadius: '50%', bgcolor: color, color: '#fff', display: 'grid', placeItems: 'center', flex: '0 0 auto', '& svg': { fontSize: 21 } }}>
         {icon}
       </Box>
       <Box sx={{ minWidth: 0 }}>
         <Typography sx={{ fontSize: 12.5, color: md.label }}>{label}</Typography>
-        <Typography component="div" sx={{ fontSize: 24, fontWeight: 700, color: valueColor ?? md.navy, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums' }}>
+        <Typography component="div" sx={{ fontSize: 24, fontWeight: 700, color: valueColor ?? md.glow, textShadow: valueColor ? undefined : md.glowShadow, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums' }}>
           {value}
         </Typography>
         <Typography sx={{ fontSize: 11, color: footColor ?? md.muted }}>{foot}</Typography>

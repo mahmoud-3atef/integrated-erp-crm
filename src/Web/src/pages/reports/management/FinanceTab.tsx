@@ -98,7 +98,7 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
             </MenuItem>
           ))}
         </TextField>
-        <Button component={RouterLink} to="/billing/invoices" startIcon={<ReceiptLongOutlinedIcon />} sx={{ bgcolor: '#fff', color: md.navy, fontWeight: 700, borderRadius: '10px', px: 1.75, '&:hover': { bgcolor: '#EEF5FA' } }}>
+        <Button component={RouterLink} to="/billing/invoices" startIcon={<ReceiptLongOutlinedIcon />} sx={{ bgcolor: md.glass, color: md.title, fontWeight: 700, borderRadius: '10px', px: 1.75, '&:hover': { bgcolor: md.glassHi } }}>
           {t('mgmt.fin.monthly')}
         </Button>
       </Box>
@@ -168,8 +168,8 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
                 {data.debtors.slice(0, 12).map((d, index) => {
                   const top = data.debtors[0]?.outstanding || 1;
                   return (
-                    <Stack key={d.projectCrmId ?? d.name} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1, borderRadius: '12px', '&:hover': { bgcolor: '#F3F7FA' } }}>
-                      <Box sx={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: md.red, bgcolor: '#FDEEEE', flex: '0 0 auto' }}>{index + 1}</Box>
+                    <Stack key={d.projectCrmId ?? d.name} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1, borderRadius: '12px', '&:hover': { bgcolor: md.glassHi } }}>
+                      <Box sx={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: md.red, bgcolor: md.glassHi, flex: '0 0 auto' }}>{index + 1}</Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography sx={{ fontSize: 13, fontWeight: 700, color: md.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           <bdi>{d.name}</bdi>
@@ -231,7 +231,7 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
               <CardHead icon={<PersonOutlineIcon />} title={t('mgmt.fin.byManager')} hint={t('mgmt.fin.byManagerHint')} />
               <Stack sx={{ gap: 1, maxHeight: 420, overflowY: 'auto', scrollbarWidth: 'thin', pe: 0.5 }}>
                 {data.managers.map((m) => (
-                  <Stack key={m.manager} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1.25, borderRadius: '12px', bgcolor: '#F7FAFC', border: `1px solid ${md.border}` }}>
+                  <Stack key={m.manager} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1.25, borderRadius: '12px', bgcolor: md.glassHi, border: `1px solid ${md.border}` }}>
                     <Box sx={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', bgcolor: md.navy, flex: '0 0 auto' }}>
                       <bdi>{Array.from(m.manager.trim())[0]?.toUpperCase() ?? '—'}</bdi>
                     </Box>
@@ -259,7 +259,7 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
               fullWidth
               onClick={() => setShowInvoices((s) => !s)}
               endIcon={<ExpandMoreIcon sx={{ transform: showInvoices ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />}
-              sx={{ justifyContent: 'space-between', color: md.navy, fontWeight: 700, fontSize: 14 }}
+              sx={{ justifyContent: 'space-between', color: md.title, fontWeight: 700, fontSize: 14 }}
             >
               <span>
                 {t('mgmt.fin.invoices')}{' '}
@@ -285,7 +285,7 @@ function CardHead({ icon, title, hint }: { icon: ReactNode; title: string; hint?
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
       <Box sx={{ color: md.teal, display: 'flex', '& svg': { fontSize: 19 } }}>{icon}</Box>
-      <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.navy }}>
+      <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title }}>
         {title}
       </Typography>
       {hint && <Typography sx={{ fontSize: 11.5, color: md.muted, marginInlineStart: 'auto' }}>{hint}</Typography>}
@@ -297,14 +297,14 @@ function CardHead({ icon, title, hint }: { icon: ReactNode; title: string; hint?
 function FinKpi({ color, icon, label, value, unit, valueColor, children }: { color: string; icon: ReactNode; label: string; value: string; unit?: string; valueColor?: string; children?: ReactNode }) {
   const { t } = useTranslation();
   return (
-    <Box sx={{ bgcolor: '#fff', border: `1px solid ${md.border}`, borderTop: `4px solid ${color}`, borderRadius: '18px', boxShadow: '0 4px 14px rgba(10,60,88,.07)', p: '16px 18px', minWidth: 0 }}>
+    <Box sx={{ bgcolor: md.glass, border: `1px solid ${md.border}`, borderTop: `4px solid ${color}`, borderRadius: '18px', boxShadow: '0 4px 14px rgba(10,60,88,.07)', p: '16px 18px', minWidth: 0 }}>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1 }}>
         <Box aria-hidden sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color, bgcolor: `${color}1A`, '& svg': { fontSize: 18 } }}>
           {icon}
         </Box>
         <Typography sx={{ fontSize: 12.5, color: md.label, fontWeight: 600 }}>{label}</Typography>
       </Stack>
-      <Typography component="div" sx={{ fontSize: 24, fontWeight: 700, color: valueColor ?? md.navy, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
+      <Typography component="div" sx={{ fontSize: 24, fontWeight: 700, color: valueColor ?? md.glow, textShadow: valueColor ? undefined : md.glowShadow, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
         <bdi>{value}</bdi>
         <Box component="small" sx={{ fontSize: 13, fontWeight: 600, color: md.muted, marginInlineStart: 0.75 }}>
           {unit ?? t('mgmt.unit.sar')}
@@ -356,7 +356,7 @@ function Aging({ data }: { data: Finance }) {
         {data.aging.map((a) => {
           const look = agingLook[a.bucket - 1]!;
           return (
-            <Stack key={a.bucket} direction="row" sx={{ alignItems: 'center', gap: 1, p: 1, borderRadius: '10px', bgcolor: '#F7FAFC', borderInlineStart: `3px solid ${look.color}` }}>
+            <Stack key={a.bucket} direction="row" sx={{ alignItems: 'center', gap: 1, p: 1, borderRadius: '10px', bgcolor: md.glassHi, borderInlineStart: `3px solid ${look.color}` }}>
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: md.ink, minWidth: 92 }}>{t(`mgmt.fin.bucket.${a.bucket}`)}</Typography>
               <Pill color={look.color} bg={`${look.color}1A`}>
                 {t(`mgmt.fin.age.${look.key}`)}

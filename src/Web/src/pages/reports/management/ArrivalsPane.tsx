@@ -15,10 +15,10 @@ import { ErrorMessage } from '../../../auth/AuthLayout';
 import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard, type Column } from './mdKit';
 
 const statusLook: Record<ArrivalStatus, { color: string; bg: string }> = {
-  working: { color: md.teal, bg: '#E3F4F5' },
-  housing: { color: md.amberDeep, bg: '#FDF3E1' },
-  vacation: { color: md.greenDeep, bg: '#E7F6EC' },
-  other: { color: md.muted, bg: '#EEF2F5' },
+  working: { color: md.teal, bg: md.glassHi },
+  housing: { color: md.amberDeep, bg: md.glassHi },
+  vacation: { color: md.greenDeep, bg: md.glassHi },
+  other: { color: md.muted, bg: md.glassHi },
 };
 
 /**
@@ -150,7 +150,7 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
               <ButtonBase
                 key={s.supplier}
                 onClick={() => setFilter((x) => ({ supplier: x.supplier === s.supplier ? undefined : s.supplier }))}
-                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 120px) minmax(0,1fr) 36px 58px', gap: 1, alignItems: 'center', p: 0.6, borderRadius: '8px', textAlign: 'start', bgcolor: filter.supplier === s.supplier ? '#EEF5FA' : 'transparent' }}
+                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 120px) minmax(0,1fr) 36px 58px', gap: 1, alignItems: 'center', p: 0.6, borderRadius: '8px', textAlign: 'start', bgcolor: filter.supplier === s.supplier ? md.glassHi : 'transparent' }}
               >
                 <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <bdi>{s.supplier === '—' ? t('mgmt.arrivals.noSupplier') : s.supplier}</bdi>
@@ -159,7 +159,7 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
                   <Box sx={{ flex: s.working, bgcolor: statusLook.working.color }} />
                   <Box sx={{ flex: s.housing, bgcolor: statusLook.housing.color }} />
                   <Box sx={{ flex: s.vacation, bgcolor: statusLook.vacation.color }} />
-                  <Box sx={{ flex: s.other, bgcolor: '#C3CDD5' }} />
+                  <Box sx={{ flex: s.other, bgcolor: 'rgba(255,255,255,.28)' }} />
                 </Stack>
                 <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, textAlign: 'end' }}>{s.total}</Typography>
                 <Typography sx={{ fontSize: 11, color: md.teal, fontWeight: 700 }}>{t('mgmt.arrivals.workPct', { rate: f.n(s.workShare) })}</Typography>
@@ -175,12 +175,12 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
             onSelect={(key) => setFilter((x) => ({ status: x.status === key ? undefined : (key as ArrivalStatus) }))}
             center={
               <Box>
-                <Typography sx={{ fontSize: 20, fontWeight: 700, color: md.navy, lineHeight: 1 }}>{f.n(data.total)}</Typography>
+                <Typography sx={{ fontSize: 20, fontWeight: 700, color: md.title, lineHeight: 1 }}>{f.n(data.total)}</Typography>
                 <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.unit.worker')}</Typography>
               </Box>
             }
           />
-          <Typography component="h4" sx={{ fontSize: 13, fontWeight: 700, color: md.navy, mt: 1.5, mb: 0.75 }}>
+          <Typography component="h4" sx={{ fontSize: 13, fontWeight: 700, color: md.title, mt: 1.5, mb: 0.75 }}>
             {t('mgmt.arrivals.byMonth')}
           </Typography>
           <Stack sx={{ gap: 0.5 }}>
@@ -216,13 +216,13 @@ function Mini({ color, icon, value, label, hint, onClick }: { color: string; ico
     <ButtonBase
       onClick={onClick}
       disabled={!onClick}
-      sx={{ justifyContent: 'flex-start', alignItems: 'flex-start', gap: 1.25, p: '12px 14px', borderRadius: '14px', bgcolor: '#fff', border: `1px solid ${md.border}`, boxShadow: `inset -3px 0 0 ${color}`, textAlign: 'start' }}
+      sx={{ justifyContent: 'flex-start', alignItems: 'flex-start', gap: 1.25, p: '12px 14px', borderRadius: '14px', bgcolor: md.glass, border: `1px solid ${md.border}`, boxShadow: `inset -3px 0 0 ${color}`, textAlign: 'start' }}
     >
       <Box aria-hidden sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: `${color}1A`, color, display: 'grid', placeItems: 'center', flex: '0 0 auto', '& svg': { fontSize: 20 } }}>
         {icon}
       </Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontSize: 22, fontWeight: 700, color: md.navy, lineHeight: 1.2 }}>{value}</Typography>
+        <Typography sx={{ fontSize: 22, fontWeight: 700, color: md.title, lineHeight: 1.2 }}>{value}</Typography>
         <Typography sx={{ fontSize: 12, color: md.label }}>{label}</Typography>
         {hint && <Typography component="div" sx={{ fontSize: 11, color, fontWeight: 600 }}>{hint}</Typography>}
       </Box>

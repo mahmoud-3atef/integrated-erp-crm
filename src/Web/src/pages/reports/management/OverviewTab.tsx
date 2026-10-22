@@ -62,7 +62,7 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
       </Box>
       </GlassStrip>
 
-      <Box sx={{ bgcolor: '#fff', border: `1px solid ${md.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(10,60,88,.05), 0 10px 26px rgba(10,60,88,.07)', p: { xs: 1.5, md: '14px' }, minWidth: 0 }}>
+      <Box sx={{ bgcolor: md.glass, border: `1px solid ${md.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(10,60,88,.05), 0 10px 26px rgba(10,60,88,.07)', p: { xs: 1.5, md: '14px' }, minWidth: 0 }}>
         <Stack direction="row" role="tablist" sx={{ gap: 3, borderBottom: `1px solid ${md.border}`, mb: 2, px: 1, overflowX: 'auto' }}>
           {(['delivery', 'housing', 'arrivals'] as Inner[]).map((key) => (
             <ButtonBase
@@ -175,9 +175,9 @@ function DeliveryPane({ from, to }: { from: string; to: string }) {
 }
 
 const entryLook: Record<string, { color: string; bg: string }> = {
-  NewArrival: { color: '#1F78C8', bg: '#E8F1FB' },
-  ReturnedWorker: { color: md.amberDeep, bg: '#FDF3E1' },
-  BackFromVacation: { color: md.greenDeep, bg: '#E7F6EC' },
+  NewArrival: { color: '#1F78C8', bg: md.glassHi },
+  ReturnedWorker: { color: md.amberDeep, bg: md.glassHi },
+  BackFromVacation: { color: md.greenDeep, bg: md.glassHi },
 };
 
 /** «حركة دخول السكن»: the approved housing orders of the period, by manager, project, way in and reason. */
@@ -235,7 +235,7 @@ function HousingPane({ from, to }: { from: string; to: string }) {
             <ButtonBase
               key={key}
               onClick={() => setFilter((x) => ({ entry: x.entry === key ? undefined : key }))}
-              sx={{ justifyContent: 'space-between', gap: 1, p: 1.5, borderRadius: '14px', border: `1px solid ${filter.entry === key ? look.color : md.border}`, bgcolor: '#fff', textAlign: 'start' }}
+              sx={{ justifyContent: 'space-between', gap: 1, p: 1.5, borderRadius: '14px', border: `1px solid ${filter.entry === key ? look.color : md.border}`, bgcolor: md.glass, textAlign: 'start' }}
             >
               <Box>
                 <Typography sx={{ fontSize: 13, fontWeight: 700, color: md.ink }}>{t(`mgmt.entry.${key}`)}</Typography>
@@ -283,12 +283,12 @@ function ReasonChip({ label, count, share, active, onClick }: { label: string; c
         fontSize: 12.5,
         fontWeight: 700,
         color: active ? '#fff' : md.text,
-        bgcolor: active ? md.navy : '#F3F7FA',
+        bgcolor: active ? md.navy : md.glassHi,
         border: `1px solid ${active ? md.navy : md.border}`,
       }}
     >
       <span>{label}</span>
-      <Box component="em" sx={{ fontStyle: 'normal', fontSize: 11.5, px: 0.75, borderRadius: 999, bgcolor: active ? 'rgba(255,255,255,.2)' : '#fff' }}>
+      <Box component="em" sx={{ fontStyle: 'normal', fontSize: 11.5, px: 0.75, borderRadius: 999, bgcolor: active ? 'rgba(255,255,255,.2)' : md.glassHi }}>
         {count}
       </Box>
       {share !== undefined && <Box aria-hidden sx={{ position: 'absolute', insetInlineStart: 0, bottom: 0, height: 3, width: `${share * 100}%`, bgcolor: md.amber }} />}
