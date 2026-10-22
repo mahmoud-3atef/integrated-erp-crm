@@ -56,6 +56,7 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
 
   const [staged, setStaged] = useState<Staged[]>([]);
   const [worker, setWorker] = useState<(typeof workers)[number] | null>(null);
+  const [search, setSearch] = useState('');
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [reason, setReason] = useState('');
   const [preview, setPreview] = useState<VariablesPreview | null>(null);
@@ -64,10 +65,13 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
   const [error, setError] = useState<string | null>(null);
 
   const open = (w: (typeof workers)[number] | null) => {
+    // Moving to another worker keeps what was entered for this one (as «إضافة المتغيرات» would).
+    const list = worker && w?.workerId !== worker.workerId ? keep(staged) : staged;
+    setStaged(list);
     setWorker(w);
     setProblem(null);
     if (!w) return;
-    const kept = staged.find((s) => s.workerId === w.workerId);
+    const kept = list.find((s) => s.workerId === w.workerId);
     const base = { ...saved(w.workerId), ...(kept?.totals ?? {}) };
     setDraft(Object.fromEntries(groups.flatMap((g) => g.types).map((type) => [type, base[type] ? String(base[type]) : ''])));
     setReason(kept?.reason ?? '');
@@ -102,10 +106,14 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
   }, [sheet.id, body]);
 
   const workerPreview = worker ? preview?.workers.find((x) => x.workerId === worker.workerId) : undefined;
+  // The list with the worker being entered in it (replacing what it had for them; none when nothing changed).
+  const keep = (list: Staged[]) =>
+    worker ? [...list.filter((s) => s.workerId !== worker.workerId), ...(Object.keys(changes).length ? [{ workerId: worker.workerId, totals: changes, reason: reason.trim() }] : [])] : list;
   const add = () => {
     if (!worker) return;
-    setStaged((list) => [...list.filter((s) => s.workerId !== worker.workerId), ...(Object.keys(changes).length ? [{ workerId: worker.workerId, totals: changes, reason: reason.trim() }] : [])]);
+    setStaged(keep(staged));
     setWorker(null);
+    setSearch('');
   };
   const save = async () => {
     setBusy(true);
@@ -121,6 +129,7 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
 
   const nameOf = (id: string) => workers.find((w) => w.workerId === id);
   const canAdd = !!worker && Object.keys(changes).length > 0 && reason.trim().length > 0 && !problem;
+  const missingReason = staged.some((s) => !s.reason);
 
   return (
     <Dialog open onClose={busy ? undefined : onClose} fullWidth maxWidth="lg" aria-labelledby="variables-title">
@@ -136,6 +145,12 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
           options={workers}
           value={worker}
           onChange={(_, w) => open(w)}
+          inputValue={search}
+          onInputChange={(_, text, why) => why !== 'reset' && setSearch(text)}
+          filterOptions={(options, state) => {
+            const q = state.inputValue.trim().toLowerCase();
+            return q ? options.filter((w) => [w.workerNo, w.name, w.iqamaNo ?? ''].some((x) => x.toLowerCase().includes(q))) : options;
+          }}
           getOptionLabel={(w) => `${w.workerNo} · ${w.name}${w.iqamaNo ? ` · ${w.iqamaNo}` : ''}`}
           isOptionEqualToValue={(a, b) => a.workerId === b.workerId}
           renderInput={(params) => <TextField {...params} label={t('timesheets.variables.search')} placeholder={t('timesheets.variables.searchHint')} />}
@@ -215,8 +230,8 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
                     <Typography sx={{ fontWeight: 700, color: tokens.navy800 }}>
                       <bdi>{w?.name}</bdi>
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>
-                      <bdi>{w?.workerNo}</bdi> · {s.reason}
+                    <Typography sx={{ fontSize: 12, color: s.reason ? tokens.gray500 : tokens.danger }}>
+                      <bdi>{w?.workerNo}</bdi> · {s.reason || t('timesheets.variables.reasonMissing')}
                     </Typography>
                   </Box>
                   <Typography sx={{ flex: 1, fontSize: 12.5, color: tokens.gray600 }}>
@@ -244,7 +259,7 @@ export function VariablesDialog({ sheet, onClose, onSaved }: { sheet: TimesheetD
         <Button onClick={onClose} disabled={busy}>
           {t('common.cancel')}
         </Button>
-        <Button variant="contained" disabled={busy || staged.length === 0 || !!problem} onClick={() => void save()}>
+        <Button variant="contained" disabled={busy || staged.length === 0 || !!problem || missingReason} onClick={() => void save()}>
           {busy ? t('timesheets.variables.saving') : t('timesheets.variables.save', { count: staged.length })}
         </Button>
       </DialogActions>

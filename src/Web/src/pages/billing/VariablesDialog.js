@@ -46,6 +46,7 @@ export function VariablesDialog({ sheet, onClose, onSaved }) {
     };
     const [staged, setStaged] = useState([]);
     const [worker, setWorker] = useState(null);
+    const [search, setSearch] = useState('');
     const [draft, setDraft] = useState({});
     const [reason, setReason] = useState('');
     const [preview, setPreview] = useState(null);
@@ -53,11 +54,14 @@ export function VariablesDialog({ sheet, onClose, onSaved }) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     const open = (w) => {
+        // Moving to another worker keeps what was entered for this one (as «إضافة المتغيرات» would).
+        const list = worker && w?.workerId !== worker.workerId ? keep(staged) : staged;
+        setStaged(list);
         setWorker(w);
         setProblem(null);
         if (!w)
             return;
-        const kept = staged.find((s) => s.workerId === w.workerId);
+        const kept = list.find((s) => s.workerId === w.workerId);
         const base = { ...saved(w.workerId), ...(kept?.totals ?? {}) };
         setDraft(Object.fromEntries(groups.flatMap((g) => g.types).map((type) => [type, base[type] ? String(base[type]) : ''])));
         setReason(kept?.reason ?? '');
@@ -91,11 +95,14 @@ export function VariablesDialog({ sheet, onClose, onSaved }) {
         return () => clearTimeout(handle);
     }, [sheet.id, body]);
     const workerPreview = worker ? preview?.workers.find((x) => x.workerId === worker.workerId) : undefined;
+    // The list with the worker being entered in it (replacing what it had for them; none when nothing changed).
+    const keep = (list) => worker ? [...list.filter((s) => s.workerId !== worker.workerId), ...(Object.keys(changes).length ? [{ workerId: worker.workerId, totals: changes, reason: reason.trim() }] : [])] : list;
     const add = () => {
         if (!worker)
             return;
-        setStaged((list) => [...list.filter((s) => s.workerId !== worker.workerId), ...(Object.keys(changes).length ? [{ workerId: worker.workerId, totals: changes, reason: reason.trim() }] : [])]);
+        setStaged(keep(staged));
         setWorker(null);
+        setSearch('');
     };
     const save = async () => {
         setBusy(true);
@@ -111,16 +118,20 @@ export function VariablesDialog({ sheet, onClose, onSaved }) {
     };
     const nameOf = (id) => workers.find((w) => w.workerId === id);
     const canAdd = !!worker && Object.keys(changes).length > 0 && reason.trim().length > 0 && !problem;
-    return (_jsxs(Dialog, { open: true, onClose: busy ? undefined : onClose, fullWidth: true, maxWidth: "lg", "aria-labelledby": "variables-title", children: [_jsxs(DialogTitle, { id: "variables-title", sx: { fontWeight: 800, color: tokens.navy800 }, children: [t('timesheets.variables.title'), " \u00B7 ", _jsx("bdi", { children: sheet.timesheetNo })] }), _jsxs(DialogContent, { dividers: true, children: [_jsx(ErrorMessage, { messageKey: error }), _jsx(Summary, { before: preview?.before, after: preview?.after }), _jsx(Autocomplete, { sx: { my: 2 }, options: workers, value: worker, onChange: (_, w) => open(w), getOptionLabel: (w) => `${w.workerNo} · ${w.name}${w.iqamaNo ? ` · ${w.iqamaNo}` : ''}`, isOptionEqualToValue: (a, b) => a.workerId === b.workerId, renderInput: (params) => _jsx(TextField, { ...params, label: t('timesheets.variables.search'), placeholder: t('timesheets.variables.searchHint') }) }), worker && (_jsxs(Box, { sx: { display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(0,1.3fr) minmax(0,1fr)' }, border: `1px solid ${tokens.gray200}`, borderRadius: '14px', p: 2, mb: 2 }, children: [_jsxs(Box, { children: [_jsxs(Typography, { sx: { fontWeight: 800, color: tokens.navy800, mb: 1 }, children: [_jsx("bdi", { children: worker.name }), " \u00B7 ", _jsx("bdi", { children: worker.workerNo }), " \u00B7 ", t('timesheets.variables.workDays', { days: worker.workDays })] }), groups.map((g) => (_jsxs(Box, { sx: { border: `1px solid ${tokens.gray200}`, borderRadius: '10px', p: 1.25, mb: 1 }, children: [_jsxs(Stack, { direction: "row", sx: { justifyContent: 'space-between', mb: 0.75 }, children: [_jsx(Typography, { sx: { fontWeight: 700, color: tokens.navy800, fontSize: 13 }, children: t(`timesheets.variables.groups.${g.key}`) }), _jsx(Typography, { sx: { fontSize: 11, color: tokens.gray500 }, children: t(`timesheets.variables.effects.${g.key}`) })] }), _jsx(Box, { sx: { display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))' } }, children: g.types.map((type) => {
+    const missingReason = staged.some((s) => !s.reason);
+    return (_jsxs(Dialog, { open: true, onClose: busy ? undefined : onClose, fullWidth: true, maxWidth: "lg", "aria-labelledby": "variables-title", children: [_jsxs(DialogTitle, { id: "variables-title", sx: { fontWeight: 800, color: tokens.navy800 }, children: [t('timesheets.variables.title'), " \u00B7 ", _jsx("bdi", { children: sheet.timesheetNo })] }), _jsxs(DialogContent, { dividers: true, children: [_jsx(ErrorMessage, { messageKey: error }), _jsx(Summary, { before: preview?.before, after: preview?.after }), _jsx(Autocomplete, { sx: { my: 2 }, options: workers, value: worker, onChange: (_, w) => open(w), inputValue: search, onInputChange: (_, text, why) => why !== 'reset' && setSearch(text), filterOptions: (options, state) => {
+                            const q = state.inputValue.trim().toLowerCase();
+                            return q ? options.filter((w) => [w.workerNo, w.name, w.iqamaNo ?? ''].some((x) => x.toLowerCase().includes(q))) : options;
+                        }, getOptionLabel: (w) => `${w.workerNo} · ${w.name}${w.iqamaNo ? ` · ${w.iqamaNo}` : ''}`, isOptionEqualToValue: (a, b) => a.workerId === b.workerId, renderInput: (params) => _jsx(TextField, { ...params, label: t('timesheets.variables.search'), placeholder: t('timesheets.variables.searchHint') }) }), worker && (_jsxs(Box, { sx: { display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(0,1.3fr) minmax(0,1fr)' }, border: `1px solid ${tokens.gray200}`, borderRadius: '14px', p: 2, mb: 2 }, children: [_jsxs(Box, { children: [_jsxs(Typography, { sx: { fontWeight: 800, color: tokens.navy800, mb: 1 }, children: [_jsx("bdi", { children: worker.name }), " \u00B7 ", _jsx("bdi", { children: worker.workerNo }), " \u00B7 ", t('timesheets.variables.workDays', { days: worker.workDays })] }), groups.map((g) => (_jsxs(Box, { sx: { border: `1px solid ${tokens.gray200}`, borderRadius: '10px', p: 1.25, mb: 1 }, children: [_jsxs(Stack, { direction: "row", sx: { justifyContent: 'space-between', mb: 0.75 }, children: [_jsx(Typography, { sx: { fontWeight: 700, color: tokens.navy800, fontSize: 13 }, children: t(`timesheets.variables.groups.${g.key}`) }), _jsx(Typography, { sx: { fontSize: 11, color: tokens.gray500 }, children: t(`timesheets.variables.effects.${g.key}`) })] }), _jsx(Box, { sx: { display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))' } }, children: g.types.map((type) => {
                                                     const changed = type in changes;
                                                     return (_jsx(TextField, { size: "small", label: `${t(`timesheets.adjustments.${type}`)} (${t(`timesheets.units.${type}`)})`, value: draft[type] ?? '', onChange: (e) => setDraft((d) => ({ ...d, [type]: e.target.value.replace(type === 'FeeDays' ? /[^\d.-]/g : /[^\d.]/g, '') })), slotProps: { htmlInput: { dir: 'ltr', inputMode: 'decimal' } }, sx: changed ? { '& .MuiOutlinedInput-root': { bgcolor: tokens.navy50, fontWeight: 700 } } : undefined }, type));
                                                 }) })] }, g.key)))] }), _jsxs(Box, { sx: { bgcolor: tokens.gray50, borderRadius: '12px', p: 1.5 }, children: [_jsx(Typography, { sx: { fontWeight: 800, color: tokens.navy800, mb: 1 }, children: t('timesheets.variables.result') }), problem && _jsx(ErrorMessage, { messageKey: problem }), _jsx(Compare, { label: t('timesheets.variables.net'), before: workerPreview?.before.net, after: workerPreview?.after.net }), _jsx(Compare, { label: t('timesheets.variables.invoice'), before: workerPreview?.before.invoice, after: workerPreview?.after.invoice }), _jsx(Compare, { label: t('timesheets.variables.invoiceTotal'), before: workerPreview?.before.invoiceTotal, after: workerPreview?.after.invoiceTotal }), workerPreview && _jsx(Breakdown, { totals: workerPreview.after }), _jsx(TextField, { fullWidth: true, size: "small", sx: { mt: 1.5 }, label: t('timesheets.variables.reason'), required: true, value: reason, onChange: (e) => setReason(e.target.value), slotProps: { htmlInput: { maxLength: 300 } } }), _jsxs(Stack, { direction: "row", sx: { justifyContent: 'flex-end', gap: 1, mt: 1.5 }, children: [_jsx(Button, { onClick: () => setWorker(null), children: t('common.cancel') }), _jsx(Button, { variant: "contained", startIcon: _jsx(AddTaskOutlinedIcon, {}), disabled: !canAdd, onClick: add, children: t('timesheets.variables.add') })] })] })] })), _jsx(Typography, { sx: { fontWeight: 800, color: tokens.navy800, mb: 1 }, children: t('timesheets.variables.list', { count: staged.length }) }), staged.length === 0 ? (_jsx(Alert, { severity: "info", sx: { borderRadius: '12px' }, children: t('timesheets.variables.empty') })) : (_jsx(Stack, { sx: { gap: 1 }, children: staged.map((s) => {
                             const w = nameOf(s.workerId);
                             const p = preview?.workers.find((x) => x.workerId === s.workerId);
-                            return (_jsxs(Stack, { direction: { xs: 'column', md: 'row' }, sx: { gap: 1.5, alignItems: { md: 'center' }, p: 1.25, borderRadius: '12px', border: `1px solid ${tokens.gray200}` }, children: [_jsxs(Box, { sx: { minWidth: 200 }, children: [_jsx(Typography, { sx: { fontWeight: 700, color: tokens.navy800 }, children: _jsx("bdi", { children: w?.name }) }), _jsxs(Typography, { sx: { fontSize: 12, color: tokens.gray500 }, children: [_jsx("bdi", { children: w?.workerNo }), " \u00B7 ", s.reason] })] }), _jsx(Typography, { sx: { flex: 1, fontSize: 12.5, color: tokens.gray600 }, children: Object.entries(s.totals)
+                            return (_jsxs(Stack, { direction: { xs: 'column', md: 'row' }, sx: { gap: 1.5, alignItems: { md: 'center' }, p: 1.25, borderRadius: '12px', border: `1px solid ${tokens.gray200}` }, children: [_jsxs(Box, { sx: { minWidth: 200 }, children: [_jsx(Typography, { sx: { fontWeight: 700, color: tokens.navy800 }, children: _jsx("bdi", { children: w?.name }) }), _jsxs(Typography, { sx: { fontSize: 12, color: s.reason ? tokens.gray500 : tokens.danger }, children: [_jsx("bdi", { children: w?.workerNo }), " \u00B7 ", s.reason || t('timesheets.variables.reasonMissing')] })] }), _jsx(Typography, { sx: { flex: 1, fontSize: 12.5, color: tokens.gray600 }, children: Object.entries(s.totals)
                                             .map(([type, v]) => `${t(`timesheets.adjustments.${type}`)}: ${sar(v ?? 0)}`)
                                             .join(' · ') }), _jsx(Delta, { label: t('timesheets.variables.net'), value: p ? p.after.net - p.before.net : null }), _jsx(Delta, { label: t('timesheets.variables.invoice'), value: p ? p.after.invoice - p.before.invoice : null }), _jsxs(Stack, { direction: "row", children: [_jsx(IconButton, { size: "small", "aria-label": t('common.edit'), onClick: () => open(w ?? null), children: _jsx(EditOutlinedIcon, { fontSize: "small" }) }), _jsx(IconButton, { size: "small", "aria-label": t('timesheets.variables.remove'), onClick: () => setStaged((list) => list.filter((x) => x.workerId !== s.workerId)), children: _jsx(DeleteOutlineIcon, { fontSize: "small" }) })] })] }, s.workerId));
-                        }) }))] }), _jsxs(DialogActions, { children: [_jsx(Button, { onClick: onClose, disabled: busy, children: t('common.cancel') }), _jsx(Button, { variant: "contained", disabled: busy || staged.length === 0 || !!problem, onClick: () => void save(), children: busy ? t('timesheets.variables.saving') : t('timesheets.variables.save', { count: staged.length }) })] })] }));
+                        }) }))] }), _jsxs(DialogActions, { children: [_jsx(Button, { onClick: onClose, disabled: busy, children: t('common.cancel') }), _jsx(Button, { variant: "contained", disabled: busy || staged.length === 0 || !!problem || missingReason, onClick: () => void save(), children: busy ? t('timesheets.variables.saving') : t('timesheets.variables.save', { count: staged.length }) })] })] }));
 }
 /** The timesheet's invoice and salaries, as saved and with the variables entered. */
 function Summary({ before, after }) {
