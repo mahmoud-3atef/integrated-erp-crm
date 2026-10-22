@@ -62,6 +62,7 @@ import { InvoiceKindBadge, InvoiceStatusBadge, signed } from './invoices';
 import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ReceiptDialog } from './ReceiptDialog';
+import { DateField } from '../../components/DateField';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -726,7 +727,7 @@ function EditDialog({ inv, onClose, onSaved }: { inv: InvoiceDetail; onClose: ()
         <ErrorMessage messageKey={error} />
         <Stack spacing={2}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField sx={{ flex: 1 }} type="date" label={t('invoices.col.date')} value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField sx={{ flex: 1 }} label={t('invoices.col.date')} value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField
               sx={{ flex: 1 }}
               label={t('invoices.paymentTerm')}
@@ -787,7 +788,7 @@ function NoteDialog({ inv, kind, onClose, onMade }: { inv: InvoiceDetail; kind: 
         <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mb: 2 }}>{t(`invoices.noteHint.${kind}`, { creditable: sar(inv.creditable) })}</Typography>
         <Stack spacing={2}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField sx={{ width: { sm: 200 } }} type="date" label={t('invoices.col.date')} value={noteDate} onChange={(e) => setNoteDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField sx={{ width: { sm: 200 } }} label={t('invoices.col.date')} value={noteDate} onChange={(e) => setNoteDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField sx={{ flex: 1 }} required label={t('invoices.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 1000 } }} />
           </Stack>
           {lines.map((l, n) => (

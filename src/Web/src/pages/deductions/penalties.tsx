@@ -47,6 +47,7 @@ import { ApprovalBar, useRecordApproval } from '../../components/workflow/Record
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { Money, NoteDialog, usePeople, usePeriods, type Person } from './advances';
+import { DateField } from '../../components/DateField';
 
 const look: Record<PenaltyStatus, { color: string; tint: string }> = {
   InApproval: { color: hr.primary, tint: '#EFF6FF' },
@@ -197,7 +198,7 @@ export function PenaltyDialog({
               filterOptions={(x) => x}
               renderInput={(params) => <TextField {...params} required label={t('deductions.employee')} />}
             />
-            <TextField size="small" required type="date" label={other ? t('deductions.other.date') : t('deductions.penalty.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" required label={other ? t('deductions.other.date') : t('deductions.penalty.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           </Box>
           <TextField size="small" required label={other ? t('deductions.other.description') : t('deductions.penalty.description')} value={description} onChange={(e) => setDescription(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
           {!other && <TextField size="small" multiline minRows={2} label={t('deductions.penalty.statement')} value={statement} onChange={(e) => setStatement(e.target.value)} slotProps={{ htmlInput: { maxLength: 1000 } }} />}

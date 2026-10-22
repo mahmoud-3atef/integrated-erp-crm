@@ -25,6 +25,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { PageHeader } from '../../components/ui';
 import { isoToday, sar } from '../operations/delivery';
+import { DateField } from '../../components/DateField';
 
 const buckets = [
   { key: 'current', tone: '#1f9d55' },
@@ -131,7 +132,7 @@ export function AgingPage() {
             onChange={(e) => setSearch(e.target.value)}
             slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
           />
-          <TextField size="small" type="date" label={t('aging.asOf')} value={asOf} onChange={(e) => e.target.value && setAsOf(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('aging.asOf')} value={asOf} onChange={(e) => e.target.value && setAsOf(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <Box sx={{ flex: 1 }} />
           <ToggleButtonGroup size="small" exclusive sx={{ whiteSpace: 'nowrap' }} value={group} onChange={(_, v: Group | null) => v && setGroup(v)}>
             <ToggleButton value="project">{t('aging.byProject')}</ToggleButton>

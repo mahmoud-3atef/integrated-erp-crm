@@ -50,6 +50,7 @@ import { LeaveRequestDialog, LeaveStatusBadge, RequestsTable, leaveLook, typeNam
 import { PermissionDialog, PermissionsTable } from './permissions';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined';
+import { DateField } from '../../components/DateField';
 
 type View = 'all' | 'pending' | 'current' | 'permissions' | 'calendar';
 
@@ -485,7 +486,7 @@ function ReturnDialog({ expected, onClose, onConfirm }: { expected: string | nul
         <DialogTitle sx={{ fontWeight: 700 }}>{t('leave.return.confirm')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Typography sx={{ fontSize: 13 }}>{t('leave.return.hint', { expected: date(expected) })}</Typography>
-          <TextField size="small" type="date" label={t('leave.return.on')} value={on} onChange={(e) => setOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('leave.return.on')} value={on} onChange={(e) => setOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           {expected && on < expected && <Alert severity="info" sx={{ py: 0 }}>{t('leave.return.earlyNote')}</Alert>}
           {expected && on > expected && <Alert severity="warning" sx={{ py: 0 }}>{t('leave.return.lateNote')}</Alert>}
           <TextField size="small" label={t('leave.reason')} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -559,8 +560,8 @@ function LeaveAmendDialog({ detail, onClose, onSaved }: { detail: LeaveDetail; o
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Alert severity="info">{t('leave.amend.hint')}</Alert>
           <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
-            <TextField size="small" type="date" label={t('leave.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
-            <TextField size="small" type="date" label={t('leave.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <DateField size="small" label={t('leave.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <DateField size="small" label={t('leave.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
           </Stack>
           <TextField size="small" multiline minRows={2} label={t('leave.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />
           <FormControlLabel control={<Checkbox checked={ticket} onChange={(e) => setTicket(e.target.checked)} />} label={t('leave.ticket')} />

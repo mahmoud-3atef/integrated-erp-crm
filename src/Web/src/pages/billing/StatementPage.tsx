@@ -1,6 +1,6 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
-import { Box, Button, GlobalStyles, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Box, Button, GlobalStyles, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -10,6 +10,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
+import { DateField } from '../../components/DateField';
 
 function Tile({ label, value, tone = tokens.navy800 }: { label: string; value: ReactNode; tone?: string }) {
   return (
@@ -74,8 +75,8 @@ export function StatementPage({ print = false }: { print?: boolean }) {
           <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center', '@media print': { display: 'none' } }}>
             {!print && (
               <>
-                <TextField size="small" type="date" label={t('statement.from')} value={from} onChange={(e) => e.target.value && set('from', e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-                <TextField size="small" type="date" label={t('statement.to')} value={to} onChange={(e) => e.target.value && set('to', e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+                <DateField size="small" label={t('statement.from')} value={from} onChange={(e) => e.target.value && set('from', e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+                <DateField size="small" label={t('statement.to')} value={to} onChange={(e) => e.target.value && set('to', e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
               </>
             )}
             <Button

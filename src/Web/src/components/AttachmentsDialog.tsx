@@ -32,6 +32,7 @@ import { acceptedFiles, documentsApi, type Attachment, type DocumentType } from 
 import { tokens } from '../app/theme';
 import { ErrorMessage } from '../auth/AuthLayout';
 import { Badge, EmptyState } from './ui';
+import { DateField } from './DateField';
 
 interface AttachmentsDialogProps {
   title: string;
@@ -137,9 +138,8 @@ export function AttachmentsDialog({ title, ownerType, ownerId, canManage, onClos
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
+              <DateField
                 size="small"
-                type="date"
                 label={t('attachments.expiresOn')}
                 value={expiresOn}
                 onChange={(e) => setExpiresOn(e.target.value)}

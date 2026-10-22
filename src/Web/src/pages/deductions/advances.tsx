@@ -65,6 +65,7 @@ import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrAcc
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
+import { DateField } from '../../components/DateField';
 
 export type Person = { id: string; nameAr: string; nameEn: string };
 
@@ -563,7 +564,7 @@ function DisburseDialog({ advance, onClose, onSaved }: { advance: AdvanceRow; on
           <Typography sx={{ fontSize: 13 }}>
             {t('deductions.disburse.amount')} <Money value={advance.amount} strong />
           </Typography>
-          <TextField size="small" type="date" label={t('deductions.disburse.paidOn')} value={paidOn} onChange={(e) => setPaidOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('deductions.disburse.paidOn')} value={paidOn} onChange={(e) => setPaidOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField select size="small" label={t('deductions.disburse.method')} value={method} onChange={(e) => setMethod(e.target.value)}>
             {methods.map((m) => (
               <MenuItem key={m} value={m}>

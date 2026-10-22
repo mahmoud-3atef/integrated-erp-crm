@@ -29,6 +29,7 @@ import { useStateName } from './movements/movementMeta';
 import { daysBetween, Journey, JourneyLine, WorkerFact, WorkerHead } from './recordParts';
 import { ReturnStatusBadge } from './returns';
 import { ReturnOrderWizard } from './ReturnOrderWizard';
+import { DateField } from '../../components/DateField';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -349,7 +350,7 @@ function AmendDialog({ order, onClose, onSaved }: { order: ReturnDetail; onClose
       <DialogContent dividers>
         <Stack sx={{ gap: 2 }}>
           <Alert severity="info">{t('operations.return.amend.hint')}</Alert>
-          <TextField type="date" required label={t('operations.return.col.arrivedOn')} value={arrivedOn} onChange={(e) => setArrivedOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField required label={t('operations.return.col.arrivedOn')} value={arrivedOn} onChange={(e) => setArrivedOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField select required label={t('operations.return.col.reason')} value={reason} onChange={(e) => setReason(e.target.value)}>
             {['ClientNoReason', 'WorkerRefuses', 'Sick', 'WorkerAbused', 'ContractCanceled', 'Other'].map((r) => (
               <MenuItem key={r} value={r}>

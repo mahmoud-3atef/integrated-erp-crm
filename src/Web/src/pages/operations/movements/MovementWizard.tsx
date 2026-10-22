@@ -47,6 +47,7 @@ import { WizardAside, WizardCard, WizardDialog } from '../../../components/Wizar
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { isoToday, sar } from '../../operations/delivery';
 import { gradient, rise, StateBubble, TypeIcon, typeLook, useStateName } from './movementMeta';
+import { DateField } from '../../../components/DateField';
 
 type Step = 0 | 1 | 2;
 
@@ -278,8 +279,7 @@ export function MovementWizard({
         <Typography sx={{ fontSize: 13, color: tokens.gray500, mb: 2, mt: -1 }}>{t(`movements.typeHints.${type}`)}</Typography>
               <Stack spacing={2.25}>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                  <TextField
-                    type="date"
+                  <DateField
                     label={t(`movements.dateLabel.${type}`)}
                     value={form.effectiveOn}
                     onChange={(e) => set({ effectiveOn: e.target.value })}
@@ -287,8 +287,7 @@ export function MovementWizard({
                     slotProps={{ inputLabel: { shrink: true } }}
                   />
                   {type === 'VacationDeparture' && (
-                    <TextField
-                      type="date"
+                    <DateField
                       label={t('movements.expectedReturn')}
                       value={form.expectedReturnOn}
                       onChange={(e) => set({ expectedReturnOn: e.target.value })}

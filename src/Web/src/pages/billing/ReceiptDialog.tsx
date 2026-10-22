@@ -28,6 +28,7 @@ import { recordTones } from '../../components/RecordLayout';
 import { WizardCard, WizardDialog } from '../../components/WizardDialog';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
+import { DateField } from '../../components/DateField';
 
 const key = (kind: string, id: string) => `${kind}:${id}`;
 
@@ -257,7 +258,7 @@ export function ReceiptDialog({
             isOptionEqualToValue={(a, b) => a.id === b.id}
             renderInput={(params) => <TextField {...params} label={t('commercial.col.project')} required autoFocus={!id} />}
           />
-          <TextField type="date" label={t('receipts.col.date')} value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField label={t('receipts.col.date')} value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
           <TextField
             label={t('receipts.col.amount')}
             value={amount}

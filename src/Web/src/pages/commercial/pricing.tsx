@@ -39,6 +39,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { Badge, type Tone } from '../../components/ui';
 import { useCommercialFormat } from './ProjectsPage';
+import { DateField } from '../../components/DateField';
 
 const statusTone: Record<WorkerPriceStatus, Tone> = { Package: 'success', Special: 'warning', NoPackage: 'info', Missing: 'danger' };
 
@@ -485,9 +486,8 @@ export function PackageDialog({ package: edited, draft, onClose, onSaved }: { pa
             </Typography>
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField type="date" label={t('commercial.prices.validFrom')} value={validFrom} onChange={(e) => setValidFrom(e.target.value)} fullWidth required slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField
-              type="date"
+            <DateField label={t('commercial.prices.validFrom')} value={validFrom} onChange={(e) => setValidFrom(e.target.value)} fullWidth required slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField
               label={t('commercial.prices.validTo')}
               value={validTo}
               onChange={(e) => setValidTo(e.target.value)}

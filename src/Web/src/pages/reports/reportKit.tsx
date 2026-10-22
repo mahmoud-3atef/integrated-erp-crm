@@ -1,12 +1,13 @@
 import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
-import { Box, Button, ButtonBase, GlobalStyles, IconButton, Skeleton, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, ButtonBase, GlobalStyles, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@mui/material/styles';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Figure, Period } from '../../api/reports';
 import { tokens } from '../../app/theme';
 import { useCountUp } from '../../components/charts';
+import { DateField } from '../../components/DateField';
 
 // The reports' shared parts (docs/03-migration-plan/14): the period bar, the figures' banner, the summary ticker, the
 // cards' titles and the small helpers; each report (executive, workforce movement, housing) builds on them.
@@ -410,8 +411,8 @@ export function ReportBar<T extends string>({
           ))}
           {preset === 'custom' && (
             <>
-              <TextField size="small" type="date" label={t('exec.from')} value={from} onChange={(e) => e.target.value && setRange([e.target.value, to])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
-              <TextField size="small" type="date" label={t('exec.to')} value={to} onChange={(e) => e.target.value && setRange([from, e.target.value])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
+              <DateField size="small" label={t('exec.from')} value={from} onChange={(e) => e.target.value && setRange([e.target.value, to])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
+              <DateField size="small" label={t('exec.to')} value={to} onChange={(e) => e.target.value && setRange([from, e.target.value])} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
             </>
           )}
           <Tooltip title={t('exec.print')}>

@@ -1,6 +1,5 @@
 import FilterAltOffOutlinedIcon from '@mui/icons-material/FilterAltOffOutlined';
 import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
-import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
 import SearchIcon from '@mui/icons-material/Search';
 import {
   Box,
@@ -33,20 +32,22 @@ type Place = 'all' | 'Housing' | 'New';
 
 /**
  * The workers that can be put on an order, listed at once: filter by text (or several numbers), status (or current
- * project), profession and nationality, tick them, and add them to the order. By default the workers that can be
+ * project), profession and nationality; a ticked worker is on the order (untick to take them off). By default the workers that can be
  * delivered (in housing or new); with <c>onJob</c> the workers on the job (for a transfer), where those already on
  * <c>targetProjectCrmId</c> cannot be picked.
  */
 export function AvailableWorkers({
   orderId,
   onOrder,
-  onAdd,
+  onToggle,
   onJob,
   targetProjectCrmId,
 }: {
   orderId?: string;
+  /** The workers on the order (ticked). */
   onOrder: string[];
-  onAdd: (workers: WorkerCard[]) => void;
+  /** Workers ticked (on) or unticked (off). */
+  onToggle: (workers: WorkerCard[], on: boolean) => void;
   onJob?: { load: (orderId?: string) => Promise<AvailableWorker[]>; titleKey: string; hintKey: string };
   targetProjectCrmId?: string | null;
 }) {
@@ -59,7 +60,6 @@ export function AvailableWorkers({
   const [profession, setProfession] = useState('');
   const [nationality, setNationality] = useState('');
   const [project, setProject] = useState('');
-  const [picked, setPicked] = useState<string[]>([]);
 
   useEffect(() => {
     (onJob ? onJob.load(orderId) : operationsApi.availableWorkers(orderId))
@@ -101,8 +101,8 @@ export function AvailableWorkers({
   }, [workers, text, place, profession, nationality, project]);
 
   const onTarget = (w: WorkerCard) => !!targetProjectCrmId && w.projectCrmId === targetProjectCrmId;
-  const selectable = shown.filter((w) => !w.busyOrderNo && !onOrder.includes(w.worker.id) && !onTarget(w.worker));
-  const allPicked = selectable.length > 0 && selectable.every((w) => picked.includes(w.worker.id));
+  const selectable = shown.filter((w) => !w.busyOrderNo && !onTarget(w.worker));
+  const allPicked = selectable.length > 0 && selectable.every((w) => onOrder.includes(w.worker.id));
   const counts = { all: workers?.length ?? 0, Housing: workers?.filter((w) => w.worker.placement === 'Housing').length ?? 0, New: workers?.filter((w) => w.worker.placement === 'New').length ?? 0 };
   const filtered = text || place !== 'all' || profession || nationality || project;
 
@@ -176,9 +176,9 @@ export function AvailableWorkers({
               <TableCell padding="checkbox">
                 <Checkbox
                   checked={allPicked}
-                  indeterminate={!allPicked && selectable.some((w) => picked.includes(w.worker.id))}
+                  indeterminate={!allPicked && selectable.some((w) => onOrder.includes(w.worker.id))}
                   disabled={selectable.length === 0}
-                  onChange={(e) => setPicked(e.target.checked ? [...new Set([...picked, ...selectable.map((w) => w.worker.id)])] : picked.filter((id) => !selectable.some((w) => w.worker.id === id)))}
+                  onChange={(e) => onToggle(selectable.map((w) => w.worker), e.target.checked)}
                 />
               </TableCell>
               <TableCell>{t('workforce.col.name')}</TableCell>
@@ -193,18 +193,17 @@ export function AvailableWorkers({
             {shown.map(({ worker: w, busyOrderNo }) => {
               const added = onOrder.includes(w.id);
               const already = onTarget(w);
-              const disabled = added || !!busyOrderNo || already;
-              const checked = added || picked.includes(w.id);
+              const disabled = (!!busyOrderNo || already) && !added;
               return (
                 <TableRow
                   key={w.id}
                   hover={!disabled}
-                  selected={checked && !added}
+                  selected={added}
                   sx={{ cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.55 : 1 }}
-                  onClick={() => !disabled && setPicked((p) => (p.includes(w.id) ? p.filter((x) => x !== w.id) : [...p, w.id]))}
+                  onClick={() => !disabled && onToggle([w], !added)}
                 >
                   <TableCell padding="checkbox">
-                    <Checkbox checked={checked} disabled={disabled} />
+                    <Checkbox checked={added} disabled={disabled} />
                   </TableCell>
                   <TableCell sx={{ minWidth: 190 }}>
                     <Typography dir="ltr" sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800, textAlign: 'start' }}>
@@ -249,17 +248,6 @@ export function AvailableWorkers({
         </Table>
       </TableContainer>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mt: 1.5 }}>
-        <Button
-          variant="contained"
-          startIcon={<PersonAddAlt1OutlinedIcon />}
-          disabled={picked.length === 0}
-          onClick={() => {
-            onAdd((workers ?? []).filter((w) => picked.includes(w.worker.id)).map((w) => w.worker));
-            setPicked([]);
-          }}
-        >
-          {t('operations.delivery.addPicked', { count: picked.length })}
-        </Button>
         <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('operations.delivery.available.shown', { shown: shown.length, all: counts.all })}</Typography>
       </Stack>
     </Box>

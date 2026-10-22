@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { localName } from '../../api/access';
 import type { LegalEntityRecord } from '../../api/setup';
 import type { ApproverOptions, RecordField, Screen } from '../../api/workflow';
+import { DateField } from '../DateField';
 
 /** What every part of the process editor needs: the screen's fields and the people, roles and registrations to pick. */
 export interface EditorData {
@@ -100,7 +101,7 @@ export function FieldValueInput({ field, value, onChange, label }: { field: Reco
         </TextField>
       );
     case 'Date':
-      return <TextField {...common} type="date" slotProps={{ inputLabel: { shrink: true } }} />;
+      return <DateField {...common} slotProps={{ inputLabel: { shrink: true } }} />;
     case 'Number':
     case 'Money':
       return <TextField {...common} onChange={(e) => onChange(e.target.value.replace(/[^\d.-]/g, ''))} slotProps={{ htmlInput: { dir: 'ltr', inputMode: 'decimal' } }} />;

@@ -25,6 +25,7 @@ import { HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useLegalEntities } from '../payroll/RunDialogs';
+import { DateField } from '../../components/DateField';
 
 // Employment actions: a request on an employee through the approval process, applied to the file when approved.
 
@@ -147,7 +148,7 @@ export function ActionDialog({ profile, departments, onClose, onSent }: { profil
           </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
-            <TextField type="date" label={t('staffActions.effectiveFrom')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ minWidth: 200 }} />
+            <DateField label={t('staffActions.effectiveFrom')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ minWidth: 200 }} />
             {kind === 'Transfer' && (
               <TextField select label={t('staffActions.newLegalEntity')} value={entity} onChange={(e) => setEntity(e.target.value)} fullWidth slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
                 <MenuItem value="">{t('staffActions.keep')}</MenuItem>
@@ -185,11 +186,11 @@ export function ActionDialog({ profile, departments, onClose, onSent }: { profil
 
           {kind === 'Acting' && (
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
-              <TextField type="date" label={t('staffActions.actingUntil')} value={until} onChange={(e) => setUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth required />
+              <DateField label={t('staffActions.actingUntil')} value={until} onChange={(e) => setUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth required />
               <TextField type="number" label={t('staffActions.actingAllowance')} value={allowance} onChange={(e) => setAllowance(e.target.value)} fullWidth />
             </Stack>
           )}
-          {kind === 'ExtendProbation' && <TextField type="date" label={t('staffActions.probationUntil')} value={until} onChange={(e) => setUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} required />}
+          {kind === 'ExtendProbation' && <DateField label={t('staffActions.probationUntil')} value={until} onChange={(e) => setUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} required />}
           {kind === 'RenewContract' && (
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
               <TextField select label={t('staffActions.contractKind')} value={contractKind} onChange={(e) => setContractKind(e.target.value as 'Fixed' | 'Open')} fullWidth>
@@ -461,7 +462,7 @@ function ActionAmendDialog({ action: a, onClose, onSaved }: { action: StaffActio
         <DialogTitle sx={{ fontWeight: 700 }}>{t('staffActions.amend.title', { no: a.actionNo })}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Alert severity="info">{t('staffActions.amend.hint')}</Alert>
-          <TextField size="small" type="date" label={t('staffActions.effectiveFrom')} value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('staffActions.effectiveFrom')} value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           {withSalary && (
             <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' } }}>
               {salaryKeys.map((k) => (
@@ -479,12 +480,12 @@ function ActionAmendDialog({ action: a, onClose, onSaved }: { action: StaffActio
           )}
           {a.kind === 'Acting' && (
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
-              <TextField size="small" type="date" label={t('staffActions.field.actingUntil')} value={actingUntil} onChange={(e) => setActingUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+              <DateField size="small" label={t('staffActions.field.actingUntil')} value={actingUntil} onChange={(e) => setActingUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
               <TextField size="small" type="number" label={t('staffActions.field.actingAllowance')} value={allowance} onChange={(e) => setAllowance(e.target.value)} slotProps={{ htmlInput: { min: 0, dir: 'ltr' } }} sx={{ flex: 1 }} />
             </Stack>
           )}
           {a.kind === 'ExtendProbation' && (
-            <TextField size="small" type="date" label={t('staffActions.field.probation')} value={probationEnds} onChange={(e) => setProbationEnds(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" label={t('staffActions.field.probation')} value={probationEnds} onChange={(e) => setProbationEnds(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           )}
           {a.kind === 'RenewContract' && a.newContractKind !== 'Open' && (
             <TextField size="small" type="number" label={t('staff.profile.fields.months')} value={months} onChange={(e) => setMonths(e.target.value)} slotProps={{ htmlInput: { min: 1, dir: 'ltr' } }} />

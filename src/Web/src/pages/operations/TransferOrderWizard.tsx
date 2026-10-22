@@ -18,6 +18,7 @@ import { WizardAside, WizardCard, WizardDialog, WizardFact } from '../../compone
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { AvailableWorkers } from './AvailableWorkers';
 import { isoToday, sar } from './delivery';
+import { DateField } from '../../components/DateField';
 
 interface Line {
   workerId: string;
@@ -110,6 +111,7 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
   };
   const change = (workerId: string, patch: Partial<Line>) => setLines((current) => current.map((l) => (l.workerId === workerId ? { ...l, ...patch } : l)));
   const remove = (workerId: string) => setLines((current) => current.filter((l) => l.workerId !== workerId));
+  const toggle = (workers: WorkerCard[], on: boolean) => (on ? add(workers) : setLines((current) => current.filter((l) => !workers.some((w) => w.id === l.workerId))));
   const cardOf = (workerId: string) => quotes[workerId]?.worker ?? cards[workerId];
 
   const priceOf = (line: Line) => (line.special ? Number(line.specialPrice) || 0 : quotes[line.workerId]?.totalPrice ?? null);
@@ -211,8 +213,7 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
               isOptionEqualToValue={(a, b) => a.id === b.id}
               renderInput={(params) => <TextField {...params} label={t('operations.transfer.newProject')} required autoFocus />}
             />
-            <TextField
-              type="date"
+            <DateField
               label={t('operations.transfer.col.transferOn')}
               value={transferOn}
               onChange={(e) => setTransferOn(e.target.value)}
@@ -265,7 +266,7 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
               {t('errors.validation_transfer_same_project')}
             </Alert>
           )}
-          <AvailableWorkers orderId={id} onOrder={lines.map((l) => l.workerId)} onAdd={add} onJob={onJob} targetProjectCrmId={project?.crmId ?? null} />
+          <AvailableWorkers orderId={id} onOrder={lines.map((l) => l.workerId)} onToggle={toggle} onJob={onJob} targetProjectCrmId={project?.crmId ?? null} />
         </>
       )}
 

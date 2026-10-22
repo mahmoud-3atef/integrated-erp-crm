@@ -19,6 +19,10 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { AvailableWorkers } from './AvailableWorkers';
 import { isoToday, sar } from './delivery';
 
+/** The least monthly service price a worker can have (as the server checks it). */
+const minimumPrice = 1000;
+import { DateField } from '../../components/DateField';
+
 interface Line {
   workerId: string;
   startOn: string;
@@ -81,7 +85,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
           setLines(
             o.lines
               .filter((l) => l.workerId)
-              .map((l) => ({ workerId: l.workerId!, startOn: l.startOn ?? '', special: l.isSpecialPrice, specialPrice: l.isSpecialPrice ? String(l.totalPrice) : '', specialReason: l.specialReason ?? '' })),
+              .map((l) => ({ workerId: l.workerId!, startOn: l.startOn ?? o.summary.startOn ?? '', special: l.isSpecialPrice, specialPrice: l.isSpecialPrice ? String(l.totalPrice) : '', specialReason: l.specialReason ?? '' })),
           );
         })
         .catch((failure: unknown) => setError(errorKey(failure)));
@@ -124,8 +128,14 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
     setCards((current) => ({ ...current, ...Object.fromEntries(workers.map((w) => [w.id, w])) }));
     setLines((current) => [
       ...current,
-      ...workers.filter((w) => !current.some((l) => l.workerId === w.id)).map((w) => ({ workerId: w.id, startOn: '', special: false, specialPrice: '', specialReason: '' })),
+      ...workers.filter((w) => !current.some((l) => l.workerId === w.id)).map((w) => ({ workerId: w.id, startOn, special: false, specialPrice: '', specialReason: '' })),
     ]);
+  };
+  const toggle = (workers: WorkerCard[], on: boolean) => (on ? add(workers) : setLines((current) => current.filter((l) => !workers.some((w) => w.id === l.workerId))));
+  // The order's start moves the workers' starts that followed it.
+  const changeStart = (value: string) => {
+    setLines((current) => current.map((l) => (!l.startOn || l.startOn === startOn ? { ...l, startOn: value } : l)));
+    setStartOn(value);
   };
   const change = (workerId: string, patch: Partial<Line>) => setLines((current) => current.map((l) => (l.workerId === workerId ? { ...l, ...patch } : l)));
   const remove = (workerId: string) => setLines((current) => current.filter((l) => l.workerId !== workerId));
@@ -135,7 +145,16 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
   const total = lines.reduce((sum, l) => sum + (priceOf(l) ?? 0), 0);
   const missingPrice = lines.some((l) => !l.special && quotes[l.workerId]?.totalPrice === null);
   const orderReady = !!projectId && !!deliverOn && !!startOn && startOn >= deliverOn && receiverName.trim() !== '' && (!late || delayReason.trim() !== '');
-  const pricesReady = lines.every((l) => !l.special || (Number(l.specialPrice) > 0 && l.specialReason.trim() !== ''));
+  // Every worker has a service price (the package's, or a special one with its reason) and a start on or after the delivery.
+  const priceProblem = (l: Line) => {
+    const price = priceOf(l);
+    if (price === null || price <= 0) return 'none';
+    if (price < minimumPrice) return 'minimum';
+    if (l.special && l.specialReason.trim() === '') return 'reason';
+    return null;
+  };
+  const startProblem = (l: Line) => !l.startOn || l.startOn < deliverOn;
+  const pricesReady = lines.length > 0 && lines.every((l) => priceProblem(l) === null && !startProblem(l));
   const ready = [orderReady, lines.length > 0, pricesReady, orderReady && lines.length > 0 && pricesReady];
 
   const save = async () => {
@@ -151,7 +170,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
       notes: notes.trim() || null,
       lines: lines.map((l) => ({
         workerId: l.workerId,
-        startOn: l.startOn || null,
+        startOn: l.startOn && l.startOn !== startOn ? l.startOn : null,
         specialPrice: l.special && l.specialPrice ? Number(l.specialPrice) : null,
         specialReason: l.special ? l.specialReason.trim() || null : null,
       })),
@@ -231,12 +250,11 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
               isOptionEqualToValue={(a, b) => a.id === b.id}
               renderInput={(params) => <TextField {...params} label={t('commercial.col.project')} required autoFocus />}
             />
-            <TextField type="date" label={t('operations.delivery.col.deliverOn')} value={deliverOn} onChange={(e) => setDeliverOn(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField
-              type="date"
+            <DateField label={t('operations.delivery.col.deliverOn')} value={deliverOn} onChange={(e) => setDeliverOn(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField
               label={t('operations.delivery.col.startOn')}
               value={startOn}
-              onChange={(e) => setStartOn(e.target.value)}
+              onChange={(e) => changeStart(e.target.value)}
               required
               error={!!startOn && !!deliverOn && startOn < deliverOn}
               helperText={startOn && deliverOn && startOn < deliverOn ? t('errors.validation_delivery_start_before') : undefined}
@@ -280,7 +298,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
               {t('operations.delivery.wizard.picked', { count: lines.length })}
             </Alert>
           )}
-          <AvailableWorkers orderId={id} onOrder={lines.map((l) => l.workerId)} onAdd={add} />
+          <AvailableWorkers orderId={id} onOrder={lines.map((l) => l.workerId)} onToggle={toggle} />
         </>
       )}
 
@@ -294,7 +312,8 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
             </Box>
           }
         >
-          {missingPrice && <Alert severity="warning" sx={{ mb: 1.5 }}>{t('operations.delivery.missingPackage')}</Alert>}
+          {missingPrice && <Alert severity="error" sx={{ mb: 1.5 }}>{t('operations.delivery.missingPackage')}</Alert>}
+          {!pricesReady && !missingPrice && lines.length > 0 && <Alert severity="warning" sx={{ mb: 1.5 }}>{t('operations.delivery.pricesNeeded')}</Alert>}
           <TableContainer>
             <Table size="small">
               <TableHead>
@@ -327,7 +346,10 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
                         )}
                       </TableCell>
                       <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
-                        <Typography sx={{ fontWeight: 800, color: tokens.navy800 }}>{sar(priceOf(line))}</Typography>
+                        <Typography sx={{ fontWeight: 800, color: priceProblem(line) ? tokens.danger : tokens.navy800 }}>{sar(priceOf(line))}</Typography>
+                        {priceProblem(line) && (
+                          <Typography sx={{ fontSize: 11.5, color: tokens.danger }}>{t(`operations.delivery.priceProblem.${priceProblem(line)}`)}</Typography>
+                        )}
                         {q && (
                           <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
                             {t('operations.delivery.breakdown', { salary: sar(q.salary), fee: q.packageNo && !line.special ? sar(q.serviceFee) : '—' })}
@@ -354,12 +376,13 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
                         </Stack>
                       </TableCell>
                       <TableCell>
-                        <TextField
+                        <DateField
                           size="small"
-                          type="date"
                           value={line.startOn}
+                          required
+                          error={startProblem(line)}
                           onChange={(e) => change(line.workerId, { startOn: e.target.value })}
-                          helperText={line.startOn ? undefined : t('operations.delivery.sameAsOrder')}
+                          helperText={startProblem(line) ? t('errors.validation_delivery_start_before') : line.startOn === startOn ? t('operations.delivery.sameAsOrder') : undefined}
                           sx={{ width: 150 }}
                           slotProps={{ inputLabel: { shrink: true } }}
                         />

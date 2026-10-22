@@ -23,6 +23,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { specialtyIcon } from '../operations/showroom/showroomParts';
+import { DateField } from '../../components/DateField';
 
 /**
  * A worker's marketing profile (docs/03-migration-plan/15): the photos and what the showroom tells a customer —
@@ -290,7 +291,7 @@ function ProfileDialog({ workerId, profile, lists, onClose, onSaved }: { workerI
             <MenuItem value="M">{t('showroom.gender.M')}</MenuItem>
             <MenuItem value="F">{t('showroom.gender.F')}</MenuItem>
           </TextField>
-          <TextField type="date" label={t('workerProfile.birthDate')} value={v.birthDate ?? ''} onChange={(e) => setV({ ...v, birthDate: e.target.value || null })} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField label={t('workerProfile.birthDate')} value={v.birthDate ?? ''} onChange={(e) => setV({ ...v, birthDate: e.target.value || null })} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField select label={t('workerProfile.religion')} value={v.religion ?? ''} onChange={(e) => setV({ ...v, religion: e.target.value || null })}>
             <MenuItem value="">—</MenuItem>
             {religions.map((r) => (

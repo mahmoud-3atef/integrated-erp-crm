@@ -35,6 +35,7 @@ import { ErrorMessage } from '../../../auth/AuthLayout';
 import { HrPageHeader, HrScope, hr, hrCard } from '../../../components/hr/Hr';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { money } from '../payroll';
+import { DateField } from '../../../components/DateField';
 
 /** A GOSI rate of a category from a date (a new row for a change: the earlier one stays for the earlier months). */
 function RateDialog({ rate, onClose, onSaved }: { rate: GosiRate | null; onClose: () => void; onSaved: () => void }) {
@@ -72,7 +73,7 @@ function RateDialog({ rate, onClose, onSaved }: { rate: GosiRate | null; onClose
               </MenuItem>
             ))}
           </TextField>
-          <TextField size="small" type="date" label={t('staffPayroll.settings.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('staffPayroll.settings.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: '1fr 1fr' }}>
             <TextField size="small" type="number" label={t('staffPayroll.gosi.employee')} value={employee} onChange={(e) => setEmployee(e.target.value)} slotProps={pct} />
             <TextField size="small" type="number" label={t('staffPayroll.gosi.employer')} value={employer} onChange={(e) => setEmployer(e.target.value)} slotProps={pct} />

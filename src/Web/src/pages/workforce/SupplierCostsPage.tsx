@@ -42,6 +42,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { KpiCard } from '../../components/KpiCard';
 import { Badge, PageHeader, PillTabs } from '../../components/ui';
+import { DateField } from '../../components/DateField';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => `${today().slice(0, 7)}-01`;
@@ -424,7 +425,7 @@ export function CostDialog({
             <MenuItem value="MonthlyFixed">{t('costs.method.MonthlyFixed')}</MenuItem>
             <MenuItem value="ByWorkingDays">{t('costs.method.ByWorkingDays')}</MenuItem>
           </TextField>
-          <TextField type="date" label={t('costs.col.from')} value={input.effectiveFrom} onChange={(e) => onChange({ ...input, effectiveFrom: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} required />
+          <DateField label={t('costs.col.from')} value={input.effectiveFrom} onChange={(e) => onChange({ ...input, effectiveFrom: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} required />
           <TextField label={t('costs.notes')} value={input.notes ?? ''} onChange={(e) => onChange({ ...input, notes: e.target.value || null })} sx={{ gridColumn: '1 / -1' }} slotProps={{ htmlInput: { maxLength: 300 } }} />
         </Box>
       </DialogContent>

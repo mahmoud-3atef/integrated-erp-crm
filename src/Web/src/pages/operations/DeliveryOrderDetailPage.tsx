@@ -44,6 +44,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
 import { useCrumb } from '../../app/breadcrumbs';
 import { DeliveryOrderWizard } from './DeliveryOrderWizard';
+import { DateField } from '../../components/DateField';
 
 /** The two letters of a worker's name, for the avatar in the workers table. */
 function initials(name: string) {
@@ -485,7 +486,7 @@ function DeliveryAmendDialog({ order, onClose, onSaved }: { order: DeliveryDetai
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <TextField size="small" type="date" value={l.startedOn} onChange={(e) => set(i, { startedOn: e.target.value })} />
+                      <DateField size="small" value={l.startedOn} onChange={(e) => set(i, { startedOn: e.target.value })} />
                     </TableCell>
                     <TableCell>
                       <TextField size="small" type="number" value={l.price} onChange={(e) => set(i, { price: e.target.value })} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} sx={{ width: 130 }} />

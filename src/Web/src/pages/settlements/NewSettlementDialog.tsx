@@ -6,6 +6,7 @@ import { endReasons, settlementsApi, type EndReason, type SettlementKind, type S
 import { hr } from '../../components/hr/Hr';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { usePeople, type Person } from '../deductions/advances';
+import { DateField } from '../../components/DateField';
 
 /**
  * A new settlement. A vacation one is for an approved leave without one: the staff's leave request, or a sponsored
@@ -64,7 +65,7 @@ export function NewSettlementDialog({ onClose, onCreated, employee, party: initi
     }
   };
   const dateField = (label: string, value: string, set: (v: string) => void) => (
-    <TextField size="small" type="date" required label={label} value={value} onChange={(e) => set(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+    <DateField size="small" required label={label} value={value} onChange={(e) => set(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
   );
 
   return (

@@ -36,6 +36,7 @@ import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrScope, HrStatusBadge, hr } from '../../components/hr/Hr';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
+import { DateField } from '../../components/DateField';
 
 export const leaveLook: Record<RequestStatus, { color: string; tint: string }> = {
   InApproval: { color: hr.primary, tint: '#EFF6FF' },
@@ -167,8 +168,8 @@ export function LeaveRequestDialog({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField size="small" type="date" required label={t('leave.from')} value={from} onChange={(e) => (setFrom(e.target.value), to < e.target.value && setTo(e.target.value))} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField size="small" type="date" required label={t('leave.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" required label={t('leave.from')} value={from} onChange={(e) => (setFrom(e.target.value), to < e.target.value && setTo(e.target.value))} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" required label={t('leave.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           </Box>
           <Box sx={{ bgcolor: '#F8FAFC', border: `1px solid ${hr.border}`, borderRadius: '10px', p: 1.5 }}>
             {!input ? (
@@ -279,7 +280,7 @@ export function EntryDialog({ employeeId, kind, types, onClose, onSaved }: { emp
             ))}
           </TextField>
           <Stack direction="row" sx={{ gap: 1 }}>
-            <TextField size="small" fullWidth type="date" label={t(kind === 'opening' ? 'leave.entry.asOf' : 'leave.entry.date')} value={date} onChange={(e) => setDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" fullWidth label={t(kind === 'opening' ? 'leave.entry.asOf' : 'leave.entry.date')} value={date} onChange={(e) => setDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField
               size="small"
               fullWidth

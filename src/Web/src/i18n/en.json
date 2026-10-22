@@ -1790,8 +1790,7 @@
       "lastComment": "Last comment",
       "workerSearch": "Filter by worker number, name, iqama or profession (or several numbers separated by spaces or commas)",
       "noWorkersFound": "No matching workers.",
-      "addPicked": "Add selected ({{count}})",
-      "availableHint": "Active workers in housing or new. Tick them by clicking the row, or select all after filtering, then \"Add selected\". Workers on another open order cannot be picked.",
+      "availableHint": "Active workers in housing or new. Tick them by clicking the row, or tick all after filtering; every ticked worker is on the order, then «Next». Those on another open order cannot be picked.",
       "chooseProject": "Choose the project to see each worker's package and price.",
       "missingPackage": "Some workers have no package for their profession and nationality on this project: give them a special price with a reason, or add a package in \"Price packages\".",
       "noLines": "No workers yet. Search for workers and add them in the section above.",
@@ -1799,7 +1798,7 @@
       "projectPackage": "The project's package",
       "specialReason": "Reason for the special price",
       "useSpecial": "Package price",
-      "sameAsOrder": "Order's date",
+      "sameAsOrder": "The order's start date",
       "submit": "Submit for approval",
       "cancel": "Cancel the order",
       "cancelTitle": "Cancel order {{no}}",
@@ -1877,7 +1876,7 @@
         "prices": "Prices and start",
         "review": "Review and send",
         "hint": "Choose the project and dates, then the workers, then check the prices before sending for approval.",
-        "picked": "{{count}} workers chosen. Add more or go on to the prices."
+        "picked": "{{count}} workers on the order. Tick more or press «Next» for the prices."
       },
       "amend": {
         "action": "Change after approval",
@@ -1896,6 +1895,12 @@
         "cancelHint": "The work periods the order opened are removed for all its workers, their periods before are open again, and they go back to their housing rooms. Not allowed if any of them has a later action.",
         "amendedBy": "Changed after approval by {{by}} on {{date}}",
         "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
+      },
+      "pricesNeeded": "Every worker needs a monthly service price and a start on or after the delivery date before going on.",
+      "priceProblem": {
+        "none": "No service price: enter a special price with its reason",
+        "minimum": "The service price is at least 1,000",
+        "reason": "Give the reason for the special price"
       }
     },
     "status": {
@@ -2062,7 +2067,7 @@
       },
       "picker": {
         "title": "Workers on the job ({{count}})",
-        "hint": "The workers now working on projects. Filter by current project, profession or nationality, tick them, then \"Add selected\". Workers already on the new project or on an open transfer or return order cannot be picked."
+        "hint": "Workers on the job now. Filter by current project, profession or nationality; every ticked worker is on the order. Those already on the new project or on an open transfer or return order cannot be picked."
       },
       "col": {
         "order": "Order and new project",
@@ -5968,5 +5973,17 @@
     "workerSign": "Worker's signature",
     "leaveRequest": "Leave request",
     "workerLeaveRequest": "Leave request (vacation departure)"
+  },
+  "calendar": {
+    "today": "Today",
+    "clear": "Clear",
+    "ok": "OK",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "pickDay": "Pick a day",
+    "open": "Open the calendar",
+    "yyyy": "YYYY",
+    "mm": "MM",
+    "dd": "DD"
   }
 }

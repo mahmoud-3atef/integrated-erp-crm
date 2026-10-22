@@ -40,6 +40,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { localRef } from './AttendanceMonthPage';
+import { DateField } from '../../components/DateField';
 
 const accents = ['#2563EB', '#D97706', '#059669', '#7C3AED', '#DB2777', '#0E7490'];
 
@@ -464,8 +465,8 @@ function AssignDialog({ shift, departments, onClose, onSaved }: { shift: Shift; 
               renderInput={(params) => <TextField {...params} label={t('shifts.assignForm.pickEmployee')} />}
             />
           )}
-          <TextField size="small" type="date" label={t('shifts.assignForm.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-          <TextField size="small" type="date" label={t('shifts.assignForm.until')} value={until} onChange={(e) => setUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('shifts.assignForm.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('shifts.assignForm.until')} value={until} onChange={(e) => setUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <ErrorMessage messageKey={error} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'flex-start', gap: 1 }}>
@@ -511,8 +512,8 @@ function HolidayDialog({ holiday, year, onClose, onSaved }: { holiday: Holiday |
             ))}
           </TextField>
           <Stack direction="row" sx={{ gap: 1 }}>
-            <TextField size="small" fullWidth type="date" label={t('shifts.holidayForm.from')} value={from} onChange={(e) => (setFrom(e.target.value), to < e.target.value && setTo(e.target.value))} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField size="small" fullWidth type="date" label={t('shifts.holidayForm.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" fullWidth label={t('shifts.holidayForm.from')} value={from} onChange={(e) => (setFrom(e.target.value), to < e.target.value && setTo(e.target.value))} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" fullWidth label={t('shifts.holidayForm.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           </Stack>
           <ErrorMessage messageKey={error} />
         </DialogContent>

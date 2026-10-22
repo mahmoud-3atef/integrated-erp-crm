@@ -6,6 +6,7 @@ import { errorKey } from '../../api/auth';
 import { staffApi, staffStatuses, type Department, type SalaryValues, type StaffProfile, type StaffStatus } from '../../api/staff';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { useLegalEntities } from '../payroll/RunDialogs';
+import { DateField } from '../../components/DateField';
 
 // The employee file's dialogs: a new hire, and the edits of a box of the file (personal data, job, contract, salary).
 
@@ -117,7 +118,7 @@ export function HireDialog({ open, departments, onClose, onSaved }: { open: bool
         <TextField label={t('staff.profile.fields.nameEn')} value={nameEn} onChange={(e) => setNameEn(e.target.value)} fullWidth />
       </Stack>
       <Stack direction="row" sx={{ gap: 1.5 }}>
-        <TextField type="date" label={t('staff.profile.fields.hireDate')} value={hireDate} onChange={(e) => setHireDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth />
+        <DateField label={t('staff.profile.fields.hireDate')} value={hireDate} onChange={(e) => setHireDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth />
         <TextField type="number" label={t('staff.dialogs.probationDays')} value={probation} onChange={(e) => setProbation(Number(e.target.value))} fullWidth />
       </Stack>
       <TextField select label={t('staff.profile.fields.legalEntity')} value={entity} onChange={(e) => setEntity(e.target.value)} slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
@@ -258,8 +259,8 @@ export function JobDialog({ profile, departments, onClose, onSaved }: { profile:
         </TextField>
       </Stack>
       <Stack direction="row" sx={{ gap: 1.5 }}>
-        <TextField type="date" label={t('staff.profile.fields.hireDate')} value={hire} onChange={(e) => setHire(e.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField type="date" label={t('staff.profile.fields.probationEnds')} value={probation} onChange={(e) => setProbation(e.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+        <DateField label={t('staff.profile.fields.hireDate')} value={hire} onChange={(e) => setHire(e.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+        <DateField label={t('staff.profile.fields.probationEnds')} value={probation} onChange={(e) => setProbation(e.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
       </Stack>
       <TextField select label={t('staff.profile.fields.status')} value={status} onChange={(e) => setStatus(e.target.value as StaffStatus)}>
         {staffStatuses.map((s) => (
@@ -281,10 +282,10 @@ export function ContractDialog({ profile, onClose, onSaved }: { profile: StaffPr
   return (
     <Frame open title={t('staff.dialogs.contract')} busy={busy} error={error} onClose={onClose} onSave={() => void run(() => staffApi.setContract(profile.id, { startsOn: nz(start), months: months ? Number(months) : null, endsOn: nz(end) }))}>
       <Stack direction="row" sx={{ gap: 1.5 }}>
-        <TextField type="date" label={t('staff.profile.fields.contractStart')} value={start} onChange={(e) => setStart(e.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+        <DateField label={t('staff.profile.fields.contractStart')} value={start} onChange={(e) => setStart(e.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
         <TextField type="number" label={t('staff.profile.fields.contractMonths')} value={months} onChange={(e) => setMonths(e.target.value)} fullWidth />
       </Stack>
-      <TextField type="date" label={t('staff.profile.fields.contractEnd')} value={end} onChange={(e) => setEnd(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+      <DateField label={t('staff.profile.fields.contractEnd')} value={end} onChange={(e) => setEnd(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
     </Frame>
   );
 }
@@ -299,7 +300,7 @@ export function SalaryDialog({ profile, onClose, onSaved }: { profile: StaffProf
   return (
     <Frame open title={t('staff.dialogs.salary')} busy={busy} error={error} onClose={onClose} saveDisabled={!reason.trim()} onSave={() => void run(() => staffApi.changeSalary(profile.id, { effectiveFrom: from, salary, reason: reason.trim() }))}>
       <Alert severity="info">{t('staff.dialogs.salaryHint')}</Alert>
-      <TextField type="date" label={t('staff.dialogs.effectiveFrom')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+      <DateField label={t('staff.dialogs.effectiveFrom')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
       <SalaryFields value={salary} onChange={setSalary} />
       <TextField label={t('staff.dialogs.reason')} value={reason} onChange={(e) => setReason(e.target.value)} required multiline minRows={2} />
     </Frame>
@@ -327,7 +328,7 @@ export function PayDetailsDialog({ profile, onClose, onSaved }: { profile: Staff
       <TextField label={t('staff.profile.fields.bank')} value={bank} onChange={(e) => setBank(e.target.value)} slotProps={{ htmlInput: { maxLength: 100 } }} />
       <TextField label={t('staff.profile.fields.iban')} value={iban} onChange={(e) => setIban(e.target.value)} placeholder="SA00 0000 0000 0000 0000 0000" helperText={t('staff.dialogs.ibanHint')} slotProps={{ htmlInput: { maxLength: 34, dir: 'ltr' } }} />
       <TextField label={t('staff.profile.fields.accountHolder')} value={holder} onChange={(e) => setHolder(e.target.value)} slotProps={{ htmlInput: { maxLength: 200 } }} />
-      <TextField type="date" label={t('staff.profile.fields.gosiSince')} value={since} onChange={(e) => setSince(e.target.value)} helperText={t('staff.dialogs.gosiSinceHint')} slotProps={{ inputLabel: { shrink: true } }} />
+      <DateField label={t('staff.profile.fields.gosiSince')} value={since} onChange={(e) => setSince(e.target.value)} helperText={t('staff.dialogs.gosiSinceHint')} slotProps={{ inputLabel: { shrink: true } }} />
     </Frame>
   );
 }

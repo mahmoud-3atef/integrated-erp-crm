@@ -52,6 +52,7 @@ import { useMonthName as usePeriodName } from '../../attendance/AttendanceMonthP
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { money } from '../payroll';
 import { useLegalEntities } from '../RunDialogs';
+import { DateField } from '../../../components/DateField';
 
 type View = 'statement' | 'tasks' | 'saudization';
 
@@ -638,11 +639,11 @@ function CloseTaskDialog({ task, onClose, onDone }: { task: GosiTask; onClose: (
                 slotProps={{ input: { endAdornment: <InputAdornment position="end">{t('hr.sar')}</InputAdornment> } }}
               />
             )}
-            <TextField size="small" required type="date" label={t(`gosi.close.doneOn.${task.kind}`)} value={doneOn} onChange={(e) => setDoneOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" required label={t(`gosi.close.doneOn.${task.kind}`)} value={doneOn} onChange={(e) => setDoneOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             {register && (
               <>
                 <TextField size="small" required label={t('gosi.close.gosiNo')} value={gosiNo} onChange={(e) => setGosiNo(e.target.value)} slotProps={{ htmlInput: { dir: 'ltr', maxLength: 30 } }} />
-                <TextField size="small" type="date" label={t('gosi.close.since')} value={since} onChange={(e) => setSince(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+                <DateField size="small" label={t('gosi.close.since')} value={since} onChange={(e) => setSince(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
               </>
             )}
           </Box>

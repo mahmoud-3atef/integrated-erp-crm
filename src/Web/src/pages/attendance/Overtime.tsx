@@ -17,6 +17,7 @@ import { HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { localRef } from './AttendanceMonthPage';
+import { DateField } from '../../components/DateField';
 
 export const overtimeLook: Record<OvertimeStatus, { color: string; tint: string }> = {
   InApproval: { color: hr.primary, tint: '#EFF6FF' },
@@ -87,7 +88,7 @@ export function OvertimeDialog({ request, amend = false, onClose, onSent }: { re
             renderInput={(params) => <TextField {...params} required label={t('overtime.employee')} />}
           />
           <Stack direction="row" sx={{ gap: 1 }}>
-            <TextField size="small" fullWidth type="date" label={t('overtime.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" fullWidth label={t('overtime.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField size="small" fullWidth type="number" label={t('overtime.hours')} value={hours} onChange={(e) => setHours(e.target.value)} slotProps={{ htmlInput: { min: 0.25, max: 12, step: 0.25 } }} />
           </Stack>
           <TextField size="small" required multiline minRows={2} label={t('overtime.reason')} value={reason} onChange={(e) => setReason(e.target.value)} slotProps={{ htmlInput: { maxLength: 500 } }} />

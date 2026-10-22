@@ -28,6 +28,7 @@ import { sar } from '../../operations/delivery';
 import { Journey, JourneyLine, WorkerFact, WorkerHead } from '../recordParts';
 import { ActionDialog } from './ActionDialog';
 import { gradient, lookOf, MovementStatusBadge, typeLook, useStateName } from './movementMeta';
+import { DateField } from '../../../components/DateField';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -408,9 +409,9 @@ function MovementAmendDialog({ movement: m, onClose, onSaved }: { movement: Move
         <Stack sx={{ gap: 2 }}>
           <Alert severity="info">{t('movements.amend.hint')}</Alert>
           <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
-            <TextField required type="date" label={t(`movements.dateLabel.${m.type}`)} value={effectiveOn} onChange={(e) => setEffectiveOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <DateField required label={t(`movements.dateLabel.${m.type}`)} value={effectiveOn} onChange={(e) => setEffectiveOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
             {m.type === 'VacationDeparture' && (
-              <TextField type="date" label={t('movements.expectedReturn')} value={expectedReturnOn} onChange={(e) => setExpectedReturnOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+              <DateField label={t('movements.expectedReturn')} value={expectedReturnOn} onChange={(e) => setExpectedReturnOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
             )}
           </Stack>
           {m.opensPeriod !== 'Work' && (

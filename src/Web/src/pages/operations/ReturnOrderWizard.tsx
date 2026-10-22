@@ -39,6 +39,7 @@ import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday } from './delivery';
 import { useStateName } from './movements/movementMeta';
 import { daysBetween, Journey, JourneyLine } from './recordParts';
+import { DateField } from '../../components/DateField';
 
 const daysAgo = (iso: string) => Math.floor((Date.parse(isoToday()) - Date.parse(iso)) / 86400000);
 
@@ -265,8 +266,7 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
             </Alert>
           )}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-            <TextField
-              type="date"
+            <DateField
               label={t('operations.return.col.arrivedOn')}
               value={arrivedOn}
               onChange={(e) => setArrivedOn(e.target.value)}

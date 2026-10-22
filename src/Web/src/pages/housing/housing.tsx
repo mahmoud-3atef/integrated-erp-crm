@@ -20,6 +20,7 @@ import type { ProjectOption, WorkerCard } from '../../api/operations';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { isoToday } from '../operations/delivery';
+import { DateField } from '../../components/DateField';
 
 /** How full a room or building is: a bar and "occupied / capacity". */
 export function Occupancy({ occupied, capacity }: { occupied: number; capacity: number }) {
@@ -237,7 +238,7 @@ export function AssignDialog({ worker, room, onClose, onSaved }: { worker?: { id
               renderInput={(params) => <TextField {...params} label={t('housing.workerWithoutRoom')} required autoFocus helperText={t('housing.workerWithoutRoomHint', { count: workers.length })} />}
             />
           )}
-          <TextField type="date" label={t('housing.from')} value={from} onChange={(e) => setFrom(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField label={t('housing.from')} value={from} onChange={(e) => setFrom(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
         </Stack>
       </DialogContent>
       <DialogActions>

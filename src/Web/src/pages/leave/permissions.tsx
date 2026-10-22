@@ -18,6 +18,7 @@ import { HrPageHeader, HrScope, hr, hrCard } from '../../components/hr/Hr';
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { LeaveStatusBadge } from './leave';
+import { DateField } from '../../components/DateField';
 
 type Person = { id: string; nameAr: string; nameEn: string };
 const hhmm = (t: string) => t.slice(0, 5);
@@ -95,7 +96,7 @@ export function PermissionDialog({ employee, request, onClose, onSent }: { emplo
                 </MenuItem>
               ))}
             </TextField>
-            <TextField size="small" type="date" label={t('permissions.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" label={t('permissions.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField size="small" type="time" label={t('permissions.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField size="small" type="time" label={t('permissions.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           </Box>
@@ -377,7 +378,7 @@ function PermissionAmendDialog({ permission: p, onClose, onSaved }: { permission
             ))}
           </TextField>
           <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
-            <TextField size="small" type="date" label={t('permissions.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <DateField size="small" label={t('permissions.date')} value={day} onChange={(e) => setDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
             <TextField size="small" type="time" label={t('permissions.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
             <TextField size="small" type="time" label={t('permissions.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
           </Stack>

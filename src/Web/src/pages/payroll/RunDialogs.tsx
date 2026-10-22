@@ -6,6 +6,7 @@ import { errorKey } from '../../api/auth';
 import { payrollApi, type SponsorLink } from '../../api/payroll';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { hr } from '../../components/hr/Hr';
+import { DateField } from '../../components/DateField';
 
 /** The company's active commercial registrations (the payroll is per registration). */
 export function useLegalEntities() {
@@ -88,8 +89,8 @@ export function NewRunDialog({ open, defaultEntity, onClose, onCreated, onLinkSp
             ))}
           </TextField>
           <Stack direction="row" sx={{ gap: 2 }}>
-            <TextField type="date" label={t('payroll.create.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth required />
-            <TextField type="date" label={t('payroll.create.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth required />
+            <DateField label={t('payroll.create.from')} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth required />
+            <DateField label={t('payroll.create.to')} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} fullWidth required />
           </Stack>
         </Stack>
       </DialogContent>

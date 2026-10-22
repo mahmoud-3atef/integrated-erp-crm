@@ -30,6 +30,7 @@ import { sar } from './delivery';
 import { daysBetween, Journey, JourneyLine, WorkerFact, WorkerHead } from './recordParts';
 import { TransferStatusBadge } from './transfers';
 import { TransferOrderWizard } from './TransferOrderWizard';
+import { DateField } from '../../components/DateField';
 
 const card = { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, border: `1px solid ${tokens.gray100}` };
 
@@ -515,7 +516,7 @@ function TransferAmendDialog({ order, onClose, onSaved }: { order: TransferDetai
         <Stack sx={{ gap: 2 }}>
           <Alert severity="info">{t('operations.transfer.amend.hint')}</Alert>
           <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
-            <TextField required type="date" label={t('operations.transfer.amend.transferOn')} value={transferOn} onChange={(e) => setTransferOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+            <DateField required label={t('operations.transfer.amend.transferOn')} value={transferOn} onChange={(e) => setTransferOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
             <TextField label={t('operations.transfer.amend.receiver')} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} sx={{ flex: 1 }} />
             <TextField label={t('operations.transfer.amend.receiverTitle')} value={receiverTitle} onChange={(e) => setReceiverTitle(e.target.value)} sx={{ flex: 1 }} />
           </Stack>

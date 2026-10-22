@@ -38,6 +38,7 @@ import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrDrawer, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
 import { EmployeeLeavePanel, typeName } from './leave';
+import { DateField } from '../../components/DateField';
 
 /** The balances of a type for every employee, the month's accrual, the year's carry-over and the opening balances' import. */
 export function LeaveBalancesPage() {
@@ -238,7 +239,7 @@ function OpeningImportDialog({ typeId, onClose, onDone }: { typeId: string; onCl
         <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
           <Typography sx={{ fontSize: 13, color: hr.textMuted }}>{t('leaveBalances.importHint')}</Typography>
           <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
-            <TextField size="small" type="date" label={t('leave.entry.asOf')} value={asOf} onChange={(e) => (setAsOf(e.target.value), setResult(null))} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField size="small" label={t('leave.entry.asOf')} value={asOf} onChange={(e) => (setAsOf(e.target.value), setResult(null))} slotProps={{ inputLabel: { shrink: true } }} />
             <input
               ref={input}
               type="file"

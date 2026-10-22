@@ -41,6 +41,7 @@ import { GlassChip, GlassFact, GlassHero, GlassKpi, GlassRow, glassButton, glass
 import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { Money, sar, useYears } from './settlementParts';
+import { DateField } from '../../components/DateField';
 
 /**
  * One settlement (docs/03-migration-plan/18), with the details' glass tint: the strip with its KPIs and facts, the
@@ -417,14 +418,14 @@ function EditDialog({ d, onClose, onSaved }: { d: SettlementDetail; onClose: () 
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField size="small" type="date" label={t('settlements.create.lastDay')} value={lastDay} onChange={(e) => setLastDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <DateField size="small" label={t('settlements.create.lastDay')} value={lastDay} onChange={(e) => setLastDay(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
               <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
                 <TextField select size="small" label={t('settlements.create.term')} value={term} onChange={(e) => setTerm(e.target.value as 'Indefinite' | 'Fixed')} sx={{ flex: 1 }}>
                   <MenuItem value="Indefinite">{t('settlements.term.Indefinite')}</MenuItem>
                   <MenuItem value="Fixed">{t('settlements.term.Fixed')}</MenuItem>
                 </TextField>
                 {term === 'Fixed' && (
-                  <TextField size="small" type="date" label={t('settlements.create.contractEnds')} value={ends} onChange={(e) => setEnds(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+                  <DateField size="small" label={t('settlements.create.contractEnds')} value={ends} onChange={(e) => setEnds(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
                 )}
               </Stack>
             </>
@@ -470,7 +471,7 @@ function PayDialog({ id, onClose, onPaid }: { id: string; onClose: () => void; o
       <DialogTitle sx={{ fontWeight: 700 }}>{t('settlements.pay')}</DialogTitle>
       <DialogContent>
         <Stack sx={{ gap: 2, pt: 0.5 }}>
-          <TextField size="small" type="date" label={t('settlements.paidOnLabel')} value={paidOn} onChange={(e) => setPaidOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateField size="small" label={t('settlements.paidOnLabel')} value={paidOn} onChange={(e) => setPaidOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField select size="small" label={t('settlements.methodLabel')} value={method} onChange={(e) => setMethod(e.target.value)}>
             {['Transfer', 'Cash', 'Cheque'].map((m) => (
               <MenuItem key={m} value={m}>

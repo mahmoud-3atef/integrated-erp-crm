@@ -45,6 +45,7 @@ import { ErrorMessage } from '../../auth/AuthLayout';
 import { AttachmentsDialog } from '../../components/AttachmentsDialog';
 import { KpiCard } from '../../components/KpiCard';
 import { Badge, PageHeader } from '../../components/ui';
+import { DateField } from '../../components/DateField';
 
 type Category = { code: string; nameAr: string; nameEn: string };
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -403,7 +404,7 @@ function ExpenseDialog({
               </MenuItem>
             ))}
           </TextField>
-          <TextField type="date" label={t('expenses.col.date')} value={v.spentOn} onChange={(e) => setV({ ...v, spentOn: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} required />
+          <DateField label={t('expenses.col.date')} value={v.spentOn} onChange={(e) => setV({ ...v, spentOn: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} required />
           <TextField type="number" label={t('expenses.amount')} value={v.amount || ''} onChange={(e) => setV({ ...v, amount: Number(e.target.value) })} required slotProps={{ htmlInput: { min: 0, step: 0.01 }, input: { endAdornment: <InputAdornment position="end">{t('workforce.sar')}</InputAdornment> } }} />
           <TextField type="number" label={t('expenses.vat')} value={v.vat || ''} onChange={(e) => setV({ ...v, vat: Number(e.target.value) })} slotProps={{ htmlInput: { min: 0, step: 0.01 }, input: { endAdornment: <InputAdornment position="end">{t('workforce.sar')}</InputAdornment> } }} />
           <TextField type="number" label={t('expenses.months')} value={v.months} onChange={(e) => setV({ ...v, months: Math.max(1, Math.min(36, Number(e.target.value) || 1)) })} helperText={v.months > 1 ? t('expenses.monthsHelpSpread', { count: v.months, share: (v.amount / v.months).toFixed(2) }) : t('expenses.monthsHelp')} slotProps={{ htmlInput: { min: 1, max: 36 } }} />

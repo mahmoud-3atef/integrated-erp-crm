@@ -14,7 +14,6 @@ import {
   DialogTitle,
   IconButton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -30,6 +29,7 @@ import { Badge } from '../../components/ui';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday } from '../operations/delivery';
 import { AssignDialog, BuildingDialog, Occupancy, RoomDialog } from './housing';
+import { DateField } from '../../components/DateField';
 
 /** One building: its details and occupancy, and its rooms with who lives in each. */
 export function BuildingPage() {
@@ -243,7 +243,7 @@ export function BuildingPage() {
           <DialogTitle>{t('housing.leaveTitle', { name: leaving.name })}</DialogTitle>
           <DialogContent dividers>
             <Typography sx={{ fontSize: 13, color: tokens.gray600, mb: 2 }}>{t('housing.leaveHint')}</Typography>
-            <TextField type="date" fullWidth label={t('housing.leaveOn')} value={leaveOn} onChange={(e) => setLeaveOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField fullWidth label={t('housing.leaveOn')} value={leaveOn} onChange={(e) => setLeaveOn(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setLeaving(null)}>{t('common.cancel')}</Button>
