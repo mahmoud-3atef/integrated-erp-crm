@@ -2397,7 +2397,10 @@
       "approved": "Approved",
       "approvedFoot": "Ready for invoice and payroll",
       "amount": "Invoices before VAT",
-      "amountFoot": "{{count}} with an issued invoice"
+      "amountFoot": "{{count}} with an issued invoice",
+      "generatedOf": "Of {{count}} projects with work",
+      "notGenerated": "Not generated",
+      "notGeneratedFoot": "Projects with work and no timesheet"
     },
     "settings": {
       "title": "Project billing settings",
@@ -2494,6 +2497,20 @@
         "worker": "Worker"
       },
       "lines": "{{count}} lines"
+    },
+    "create": {
+      "button": "Create the monthly timesheet",
+      "title": "Create the monthly timesheet",
+      "hint": "Timesheet of «{{project}}»: the period and day basis come from the project’s settings and can be changed.",
+      "month": "Timesheet month",
+      "period": "Period:",
+      "willSave": "The change is saved in the project’s timesheet settings.",
+      "ok": "Create and open",
+      "creating": "Creating…"
+    },
+    "projectSettings": {
+      "title": "Timesheet settings",
+      "edit": "Edit the settings"
     }
   },
   "invoices": {

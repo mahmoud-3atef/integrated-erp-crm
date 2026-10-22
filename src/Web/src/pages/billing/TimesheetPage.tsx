@@ -40,9 +40,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type BillingSettings, type TimesheetDetail, type TimesheetLine, type WorkerPay } from '../../api/billing';
+import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type TimesheetDetail, type TimesheetLine, type WorkerPay } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { TimesheetSettingsDialog } from './timesheetSetup';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
 import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
@@ -430,8 +431,10 @@ export function TimesheetPage() {
       )}
       {adjusting && <AdjustDialog sheet={sheet} line={adjusting} onClose={() => setAdjusting(null)} onChanged={() => void reload()} />}
       {settings && (
-        <SettingsDialog
-          sheet={sheet}
+        <TimesheetSettingsDialog
+          projectId={sheet.projectId}
+          projectName={sheet.projectName}
+          settings={sheet.settings}
           onClose={() => setSettings(false)}
           onSaved={() => {
             setSettings(false);
@@ -885,64 +888,3 @@ function AdjustDialog({ sheet, line, onClose, onChanged }: { sheet: TimesheetDet
   );
 }
 
-function SettingsDialog({ sheet, onClose, onSaved }: { sheet: TimesheetDetail; onClose: () => void; onSaved: () => void }) {
-  const { t } = useTranslation();
-  const [s, setS] = useState<BillingSettings>(sheet.settings);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const num = (key: keyof BillingSettings, label: string, scale = 1) => (
-    <TextField
-      label={label}
-      value={s[key] === null ? '' : String(Math.round(Number(s[key]) * scale * 10000) / 10000)}
-      onChange={(e) => setS({ ...s, [key]: e.target.value === '' ? null : Number(e.target.value.replace(/[^\d.]/g, '')) / scale })}
-      slotProps={{ htmlInput: { dir: 'ltr', inputMode: 'decimal' } }}
-    />
-  );
-
-  return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t('timesheets.settings.title')}</DialogTitle>
-      <DialogContent dividers>
-        <ErrorMessage messageKey={error} />
-        <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mb: 2 }}>{t('timesheets.settings.hint', { project: sheet.projectName })}</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-          <TextField select label={t('timesheets.settings.cycleStartDay')} value={s.cycleStartDay} onChange={(e) => setS({ ...s, cycleStartDay: Number(e.target.value) })}>
-            {Array.from({ length: 28 }, (_, n) => n + 1).map((d) => (
-              <MenuItem key={d} value={d}>
-                {d === 1 ? t('timesheets.settings.calendarMonth') : t('timesheets.settings.fromDay', { day: d, prev: d - 1 })}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField select label={t('timesheets.settings.dayBasis')} value={s.dayBasis} onChange={(e) => setS({ ...s, dayBasis: e.target.value as BillingSettings['dayBasis'] })}>
-            <MenuItem value="Thirty">{t('timesheets.dayBasis.Thirty')}</MenuItem>
-            <MenuItem value="ActualDays">{t('timesheets.dayBasis.ActualDays')}</MenuItem>
-          </TextField>
-          {num('overtimeMultiplier', t('timesheets.settings.overtimeMultiplier'))}
-          {num('monthlyHours', t('timesheets.settings.monthlyHours'))}
-          {num('overtimeHourlyRate', t('timesheets.settings.overtimeHourlyRate'))}
-          {num('maxOvertimeHours', t('timesheets.settings.maxOvertimeHours'))}
-          {num('gosiRate', t('timesheets.settings.gosiRate'), 100)}
-          {num('vatRate', t('timesheets.settings.vatRate'), 100)}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('common.cancel')}</Button>
-        <Button
-          variant="contained"
-          disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            setError(null);
-            billingApi
-              .saveSettings(sheet.projectId, s)
-              .then(onSaved)
-              .catch((failure: unknown) => setError(errorKey(failure)))
-              .finally(() => setBusy(false));
-          }}
-        >
-          {t('common.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}

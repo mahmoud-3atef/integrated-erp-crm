@@ -20,6 +20,7 @@ import { errorKey } from '../../api/auth';
 import { adjustmentTypes, billingApi, invoiceApi } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
+import { TimesheetSettingsDialog } from './timesheetSetup';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
 import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
@@ -158,7 +159,7 @@ export function TimesheetPage() {
                                     ] }), tab === 'invoice' && _jsx(InvoiceTab, { sheet: sheet }), tab === 'payroll' && (_jsxs(_Fragment, { children: [_jsx(Hint, { text: t('timesheets.payrollHint') }), _jsx(PayTable, { rows: sheet.payroll })] })), tab === 'suppliers' && (_jsxs(_Fragment, { children: [_jsx(Hint, { text: t('timesheets.suppliersHint') }), sheet.suppliers.length === 0 ? (_jsx(Typography, { sx: { py: 4, textAlign: 'center', color: tokens.gray500 }, children: t('timesheets.noSuppliers') })) : (_jsx(Stack, { spacing: 2, children: sheet.suppliers.map((s) => (_jsxs(Box, { sx: { border: `1px solid ${tokens.navy50}`, borderRadius: `${tokens.radius}px`, p: 1.5 }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1.5, mb: 1 }, children: [_jsx(Typography, { sx: { fontSize: 15, fontWeight: 800, color: tokens.navy800, flex: 1 }, children: s.supplierName }), _jsx(Typography, { sx: { fontSize: 12.5, color: tokens.gray600 }, children: t('timesheets.supplierSummary', { workers: s.workers, days: sar(s.workDays), net: sar(s.net) }) })] }), _jsx(PayTable, { rows: s.items })] }, s.supplierName))) }))] })), tab === 'unknown' && (_jsxs(_Fragment, { children: [_jsx(Alert, { severity: "warning", icon: _jsx(WarningAmberOutlinedIcon, {}), sx: { mb: 1.5 }, children: t('timesheets.unknownHint') }), _jsx(PayTable, { rows: sheet.unknownSource })] }))] })] }) }), uploading && (_jsx(ExcelUploadDialog, { timesheetId: sheet.id, onClose: () => setUploading(false), onApplied: () => {
                     setUploading(false);
                     void reload();
-                } })), adjusting && _jsx(AdjustDialog, { sheet: sheet, line: adjusting, onClose: () => setAdjusting(null), onChanged: () => void reload() }), settings && (_jsx(SettingsDialog, { sheet: sheet, onClose: () => setSettings(false), onSaved: () => {
+                } })), adjusting && _jsx(AdjustDialog, { sheet: sheet, line: adjusting, onClose: () => setAdjusting(null), onChanged: () => void reload() }), settings && (_jsx(TimesheetSettingsDialog, { projectId: sheet.projectId, projectName: sheet.projectName, settings: sheet.settings, onClose: () => setSettings(false), onSaved: () => {
                     setSettings(false);
                     if (sheet.canEdit)
                         void run(() => billingApi.generate(sheet.projectId, sheet.month));
@@ -286,20 +287,4 @@ function AdjustDialog({ sheet, line, onClose, onChanged }) {
                             setValue('');
                             setReason('');
                         }), children: t('timesheets.addAdjustment') })] })] }));
-}
-function SettingsDialog({ sheet, onClose, onSaved }) {
-    const { t } = useTranslation();
-    const [s, setS] = useState(sheet.settings);
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState(null);
-    const num = (key, label, scale = 1) => (_jsx(TextField, { label: label, value: s[key] === null ? '' : String(Math.round(Number(s[key]) * scale * 10000) / 10000), onChange: (e) => setS({ ...s, [key]: e.target.value === '' ? null : Number(e.target.value.replace(/[^\d.]/g, '')) / scale }), slotProps: { htmlInput: { dir: 'ltr', inputMode: 'decimal' } } }));
-    return (_jsxs(Dialog, { open: true, onClose: onClose, fullWidth: true, maxWidth: "sm", children: [_jsx(DialogTitle, { children: t('timesheets.settings.title') }), _jsxs(DialogContent, { dividers: true, children: [_jsx(ErrorMessage, { messageKey: error }), _jsx(Typography, { sx: { fontSize: 12.5, color: tokens.gray500, mb: 2 }, children: t('timesheets.settings.hint', { project: sheet.projectName }) }), _jsxs(Box, { sx: { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }, children: [_jsx(TextField, { select: true, label: t('timesheets.settings.cycleStartDay'), value: s.cycleStartDay, onChange: (e) => setS({ ...s, cycleStartDay: Number(e.target.value) }), children: Array.from({ length: 28 }, (_, n) => n + 1).map((d) => (_jsx(MenuItem, { value: d, children: d === 1 ? t('timesheets.settings.calendarMonth') : t('timesheets.settings.fromDay', { day: d, prev: d - 1 }) }, d))) }), _jsxs(TextField, { select: true, label: t('timesheets.settings.dayBasis'), value: s.dayBasis, onChange: (e) => setS({ ...s, dayBasis: e.target.value }), children: [_jsx(MenuItem, { value: "Thirty", children: t('timesheets.dayBasis.Thirty') }), _jsx(MenuItem, { value: "ActualDays", children: t('timesheets.dayBasis.ActualDays') })] }), num('overtimeMultiplier', t('timesheets.settings.overtimeMultiplier')), num('monthlyHours', t('timesheets.settings.monthlyHours')), num('overtimeHourlyRate', t('timesheets.settings.overtimeHourlyRate')), num('maxOvertimeHours', t('timesheets.settings.maxOvertimeHours')), num('gosiRate', t('timesheets.settings.gosiRate'), 100), num('vatRate', t('timesheets.settings.vatRate'), 100)] })] }), _jsxs(DialogActions, { children: [_jsx(Button, { onClick: onClose, children: t('common.cancel') }), _jsx(Button, { variant: "contained", disabled: busy, onClick: () => {
-                            setBusy(true);
-                            setError(null);
-                            billingApi
-                                .saveSettings(sheet.projectId, s)
-                                .then(onSaved)
-                                .catch((failure) => setError(errorKey(failure)))
-                                .finally(() => setBusy(false));
-                        }, children: t('common.save') })] })] }));
 }

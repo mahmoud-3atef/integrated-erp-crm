@@ -40,7 +40,7 @@ import { TimesheetStatusBadge, timesheetTone } from './timesheets';
 import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
 import { toneColors } from '../../app/theme';
 
-type CardFilter = 'all' | 'generated' | 'inApproval' | 'approved' | 'invoiced';
+type CardFilter = 'all' | 'generated' | 'inApproval' | 'approved' | 'invoiced' | 'notGenerated';
 
 /** Which projects a card shows: all, with a timesheet, in approval, approved, or with an issued invoice. */
 const cardFilters: Record<CardFilter, (p: MonthProject) => boolean> = {
@@ -49,6 +49,7 @@ const cardFilters: Record<CardFilter, (p: MonthProject) => boolean> = {
   inApproval: (p) => p.status === 'InApproval',
   approved: (p) => p.status === 'Approved',
   invoiced: (p) => p.invoiceDoc?.status === 'Issued',
+  notGenerated: (p) => p.timesheetId === null,
 };
 
 const monthIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
@@ -63,7 +64,7 @@ export function TimesheetsPage() {
   const month = params.get('month') ?? monthIso(new Date());
   const [data, setData] = useState<TimesheetMonth | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [card, setCard] = useState<CardFilter>('all');
+  const [card, setCard] = useState<CardFilter>('generated');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const canManage = can('billing.timesheets.manage', true);
@@ -154,11 +155,11 @@ export function TimesheetsPage() {
       <ErrorMessage messageKey={error} />
 
       <StatusStrip count={5}>
-        <StripItem active={card === 'all'} onClick={() => toggle('all')} label={t('timesheets.cards.projects')} value={String(data?.totals.projects ?? 0)} foot={t('timesheets.cards.projectsFoot')} icon={<BusinessCenterOutlinedIcon />} tone={tokens.navy700} />
-        <StripItem active={card === 'generated'} onClick={() => toggle('generated')} label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedFoot', { count: missing })} icon={<PostAddOutlinedIcon />} tone="#6b7a90" />
+        <StripItem active={card === 'generated'} onClick={() => toggle('generated')} label={t('timesheets.cards.generated')} value={String(data?.totals.generated ?? 0)} foot={t('timesheets.cards.generatedOf', { count: data?.totals.projects ?? 0 })} icon={<PostAddOutlinedIcon />} tone={tokens.navy700} />
         <StripItem active={card === 'inApproval'} onClick={() => toggle('inApproval')} label={t('timesheets.cards.inApproval')} value={String(data?.totals.inApproval ?? 0)} foot={t('timesheets.cards.inApprovalFoot')} icon={<HourglassBottomOutlinedIcon />} tone="#d9822b" />
         <StripItem active={card === 'approved'} onClick={() => toggle('approved')} label={t('timesheets.cards.approved')} value={String(data?.totals.approved ?? 0)} foot={t('timesheets.cards.approvedFoot')} icon={<AssignmentTurnedInOutlinedIcon />} tone="#1f9d55" />
         <StripItem active={card === 'invoiced'} onClick={() => toggle('invoiced')} label={t('timesheets.cards.amount')} value={sar(data?.totals.invoiceAmount ?? 0)} foot={t('timesheets.cards.amountFoot', { count: data?.totals.invoiced ?? 0 })} icon={<PaymentsOutlinedIcon />} tone="#2b7bd9" />
+        <StripItem active={card === 'notGenerated'} onClick={() => toggle('notGenerated')} label={t('timesheets.cards.notGenerated')} value={String(missing)} foot={t('timesheets.cards.notGeneratedFoot')} icon={<BusinessCenterOutlinedIcon />} tone="#6b7a90" />
       </StatusStrip>
 
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>

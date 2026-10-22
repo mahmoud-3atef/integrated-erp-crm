@@ -32,6 +32,12 @@ import { placementLook } from '../../components/workforce/placement';
 import { draftFromSuggestion, PackageDialog, PackagesTable, SuggestionsTable, WorkerPricesTable, type PackageDraft } from './pricing';
 import { contractStatusTone, DaysLeft, useCommercialFormat } from './ProjectsPage';
 import { useCrumb } from '../../app/breadcrumbs';
+import { billingApi, type BillingSettings } from '../../api/billing';
+import { CreateTimesheetDialog, TimesheetSettingsDialog } from '../billing/timesheetSetup';
+import DateRangeOutlinedIcon from '@mui/icons-material/DateRangeOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 
 /** One project, as the old project page: title bar, project and contract sections, then its workers, price packages and worker prices. */
 export function ProjectDetailPage() {
@@ -44,6 +50,13 @@ export function ProjectDetailPage() {
   const canManage = can('commercial.prices.manage', true);
   const [dialog, setDialog] = useState<{ package?: PackageRow; draft?: PackageDraft } | null>(null);
   const [reload, setReload] = useState(0);
+  // The project's timesheet settings, and «إنشاء التحضير الشهري» (billing's own permissions).
+  const seeBilling = can('billing.timesheets.view', true);
+  const canGenerate = can('billing.timesheets.manage', true);
+  const [billing, setBilling] = useState<BillingSettings | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [editingBilling, setEditingBilling] = useState(false);
+  const [billingReload, setBillingReload] = useState(0);
   const [params] = useSearchParams();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   useCrumb(project?.summary.name);
@@ -60,6 +73,12 @@ export function ProjectDetailPage() {
       commercialApi.projectPrices(id!).then(setPrices).catch((failure: unknown) => setError(errorKey(failure)));
     }
   }, [id, canPrices, reload]);
+
+  useEffect(() => {
+    if (id && seeBilling) {
+      billingApi.settings(id).then(setBilling).catch(() => setBilling(null));
+    }
+  }, [id, seeBilling, billingReload]);
 
   const toggle = async (row: PackageRow) => {
     try {
@@ -96,6 +115,11 @@ export function ProjectDetailPage() {
         </Box>
         {p.contractStatus && <Badge tone={contractStatusTone[p.contractStatus]}>{t(`commercial.contractStatus.${p.contractStatus}`)}</Badge>}
         {!p.isActive && <Badge tone="neutral">{t('commercial.inactive')}</Badge>}
+        {canGenerate && (
+          <Button variant="contained" startIcon={<PostAddOutlinedIcon />} onClick={() => setCreating(true)}>
+            {t('timesheets.create.button')}
+          </Button>
+        )}
         <Button startIcon={<ArrowBackIcon sx={{ transform: ar ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate(-1)}>
           {t('common.back')}
         </Button>
@@ -143,6 +167,36 @@ export function ProjectDetailPage() {
             </FieldBox>
           )}
         </FieldSection>
+
+        {billing && (
+          <FieldSection title={t('timesheets.projectSettings.title')} icon={<TuneOutlinedIcon />} tone="sky">
+            <FieldBox label={t('timesheets.settings.cycleStartDay')} icon={<DateRangeOutlinedIcon />}>
+              {billing.cycleStartDay === 1 ? t('timesheets.settings.calendarMonth') : t('timesheets.settings.fromDay', { day: billing.cycleStartDay, prev: billing.cycleStartDay - 1 })}
+            </FieldBox>
+            <FieldBox label={t('timesheets.settings.dayBasis')} icon={<CalendarMonthOutlinedIcon />}>
+              {t(`timesheets.dayBasis.${billing.dayBasis}`)}
+            </FieldBox>
+            <FieldBox label={t('timesheets.settings.overtimeMultiplier')} icon={<TagOutlinedIcon />}>
+              <bdi>{billing.overtimeMultiplier}</bdi>
+            </FieldBox>
+            <FieldBox label={t('timesheets.settings.monthlyHours')} icon={<TagOutlinedIcon />}>
+              <bdi>{billing.monthlyHours}</bdi>
+            </FieldBox>
+            <FieldBox label={t('timesheets.settings.gosiRate')} icon={<TagOutlinedIcon />}>
+              <bdi>{Math.round(billing.gosiRate * 10000) / 100}%</bdi>
+            </FieldBox>
+            <FieldBox label={t('timesheets.settings.vatRate')} icon={<TagOutlinedIcon />}>
+              <bdi>{Math.round(billing.vatRate * 10000) / 100}%</bdi>
+            </FieldBox>
+            {canGenerate && (
+              <Box sx={{ gridColumn: '1 / -1' }}>
+                <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => setEditingBilling(true)}>
+                  {t('timesheets.projectSettings.edit')}
+                </Button>
+              </Box>
+            )}
+          </FieldSection>
+        )}
 
         <FieldSection title={t('commercial.sections.contract')} icon={<DescriptionOutlinedIcon />} tone="sky">
           <FieldBox label={t('commercial.col.contractStatus')} icon={<VerifiedOutlinedIcon />}>
@@ -262,6 +316,19 @@ export function ProjectDetailPage() {
         </Stack>
       </Box>
       {dialog && <PackageDialog package={dialog.package} draft={dialog.draft} onClose={() => setDialog(null)} onSaved={() => (setDialog(null), setReload((n) => n + 1))} />}
+      {creating && <CreateTimesheetDialog projectId={id!} projectName={p.name} onClose={() => setCreating(false)} />}
+      {editingBilling && billing && (
+        <TimesheetSettingsDialog
+          projectId={id!}
+          projectName={p.name}
+          settings={billing}
+          onClose={() => setEditingBilling(false)}
+          onSaved={() => {
+            setEditingBilling(false);
+            setBillingReload((n) => n + 1);
+          }}
+        />
+      )}
     </Box>
   );
 }
