@@ -7,6 +7,16 @@ export type WorkerSource = 'Company' | 'Supplier' | 'Unknown';
 export const adjustmentTypes = ['Absence', 'Overtime', 'OvertimeAmount', 'ClientAddition', 'ClientDeduction', 'CustomerLoan', 'FeeDays', 'OtherCost', 'OtherDeduction', 'InternalAddition', 'InternalDeduction'] as const;
 
 /** The timesheet's invoice (before VAT, VAT, with VAT) and the workers' net pay and due salary. */
+export interface LegacyImportReport {
+  imported: number;
+  lines: number;
+  workers: number;
+  invoiceAmount: number;
+  skipped: { invoiceNo: string; project: string; month: string; reason: string }[];
+  balanced: { invoiceNo: string; timesheetNo: string; project: string; lines: number; invoiceDifference: number; payDifference: number }[];
+  missingWorkers: number;
+}
+
 export interface SheetTotals {
   invoice: number;
   vat: number;
@@ -43,6 +53,8 @@ export interface VariableTotal {
 export type AdjustmentType = (typeof adjustmentTypes)[number];
 
 export interface MonthProject {
+  /** The old system's invoice the timesheet was made from. */
+  legacyInvoiceNo?: string | null;
   projectId: string | null;
   projectCrmId: string;
   projectName: string;
@@ -212,6 +224,9 @@ export interface TimesheetDetail {
   canSubmit: boolean;
   invoiceDoc: InvoiceRef | null;
   canInvoice: boolean;
+  /** The old system's invoice this draft was made from, and its status code there. */
+  legacyInvoiceNo?: string | null;
+  legacyStatus?: number | null;
 }
 
 const base = '/api/v1/billing';
@@ -221,6 +236,7 @@ export const billingApi = {
   get: (id: string) => request<TimesheetDetail>('GET', `${base}/timesheets/${id}`),
   generate: (projectId: string, month: string) => request<{ id: string }>('POST', `${base}/timesheets/generate`, { projectId, month }),
   adjust: (id: string, input: { workerId: string; type: AdjustmentType; value: number; reason: string }) => request<void>('POST', `${base}/timesheets/${id}/adjustments`, input),
+  importLegacy: () => request<LegacyImportReport>('POST', `${base}/timesheets/import-legacy`),
   previewVariables: (id: string, totals: VariableTotal[]) => request<VariablesPreview>('POST', `${base}/timesheets/${id}/variables/preview`, totals),
   saveVariables: (id: string, totals: VariableTotal[]) => request<void>('POST', `${base}/timesheets/${id}/variables`, totals),
   removeAdjustment: (id: string, adjustmentId: string) => request<void>('DELETE', `${base}/timesheets/${id}/adjustments/${adjustmentId}`),

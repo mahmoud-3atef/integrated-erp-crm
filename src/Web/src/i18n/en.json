@@ -594,7 +594,9 @@
     "validation_status_value_screen": "This screen has no record status.",
     "validation_status_value_name": "Enter the value's Arabic and English names (100 characters at most).",
     "conflict_status_value_taken": "The screen already has a value with this name.",
-    "not_found_status_value": "The value was not found."
+    "not_found_status_value": "The value was not found.",
+    "conflict_timesheet_legacy": "This timesheet is the old system's invoice: it is not generated again from the ledger.",
+    "conflict_timesheet_legacy_issued": "The old system already sent this invoice to the customer: no invoice is issued from it here."
   },
   "menu": {
     "label": "Main menu",
@@ -2562,6 +2564,50 @@
       },
       "remove": "Remove from the list",
       "reasonMissing": "A reason is required: click edit to enter it"
+    },
+    "legacy": {
+      "button": "Bring the old system's invoices",
+      "title": "Bring the old system's invoices",
+      "badge": "From the old system",
+      "intro": "The old system's project invoices from June 2026 (not cancelled) become draft timesheets: one per invoice, with its lines and variables as the old system has them, its number and status there.",
+      "rules": "A line the formulas give differently from the old invoice (a hand edit there) gets a variable for the difference, «Difference from the old system's invoice», so the draft equals the old invoice. An invoice is never brought twice, and a month with a timesheet here is skipped. A brought timesheet is not generated again from the ledger, and no invoice is issued from it when the old one was sent to the customer.",
+      "run": "Start",
+      "running": "Bringing…",
+      "imported": "Invoices brought",
+      "lines": "Lines",
+      "workers": "Workers",
+      "amount": "Before VAT",
+      "missingWorkers": "{{count}} lines of workers not in the new system were not brought.",
+      "balanced": "Invoices balanced ({{count}})",
+      "balancedHint": "The invoice difference as «Other costs» or «Other deductions», the pay difference as an internal addition or deduction, each with the reason «Difference from the old system's invoice».",
+      "skipped": "Invoices not brought ({{count}})",
+      "col": {
+        "invoice": "Old invoice",
+        "timesheet": "Timesheet",
+        "project": "Project",
+        "lines": "Lines with a difference",
+        "invoiceDiff": "Invoice difference",
+        "payDiff": "Pay difference",
+        "month": "Month",
+        "reason": "Reason"
+      },
+      "reasons": {
+        "project_unknown": "The project is not in the new system",
+        "month_taken": "The project has a timesheet for this month",
+        "no_lines": "The invoice has no lines",
+        "workers_unknown": "Its workers are not in the new system"
+      },
+      "status": {
+        "1": "Under preparation",
+        "279640000": "Sent to finance",
+        "279640001": "Under finance review",
+        "279640002": "Sent to the customer",
+        "279640003": "Partially collected",
+        "279640004": "Fully collected",
+        "279640005": "Reviewed by finance",
+        "279640006": "Sent to the project supervisor",
+        "279640008": "Awaiting payment"
+      }
     }
   },
   "invoices": {

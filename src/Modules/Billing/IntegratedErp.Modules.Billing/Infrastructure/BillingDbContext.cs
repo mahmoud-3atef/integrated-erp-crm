@@ -208,6 +208,8 @@ internal sealed class TimesheetConfiguration : IEntityTypeConfiguration<Timeshee
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id).ValueGeneratedNever();
         builder.Property(t => t.TimesheetNo).HasMaxLength(40).IsRequired();
+        builder.Property(t => t.LegacyInvoiceNo).HasMaxLength(40);
+        builder.HasIndex(t => new { t.TenantId, t.LegacyInvoiceCrmId }).IsUnique().HasFilter("[legacy_invoice_crm_id] IS NOT NULL");
         builder.Property(t => t.ProjectCode).HasMaxLength(100).IsRequired();
         builder.Property(t => t.ProjectName).HasMaxLength(300).IsRequired();
         builder.Property(t => t.CustomerName).HasMaxLength(300);

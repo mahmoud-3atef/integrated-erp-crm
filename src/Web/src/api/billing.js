@@ -7,6 +7,7 @@ export const billingApi = {
     get: (id) => request('GET', `${base}/timesheets/${id}`),
     generate: (projectId, month) => request('POST', `${base}/timesheets/generate`, { projectId, month }),
     adjust: (id, input) => request('POST', `${base}/timesheets/${id}/adjustments`, input),
+    importLegacy: () => request('POST', `${base}/timesheets/import-legacy`),
     previewVariables: (id, totals) => request('POST', `${base}/timesheets/${id}/variables/preview`, totals),
     saveVariables: (id, totals) => request('POST', `${base}/timesheets/${id}/variables`, totals),
     removeAdjustment: (id, adjustmentId) => request('DELETE', `${base}/timesheets/${id}/adjustments/${adjustmentId}`),

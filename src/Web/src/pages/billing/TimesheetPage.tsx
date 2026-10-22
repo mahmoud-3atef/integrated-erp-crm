@@ -45,6 +45,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { TimesheetSettingsDialog } from './timesheetSetup';
 import { VariablesDialog } from './VariablesDialog';
+import { LegacyBadge } from './LegacyImportDialog';
 import PlaylistAddOutlinedIcon from '@mui/icons-material/PlaylistAddOutlined';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
@@ -200,6 +201,7 @@ export function TimesheetPage() {
         status={
           <Box sx={{ bgcolor: '#fff', borderRadius: 99, px: 0.25 }}>
             <ShownStatus approval={approval.detail}><TimesheetStatusBadge status={sheet.status} /></ShownStatus>
+            {sheet.legacyInvoiceNo && <LegacyBadge number={sheet.legacyInvoiceNo} status={sheet.legacyStatus} />}
           </Box>
         }
         title={sheet.projectName}

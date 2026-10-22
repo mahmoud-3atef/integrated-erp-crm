@@ -39,6 +39,8 @@ import { InvoiceStatusBadge } from './invoices';
 import { TimesheetStatusBadge, timesheetTone } from './timesheets';
 import { ListHero, rowEdge, StageLine, StatusStrip, StripItem, toneHead, useCurrentStages } from '../../components/ListLayout';
 import { toneColors } from '../../app/theme';
+import { LegacyBadge, LegacyImportDialog } from './LegacyImportDialog';
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
 
 type CardFilter = 'all' | 'generated' | 'inApproval' | 'approved' | 'invoiced' | 'notGenerated';
 
@@ -124,6 +126,7 @@ export function TimesheetsPage() {
     (p) => cardFilters[card](p) && (!term || [p.projectName, p.customerName, p.projectManager, p.timesheetNo, p.invoiceDoc?.invoiceNo].some((v) => v?.toLowerCase().includes(term))),
   );
   const toggle = (value: CardFilter) => setCard(card === value ? 'all' : value);
+  const [importing, setImporting] = useState(false);
 
   const stages = useCurrentStages('billing.timesheet', rows.flatMap((x) => (x.timesheetId ? [x.timesheetId] : [])));
 
@@ -133,11 +136,18 @@ export function TimesheetsPage() {
         title={t('timesheets.title')}
         subtitle={t('timesheets.intro')}
         actions={
-          canManage && missing > 0 ? (
-            <Button variant="contained" startIcon={<AutoModeOutlinedIcon />} disabled={busy !== null} onClick={() => void generateAll()}>
-              {t('timesheets.generateAll', { count: missing })}
-            </Button>
-          ) : undefined
+          <>
+            {canManage && can('billing.invoices.manage', true) && (
+              <Button variant="outlined" startIcon={<CloudDownloadOutlinedIcon />} onClick={() => setImporting(true)} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.5)' }}>
+                {t('timesheets.legacy.button')}
+              </Button>
+            )}
+            {canManage && missing > 0 && (
+              <Button variant="contained" startIcon={<AutoModeOutlinedIcon />} disabled={busy !== null} onClick={() => void generateAll()}>
+                {t('timesheets.generateAll', { count: missing })}
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -219,6 +229,7 @@ export function TimesheetsPage() {
                           {p.timesheetNo}
                         </Typography>
                         <TimesheetStatusBadge status={p.status!} />
+                        {p.legacyInvoiceNo && <LegacyBadge number={p.legacyInvoiceNo} />}
                         <StageLine stage={stages[p.timesheetId]} />
                       </Stack>
                     ) : p.projectId ? (
@@ -267,6 +278,7 @@ export function TimesheetsPage() {
           </Table>
         </TableContainer>
       </Box>
+      {importing && <LegacyImportDialog onClose={() => setImporting(false)} onDone={() => void reload()} />}
     </Box>
   );
 }

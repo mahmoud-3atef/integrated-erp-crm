@@ -23,6 +23,12 @@ internal static class TimesheetEndpoints
                 await queries.GetAsync(id, ct).ConfigureAwait(false) is { } timesheet ? Results.Ok(timesheet) : Results.NotFound())
             .RequirePermission(BillingPermissions.TimesheetsView, companyWide: true);
 
+        // The old system's invoices from June 2026 as draft timesheets (read from the CRM copy); what it did, as a report.
+        group.MapPost("/timesheets/import-legacy", async (LegacyTimesheetImport import, CancellationToken ct) =>
+                Results.Ok(await import.ImportAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(BillingPermissions.TimesheetsManage, companyWide: true)
+            .RequirePermission(BillingPermissions.InvoicesManage, companyWide: true);
+
         group.MapPost("/timesheets/generate", async (GenerateInput input, TimesheetService service, CancellationToken ct) =>
                 await service.GenerateAsync(input, ct).ConfigureAwait(false) is var result && result.IsSuccess ? Results.Ok(new { id = result.Value }) : Problem(result.Error))
             .RequirePermission(BillingPermissions.TimesheetsManage, companyWide: true);

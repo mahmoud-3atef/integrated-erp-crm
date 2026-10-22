@@ -1022,6 +1022,19 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
                         .HasColumnType("nvarchar(2000)")
                         .HasColumnName("last_comment");
 
+                    b.Property<Guid?>("LegacyInvoiceCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("legacy_invoice_crm_id");
+
+                    b.Property<string>("LegacyInvoiceNo")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("legacy_invoice_no");
+
+                    b.Property<int?>("LegacyStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("legacy_status");
+
                     b.Property<DateOnly>("Month")
                         .HasColumnType("date")
                         .HasColumnName("month");
@@ -1075,6 +1088,11 @@ namespace IntegratedErp.Modules.Billing.Infrastructure.Migrations
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_timesheet_tenant_id");
+
+                    b.HasIndex("TenantId", "LegacyInvoiceCrmId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_timesheet_tenant_id_legacy_invoice_crm_id")
+                        .HasFilter("[legacy_invoice_crm_id] IS NOT NULL");
 
                     b.HasIndex("TenantId", "TimesheetNo")
                         .IsUnique()

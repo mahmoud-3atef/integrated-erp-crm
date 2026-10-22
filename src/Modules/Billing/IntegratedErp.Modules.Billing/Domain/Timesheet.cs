@@ -183,6 +183,39 @@ public sealed class Timesheet : ITenantOwned
 
     public IReadOnlyList<TimesheetLine> Lines => _lines;
 
+    /// <summary>The old system's invoice this draft was made from (docs/03-migration-plan/20-legacy-invoices-import.md), its number and its status there.</summary>
+    public Guid? LegacyInvoiceCrmId { get; private set; }
+
+    public string? LegacyInvoiceNo { get; private set; }
+
+    public int? LegacyStatus { get; private set; }
+
+    /// <summary>The old invoice was sent to the customer (or collected): no invoice is issued from this draft here.</summary>
+    public bool LegacyIssued => LegacyStatus is 279640002 or 279640003 or 279640004 or 279640008;
+
+    public void MarkLegacy(Guid crmId, string number, int status)
+    {
+        LegacyInvoiceCrmId = crmId;
+        LegacyInvoiceNo = number;
+        LegacyStatus = status;
+    }
+
+    /// <summary>The old invoice's lines and their variables (no checks: they are what the old system recorded).</summary>
+    public void ImportLegacy(IEnumerable<TimesheetLine> lines, IEnumerable<(Guid WorkerId, AdjustmentType Type, decimal Value, string Reason)> variables, BillingRules rules, string by, DateTimeOffset at)
+    {
+        _lines.Clear();
+        _lines.AddRange(lines);
+        GeneratedAt = at;
+        GeneratedByName = by;
+        AddLegacyAdjustments(variables, rules, by, at);
+    }
+
+    public void AddLegacyAdjustments(IEnumerable<(Guid WorkerId, AdjustmentType Type, decimal Value, string Reason)> variables, BillingRules rules, string by, DateTimeOffset at)
+    {
+        _adjustments.AddRange(variables.Select(v => new TimesheetAdjustment(Id, v.WorkerId, v.Type, v.Value, v.Reason, by, at)));
+        Recalculate(rules);
+    }
+
     public IReadOnlyList<TimesheetAdjustment> Adjustments => _adjustments;
 
     public bool IsEditable => Status is TimesheetStatus.Draft or TimesheetStatus.Returned && !AwaitingApproval;
@@ -215,6 +248,12 @@ public sealed class Timesheet : ITenantOwned
         if (Status is not (TimesheetStatus.Draft or TimesheetStatus.Returned) || AwaitingApproval)
         {
             return Result.Failure(TimesheetErrors.NotEditable);
+        }
+
+        // An old invoice's draft keeps its lines: generating again from the ledger would lose them.
+        if (LegacyInvoiceNo is not null)
+        {
+            return Result.Failure(TimesheetErrors.Legacy);
         }
 
         From = from;
@@ -712,4 +751,6 @@ public static class TimesheetErrors
     public static readonly Error OvertimeOverLimit = Error.Validation("timesheet_overtime_limit", "The overtime hours exceed the project's monthly limit.");
     public static readonly Error AdjustmentNotFound = Error.NotFound("timesheet_adjustment", "Adjustment not found.");
     public static readonly Error Settings = Error.Validation("timesheet_settings", "Check the billing settings' values.");
+    public static readonly Error Legacy = Error.Conflict("timesheet_legacy", "This timesheet is the old system's invoice: it is not generated again from the ledger.");
+    public static readonly Error LegacyIssued = Error.Conflict("timesheet_legacy_issued", "The old system already sent this invoice to the customer: no invoice is issued from it here.");
 }

@@ -41,6 +41,12 @@ internal sealed class InvoiceService(
             return Result.Failure<Guid>(InvoiceErrors.Exists);
         }
 
+        // The old system already sent this invoice: issuing it here would bill the customer twice.
+        if (timesheet.LegacyIssued)
+        {
+            return Result.Failure<Guid>(TimesheetErrors.LegacyIssued);
+        }
+
         var billTo = await projects.BillToAsync(timesheet.ProjectId, cancellationToken).ConfigureAwait(false);
         var buyer = billTo is null
             ? new InvoiceBuyer(null, timesheet.CustomerName ?? timesheet.ProjectName, null, null, null, null)

@@ -24,7 +24,11 @@ public sealed record MonthProjectDto(
     decimal? WorkDays,
     decimal? InvoiceAmount,
     decimal? InvoiceTotal,
-    InvoiceRefDto? InvoiceDoc);
+    InvoiceRefDto? InvoiceDoc)
+{
+    /// <summary>The old system's invoice the timesheet was made from (its number).</summary>
+    public string? LegacyInvoiceNo { get; init; }
+}
 
 public sealed record MonthTotalsDto(int Projects, int Generated, int InApproval, int Approved, decimal InvoiceAmount, int Invoiced);
 
@@ -133,7 +137,13 @@ public sealed record TimesheetDetailDto(
     bool CanEdit,
     bool CanSubmit,
     InvoiceRefDto? InvoiceDoc,
-    bool CanInvoice);
+    bool CanInvoice)
+{
+    /// <summary>The old system's invoice this draft was made from, and its status code there.</summary>
+    public string? LegacyInvoiceNo { get; init; }
+
+    public int? LegacyStatus { get; init; }
+}
 
 internal sealed class TimesheetQueries(
     BillingDbContext db,
@@ -152,7 +162,7 @@ internal sealed class TimesheetQueries(
         var sheets = await db.Timesheets.AsNoTracking().Where(t => t.Month == first)
             .Select(t => new
             {
-                t.Id, t.TimesheetNo, t.ProjectId, t.ProjectCrmId, t.ProjectName, t.CustomerName, t.Status,
+                t.Id, t.TimesheetNo, t.ProjectId, t.ProjectCrmId, t.ProjectName, t.CustomerName, t.Status, t.LegacyInvoiceNo,
                 Workers = t.Lines.Select(l => l.WorkerId).Distinct().Count(),
                 Days = t.Lines.Sum(l => (decimal?)l.WorkDays) ?? 0,
                 Amount = t.Lines.Sum(l => (decimal?)l.InvoiceAmount) ?? 0,
@@ -172,7 +182,10 @@ internal sealed class TimesheetQueries(
                 return new MonthProjectDto(
                     project?.Id, crm, project?.Name ?? sheet?.ProjectName ?? byProject.GetValueOrDefault(crm).Name ?? "—", project?.CustomerName ?? sheet?.CustomerName,
                     project?.Manager, byProject.GetValueOrDefault(crm).Workers, sheet?.Id, sheet?.TimesheetNo, sheet?.Status.ToString(),
-                    sheet?.Workers, sheet?.Days, sheet?.Amount, sheet?.Total, sheet is null ? null : invoices.GetValueOrDefault(sheet.Id));
+                    sheet?.Workers, sheet?.Days, sheet?.Amount, sheet?.Total, sheet is null ? null : invoices.GetValueOrDefault(sheet.Id))
+                {
+                    LegacyInvoiceNo = sheet?.LegacyInvoiceNo,
+                };
             })
             .OrderBy(r => r.TimesheetId is null ? 0 : 1).ThenByDescending(r => r.LedgerWorkers)
             .ToList();
@@ -252,6 +265,10 @@ internal sealed class TimesheetQueries(
             CanEdit: canManage && t.IsEditable,
             CanSubmit: canManage && t.IsEditable && t.Lines.Count > 0,
             invoiceDoc,
-            CanInvoice: invoiceDoc is null && t.Status == TimesheetStatus.Approved && granted.Has(BillingPermissions.InvoicesManage));
+            CanInvoice: invoiceDoc is null && t.Status == TimesheetStatus.Approved && !t.LegacyIssued && granted.Has(BillingPermissions.InvoicesManage))
+        {
+            LegacyInvoiceNo = t.LegacyInvoiceNo,
+            LegacyStatus = t.LegacyStatus,
+        };
     }
 }

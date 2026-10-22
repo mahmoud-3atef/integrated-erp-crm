@@ -1,6 +1,8 @@
 ﻿using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.IntegrationTests.CrmSync;
 using IntegratedErp.Modules.Billing.Application;
+using IntegratedErp.Modules.Billing.Infrastructure;
+using IntegratedErp.Modules.Billing.Domain;
 using IntegratedErp.Modules.Commercial.Contracts;
 using IntegratedErp.Modules.CrmSync.Application;
 using IntegratedErp.Modules.CrmSync.Contracts;
@@ -397,6 +399,65 @@ public sealed class TimesheetTests(TestDatabase database)
         return (
             await PersonAsync("مشرف المشروع", "billing.timesheets.manage", "billing.invoices.manage", "billing.receipts.manage", "billing.bank_accounts.manage"),
             await PersonAsync("مدير العمليات", "billing.timesheets.approve", "billing.invoices.review", "billing.invoices.approve", "billing.receipts.review", "billing.receipts.approve"));
+    }
+
+    [SkippableFact]
+    public async Task The_old_systems_invoices_from_June_2026_become_draft_timesheets_equal_to_the_old_amounts()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        Guid tenantId;
+        using (var scope = database.Scope(system: true))
+        {
+            tenantId = (await scope.ServiceProvider.GetRequiredService<OrganizationService>().CreateTenantAsync($"lg-{Guid.NewGuid():N}"[..16], "شركة النقل", "Legacy Co", default)).Value.Id;
+        }
+
+        var crm = new FakeCrm();
+        crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
+        var project = crm.Add("new_project", new() { ["new_name"] = "مشروع الرياض", ["new_code"] = "pro00900", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
+        var first = Worker(crm, "BSS0701", 100000000);
+        var second = Worker(crm, "BSS0702", 100000000);
+        Guid Invoice(string number, int status, string from, string to) => crm.Add("new_invoice", new()
+        {
+            ["new_invoicenumber"] = number, ["new_projectid"] = project.ToString(), ["new_projectidname"] = "مشروع الرياض", ["new_invoicetype"] = 100000000,
+            ["statecode"] = 0, ["statuscode"] = status, ["new_fromdate"] = from, ["new_todate"] = to,
+        }, created: Created2025);
+        void Line(Guid invoice, Guid worker, decimal invoiceAmount, decimal net) => crm.Add("new_invoicdetail", new()
+        {
+            ["new_invoiceid"] = invoice.ToString(), ["new_employeeid"] = worker.ToString(), ["new_workingdays"] = 31m, ["new_monthdays"] = 31m, ["new_mawariddays"] = 31m,
+            ["new_custsalary"] = 1500m, ["new_totalsalary"] = 1500m, ["new_salesprice"] = 3000m, ["new_totalwithoutvat"] = invoiceAmount, ["new_nettoemployee"] = net,
+        }, created: Created2025);
+        var july = Invoice("INV00650", 279640003, "2026-06-30T21:00:00Z", "2026-07-30T21:00:00Z");
+        Line(july, first, 3000m, 1500m);
+        Line(july, second, 2875.40m, 1432.10m); // edited by hand in the old system
+        Invoice("INV00651", 279640003, "2026-06-30T21:00:00Z", "2026-07-30T21:00:00Z"); // a second invoice for the same month
+        Line(Invoice("INV00500", 279640004, "2026-04-30T21:00:00Z", "2026-05-30T21:00:00Z"), first, 3000m, 1500m); // before June 2026
+        Line(Invoice("INV00652", 279640007, "2026-07-31T21:00:00Z", "2026-08-30T21:00:00Z"), first, 3000m, 1500m); // cancelled
+        await SyncAsync(tenantId, crm);
+        var (manager, _) = await PeopleAsync(tenantId);
+
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var report = await scope.ServiceProvider.GetRequiredService<LegacyTimesheetImport>().ImportAsync(default);
+            Assert.Equal((1, 2, 2, 0), (report.Imported, report.Lines, report.Workers, report.MissingWorkers));
+            Assert.Equal(5875.40m, report.InvoiceAmount);
+            Assert.Equal([("INV00651", "month_taken")], report.Skipped.Select(s => (s.InvoiceNo, s.Reason)));
+            Assert.Equal("INV00650", Assert.Single(report.Balanced).InvoiceNo);
+
+            var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+            var sheet = await db.Timesheets.Include(t => t.Lines).Include(t => t.Adjustments).SingleAsync();
+            Assert.Equal(("INV00650", 279640003, new DateOnly(2026, 7, 1), true), (sheet.LegacyInvoiceNo, sheet.LegacyStatus, sheet.Month, sheet.LegacyIssued));
+            Assert.Equal(TimesheetStatus.Draft, sheet.Status);
+            Assert.Equal((5875.40m, 2932.10m), (sheet.Lines.Sum(l => l.InvoiceAmount), sheet.Lines.Sum(l => l.WorkerNet)));
+            var edited = sheet.Lines.Single(l => l.WorkerNo == "BSS0702");
+            Assert.Equal((2875.40m, 1432.10m), (edited.InvoiceAmount, edited.WorkerNet));
+            Assert.All(sheet.Adjustments, a => Assert.Equal((edited.WorkerId, "فرق عن فاتورة النظام القديم INV00650"), (a.WorkerId, a.Reason)));
+            Assert.Contains(sheet.Adjustments, a => a.Type == AdjustmentType.OtherDeduction);
+
+            var again = await scope.ServiceProvider.GetRequiredService<LegacyTimesheetImport>().ImportAsync(default);
+            Assert.Equal(0, again.Imported);
+            var regenerate = await scope.ServiceProvider.GetRequiredService<TimesheetService>().GenerateAsync(new GenerateInput(sheet.ProjectId, sheet.Month), default);
+            Assert.Equal("conflict.timesheet_legacy", regenerate.Error.Code);
+        }
     }
 
     private static Guid Worker(FakeCrm crm, string number, int? sponsor) =>
