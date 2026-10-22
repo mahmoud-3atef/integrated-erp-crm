@@ -8,16 +8,17 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import VolunteerActivismOutlinedIcon from '@mui/icons-material/VolunteerActivismOutlined';
-import { Alert, Box, ButtonBase, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Skeleton, Stack, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../../api/auth';
 import { managementApi, type Delivery, type EntryRow, type HousingEntries, type StartRow } from '../../../api/management';
 import type { Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { ArrivalsPane } from './ArrivalsPane';
 import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column } from './mdKit';
 
-type Inner = 'delivery' | 'housing' | 'arrivals' | 'tracking';
+type Inner = 'delivery' | 'housing' | 'arrivals';
 
 /** «نظرة عامة»: the six cards, then the project deliveries and the housing entries (docs/03-migration-plan/19). */
 export function OverviewTab({ from, to, overview }: { from: string; to: string; overview: Overview | null }) {
@@ -63,7 +64,7 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
 
       <Box sx={{ bgcolor: '#fff', border: `1px solid ${md.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(10,60,88,.05), 0 10px 26px rgba(10,60,88,.07)', p: { xs: 1.5, md: '14px' }, minWidth: 0 }}>
         <Stack direction="row" role="tablist" sx={{ gap: 3, borderBottom: `1px solid ${md.border}`, mb: 2, px: 1, overflowX: 'auto' }}>
-          {(['delivery', 'housing', 'arrivals', 'tracking'] as Inner[]).map((key) => (
+          {(['delivery', 'housing', 'arrivals'] as Inner[]).map((key) => (
             <ButtonBase
               key={key}
               role="tab"
@@ -87,11 +88,7 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
         </Stack>
         {inner === 'delivery' && <DeliveryPane from={from} to={to} />}
         {inner === 'housing' && <HousingPane from={from} to={to} />}
-        {(inner === 'arrivals' || inner === 'tracking') && (
-          <Alert severity="info" sx={{ borderRadius: '12px' }}>
-            {t('mgmt.phase2')}
-          </Alert>
-        )}
+        {inner === 'arrivals' && <ArrivalsPane from={from} to={to} />}
       </Box>
     </Stack>
   );

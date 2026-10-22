@@ -6030,7 +6030,6 @@
     "from": "From",
     "to": "To",
     "refresh": "Refresh",
-    "phase2": "This part comes in the second phase of moving the dashboard.",
     "tab": {
       "overview": "Overview",
       "overviewHint": "Indicators and workforce movement",
@@ -6074,8 +6073,7 @@
     "inner": {
       "delivery": "Project deliveries",
       "housing": "Housing entries",
-      "arrivals": "New arrivals",
-      "tracking": "Tracking"
+      "arrivals": "New arrivals"
     },
     "delivery": {
       "total": "Workers who started on projects",
@@ -6245,6 +6243,45 @@
         "lateNoDue": "Open {{count}} days with no due date",
         "noDue": "No due date",
         "onTime": "{{count}} days left"
+      }
+    },
+    "arrivals": {
+      "total": "New arrivals",
+      "note": "By date of joining the company · {{from}} → {{to}}",
+      "kpi": {
+        "working": "On the job now",
+        "housing": "In housing now",
+        "notDelivered": "Not yet delivered to a project",
+        "workedOnce": "Worked at least once",
+        "workShare": "Average share of time at work since joining",
+        "toFirst": "Average days from joining to the first work"
+      },
+      "ofAll": "{{share}} of all",
+      "shareText": "Work {{work}}% · housing {{housing}}%",
+      "shareHint": "Work {{work}} days · housing {{housing}} days",
+      "days": "{{count}} days",
+      "after": "after {{count}} days",
+      "notYet": "Not started yet",
+      "noSupplier": "No supplier",
+      "workPct": "Work {{rate}}%",
+      "bySupplier": "Workers by supplier",
+      "statuses": "Where the new workers are",
+      "byMonth": "Joining by month",
+      "clickToFilter": "Click to filter the table",
+      "table": "New workers in detail",
+      "status": {
+        "working": "On the job",
+        "housing": "In housing",
+        "vacation": "On leave",
+        "other": "Other"
+      },
+      "col": {
+        "arrived": "Joined on",
+        "supplier": "Supplier",
+        "project": "Current project",
+        "since": "Since joining",
+        "share": "Work / housing share",
+        "first": "First work"
       }
     }
   }

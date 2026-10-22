@@ -192,7 +192,7 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
         var today = clock.Today;
         var arrived = await db.Workers.AsNoTracking()
             .Where(w => w.Kind == WorkerKind.Worker && !w.RemovedInCrm && w.ArrivedOn != null && w.ArrivedOn >= from && w.ArrivedOn <= to)
-            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.WorkerNo, w.Sponsor, w.ArrivedOn, w.Placement, p.NameAr, p.NameEn })
+            .Join(db.People, w => w.PersonId, p => p.Id, (w, p) => new { w.Id, w.WorkerNo, w.Sponsor, w.ArrivedOn, w.Placement, w.ProjectName, w.RecruitmentAgent, p.NameAr, p.NameEn })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         var timelines = await TimelinesAsync(arrived.Select(a => a.Id).ToHashSet(), cancellationToken).ConfigureAwait(false);
         return arrived.Select(a =>
@@ -201,7 +201,9 @@ internal sealed class WorkforceDashboard(WorkforceDbContext db, IReferenceData r
                 var spans = timelines[a.Id].Where(p => (p.EndsOn ?? today.AddDays(1)) > since).ToList();
                 int Days(PeriodKind kind) => spans.Where(p => p.Kind == kind).Sum(p => Math.Max(0, Math.Min((p.EndsOn ?? today.AddDays(1)).DayNumber, today.AddDays(1).DayNumber) - Math.Max(p.StartsOn.DayNumber, since.DayNumber)));
                 var first = spans.Where(p => p.Kind == PeriodKind.Work && p.StartsOn >= since).OrderBy(p => p.StartsOn).FirstOrDefault();
-                return new WorkforceArrival(a.Id, a.WorkerNo, a.NameAr ?? a.NameEn, a.Sponsor, since, a.Placement.ToString(), first?.StartsOn, first?.Place, Days(PeriodKind.Work), Days(PeriodKind.Housing));
+                var now = spans.FirstOrDefault(p => p.EndsOn is null && p.Kind == PeriodKind.Work);
+                return new WorkforceArrival(a.Id, a.WorkerNo, a.NameAr ?? a.NameEn, a.Sponsor, since, a.Placement.ToString(), first?.StartsOn, first?.Place, Days(PeriodKind.Work), Days(PeriodKind.Housing),
+                    a.Placement is Placement.Working or Placement.Inactive ? now?.Place ?? a.ProjectName : null, a.RecruitmentAgent);
             })
             .OrderByDescending(a => a.ArrivedOn).ThenBy(a => a.WorkerNo, StringComparer.Ordinal).ToList();
     }

@@ -189,7 +189,9 @@ public sealed record WorkforceMove(
     DateOnly? FromStartedOn = null);
 
 /// <summary>A worker who joined the company in a period (the old system's «date of joining»), and how they have fared since.</summary>
-public sealed record WorkforceArrival(Guid WorkerId, string WorkerNo, string Name, string? Sponsor, DateOnly ArrivedOn, string Placement, DateOnly? FirstWorkOn, string? FirstProject, int WorkDays, int HousingDays);
+/// <param name="Project">The project the worker is on now (none in housing).</param>
+/// <param name="Agent">The recruitment agent (the old dashboard's «supplier»).</param>
+public sealed record WorkforceArrival(Guid WorkerId, string WorkerNo, string Name, string? Sponsor, DateOnly ArrivedOn, string Placement, DateOnly? FirstWorkOn, string? FirstProject, int WorkDays, int HousingDays, string? Project = null, string? Agent = null);
 
 /// <summary>A worker in housing now: since when, and where from.</summary>
 public sealed record WorkforceInHousing(Guid WorkerId, string WorkerNo, string Name, DateOnly Since, string? Place, Guid? FromProjectCrmId, string? FromPlace, decimal MonthlySalary);

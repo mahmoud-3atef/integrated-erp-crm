@@ -29,6 +29,14 @@ internal static class ReportWorkbook
     public static byte[] Entries(IReadOnlyList<EntryRowDto> rows) => Build("دخول السكن", ["رقم العامل", "العامل", "المشروع", "مدير المشروع", "تاريخ السكن", "نوع الدخول", "سبب الرجيع", "السكن", "الأيام"],
         rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Project, r.Manager, r.ArrivedOn.ToDateTime(TimeOnly.MinValue), r.Entry switch { "NewArrival" => "حديث الوصول", "BackFromVacation" => "عائد من إجازة", _ => "عامل مرتجع" }, r.Entry == "ReturnedWorker" ? Reason(r.Reason) : null, r.Housing, r.Days }).ToList());
 
+    public static byte[] NewWorkers(IReadOnlyList<NewWorkerDto> rows) => Build("العمالة دخول جديد", ["تاريخ الالتحاق", "رقم العامل", "العامل", "المورد", "الحالة", "المشروع الحالي", "منذ الدخول (يوم)", "أيام العمل", "أيام السكن", "نسبة العمل %", "أول مباشرة", "بعد (يوم)"],
+        rows.Select(r => new object?[]
+        {
+            r.ArrivedOn.ToDateTime(TimeOnly.MinValue), r.WorkerNo, r.Name, r.Supplier,
+            r.Status switch { "working" => "على رأس العمل", "housing" => "في السكن", "vacation" => "إجازة", _ => "أخرى" },
+            r.Project, r.DaysSince, r.WorkDays, r.HousingDays, r.WorkShare, r.FirstWorkOn?.ToDateTime(TimeOnly.MinValue), r.DaysToFirstWork,
+        }).ToList());
+
     public static byte[] Tasks(IReadOnlyList<TaskRowDto> rows) => Build("المهام", ["المهمة", "السجل المرتبط", "الموظف", "النوع", "الإنشاء", "الاستحقاق", "الإنجاز", "الحالة"],
         rows.Select(r => new object?[]
         {

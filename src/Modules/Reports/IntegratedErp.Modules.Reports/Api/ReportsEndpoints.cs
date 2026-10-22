@@ -112,6 +112,18 @@ internal static class ReportsEndpoints
             })
             .RequirePermission(ReportsPermissions.ManagementView, companyWide: true);
 
+        group.MapGet("/new-arrivals", async (DateOnly? from, DateOnly? to, bool? excel, ManagementDashboard dashboard, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var data = await dashboard.NewArrivalsAsync(range.From, range.To, ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.NewWorkers(data.Rows), Xlsx, "new-workers.xlsx") : Results.Ok(data);
+            })
+            .RequirePermission(ReportsPermissions.ManagementView, companyWide: true);
+
         // The old system's tasks of the period (read from the CRM copy).
         group.MapGet("/tasks", async (DateOnly? from, DateOnly? to, bool? excel, ManagementDashboard dashboard, IClock clock, CancellationToken ct) =>
             {

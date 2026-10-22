@@ -16,6 +16,31 @@ public sealed record DeliveryDto(int Total, IReadOnlyList<RankDto> ByManager, IR
 /// <param name="Days">In housing to the next work start, or to today while still there.</param>
 public sealed record EntryRowDto(string WorkerNo, string Name, Guid? ProjectCrmId, string? Project, string? Manager, DateOnly ArrivedOn, string Entry, string Reason, string? Housing, int Days);
 
+/// <param name="Status">working, housing, vacation or other (where the worker is now).</param>
+/// <param name="WorkShare">The share of the days since joining spent at work (and <paramref name="HousingShare"/> in housing).</param>
+public sealed record NewWorkerDto(string WorkerNo, string Name, string? Supplier, DateOnly ArrivedOn, string Status, string? Project, DateOnly? FirstWorkOn, int? DaysToFirstWork, int DaysSince, int WorkDays, int HousingDays, decimal WorkShare, decimal HousingShare);
+
+public sealed record SupplierArrivalsDto(string Supplier, int Total, int Working, int Housing, int Vacation, int Other, decimal WorkShare);
+
+public sealed record MonthCountDto(string Month, int Count);
+
+/// <param name="WorkShare">The average share of their days since joining the new workers spent at work (<paramref name="HousingShare"/> in housing).</param>
+/// <param name="DaysToFirstWork">The average days from joining to the first work, of those who have started one (null: none).</param>
+public sealed record NewArrivalsDto(
+    int Total,
+    int Working,
+    int Housing,
+    int Vacation,
+    int NotDelivered,
+    int WorkedOnce,
+    decimal? WorkShare,
+    decimal? HousingShare,
+    decimal? DaysToFirstWork,
+    IReadOnlyList<RankDto> ByStatus,
+    IReadOnlyList<MonthCountDto> ByMonth,
+    IReadOnlyList<SupplierArrivalsDto> BySupplier,
+    IReadOnlyList<NewWorkerDto> Rows);
+
 public sealed record HousingEntriesDto(int Total, IReadOnlyList<RankDto> ByManager, IReadOnlyList<RankDto> ByProject, IReadOnlyList<RankDto> ByEntry, IReadOnlyList<RankDto> Reasons, IReadOnlyList<EntryRowDto> Rows);
 
 /// <summary>
@@ -26,6 +51,8 @@ public sealed record HousingEntriesDto(int Total, IReadOnlyList<RankDto> ByManag
 internal sealed class ManagementDashboard(IWorkforceReport workforce, IPeriodLedger ledger, IHousingEntries entries, IProjectDirectory projects, LegacyTasks legacyTasks, IClock clock)
 {
     private const string NoManager = "—";
+
+    private static readonly string[] Statuses = ["working", "housing", "vacation", "other"];
 
     /// <summary>The completed tasks a list shows after the pending ones (the old dashboard's 300).</summary>
     public const int CompletedShown = 300;
@@ -123,6 +150,41 @@ internal sealed class ManagementDashboard(IWorkforceReport workforce, IPeriodLed
             Rank(rows.Select(r => r.Entry)),
             Rank(rows.Where(r => r.Entry == "ReturnedWorker").Select(r => r.Reason)),
             rows);
+    }
+
+    /// <summary>
+    /// The workers who joined the company in a period (the old dashboard's «العمالة دخول جديد»): where they are now, how
+    /// much of their time since has been work, how soon they first worked, by month and by supplier.
+    /// </summary>
+    public async Task<NewArrivalsDto> NewArrivalsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        const string NoSupplier = "—";
+        var today = clock.Today;
+        var rows = (await workforce.ArrivalsAsync(from, to, cancellationToken).ConfigureAwait(false)).Select(a =>
+            {
+                var since = Math.Max(1, today.DayNumber - a.ArrivedOn.DayNumber + 1);
+                // On the job as the old system counts it: «InActive Employee» workers too.
+                var status = a.Placement switch { "Working" or "Inactive" => "working", "Housing" or "New" => "housing", "Vacation" => "vacation", _ => "other" };
+                return new NewWorkerDto(a.WorkerNo, a.Name, string.IsNullOrWhiteSpace(a.Agent) ? null : a.Agent.Trim(), a.ArrivedOn, status, a.Project, a.FirstWorkOn,
+                    a.FirstWorkOn is { } f ? Math.Max(0, f.DayNumber - a.ArrivedOn.DayNumber) : null, since, a.WorkDays, a.HousingDays,
+                    Math.Min(100, Math.Round(a.WorkDays * 100m / since, 1)), Math.Min(100, Math.Round(a.HousingDays * 100m / since, 1)));
+            })
+            .ToList();
+        decimal? Average(IEnumerable<decimal> values) => values.Any() ? Math.Round(values.Average(), 1) : null;
+        int Count(string status) => rows.Count(r => r.Status == status);
+
+        var bySupplier = rows.GroupBy(r => r.Supplier ?? NoSupplier, StringComparer.Ordinal)
+            .Select(g => new SupplierArrivalsDto(g.Key, g.Count(), g.Count(r => r.Status == "working"), g.Count(r => r.Status == "housing"), g.Count(r => r.Status == "vacation"), g.Count(r => r.Status == "other"),
+                Math.Round(g.Average(r => r.WorkShare), 0)))
+            .OrderByDescending(s => s.Total).ToList();
+        var byMonth = rows.GroupBy(r => r.ArrivedOn.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture))
+            .Select(g => new MonthCountDto(g.Key, g.Count())).OrderBy(m => m.Month, StringComparer.Ordinal).ToList();
+        var byStatus = Statuses.Select(s => new RankDto(s, s, Count(s))).Where(r => r.Count > 0).ToList();
+
+        // Not delivered yet: in housing and never at work since joining.
+        return new NewArrivalsDto(rows.Count, Count("working"), Count("housing"), Count("vacation"), rows.Count(r => r.FirstWorkOn is null && r.Status == "housing"), rows.Count(r => r.FirstWorkOn is not null),
+            Average(rows.Select(r => r.WorkShare)), Average(rows.Select(r => r.HousingShare)), Average(rows.Where(r => r.DaysToFirstWork is not null).Select(r => (decimal)r.DaysToFirstWork!.Value)),
+            byStatus, byMonth, bySupplier, rows);
     }
 
     private static List<RankDto> Rank(IEnumerable<string> keys) =>

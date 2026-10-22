@@ -96,6 +96,12 @@ public sealed class MovementReportTests(TestDatabase database)
             Assert.All(delivery.Rows, r => Assert.Equal((month, 3000m), (r.StartsOn, r.Price)));
             Assert.All(delivery.Rows, r => Assert.True(r.Days >= 1 && r.Status != "NotStarted"));
             Assert.Equal(month, delivery.Rows.Single(r => r.WorkerNo == "BSS0620").EndsOn);
+
+            // Its new arrivals: the three who joined this month, two delivered, one still in housing.
+            var arrivals = await scope.ServiceProvider.GetRequiredService<ManagementDashboard>().NewArrivalsAsync(month, month.AddMonths(1).AddDays(-1), default);
+            Assert.Equal((3, 2, 1), (arrivals.Total, arrivals.WorkedOnce, arrivals.NotDelivered));
+            Assert.Equal(3, arrivals.ByMonth.Single().Count);
+            Assert.Equal(0m, arrivals.DaysToFirstWork);
         }
     }
 }
