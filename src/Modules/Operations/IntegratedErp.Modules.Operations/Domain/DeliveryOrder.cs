@@ -570,6 +570,7 @@ public sealed record CrmDeliveryOrder(
 
 public static class DeliveryErrors
 {
+    public static readonly Error PeriodLocked = Error.Conflict("delivery_period_locked", "A timesheet, a payroll run or a settlement is already built on a worker's periods from that day.");
     public static readonly Error NotFound = Error.NotFound("delivery_order", "Delivery order not found.");
     public static readonly Error NotEditable = Error.Conflict("delivery_not_editable", "Only a draft or returned order can be changed.");
     public static readonly Error NotInApproval = Error.Conflict("delivery_not_in_approval", "The order is not in approval.");

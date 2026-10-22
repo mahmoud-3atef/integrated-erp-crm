@@ -474,6 +474,7 @@ public sealed record TransferLineChange(Guid LineId, decimal TotalPrice, string?
 
 public static class TransferErrors
 {
+    public static readonly Error PeriodLocked = Error.Conflict("transfer_period_locked", "A timesheet, a payroll run or a settlement is already built on a worker's periods from that day.");
     public static readonly Error NotFound = Error.NotFound("transfer_order", "Transfer order not found.");
     public static readonly Error NotEditable = Error.Conflict("transfer_not_editable", "Only a draft or returned order can be changed.");
     public static readonly Error NotInApproval = Error.Conflict("transfer_not_in_approval", "The order is not in approval.");

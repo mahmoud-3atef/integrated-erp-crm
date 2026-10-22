@@ -230,6 +230,11 @@ public sealed class PayrollTests(TestDatabase database)
             Assert.StartsWith("VD-", s.LeaveRequestNo, StringComparison.Ordinal);
             Assert.Equal((30m, 1500m), (s.LeaveDays, s.Lines.Single(l => l.Code == "leave_allowance").Amount));
             Assert.DoesNotContain(await settlements.WorkerLeavesAsync(default), l => l.RequestId == departure);
+
+            // A settlement is made from the departure: it can no longer be cancelled or moved.
+            var movements = scope.ServiceProvider.GetRequiredService<MovementService>();
+            Assert.Equal("conflict.movement_period_locked", (await movements.CancelApprovedAsync(departure, "خطأ", default)).Error.Code);
+            Assert.Equal("conflict.movement_period_locked", (await movements.AmendAsync(departure, new MovementAmendInput(today.AddDays(11), today.AddDays(41), null, null, "تأخر السفر"), default)).Error.Code);
         }
     }
 
@@ -262,7 +267,7 @@ public sealed class PayrollTests(TestDatabase database)
 
         return (
             await PersonAsync("مسؤول الرواتب", "billing.timesheets.manage", "payroll.workers.manage", "payroll.settings.manage", "payroll.settlements.view", "payroll.settlements.manage",
-                "operations.movements.view", "operations.movements.manage"),
+                "operations.movements.view", "operations.movements.manage", "operations.movements.vacation_departure.amend", "operations.movements.vacation_departure.cancel_approved"),
             await PersonAsync("المعتمد", "billing.timesheets.approve", "payroll.workers.review", "payroll.workers.finance", "payroll.workers.approve",
                 "payroll.settlements.view", "payroll.settlements.approve.operations", "payroll.settlements.approve.payroll", "payroll.settlements.approve.finance",
                 "operations.movements.view", "operations.movements.approve"));

@@ -188,6 +188,13 @@ internal sealed class TransferOrderService(
 
         // The work periods first (each worker whose date or price changes), then the order.
         var moving = input.TransferOn != order.TransferOn;
+        foreach (var workerId in order.Lines.Where(l => moving || prices.ContainsKey(l.Id)).Select(l => l.WorkerId))
+        {
+            if (await ledger.LockedAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                return Result.Failure(TransferErrors.PeriodLocked);
+            }
+        }
         foreach (var line in order.Lines.Where(l => moving || prices.ContainsKey(l.Id)))
         {
             var moved = await ledger.AmendAsync(
@@ -238,6 +245,14 @@ internal sealed class TransferOrderService(
             if (timeline.Any(p => p.SourceId == order.Id) && timeline[0].SourceId != order.Id)
             {
                 return Result.Failure(TransferErrors.LaterPeriod);
+            }
+        }
+
+        foreach (var workerId in order.Lines.Select(l => l.WorkerId))
+        {
+            if (await ledger.LockedAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                return Result.Failure(TransferErrors.PeriodLocked);
             }
         }
 

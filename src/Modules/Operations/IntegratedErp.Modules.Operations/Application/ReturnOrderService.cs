@@ -184,7 +184,7 @@ internal sealed class ReturnOrderService(
         var moved = await ledger.AmendAsync(new PeriodAmendRequest(workerId, order.Id, input.ArrivedOn, !input.StopSalary, housingName, order.OrderNo), cancellationToken).ConfigureAwait(false);
         if (moved.IsFailure)
         {
-            return Result.Failure(moved.Error.Code == "conflict.period_overlap" ? ReturnErrors.PeriodOverlap : moved.Error);
+            return Result.Failure(moved.Error.Code == "conflict.period_locked" ? ReturnErrors.PeriodLocked : moved.Error.Code == "conflict.period_overlap" ? ReturnErrors.PeriodOverlap : moved.Error);
         }
 
         // The room: the stay this order opened is taken back and opened again from the (new) day, in the (new) room.
@@ -236,7 +236,7 @@ internal sealed class ReturnOrderService(
         var undone = await ledger.UndoAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false);
         if (undone.IsFailure)
         {
-            return Result.Failure(undone.Error.Code == "conflict.period_not_last" ? ReturnErrors.LaterPeriod : undone.Error);
+            return Result.Failure(undone.Error.Code == "conflict.period_locked" ? ReturnErrors.PeriodLocked : undone.Error.Code == "conflict.period_not_last" ? ReturnErrors.LaterPeriod : undone.Error);
         }
 
         await housing.UndoStayAsync(workerId, ReturnOrderAdapter.SourceType, order.OrderNo, cancellationToken).ConfigureAwait(false);

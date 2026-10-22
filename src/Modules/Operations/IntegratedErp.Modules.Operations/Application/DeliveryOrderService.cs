@@ -215,6 +215,14 @@ internal sealed class DeliveryOrderService(
             }
         }
 
+        foreach (var workerId in changed.Where(c => c.Line.WorkerId is not null).Select(c => c.Line.WorkerId!.Value))
+        {
+            if (await ledger.LockedAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                return Result.Failure(DeliveryErrors.PeriodLocked);
+            }
+        }
+
         // The work periods first (each worker's), then the order.
         foreach (var (line, change) in changed.Where(c => c.Line.WorkerId is not null))
         {
@@ -267,6 +275,14 @@ internal sealed class DeliveryOrderService(
             if (timeline.Any(p => p.SourceId == order.Id) && timeline[0].SourceId != order.Id)
             {
                 return Result.Failure(DeliveryErrors.LaterPeriod);
+            }
+        }
+
+        foreach (var workerId in workers.Select(w => w.WorkerId))
+        {
+            if (await ledger.LockedAsync(workerId, order.Id, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                return Result.Failure(DeliveryErrors.PeriodLocked);
             }
         }
 

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Workforce.Application;
 
-internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOptions> options, IClock clock) : IPeriodLedger
+internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOptions> options, IClock clock, IEnumerable<IWorkerPeriodLocks> locks) : IPeriodLedger
 {
     public async Task<Result> StartWorkAsync(IReadOnlyList<WorkStartRequest> starts, CancellationToken cancellationToken)
     {
@@ -107,6 +107,11 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
             return Result.Failure(Error.NotFound("period", "The document opened no period of the worker."));
         }
 
+        if (await LockedFromAsync(amend.WorkerId, amend.SourceId, period.StartsOn < amend.StartsOn ? period.StartsOn : amend.StartsOn, cancellationToken).ConfigureAwait(false) is { } locked)
+        {
+            return Result.Failure(locked);
+        }
+
         var before = mine.FirstOrDefault(p => p.Id != period.Id && p.EndsOn == period.StartsOn);
         var others = mine.Where(p => p.Id != period.Id && p.Id != before?.Id).ToList();
         var newEnd = period.EndsOn;
@@ -135,10 +140,47 @@ internal sealed class PeriodLedger(WorkforceDbContext db, IOptions<WorkforceOpti
             return Result.Failure(Error.Conflict("period_not_last", "Another period of the worker came after this one: cancel it first."));
         }
 
+        if (await LockedFromAsync(workerId, sourceId, period.StartsOn, cancellationToken).ConfigureAwait(false) is { } locked)
+        {
+            return Result.Failure(locked);
+        }
+
         mine.FirstOrDefault(p => p.Id != period.Id && p.EndsOn == period.StartsOn)?.Reopen();
         db.Periods.Remove(period);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
+    }
+
+    public async Task<string?> LockedAsync(Guid workerId, Guid sourceId, CancellationToken cancellationToken)
+    {
+        var start = await db.Periods.AsNoTracking().Where(p => p.WorkerId == workerId && p.SourceId == sourceId).Select(p => (DateOnly?)p.StartsOn).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (start is null)
+        {
+            return null;
+        }
+
+        foreach (var source in locks)
+        {
+            if (await source.LockedFromAsync(workerId, sourceId, start.Value, cancellationToken).ConfigureAwait(false) is { } no)
+            {
+                return no;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<Error?> LockedFromAsync(Guid workerId, Guid sourceId, DateOnly day, CancellationToken cancellationToken)
+    {
+        foreach (var source in locks)
+        {
+            if (await source.LockedFromAsync(workerId, sourceId, day, cancellationToken).ConfigureAwait(false) is { } no)
+            {
+                return Error.Conflict("period_locked", $"The worker's periods from that day are already in {no}.");
+            }
+        }
+
+        return null;
     }
 
     /// <summary>The periods a movement may leave for each kind it opens.</summary>

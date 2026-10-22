@@ -425,6 +425,7 @@ public sealed record CrmReturnOrder(
 
 public static class ReturnErrors
 {
+    public static readonly Error PeriodLocked = Error.Conflict("return_period_locked", "A timesheet, a payroll run or a settlement is already built on a worker's periods from that day.");
     public static readonly Error NotFound = Error.NotFound("return_order", "Return order not found.");
     public static readonly Error NotEditable = Error.Conflict("return_not_editable", "Only an order under preparation or returned can be changed.");
     public static readonly Error NotCancelable = Error.Conflict("return_not_cancelable", "This order can no longer be canceled.");

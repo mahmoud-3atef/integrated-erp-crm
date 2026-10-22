@@ -234,7 +234,7 @@ internal sealed class MovementService(
             var moved = await ledger.AmendAsync(new PeriodAmendRequest(m.WorkerId, m.Id, input.EffectiveOn, m.PaySalary, place, m.MovementNo), cancellationToken).ConfigureAwait(false);
             if (moved.IsFailure)
             {
-                return Result.Failure(moved.Error.Code == "conflict.period_overlap" ? MovementErrors.PeriodOverlap : moved.Error);
+                return Result.Failure(moved.Error.Code == "conflict.period_locked" ? MovementErrors.PeriodLocked : moved.Error.Code == "conflict.period_overlap" ? MovementErrors.PeriodOverlap : moved.Error);
             }
         }
 
@@ -279,7 +279,7 @@ internal sealed class MovementService(
         var undone = await ledger.UndoAsync(m.WorkerId, m.Id, cancellationToken).ConfigureAwait(false);
         if (undone.IsFailure)
         {
-            return Result.Failure(undone.Error.Code == "conflict.period_not_last" ? MovementErrors.LaterPeriod : undone.Error);
+            return Result.Failure(undone.Error.Code == "conflict.period_locked" ? MovementErrors.PeriodLocked : undone.Error.Code == "conflict.period_not_last" ? MovementErrors.LaterPeriod : undone.Error);
         }
 
         if (MovementAdapter.LeavesHousing(m))

@@ -116,6 +116,12 @@ public interface IPeriodLedger
     Task<Result> UndoAsync(Guid workerId, Guid sourceId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The number of a document already built on the period a document opened (a timesheet, a payroll run, a
+    /// settlement): that period can no longer change or be taken back. Null when it can.
+    /// </summary>
+    Task<string?> LockedAsync(Guid workerId, Guid sourceId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The work periods overlapping a date range (both days included), as the timelines show them: the old system's
     /// history up to each worker's first period recorded here, then the recorded periods. One project, or all of them
     /// (<paramref name="projectCrmId"/> null). Work on an inactive project ("InActive Employee") is left out.
@@ -153,3 +159,13 @@ public sealed record WorkSpan(
 /// period's monthly service price (a special price; null keeps it).
 /// </summary>
 public sealed record PeriodAmendRequest(Guid WorkerId, Guid SourceId, DateOnly StartsOn, bool PaySalary, string? Place, string SourceNo, decimal? TotalPrice = null);
+
+/// <summary>
+/// Documents of other modules built on a worker's periods from a day (a timesheet or a payroll run in approval or
+/// approved, a settlement not cancelled): the periods from that day — or the one a document opened — cannot change.
+/// </summary>
+public interface IWorkerPeriodLocks
+{
+    /// <summary>The number of such a document, if any.</summary>
+    Task<string?> LockedFromAsync(Guid workerId, Guid sourceId, DateOnly day, CancellationToken cancellationToken);
+}

@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Workforce.Contracts;
 using IntegratedErp.BuildingBlocks.Alerts;
 using IntegratedErp.BuildingBlocks.Attachments;
 using IntegratedErp.Modules.CrmSync.Contracts;
@@ -32,6 +33,7 @@ public sealed class BillingModule : IModule
         services.AddScoped<TimesheetQueries>();
         services.AddScoped<ITimesheetPayroll, TimesheetPayroll>();
         services.AddScoped<IApprovalRecordAdapter, TimesheetAdapter>();
+        services.AddScoped<IWorkerPeriodLocks, TimesheetPeriodLocks>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<InvoiceQueries>();
         services.AddScoped<IApprovalRecordAdapter, InvoiceAdapter>();

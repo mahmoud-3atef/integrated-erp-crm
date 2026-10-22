@@ -579,7 +579,12 @@
     "conflict_staff_action_locked": "A payroll run (approved or in approval) or a settlement already used the employee's file from that day.",
     "forbidden_staff_action_kind": "You do not have this permission for this kind of action.",
     "conflict_attendance_overtime_not_amendable": "Only approved overtime can be changed or cancelled after its approval.",
-    "validation_attendance_amend_reason": "Give the reason (500 characters at most)."
+    "validation_attendance_amend_reason": "Give the reason (500 characters at most).",
+    "conflict_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
+    "conflict_delivery_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
+    "conflict_transfer_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
+    "conflict_movement_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
+    "conflict_return_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first."
   },
   "menu": {
     "label": "Main menu",
