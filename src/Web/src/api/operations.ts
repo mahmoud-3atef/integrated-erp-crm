@@ -154,6 +154,8 @@ export interface WorkerPriceQuote {
   transport: number;
   transportBillable: boolean;
   totalPrice: number | null;
+  /** The first day the worker can start (the day after their latest period began); null when they have none yet. */
+  earliestStart: string | null;
 }
 
 export interface DeliveryLineInput {

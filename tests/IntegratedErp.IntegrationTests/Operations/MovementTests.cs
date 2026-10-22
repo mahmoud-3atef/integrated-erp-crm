@@ -93,6 +93,10 @@ public sealed class MovementTests(TestDatabase database)
             Assert.Equal(("Housing", "سكن العزيزية", false), Head(await ledger.PeriodsAsync(b, default)) is var hb ? (hb.Kind, hb.ProjectName, hb.PaySalary) : default);
             Assert.True((await directory.CardsAsync([b], default)).Single().Available);
 
+            // B arrived today: nothing new can start on that same day — refused when saved, not at the end of its approval.
+            var early = await scope.ServiceProvider.GetRequiredService<MovementService>().CreateAsync(Input("FinalExit", b, today) with { ExitKind = "FinalExit" }, default);
+            Assert.Equal("validation.movement_before_last_period", early.Error.Code);
+
             var vacation = (await ledger.PeriodsAsync(a, default))[0];
             Assert.Equal(("ClientVacation", "مشروع الرياض", 3000m), (vacation.Kind, vacation.ProjectName, vacation.TotalPrice));
             Assert.Equal("Vacation", (await directory.CardsAsync([a], default)).Single().Placement);

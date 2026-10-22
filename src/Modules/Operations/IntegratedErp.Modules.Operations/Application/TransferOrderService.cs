@@ -353,6 +353,11 @@ internal sealed class TransferOrderService(
         foreach (var line in input.Lines)
         {
             var quote = byWorker[line.WorkerId];
+            if (quote.EarliestStart is { } earliest && input.TransferOn < earliest)
+            {
+                return Fail(TransferErrors.StartBeforeLastPeriod);
+            }
+
             var special = line.SpecialPrice is { } price && price != quote.TotalPrice;
             if (!special && quote.TotalPrice is null)
             {

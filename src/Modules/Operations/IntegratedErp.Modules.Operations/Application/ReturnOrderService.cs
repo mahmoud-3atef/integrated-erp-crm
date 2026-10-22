@@ -302,6 +302,11 @@ internal sealed class ReturnOrderService(
             return Fail(Errors.BeforeWork);
         }
 
+        if (await PeriodRules.EarliestStartAsync(ledger, card.Id, orderId, cancellationToken).ConfigureAwait(false) is { } earliest && input.ArrivedOn < earliest)
+        {
+            return Fail(Errors.BeforeWork);
+        }
+
         if ((await BusyAsync(orderId, [card.Id], cancellationToken).ConfigureAwait(false)).Count > 0)
         {
             return Fail(Errors.Busy);

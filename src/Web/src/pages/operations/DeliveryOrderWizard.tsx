@@ -170,7 +170,8 @@ export function DeliveryOrderWizard({
     if (l.special && l.specialReason.trim() === '') return 'reason';
     return null;
   };
-  const startProblem = (l: Line) => !l.startOn || l.startOn < deliverOn;
+  const earliestOf = (l: Line) => quotes[l.workerId]?.earliestStart ?? null;
+  const startProblem = (l: Line) => !l.startOn || l.startOn < deliverOn || (earliestOf(l) !== null && l.startOn < earliestOf(l)!);
   const pricesReady = lines.length > 0 && lines.every((l) => priceProblem(l) === null && !startProblem(l));
   const ready: Record<string, boolean> = { order: orderReady, workers: lines.length > 0, prices: pricesReady, review: orderReady && lines.length > 0 && pricesReady };
 
@@ -405,7 +406,15 @@ export function DeliveryOrderWizard({
                           required
                           error={startProblem(line)}
                           onChange={(e) => change(line.workerId, { startOn: e.target.value })}
-                          helperText={startProblem(line) ? t('errors.validation_delivery_start_before') : line.startOn === startOn ? t('operations.delivery.sameAsOrder') : undefined}
+                          helperText={
+                            !line.startOn || line.startOn < deliverOn
+                              ? t('errors.validation_delivery_start_before')
+                              : startProblem(line)
+                                ? t('operations.delivery.earliestStart', { date: date(earliestOf(line)!) })
+                                : line.startOn === startOn
+                                  ? t('operations.delivery.sameAsOrder')
+                                  : undefined
+                          }
                           sx={{ width: 150 }}
                           slotProps={{ inputLabel: { shrink: true } }}
                         />

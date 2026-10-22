@@ -44,7 +44,8 @@ public sealed record WorkerPriceDto(
     bool HousingBillable,
     decimal Transport,
     bool TransportBillable,
-    decimal? TotalPrice);
+    decimal? TotalPrice,
+    DateOnly? EarliestStart = null);
 
 /// <summary>What may change on a delivered order: the receiver and notes, and the workers' starts and prices, with the reason.</summary>
 public sealed record DeliveryAmendInput(string ReceiverName, string? ReceiverTitle, string? Notes, IReadOnlyList<DeliveryLineChange> Lines, string AmendReason);
@@ -355,7 +356,8 @@ internal sealed class DeliveryOrderService(
                 package?.PackageId, package?.PackageNo, package?.ForProject ?? false,
                 salary, package?.ServiceFee ?? 0, package?.Housing ?? 0, package?.HousingBillable ?? false,
                 package?.Transport ?? 0, package?.TransportBillable ?? false,
-                package is null ? null : salary + package.ServiceFee + package.Housing + package.Transport));
+                package is null ? null : salary + package.ServiceFee + package.Housing + package.Transport,
+                await PeriodRules.EarliestStartAsync(ledger, card.Id, exceptOrderId, cancellationToken).ConfigureAwait(false)));
         }
 
         return Result.Success<IReadOnlyList<WorkerPriceDto>>(result);
@@ -419,6 +421,11 @@ internal sealed class DeliveryOrderService(
             if (line.StartOn is { } start && start < input.DeliverOn)
             {
                 return Fail(DeliveryErrors.StartBeforeDelivery);
+            }
+
+            if (p.EarliestStart is { } earliest && (line.StartOn ?? input.StartOn) < earliest)
+            {
+                return Fail(DeliveryErrors.StartBeforeLastPeriod);
             }
 
             var special = line.SpecialPrice is { } price && price != p.TotalPrice;

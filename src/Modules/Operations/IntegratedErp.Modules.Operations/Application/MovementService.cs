@@ -365,6 +365,11 @@ internal sealed class MovementService(
             return Fail(MovementErrors.DelayReason);
         }
 
+        if (await PeriodRules.EarliestStartAsync(ledger, input.WorkerId, movementId, cancellationToken).ConfigureAwait(false) is { } earliest && input.EffectiveOn < earliest)
+        {
+            return Fail(MovementErrors.BeforeLastPeriod);
+        }
+
         VacationKind? vacation = null;
         ReturnTarget? returnTo = null;
         MovementWork? work = null;

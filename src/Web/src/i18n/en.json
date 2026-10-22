@@ -584,7 +584,10 @@
     "conflict_delivery_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
     "conflict_transfer_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
     "conflict_movement_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
-    "conflict_return_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first."
+    "conflict_return_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
+    "validation_delivery_start_before_last_period": "A worker's start is on or before their latest period: the earliest is the day after it began.",
+    "validation_transfer_start_before_last_period": "The transfer date is on or before a worker's latest period: the earliest is the day after it began.",
+    "validation_movement_before_last_period": "The date is on or before the worker's latest period: the earliest is the day after it began."
   },
   "menu": {
     "label": "Main menu",
@@ -1901,7 +1904,8 @@
         "none": "No service price: enter a special price with its reason",
         "minimum": "The service price is at least 1,000",
         "reason": "Give the reason for the special price"
-      }
+      },
+      "earliestStart": "The start cannot be before {{date}} (the day after the worker's latest period began)"
     },
     "status": {
       "UnderPreparation": "Under preparation",

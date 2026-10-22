@@ -570,6 +570,7 @@ public sealed record CrmDeliveryOrder(
 
 public static class DeliveryErrors
 {
+    public static readonly Error StartBeforeLastPeriod = Error.Validation("delivery_start_before_last_period", "A worker's start of work is on or before their latest period: start the day after it at the earliest.");
     public static readonly Error PeriodLocked = Error.Conflict("delivery_period_locked", "A timesheet, a payroll run or a settlement is already built on a worker's periods from that day.");
     public static readonly Error NotFound = Error.NotFound("delivery_order", "Delivery order not found.");
     public static readonly Error NotEditable = Error.Conflict("delivery_not_editable", "Only a draft or returned order can be changed.");

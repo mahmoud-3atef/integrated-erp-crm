@@ -414,6 +414,7 @@ public static class MovementErrors
 {
     public static readonly Error PeriodLocked = Error.Conflict("movement_period_locked", "A timesheet, a payroll run or a settlement is already built on a worker's periods from that day.");
     public static readonly Error NotFound = Error.NotFound("movement", "Movement not found.");
+    public static readonly Error BeforeLastPeriod = Error.Validation("movement_before_last_period", "The date is on or before the worker's latest period: the earliest is the day after it began.");
     public static readonly Error NotEditable = Error.Conflict("movement_not_editable", "Only a returned movement can be changed or canceled.");
     public static readonly Error NotAmendable = Error.Conflict("movement_not_amendable", "Only an executed movement can be changed or cancelled after its approval.");
     public static readonly Error AmendReason = Error.Validation("movement_amend_reason", "Give the reason (500 characters at most).");

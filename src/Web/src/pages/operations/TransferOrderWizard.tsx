@@ -119,7 +119,17 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
   const missingPrice = lines.some((l) => !l.special && quotes[l.workerId]?.totalPrice === null);
   const sameProject = !!project && lines.some((l) => cardOf(l.workerId)?.projectCrmId === project.crmId);
   const orderReady = !!projectId && !!transferOn && (!late || delayReason.trim() !== '');
-  const pricesReady = lines.every((l) => !l.special || (Number(l.specialPrice) > 0 && l.specialReason.trim() !== ''));
+  // Every worker has a service price of at least 1,000 (a special one with its reason), and can move on the transfer date.
+  const priceProblem = (l: Line) => {
+    const price = priceOf(l);
+    if (price === null || price <= 0) return 'none';
+    if (price < 1000) return 'minimum';
+    if (l.special && l.specialReason.trim() === '') return 'reason';
+    const earliest = quotes[l.workerId]?.earliestStart;
+    if (earliest && transferOn < earliest) return 'start';
+    return null;
+  };
+  const pricesReady = lines.length > 0 && lines.every((l) => priceProblem(l) === null);
   const ready = [orderReady, lines.length > 0 && !sameProject, pricesReady, orderReady && lines.length > 0 && !sameProject && pricesReady];
 
   const save = async () => {
@@ -317,7 +327,14 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
                         )}
                       </TableCell>
                       <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
-                        <Typography sx={{ fontWeight: 800, color: tokens.navy800 }}>{sar(priceOf(line))}</Typography>
+                        <Typography sx={{ fontWeight: 800, color: priceProblem(line) ? tokens.danger : tokens.navy800 }}>{sar(priceOf(line))}</Typography>
+                        {priceProblem(line) && (
+                          <Typography sx={{ fontSize: 11.5, color: tokens.danger }}>
+                            {priceProblem(line) === 'start'
+                              ? t('operations.delivery.earliestStart', { date: date(quotes[line.workerId]!.earliestStart!) })
+                              : t(`operations.delivery.priceProblem.${priceProblem(line)}`)}
+                          </Typography>
+                        )}
                         {q && (
                           <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
                             {t('operations.delivery.breakdown', { salary: sar(q.salary), fee: q.packageNo && !line.special ? sar(q.serviceFee) : '—' })}
