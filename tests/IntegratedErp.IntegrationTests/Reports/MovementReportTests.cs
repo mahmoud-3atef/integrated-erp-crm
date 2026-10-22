@@ -88,6 +88,14 @@ public sealed class MovementReportTests(TestDatabase database)
             var waiting = await report.ArrivalsAsync(month, month.AddMonths(1).AddDays(-1), null, delivered: false, default);
             Assert.Equal("BSS0610", Assert.Single(waiting).WorkerNo);
             Assert.Equal("BSS0610", Assert.Single(await report.WaitingAsync(default)).WorkerNo);
+
+            // The executive dashboard's deliveries: the same starts, each with its work period's price, end and days.
+            var delivery = await scope.ServiceProvider.GetRequiredService<ManagementDashboard>().DeliveryAsync(month, month.AddMonths(1).AddDays(-1), default);
+            Assert.Equal(3, delivery.Total);
+            Assert.Equal(("مشروع الرياض", 3), (delivery.ByProject.Single().Name, delivery.ByProject.Single().Count));
+            Assert.All(delivery.Rows, r => Assert.Equal((month, 3000m), (r.StartsOn, r.Price)));
+            Assert.All(delivery.Rows, r => Assert.True(r.Days >= 1 && r.Status != "NotStarted"));
+            Assert.Equal(month, delivery.Rows.Single(r => r.WorkerNo == "BSS0620").EndsOn);
         }
     }
 }

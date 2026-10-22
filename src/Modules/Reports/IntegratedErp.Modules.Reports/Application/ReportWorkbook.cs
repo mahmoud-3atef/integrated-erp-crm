@@ -23,6 +23,12 @@ internal static class ReportWorkbook
     public static byte[] WorkerProfit(IReadOnlyList<WorkerProfitDto> rows) => Build("ربحية العمالة", ["رقم العامل", "العامل", "المصدر", "المورد", "المشاريع", "أيام العمل", "أيام السكن", "الإيراد", "التكلفة", "منها أيام السكن", "المصاريف", "الربح", "الإيراد الضائع (أيام السكن)", "ملاحظة"],
         rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Source switch { "Company" => "كفالة الشركة", "Supplier" => "مورد", _ => "غير محدد" }, r.Supplier, r.Projects, r.WorkDays, r.HousingDays, r.Revenue, r.Cost, r.IdleCost, r.Expenses, r.Profit, r.LostRevenue, r.CostMissing ? "تكلفة المورد غير مدخلة" : null }).ToList());
 
+    public static byte[] Starts(IReadOnlyList<StartRowDto> rows) => Build("المباشرات", ["رقم العامل", "العامل", "المشروع", "قيمة الخدمة", "مدير المشروع", "تاريخ المباشرة", "تاريخ التوقف", "الحالة", "مدة المباشرة (يوم)"],
+        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Project, r.Price, r.Manager, r.StartsOn.ToDateTime(TimeOnly.MinValue), r.EndsOn?.ToDateTime(TimeOnly.MinValue), r.Status switch { "Working" => "على رأس العمل", "Ended" => "منتهية", _ => "لم تبدأ" }, r.Days }).ToList());
+
+    public static byte[] Entries(IReadOnlyList<EntryRowDto> rows) => Build("دخول السكن", ["رقم العامل", "العامل", "المشروع", "مدير المشروع", "تاريخ السكن", "نوع الدخول", "سبب الرجيع", "السكن", "الأيام"],
+        rows.Select(r => new object?[] { r.WorkerNo, r.Name, r.Project, r.Manager, r.ArrivedOn.ToDateTime(TimeOnly.MinValue), r.Entry switch { "NewArrival" => "حديث الوصول", "BackFromVacation" => "عائد من إجازة", _ => "عامل مرتجع" }, r.Entry == "ReturnedWorker" ? Reason(r.Reason) : null, r.Housing, r.Days }).ToList());
+
     private static string Reason(string reason) => reason switch
     {
         "ClientNoReason" => "العميل أرجع العامل بدون سبب",

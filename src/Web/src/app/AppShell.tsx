@@ -1,4 +1,5 @@
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
+import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined';
 import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
@@ -98,6 +99,7 @@ const menu: MenuSection[] = [
     titleKey: 'menu.reportsSection',
     icon: <QueryStatsOutlinedIcon />,
     items: [
+      { path: '/reports/management', labelKey: 'menu.management', icon: <SpeedOutlinedIcon />, permission: 'reports.management.view', companyWide: true },
       { path: '/reports/executive', labelKey: 'menu.executive', icon: <QueryStatsOutlinedIcon />, permission: 'reports.executive.view', companyWide: true },
       { path: '/reports/movement', labelKey: 'menu.movement', icon: <SyncAltOutlinedIcon />, permission: 'reports.movement.view', companyWide: true },
     ],

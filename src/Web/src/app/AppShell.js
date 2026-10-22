@@ -1,5 +1,6 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
+import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined';
 import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
@@ -77,6 +78,7 @@ const menu = [
         titleKey: 'menu.reportsSection',
         icon: _jsx(QueryStatsOutlinedIcon, {}),
         items: [
+            { path: '/reports/management', labelKey: 'menu.management', icon: _jsx(SpeedOutlinedIcon, {}), permission: 'reports.management.view', companyWide: true },
             { path: '/reports/executive', labelKey: 'menu.executive', icon: _jsx(QueryStatsOutlinedIcon, {}), permission: 'reports.executive.view', companyWide: true },
             { path: '/reports/movement', labelKey: 'menu.movement', icon: _jsx(SyncAltOutlinedIcon, {}), permission: 'reports.movement.view', companyWide: true },
         ],

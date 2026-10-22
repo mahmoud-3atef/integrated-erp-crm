@@ -65,6 +65,70 @@ internal static class ReportsEndpoints
 
         MapMovement(endpoints);
         MapCeo(endpoints);
+        MapManagement(endpoints);
+    }
+
+    /// <summary>
+    /// The old system's executive dashboard as it was (docs/03-migration-plan/19): the executive report's figures and
+    /// finance under the dashboard's own permission, and its project deliveries and housing entries.
+    /// </summary>
+    private static void MapManagement(IEndpointRouteBuilder endpoints)
+    {
+        var group = endpoints.MapGroup("/api/v1/reports/management").WithTags("Executive dashboard").RequireAuthorization(PlatformPolicies.CompanyUser);
+
+        group.MapGet("/overview", async (DateOnly? from, DateOnly? to, ExecutiveReport report, IPermissionService permissions, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var finance = (await permissions.GetCurrentAsync(ct).ConfigureAwait(false)).LegalEntitiesFor(InvoicesView) is null;
+                return Results.Ok(await report.OverviewAsync(range.From, range.To, finance, ct).ConfigureAwait(false));
+            })
+            .RequirePermission(ReportsPermissions.ManagementView, companyWide: true);
+
+        group.MapGet("/delivery", async (DateOnly? from, DateOnly? to, bool? excel, ManagementDashboard dashboard, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var data = await dashboard.DeliveryAsync(range.From, range.To, ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Starts(data.Rows), Xlsx, "deliveries.xlsx") : Results.Ok(data);
+            })
+            .RequirePermission(ReportsPermissions.ManagementView, companyWide: true);
+
+        group.MapGet("/housing-entries", async (DateOnly? from, DateOnly? to, bool? excel, ManagementDashboard dashboard, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var data = await dashboard.HousingEntriesAsync(range.From, range.To, ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Entries(data.Rows), Xlsx, "housing-entries.xlsx") : Results.Ok(data);
+            })
+            .RequirePermission(ReportsPermissions.ManagementView, companyWide: true);
+
+        group.MapGet("/finance", async (DateOnly? from, DateOnly? to, Guid? project, ExecutiveReport report, IClock clock, CancellationToken ct) =>
+                Range(from, to, clock) is { } range ? Results.Ok(await report.FinanceAsync(range.From, range.To, project, ct).ConfigureAwait(false)) : BadPeriod())
+            .RequirePermission(ReportsPermissions.ManagementView, companyWide: true)
+            .RequirePermission(InvoicesView, companyWide: true);
+
+        group.MapGet("/invoices", async (DateOnly? from, DateOnly? to, Guid? project, string? manager, int? status, int? bucket, string? month, bool? open, bool? excel, ExecutiveReport report, IClock clock, CancellationToken ct) =>
+            {
+                if (Range(from, to, clock) is not { } range)
+                {
+                    return BadPeriod();
+                }
+
+                var rows = await report.InvoicesAsync(new ReportFilter(range.From, range.To, project, manager, status, bucket, month, null, open == true), ct).ConfigureAwait(false);
+                return excel == true ? Results.File(ReportWorkbook.Invoices(rows), Xlsx, "invoices.xlsx") : Results.Ok(rows);
+            })
+            .RequirePermission(ReportsPermissions.ManagementView, companyWide: true)
+            .RequirePermission(InvoicesView, companyWide: true);
     }
 
     private const string Xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";

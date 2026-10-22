@@ -242,7 +242,7 @@ function Connector({ from, to }) {
             : state === 'Rejected'
                 ? { background: `repeating-linear-gradient(90deg, ${flow.rejected} 0 7px, transparent 7px 12px)` }
                 : { background: `repeating-linear-gradient(90deg, #8a9aa6 0 5px, transparent 5px 10px)` };
-    return (_jsxs(Box, { component: "li", "aria-hidden": true, sx: { position: 'relative', flex: '1 1 0', minWidth: 44, height: 34, mx: -1.5 }, children: [_jsx(Box, { sx: { position: 'absolute', top: 16, insetInline: 0, height: 2.5, borderRadius: 2, ...look } }), label && (_jsx(Box, { component: "span", sx: {
+    return (_jsxs(Box, { component: "li", "aria-hidden": true, sx: { position: 'relative', flex: '1 1 0', minWidth: 44, maxWidth: 220, height: 34, mx: -1.5 }, children: [_jsx(Box, { sx: { position: 'absolute', top: 16, insetInline: 0, height: 2.5, borderRadius: 2, ...look } }), label && (_jsx(Box, { component: "span", sx: {
                     position: 'absolute',
                     top: -1,
                     left: '50%',
