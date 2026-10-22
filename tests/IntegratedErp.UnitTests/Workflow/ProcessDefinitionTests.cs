@@ -119,6 +119,20 @@ public sealed class ProcessDefinitionTests
     }
 
     [Fact]
+    public void A_condition_can_test_a_field_of_a_related_table()
+    {
+        // The project's budget (a related table's field): valid, and tested on the engine's "relation.field" values.
+        var rule = new ConditionRule("budget", ConditionOperator.GreaterThan, "100000", Relation: "project");
+        Assert.True(DefinitionRules.Validate(new ProcessDefinition(new ConditionGroup(true, [rule]), [Stage("a")]), Screen).IsSuccess);
+        AssertInvalid(new ProcessDefinition(new ConditionGroup(true, [rule with { FieldKey = "unknown" }]), [Stage("a")]), "unknown field");
+        AssertInvalid(new ProcessDefinition(new ConditionGroup(true, [rule with { Relation = "customer" }]), [Stage("a")]), "unknown field");
+
+        var fields = ConditionFields.Of(Screen);
+        Assert.True(FieldValues.Matches(new ConditionGroup(true, [rule]), fields, new Dictionary<string, string?> { ["project.budget"] = "250000" }));
+        Assert.False(FieldValues.Matches(new ConditionGroup(true, [rule]), fields, new Dictionary<string, string?> { ["project.budget"] = "50000", ["budget"] = "250000" }));
+    }
+
+    [Fact]
     public void All_and_any_groups_combine_rules()
     {
         var values = new Dictionary<string, string?> { ["amount"] = "500", ["category"] = "LEAVE" };

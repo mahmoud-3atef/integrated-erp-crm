@@ -43,8 +43,8 @@ internal sealed partial class SqlCrmSource(IOptions<CrmSyncOptions> options) : I
 
         // Keyset paging on (modifiedon, id); a missing modifiedon sorts first.
         var sql = $"""
-            SELECT TOP (@pageSize) *
-            FROM [dbo].[{entity.Name}]
+            SELECT TOP (@pageSize) t.*{Extra(entity.Name)}
+            FROM [dbo].[{entity.Name}] t
             WHERE (@createdFrom IS NULL OR [createdon] >= @createdFrom)
               AND (@afterModifiedOn IS NULL
                    OR ISNULL([modifiedon], '19000101') > @afterModifiedOn
@@ -95,6 +95,16 @@ internal sealed partial class SqlCrmSource(IOptions<CrmSyncOptions> options) : I
             await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
         }
     }
+
+    /// <summary>
+    /// Columns a row needs from another CRM table, read with it: a project's owner (its manager) Windows account
+    /// (DOMAIN\name), which links them to their account here. Fixed text: nothing from outside reaches it.
+    /// </summary>
+    private static string Extra(string entity) => entity switch
+    {
+        "new_project" => ", (SELECT TOP (1) u.[domainname] FROM [dbo].[systemuser] u WHERE u.[systemuserid] = t.[ownerid]) AS [owner_domainname]",
+        _ => string.Empty,
+    };
 
     /// <summary>Refuses any statement that is not a single SELECT (defence in depth; statements are built here).</summary>
     internal static void EnsureReadOnly(string sql)

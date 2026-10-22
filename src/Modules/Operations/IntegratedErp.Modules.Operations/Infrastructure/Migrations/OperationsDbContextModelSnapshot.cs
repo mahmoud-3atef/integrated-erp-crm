@@ -898,6 +898,19 @@ namespace IntegratedErp.Modules.Operations.Infrastructure.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("delay_reason");
 
+                    b.Property<Guid?>("FromProjectCrmId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("from_project_crm_id");
+
+                    b.Property<Guid?>("FromProjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("from_project_id");
+
+                    b.Property<string>("FromProjectName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("from_project_name");
+
                     b.Property<string>("LastComment")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)")

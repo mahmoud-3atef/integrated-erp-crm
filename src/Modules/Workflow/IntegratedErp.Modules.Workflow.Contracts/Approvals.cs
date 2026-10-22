@@ -78,9 +78,11 @@ public sealed record ApprovalScreen(
 public sealed record DefaultApprovalProcess(string NameAr, string NameEn, string DefinitionJson);
 
 /// <summary>
-/// A table related to the screen's record (e.g. an invoice's project, a movement's worker) whose fields a process may
-/// update. Only declared relations exist, so a process can change another table only through a real relation, and
-/// the owning module applies the change (through that table's module contract when it belongs to another module).
+/// A table related to the screen's record (e.g. an invoice's project, a transfer order's new project): its fields can
+/// be tested by a process's conditions (read through <see cref="IApprovalRecordAdapter.ReadRelatedAsync"/>), and the
+/// updatable ones changed. Only declared relations exist, so a process reaches another table only through a real
+/// relation, and the owning module applies a change (through that table's module contract when it belongs to another
+/// module).
 /// </summary>
 public sealed record RecordRelation(string Key, string NameAr, string NameEn, IReadOnlyList<RecordField> Fields);
 
@@ -129,6 +131,13 @@ public interface IApprovalRecordAdapter
 
     /// <summary>Current values of the declared fields; null when the record does not exist in the current company.</summary>
     Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Current values of a related table's declared fields (the relation's record for this record), for conditions;
+    /// null when the record has none (e.g. no project yet). Screens without relations need not implement it.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, string?>?> ReadRelatedAsync(Guid recordId, string relation, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<string, string?>?>(null);
 
     /// <summary>
     /// Sets updatable fields of the record (<paramref name="relation"/> null) or of the related table with that key

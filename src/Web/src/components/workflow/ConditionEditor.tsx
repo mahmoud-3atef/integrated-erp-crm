@@ -18,13 +18,19 @@ const operatorsFor = (type: FieldType | undefined): Operator[] => {
   return base;
 };
 
-/** Rows of "field — operator — value", joined by AND (all) or OR (any). Only declared fields and fixed operators. */
+/**
+ * Rows of "table — field — operator — value", joined by AND (all) or OR (any): the table is the record itself or one of
+ * its related tables (e.g. a transfer order's new project), and the field one of that table's. Only declared fields and
+ * fixed operators.
+ */
 export function ConditionEditor({ value, onChange }: { value: ConditionGroup; onChange: (value: ConditionGroup) => void }) {
   const { t, i18n } = useTranslation();
   const { screen, readOnly } = useEditor();
 
   const update = (index: number, change: Partial<ConditionRule>) =>
     onChange({ ...value, rules: value.rules.map((r, i) => (i === index ? { ...r, ...change } : r)) });
+  const relations = screen.relations ?? [];
+  const fieldsOf = (relation: string | null | undefined) => (relation ? (relations.find((r) => r.key === relation)?.fields ?? []) : screen.fields);
 
   return (
     <Box>
@@ -43,13 +49,36 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
       )}
       <Stack spacing={1}>
         {value.rules.map((rule, index) => {
-          const field = screen.fields.find((f) => f.key === rule.fieldKey);
+          const tableFields = fieldsOf(rule.relation);
+          const field = tableFields.find((f) => f.key === rule.fieldKey);
           const operators = operatorsFor(field?.type);
           const needsValue = rule.operator !== 'IsEmpty' && rule.operator !== 'IsNotEmpty';
           return (
             <Stack key={index} direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'center' } }}>
               {index > 0 && (
                 <Typography sx={{ fontSize: 12, fontWeight: 700, color: tokens.navy600, minWidth: 28 }}>{value.matchAll ? t('process.and') : t('process.or')}</Typography>
+              )}
+              {relations.length > 0 && (
+                <TextField
+                  select
+                  size="small"
+                  label={t('process.table')}
+                  value={rule.relation ?? ''}
+                  disabled={readOnly}
+                  slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                  onChange={(e) => {
+                    const relation = e.target.value || null;
+                    update(index, { relation, fieldKey: fieldsOf(relation)[0]?.key ?? '', operator: 'Equals', value: null, values: null });
+                  }}
+                  sx={{ minWidth: 170 }}
+                >
+                  <MenuItem value="">{t('process.thisRecord')}</MenuItem>
+                  {relations.map((r) => (
+                    <MenuItem key={r.key} value={r.key}>
+                      {localName(r, i18n.language)}
+                    </MenuItem>
+                  ))}
+                </TextField>
               )}
               <TextField
                 select
@@ -60,7 +89,7 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                 onChange={(e) => update(index, { fieldKey: e.target.value, operator: 'Equals', value: null, values: null })}
                 sx={{ minWidth: 170 }}
               >
-                {screen.fields.map((f) => (
+                {tableFields.map((f) => (
                   <MenuItem key={f.key} value={f.key}>
                     {localName(f, i18n.language)}
                   </MenuItem>

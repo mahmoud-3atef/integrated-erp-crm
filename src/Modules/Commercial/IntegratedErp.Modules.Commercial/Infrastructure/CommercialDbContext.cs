@@ -81,6 +81,8 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.Property(p => p.NameAr).HasMaxLength(300);
         builder.Property(p => p.NameEn).HasMaxLength(300);
         builder.Property(p => p.Manager).HasMaxLength(200);
+        builder.Property(p => p.ManagerLogin).HasMaxLength(100);
+        builder.HasIndex(p => new { p.TenantId, p.ManagerLogin });
         builder.Property(p => p.CommercialRegistration).HasMaxLength(50);
         builder.Property(p => p.City).HasMaxLength(100);
         builder.Property(p => p.Sector).HasMaxLength(200);

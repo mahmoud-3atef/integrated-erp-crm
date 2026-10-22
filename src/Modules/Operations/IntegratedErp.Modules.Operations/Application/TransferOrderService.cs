@@ -1,3 +1,5 @@
+using IntegratedErp.Modules.Identity.Contracts;
+using IntegratedErp.BuildingBlocks.Security;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Time;
@@ -20,7 +22,8 @@ public sealed record TransferInput(
     string? ReceiverTitle,
     string? DelayReason,
     string? Notes,
-    IReadOnlyList<TransferLineInput> Lines);
+    IReadOnlyList<TransferLineInput> Lines,
+    Guid? FromProjectId = null);
 
 /// <summary>What may change on a transferred order: its date, receiver and notes, and the workers' prices, with the reason.</summary>
 public sealed record TransferAmendInput(DateOnly TransferOn, string? ReceiverName, string? ReceiverTitle, string? Notes, IReadOnlyList<TransferLineChange> Lines, string AmendReason);
@@ -37,6 +40,8 @@ internal sealed class TransferOrderService(
     IApprovalService approvals,
     NumberSequenceService numbering,
     IPeriodLedger ledger,
+    IPermissionService permissions,
+    IUserDirectory users,
     ICurrentUser user,
     IClock clock)
 {
@@ -44,9 +49,36 @@ internal sealed class TransferOrderService(
         [TransferStatus.UnderPreparation, TransferStatus.SentToOperationsManager, TransferStatus.InApproval, TransferStatus.Returned];
 
     /// <summary>Every worker on the job, with the open transfer or return order that already has them (if any), for the form's list.</summary>
-    public async Task<IReadOnlyList<OnJobWorkerDto>> OnJobAsync(Guid? exceptOrderId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The projects workers can be moved to: every active one for the holders of «all projects»; otherwise those the
+    /// user manages (the project's manager signs in with the user's account).
+    /// </summary>
+    public async Task<IReadOnlyList<ProjectInfo>> TargetProjectsAsync(CancellationToken cancellationToken)
+    {
+        if ((await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false)).Has(OperationsPermissions.TransferAllProjects))
+        {
+            return await projects.ActiveAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (!Guid.TryParse(user.UserId, out var userId))
+        {
+            return [];
+        }
+
+        var logins = await users.LoginsAsync(userId, cancellationToken).ConfigureAwait(false);
+        return await projects.ManagedByAsync(logins, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The workers on the job (on the project they would leave, when given), with the open order already holding them.</summary>
+    public async Task<IReadOnlyList<OnJobWorkerDto>> OnJobAsync(Guid? exceptOrderId, Guid? fromProjectId, CancellationToken cancellationToken)
     {
         var cards = await workforce.OnJobAsync(cancellationToken).ConfigureAwait(false);
+        if (fromProjectId is { } fromId)
+        {
+            var from = await projects.FindAsync([fromId], [], cancellationToken).ConfigureAwait(false) is [var p, ..] ? p : null;
+            cards = from is null ? [] : cards.Where(c => c.ProjectCrmId == from.CrmId).ToList();
+        }
+
         var busy = await BusyAsync(db, exceptOrderId, cards.Select(c => c.Id).ToList(), cancellationToken).ConfigureAwait(false);
         return cards.Select(c => new OnJobWorkerDto(c, busy.GetValueOrDefault(c.Id))).ToList();
     }
@@ -323,6 +355,22 @@ internal sealed class TransferOrderService(
             return Fail(Errors.Project);
         }
 
+        if ((await TargetProjectsAsync(cancellationToken).ConfigureAwait(false)).All(t => t.Id != project.Id))
+        {
+            return Fail(Errors.NotManaged);
+        }
+
+        var fromProject = input.FromProjectId is { } fromId && await projects.FindAsync([fromId], [], cancellationToken).ConfigureAwait(false) is [var f, ..] ? f : null;
+        if (fromProject is null)
+        {
+            return Fail(Errors.FromProject);
+        }
+
+        if (fromProject.Id == project.Id)
+        {
+            return Fail(Errors.SameProject);
+        }
+
         if (input.TransferOn < clock.Today.AddDays(-DeliveryOrderService.DelayDays) && string.IsNullOrWhiteSpace(input.DelayReason))
         {
             return Fail(Errors.DelayReason);
@@ -343,6 +391,11 @@ internal sealed class TransferOrderService(
         if (check.IsFailure)
         {
             return Fail(check.Error);
+        }
+
+        if (check.Value.Any(c => c.ProjectCrmId != fromProject.CrmId))
+        {
+            return Fail(Errors.NotOnFromProject);
         }
 
         var priced = await delivery.PriceAsync(project.Id, workerIds, input.TransferOn, null, cancellationToken).ConfigureAwait(false);
@@ -392,7 +445,8 @@ internal sealed class TransferOrderService(
 
         var header = new TransferHeader(
             project.Id, project.CrmId, project.Code, project.Name, project.CustomerName, project.Manager, project.ContractType,
-            input.TransferOn, input.ReceiverName, input.ReceiverTitle, input.DelayReason, input.Notes);
+            input.TransferOn, input.ReceiverName, input.ReceiverTitle, input.DelayReason, input.Notes,
+            fromProject.Id, fromProject.CrmId, fromProject.Name);
         return Result.Success((header, lines));
 
         static Result<(TransferHeader, List<TransferLineValues>)> Fail(Error error) => Result.Failure<(TransferHeader, List<TransferLineValues>)>(error);
@@ -427,6 +481,9 @@ internal sealed class TransferOrderService(
     private static class Errors
     {
         public static readonly Error Project = Error.Validation("transfer_project", "Choose an active project.");
+        public static readonly Error FromProject = Error.Validation("transfer_from_project", "Choose the project the workers leave.");
+        public static readonly Error NotOnFromProject = Error.Validation("transfer_not_on_from_project", "Every worker of the order must be on the project they leave.");
+        public static readonly Error NotManaged = Error.Validation("transfer_project_not_managed", "You can move workers only to a project you manage.");
         public static readonly Error DelayReason = Error.Validation("transfer_delay_reason", "The transfer date is more than two days ago: write the reason for the delay.");
         public static readonly Error Duplicate = Error.Validation("transfer_worker_duplicate", "A worker is on the order twice.");
         public static readonly Error NotOnJob = Error.Validation("transfer_not_on_job", "A worker is not on the job.");

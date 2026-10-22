@@ -63,7 +63,7 @@ internal sealed partial class ApprovalEngine(
             return Result.Failure<Guid>(UnknownScreen);
         }
 
-        if (await adapter.ReadAsync(submission.RecordId, cancellationToken).ConfigureAwait(false) is not { } values)
+        if (await ReadAsync(adapter, submission.RecordId, cancellationToken).ConfigureAwait(false) is not { } values)
         {
             return Result.Failure<Guid>(RecordNotFound);
         }
@@ -77,7 +77,7 @@ internal sealed partial class ApprovalEngine(
 
         await EnsureDefaultProcessAsync(adapter.Screen, cancellationToken).ConfigureAwait(false);
         await RequiredActions.UpgradeAsync(db, adapter.Screen, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        var fields = ConditionFields.Of(adapter.Screen);
         var processes = await db.Processes.AsNoTracking().Include(p => p.Versions)
             .Where(p => p.Screen == submission.Screen && p.IsActive && (submission.ProcessId == null || p.Id == submission.ProcessId))
             .OrderBy(p => p.Priority).ThenBy(p => p.NameEn)
@@ -521,7 +521,7 @@ internal sealed partial class ApprovalEngine(
         }
 
         cursor.Advance(waiting, ProcessCursor.Approve, definition);
-        var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        var fields = ConditionFields.Of(adapter.Screen);
         IReadOnlyDictionary<string, string?>? values = null;
         for (var guard = 0; guard < MaxStepsPerRun; guard++)
         {
@@ -615,7 +615,7 @@ internal sealed partial class ApprovalEngine(
     private async Task RunAsync(ApprovalInstance instance, IApprovalRecordAdapter adapter, CancellationToken cancellationToken)
     {
         var definition = await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false);
-        var fields = adapter.Screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        var fields = ConditionFields.Of(adapter.Screen);
         var cursor = ProcessCursor.Parse(instance.Cursor);
 
         for (var guard = 0; guard < MaxStepsPerRun; guard++)
@@ -920,8 +920,36 @@ internal sealed partial class ApprovalEngine(
         LogStepFailed(logger, instance.Id, error);
     }
 
-    private static async Task<IReadOnlyDictionary<string, string?>?> ValuesAsync(ApprovalInstance instance, IApprovalRecordAdapter adapter, CancellationToken cancellationToken) =>
-        await adapter.ReadAsync(instance.RecordId, cancellationToken).ConfigureAwait(false);
+    private static Task<IReadOnlyDictionary<string, string?>?> ValuesAsync(ApprovalInstance instance, IApprovalRecordAdapter adapter, CancellationToken cancellationToken) =>
+        ReadAsync(adapter, instance.RecordId, cancellationToken);
+
+    /// <summary>The record's values, and each related table's as "relation.field" (what conditions test).</summary>
+    private static async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(IApprovalRecordAdapter adapter, Guid recordId, CancellationToken cancellationToken)
+    {
+        if (await adapter.ReadAsync(recordId, cancellationToken).ConfigureAwait(false) is not { } own)
+        {
+            return null;
+        }
+
+        if (adapter.Screen.RelatedTables.Count == 0)
+        {
+            return own;
+        }
+
+        var values = new Dictionary<string, string?>(own, StringComparer.Ordinal);
+        foreach (var relation in adapter.Screen.RelatedTables)
+        {
+            if (await adapter.ReadRelatedAsync(recordId, relation.Key, cancellationToken).ConfigureAwait(false) is { } related)
+            {
+                foreach (var (key, value) in related)
+                {
+                    values[ConditionFields.Key(relation.Key, key)] = value;
+                }
+            }
+        }
+
+        return values;
+    }
 
     private async Task<List<Guid>> RecipientsAsync(ApprovalInstance instance, IReadOnlyList<Recipient> to, IReadOnlyDictionary<string, string?> values, CancellationToken cancellationToken)
     {

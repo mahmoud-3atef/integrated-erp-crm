@@ -16,4 +16,15 @@ internal sealed class UserDirectory(IdentityDbContext db) : IUserDirectory
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<string>> LoginsAsync(Guid userAccountId, CancellationToken cancellationToken) =>
+        (await db.ExternalLogins.AsNoTracking()
+            .Where(l => l.UserAccountId == userAccountId)
+            .Select(l => l.UserName)
+            .ToListAsync(cancellationToken).ConfigureAwait(false))
+        .Select(n => n[(n.LastIndexOf('\\') + 1)..])
+        .Select(n => n.Trim().ToLowerInvariant())
+        .Where(n => n.Length > 0)
+        .Distinct()
+        .ToList();
 }

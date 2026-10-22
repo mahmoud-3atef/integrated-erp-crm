@@ -129,7 +129,8 @@ internal sealed class CommercialImportService(CommercialDbContext db, ICrmStagin
                     Fit(Text(row, "new_mobilen"), 50),
                     Fit(Text(row, "new_emailaddresses"), 500),
                     Int(row, "statecode") is null or 0,
-                    Created(row)),
+                    Created(row),
+                    LoginOf(Text(row, "owner_domainname"))),
                 customerCrmId,
                 customerId);
         }
@@ -191,4 +192,18 @@ internal sealed class CommercialImportService(CommercialDbContext db, ICrmStagin
         DateTimeOffset.TryParse(Text(row, "createdon"), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var at) ? at : null;
 
     private static string? Fit(string? text, int max) => text is null ? null : text.Length <= max ? text : text[..max];
+
+    /// <summary>"JRCO\\name" → "name" (lower case): how the account signs in here.</summary>
+    internal static string? LoginOf(string? domainName)
+    {
+        if (string.IsNullOrWhiteSpace(domainName))
+        {
+            return null;
+        }
+
+        var name = domainName.Trim();
+        var slash = name.LastIndexOf('\\');
+        name = (slash >= 0 ? name[(slash + 1)..] : name).Trim().ToLowerInvariant();
+        return name.Length is 0 or > 100 ? null : name;
+    }
 }

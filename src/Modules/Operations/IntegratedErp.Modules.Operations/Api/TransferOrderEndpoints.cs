@@ -27,8 +27,12 @@ internal static class TransferOrderEndpoints
                 Results.Ok(await queries.ProjectsAsync(ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.TransferCreate, companyWide: true);
 
-        group.MapGet("/on-job-workers", async (Guid? orderId, TransferOrderService service, CancellationToken ct) =>
-                Results.Ok(await service.OnJobAsync(orderId, ct).ConfigureAwait(false)))
+        group.MapGet("/target-projects", async (TransferOrderService service, CancellationToken ct) =>
+                Results.Ok(await service.TargetProjectsAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(OperationsPermissions.TransferCreate, companyWide: true);
+
+        group.MapGet("/on-job-workers", async (Guid? orderId, Guid? fromProjectId, TransferOrderService service, CancellationToken ct) =>
+                Results.Ok(await service.OnJobAsync(orderId, fromProjectId, ct).ConfigureAwait(false)))
             .RequirePermission(OperationsPermissions.TransferCreate, companyWide: true);
 
         group.MapPost("/prices", async (PriceRequest r, DeliveryOrderService service, IClock clock, CancellationToken ct) =>

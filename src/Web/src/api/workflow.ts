@@ -22,7 +22,7 @@ export interface RecordField {
   options: FieldOption[] | null;
 }
 
-/** A table related to the screen's record whose fields a process may update. */
+/** A table related to the screen's record: its fields can be tested by conditions, and the updatable ones changed. */
 export interface RecordRelation {
   key: string;
   nameAr: string;
@@ -59,6 +59,8 @@ export interface ConditionRule {
   operator: Operator;
   value?: string | null;
   values?: string[] | null;
+  /** The related table the field belongs to (its key); none: the record itself. */
+  relation?: string | null;
 }
 
 export interface ConditionGroup {

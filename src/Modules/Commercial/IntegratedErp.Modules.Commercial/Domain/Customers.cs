@@ -201,6 +201,9 @@ public sealed class Project : ITenantOwned
 
     public string? Manager { get; private set; }
 
+    /// <summary>The manager's sign-in name here (their Windows account without the domain, lower case), from the CRM owner.</summary>
+    public string? ManagerLogin { get; private set; }
+
     public string? CommercialRegistration { get; private set; }
 
     public string? City { get; private set; }
@@ -230,6 +233,7 @@ public sealed class Project : ITenantOwned
         NameAr = s.NameAr;
         NameEn = s.NameEn;
         Manager = s.Manager;
+        ManagerLogin = s.ManagerLogin;
         CommercialRegistration = s.CommercialRegistration;
         City = s.City;
         Sector = s.Sector;
@@ -259,7 +263,8 @@ public sealed record ProjectSnapshot(
     string? ContactMobile,
     string? ContactEmails,
     bool IsActive,
-    DateTimeOffset? CrmCreatedAt);
+    DateTimeOffset? CrmCreatedAt,
+    string? ManagerLogin = null);
 
 /// <summary>What the last import from the CRM copy did (one row per company).</summary>
 public sealed class CommercialImport : ITenantOwned

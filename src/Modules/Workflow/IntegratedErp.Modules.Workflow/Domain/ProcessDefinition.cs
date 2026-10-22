@@ -176,7 +176,38 @@ public enum ConditionOperator
     IsNotEmpty,
 }
 
-public sealed record ConditionRule(string FieldKey, ConditionOperator Operator, string? Value = null, IReadOnlyList<string>? Values = null);
+/// <summary>A test on a field of the record (<paramref name="Relation"/> null) or of one of its related tables (the relation's key).</summary>
+public sealed record ConditionRule(string FieldKey, ConditionOperator Operator, string? Value = null, IReadOnlyList<string>? Values = null, string? Relation = null);
+
+/// <summary>
+/// The fields a condition can test: the record's, and each related table's as "relation.field" — the same keys the
+/// engine gives their values under.
+/// </summary>
+public static class ConditionFields
+{
+    public static string Key(string? relation, string fieldKey) => relation is null ? fieldKey : $"{relation}.{fieldKey}";
+
+    public static string Key(ConditionRule rule)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        return Key(rule.Relation, rule.FieldKey);
+    }
+
+    public static Dictionary<string, RecordField> Of(ApprovalScreen screen)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        var fields = screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        foreach (var relation in screen.RelatedTables)
+        {
+            foreach (var field in relation.Fields)
+            {
+                fields[Key(relation.Key, field.Key)] = field;
+            }
+        }
+
+        return fields;
+    }
+}
 
 /// <summary>All (AND) or any (OR) of the rules; an empty group is true.</summary>
 public sealed record ConditionGroup(bool MatchAll, IReadOnlyList<ConditionRule> Rules);
@@ -189,13 +220,14 @@ public static class DefinitionRules
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(screen);
         var fields = screen.Fields.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        var tested = ConditionFields.Of(screen);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var errors = new List<string>();
         var count = 0;
 
         if (definition.StartCondition is { } start)
         {
-            CheckGroup(start, fields, errors, "start condition");
+            CheckGroup(start, tested, errors, "start condition");
         }
 
         if (definition.Steps.Count == 0)
@@ -300,7 +332,7 @@ public static class DefinitionRules
 
                         foreach (var branch in c.Branches)
                         {
-                            CheckGroup(branch.Condition, fields, errors, "condition");
+                            CheckGroup(branch.Condition, tested, errors, "condition");
                             CheckList(branch.Steps, depth + 1);
                         }
 
@@ -424,9 +456,9 @@ public static class DefinitionRules
 
         foreach (var rule in group.Rules)
         {
-            if (!fields.TryGetValue(rule.FieldKey, out var field))
+            if (!fields.TryGetValue(ConditionFields.Key(rule), out var field))
             {
-                errors.Add($"The {where} uses an unknown field \"{rule.FieldKey}\".");
+                errors.Add($"The {where} uses an unknown field \"{ConditionFields.Key(rule)}\".");
                 continue;
             }
 
@@ -477,7 +509,7 @@ public static class FieldValues
         }
 
         bool Check(ConditionRule rule) =>
-            fields.TryGetValue(rule.FieldKey, out var field) && Compare(field, values.GetValueOrDefault(rule.FieldKey), rule);
+            fields.TryGetValue(ConditionFields.Key(rule), out var field) && Compare(field, values.GetValueOrDefault(ConditionFields.Key(rule)), rule);
 
         return group.MatchAll ? group.Rules.All(Check) : group.Rules.Any(Check);
     }

@@ -410,6 +410,9 @@ export interface TransferDetail {
   amendNote: string | null;
   canceledAt: string | null;
   canceledByName: string | null;
+  /** The project the workers leave (older orders: the first worker's). */
+  fromProjectId: string | null;
+  fromProjectName: string | null;
 }
 
 /** What may change on a transferred order: its date, the receiver and notes, and the workers' prices, with the reason. */
@@ -430,6 +433,8 @@ export interface TransferInput {
   delayReason: string | null;
   notes: string | null;
   lines: { workerId: string; specialPrice: number | null; specialReason: string | null }[];
+  /** The project the workers leave (every worker of the order is on it). */
+  fromProjectId: string | null;
 }
 
 const transfersBase = '/api/v1/operations/transfer-orders';
@@ -444,7 +449,14 @@ export const transfersApi = {
   },
   get: (id: string) => request<TransferDetail>('GET', `${transfersBase}/${id}`),
   projects: () => request<ProjectOption[]>('GET', `${transfersBase}/projects`),
-  onJobWorkers: (orderId?: string) => request<AvailableWorker[]>('GET', `${transfersBase}/on-job-workers${orderId ? `?orderId=${orderId}` : ''}`),
+  /** The projects the user may move workers to: all with the general permission, else the ones they manage. */
+  targetProjects: () => request<ProjectOption[]>('GET', `${transfersBase}/target-projects`),
+  onJobWorkers: (orderId?: string, fromProjectId?: string | null) => {
+    const q = new URLSearchParams();
+    if (orderId) q.set('orderId', orderId);
+    if (fromProjectId) q.set('fromProjectId', fromProjectId);
+    return request<AvailableWorker[]>('GET', `${transfersBase}/on-job-workers${q.size ? `?${q.toString()}` : ''}`);
+  },
   prices: (projectId: string, workerIds: string[], on: string) => request<WorkerPriceQuote[]>('POST', `${transfersBase}/prices`, { projectId, workerIds, on, orderId: null }),
   create: (input: TransferInput) => request<SavedOrder>('POST', transfersBase, input),
   update: (id: string, input: TransferInput) => request<SavedOrder>('PUT', `${transfersBase}/${id}`, input),

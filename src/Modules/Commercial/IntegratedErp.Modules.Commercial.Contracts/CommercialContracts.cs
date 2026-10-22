@@ -43,13 +43,19 @@ public sealed record ProjectInfo(
     string? CustomerName,
     string? Manager,
     string? ContractType,
-    bool IsActive);
+    bool IsActive,
+    string? ManagerLogin = null,
+    string? City = null,
+    string? Sector = null);
 
 /// <summary>The projects of the current company.</summary>
 public interface IProjectDirectory
 {
     /// <summary>Active projects, by name.</summary>
     Task<IReadOnlyList<ProjectInfo>> ActiveAsync(CancellationToken cancellationToken);
+
+    /// <summary>Active projects whose manager signs in with one of these names (lower case), by name.</summary>
+    Task<IReadOnlyList<ProjectInfo>> ManagedByAsync(IReadOnlyCollection<string> logins, CancellationToken cancellationToken);
 
     /// <summary>These projects (by id or by CRM id); unknown ones are left out.</summary>
     Task<IReadOnlyList<ProjectInfo>> FindAsync(IReadOnlyCollection<Guid> ids, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken);

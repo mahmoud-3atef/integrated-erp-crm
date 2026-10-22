@@ -627,6 +627,11 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("manager");
 
+                    b.Property<string>("ManagerLogin")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("manager_login");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -674,6 +679,9 @@ namespace IntegratedErp.Modules.Commercial.Infrastructure.Migrations
                     b.HasIndex("TenantId", "CrmId")
                         .IsUnique()
                         .HasDatabaseName("ix_project_tenant_id_crm_id");
+
+                    b.HasIndex("TenantId", "ManagerLogin")
+                        .HasDatabaseName("ix_project_tenant_id_manager_login");
 
                     b.ToTable("project", "commercial");
                 });

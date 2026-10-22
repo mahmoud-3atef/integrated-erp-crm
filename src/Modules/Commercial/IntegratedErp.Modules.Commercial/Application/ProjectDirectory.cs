@@ -10,6 +10,16 @@ internal sealed class ProjectDirectory(CommercialDbContext db) : IProjectDirecto
         (await QueryAsync(db.Projects.Where(p => !p.RemovedInCrm && p.IsActive), cancellationToken).ConfigureAwait(false))
             .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
+    public async Task<IReadOnlyList<ProjectInfo>> ManagedByAsync(IReadOnlyCollection<string> logins, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(logins);
+        var names = logins.Select(l => l.Trim().ToLowerInvariant()).Where(l => l.Length > 0).Distinct().ToList();
+        return names.Count == 0
+            ? []
+            : (await QueryAsync(db.Projects.Where(p => !p.RemovedInCrm && p.IsActive && p.ManagerLogin != null && names.Contains(p.ManagerLogin)), cancellationToken).ConfigureAwait(false))
+                .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     public async Task<IReadOnlyList<ProjectInfo>> FindAsync(IReadOnlyCollection<Guid> ids, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);
@@ -45,7 +55,7 @@ internal sealed class ProjectDirectory(CommercialDbContext db) : IProjectDirecto
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         return rows.Select(x => new ProjectInfo(
                 x.Project.Id, x.Project.CrmId, x.Project.Code, x.Project.Name, x.CustomerName, x.Project.Manager, x.Type?.ToString(),
-                x.Project.IsActive && !x.Project.RemovedInCrm))
+                x.Project.IsActive && !x.Project.RemovedInCrm, x.Project.ManagerLogin, x.Project.City, x.Project.Sector))
             .ToList();
     }
 }

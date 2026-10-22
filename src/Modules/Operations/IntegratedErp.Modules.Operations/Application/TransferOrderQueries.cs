@@ -82,7 +82,9 @@ public sealed record TransferDetailDto(
     string? AmendedByName = null,
     string? AmendNote = null,
     DateTimeOffset? CanceledAt = null,
-    string? CanceledByName = null);
+    string? CanceledByName = null,
+    Guid? FromProjectId = null,
+    string? FromProjectName = null);
 
 internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceData reference, IApprovalService approvals, IPermissionService permissions, IPeriodLedger ledger)
 {
@@ -177,7 +179,9 @@ internal sealed class TransferOrderQueries(OperationsDbContext db, IReferenceDat
             AmendedByName: order.AmendedByName,
             AmendNote: order.AmendNote,
             CanceledAt: order.CanceledAt,
-            CanceledByName: order.CanceledByName);
+            CanceledByName: order.CanceledByName,
+            FromProjectId: order.FromProjectId,
+            FromProjectName: order.FromProjectName ?? lines.Select(l => l.FromProjectName).FirstOrDefault(n => n is not null));
     }
 
     private async Task<List<TransferRowDto>> RowsAsync(Guid? only, CancellationToken cancellationToken)

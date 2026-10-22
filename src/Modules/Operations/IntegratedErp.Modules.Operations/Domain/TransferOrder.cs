@@ -39,7 +39,10 @@ public sealed record TransferHeader(
     string? ReceiverName,
     string? ReceiverTitle,
     string? DelayReason,
-    string? Notes);
+    string? Notes,
+    Guid? FromProjectId = null,
+    Guid? FromProjectCrmId = null,
+    string? FromProjectName = null);
 
 /// <summary>A worker line: the project they leave, and the price on the new project (the package's, or a special price with a reason).</summary>
 public sealed record TransferLineValues(
@@ -102,6 +105,13 @@ public sealed class TransferOrder : ITenantOwned
     public string ProjectCode { get; private set; }
 
     public string ProjectName { get; private set; }
+
+    /// <summary>The project the workers leave (chosen first; every worker of the order is on it).</summary>
+    public Guid? FromProjectId { get; private set; }
+
+    public Guid? FromProjectCrmId { get; private set; }
+
+    public string? FromProjectName { get; private set; }
 
     public string? CustomerName { get; private set; }
 
@@ -337,6 +347,9 @@ public sealed class TransferOrder : ITenantOwned
         ProjectCrmId = h.ProjectCrmId;
         ProjectCode = h.ProjectCode;
         ProjectName = h.ProjectName;
+        FromProjectId = h.FromProjectId;
+        FromProjectCrmId = h.FromProjectCrmId;
+        FromProjectName = h.FromProjectName;
         CustomerName = h.CustomerName;
         ProjectManager = h.ProjectManager;
         ContractType = h.ContractType;

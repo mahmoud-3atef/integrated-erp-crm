@@ -28,7 +28,6 @@ interface Line {
 }
 
 const daysAgo = (iso: string) => Math.floor((Date.parse(isoToday()) - Date.parse(iso)) / 86400000);
-const onJob = { load: (orderId?: string) => transfersApi.onJobWorkers(orderId), titleKey: 'operations.transfer.picker.title', hintKey: 'operations.transfer.picker.hint' };
 
 function initials(name: string) {
   return (
@@ -51,7 +50,9 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
   const { date } = useCommercialFormat();
   const [step, setStep] = useState(0);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [targets, setTargets] = useState<ProjectOption[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [fromProjectId, setFromProjectId] = useState<string | null>(null);
   const [transferOn, setTransferOn] = useState(isoToday());
   const [receiverName, setReceiverName] = useState('');
   const [receiverTitle, setReceiverTitle] = useState('');
@@ -66,12 +67,14 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
 
   useEffect(() => {
     transfersApi.projects().then(setProjects).catch((failure: unknown) => setError(errorKey(failure)));
+    transfersApi.targetProjects().then(setTargets).catch((failure: unknown) => setError(errorKey(failure)));
     if (id) {
       transfersApi
         .get(id)
         .then((o) => {
           setOrderNo(o.summary.orderNo);
           setProjectId(o.summary.projectId);
+          setFromProjectId(o.fromProjectId);
           setTransferOn(o.summary.transferOn);
           setReceiverName(o.receiverName ?? '');
           setReceiverTitle(o.receiverTitle ?? '');
@@ -100,7 +103,14 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
     };
   }, [projectId, workerKey, transferOn]);
 
-  const project = projects.find((p) => p.id === projectId) ?? null;
+  const project = targets.find((p) => p.id === projectId) ?? projects.find((p) => p.id === projectId) ?? null;
+  const fromProject = projects.find((p) => p.id === fromProjectId) ?? null;
+  // The workers on the project they leave (the list loads again when that project changes).
+  const onJob = { load: (orderId?: string) => transfersApi.onJobWorkers(orderId, fromProjectId), titleKey: 'operations.transfer.picker.title', hintKey: 'operations.transfer.picker.hint' };
+  const chooseFrom = (value: string | null) => {
+    if (value !== fromProjectId) setLines([]);
+    setFromProjectId(value);
+  };
   const late = !!transferOn && daysAgo(transferOn) > 2;
   const add = (workers: WorkerCard[]) => {
     setCards((current) => ({ ...current, ...Object.fromEntries(workers.map((w) => [w.id, w])) }));
@@ -118,7 +128,7 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
   const total = lines.reduce((sum, l) => sum + (priceOf(l) ?? 0), 0);
   const missingPrice = lines.some((l) => !l.special && quotes[l.workerId]?.totalPrice === null);
   const sameProject = !!project && lines.some((l) => cardOf(l.workerId)?.projectCrmId === project.crmId);
-  const orderReady = !!projectId && !!transferOn && (!late || delayReason.trim() !== '');
+  const orderReady = !!projectId && !!fromProjectId && projectId !== fromProjectId && !!transferOn && (!late || delayReason.trim() !== '');
   // Every worker has a service price of at least 1,000 (a special one with its reason), and can move on the transfer date.
   const priceProblem = (l: Line) => {
     const price = priceOf(l);
@@ -147,6 +157,7 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
         specialPrice: l.special && l.specialPrice ? Number(l.specialPrice) : null,
         specialReason: l.special ? l.specialReason.trim() || null : null,
       })),
+      fromProjectId,
     };
     try {
       const saved = id ? await transfersApi.update(id, input) : await transfersApi.create(input);
@@ -204,6 +215,7 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
       error={error}
       aside={
         <WizardAside tone="transfer" title={t('operations.transfer.wizard.summary')}>
+          <WizardFact icon={<ApartmentOutlinedIcon />} label={t('operations.transfer.fromProject')} value={fromProject?.name} sub={fromProject?.customerName} />
           <WizardFact icon={<ApartmentOutlinedIcon />} label={t('operations.transfer.newProject')} value={project?.name} sub={project?.customerName} />
           <WizardFact icon={<EventOutlinedIcon />} label={t('operations.transfer.col.transferOn')} value={transferOn ? date(transferOn) : null} />
           <WizardFact icon={<BadgeOutlinedIcon />} label={t('operations.transfer.receiverName')} value={receiverName.trim()} sub={receiverTitle.trim() || null} />
@@ -214,14 +226,23 @@ export function TransferOrderWizard({ id, onClose, onSaved }: { id?: string; onC
     >
       {step === 0 && (
         <WizardCard title={t('operations.transfer.sections.order')} icon={<SwapHorizIcon />}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
             <Autocomplete
               options={projects}
+              value={fromProject}
+              onChange={(_, v) => chooseFrom(v?.id ?? null)}
+              getOptionLabel={(p) => `${p.name} (${p.code})`}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              renderInput={(params) => <TextField {...params} label={t('operations.transfer.fromProject')} required autoFocus />}
+            />
+            <Autocomplete
+              options={targets.filter((p) => p.id !== fromProjectId)}
               value={project}
               onChange={(_, v) => setProjectId(v?.id ?? null)}
               getOptionLabel={(p) => `${p.name} (${p.code})`}
               isOptionEqualToValue={(a, b) => a.id === b.id}
-              renderInput={(params) => <TextField {...params} label={t('operations.transfer.newProject')} required autoFocus />}
+              noOptionsText={t('operations.transfer.noTargets')}
+              renderInput={(params) => <TextField {...params} label={t('operations.transfer.newProject')} required helperText={targets.length === 0 ? t('operations.transfer.noTargets') : undefined} />}
             />
             <DateField
               label={t('operations.transfer.col.transferOn')}

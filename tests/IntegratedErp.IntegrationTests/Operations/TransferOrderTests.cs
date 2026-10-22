@@ -35,7 +35,7 @@ public sealed class TransferOrderTests(TestDatabase database)
         var philippines = crm.Add(CrmEntities.Country, new() { ["new_name"] = "الفلبين", ["new_nameenglish"] = "Philippines" });
         var labour = crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
         var riyadh = crm.Add("new_project", new() { ["new_name"] = "مشروع الرياض", ["new_code"] = "pro00700", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
-        var jeddah = crm.Add("new_project", new() { ["new_name"] = "مشروع جدة", ["new_code"] = "pro00701", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
+        var jeddah = crm.Add("new_project", new() { ["new_name"] = "مشروع جدة", ["new_code"] = "pro00701", ["new_contracttype"] = 2, ["statecode"] = 0, ["owner_domainname"] = @"JRCO\Mgr.Jeddah" }, created: Created2025);
         Worker(crm, "BSS0301", philippines, labour, 100000000, riyadh, "مشروع الرياض");
         Worker(crm, "BSS0302", philippines, labour, 100000000, jeddah, "مشروع جدة");
         Worker(crm, "BSS0303", philippines, labour, 279640001, null, null); // in housing
@@ -43,10 +43,11 @@ public sealed class TransferOrderTests(TestDatabase database)
 
         var (creator, manager) = await PeopleAsync(tenantId);
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
-        Guid jeddahId, moving, already, housed, orderId;
+        Guid jeddahId, riyadhId, moving, already, housed, orderId;
         using (var scope = database.Scope(tenantId, user: creator.ToString()))
         {
             jeddahId = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().ProjectsAsync(default)).Single(p => p.Name == "مشروع جدة").Id;
+            riyadhId = (await scope.ServiceProvider.GetRequiredService<DeliveryOrderQueries>().ProjectsAsync(default)).Single(p => p.Name == "مشروع الرياض").Id;
             var options = await scope.ServiceProvider.GetRequiredService<PricingQueries>().OptionsAsync(null, default);
             var package = await scope.ServiceProvider.GetRequiredService<PricingService>().CreateAsync(
                 new PackageInput(jeddahId, options.Professions.Single().Code, options.Nationalities.Single().Code, 1500m, 1300m, 200m, true, 0m, false, new DateOnly(2026, 1, 1), null, null),
@@ -54,13 +55,17 @@ public sealed class TransferOrderTests(TestDatabase database)
             Assert.True(package.IsSuccess);
 
             var service = scope.ServiceProvider.GetRequiredService<TransferOrderService>();
-            var onJob = await service.OnJobAsync(null, default);
+            var onJob = await service.OnJobAsync(null, null, default);
             Assert.Equal(["BSS0301", "BSS0302"], onJob.Select(w => w.Worker.WorkerNo).Order());
+
+            // From Riyadh: only its workers. To: only the project the creator manages.
+            Assert.Equal(["BSS0301"], (await service.OnJobAsync(null, riyadhId, default)).Select(w => w.Worker.WorkerNo));
+            Assert.Equal(["مشروع جدة"], (await service.TargetProjectsAsync(default)).Select(p => p.Name));
             moving = onJob.Single(w => w.Worker.WorkerNo == "BSS0301").Worker.Id;
             already = onJob.Single(w => w.Worker.WorkerNo == "BSS0302").Worker.Id;
             housed = (await scope.ServiceProvider.GetRequiredService<IWorkforceDirectory>().SearchAsync("BSS0303", 5, default)).Single().Id;
 
-            TransferInput Input(DateOnly on, params TransferLineInput[] lines) => new(jeddahId, on, "أحمد", "مشرف الموقع", null, null, lines);
+            TransferInput Input(DateOnly on, params TransferLineInput[] lines) => new(jeddahId, on, "أحمد", "مشرف الموقع", null, null, lines, riyadhId);
             Assert.Equal("validation.transfer_same_project", (await service.CreateAsync(Input(today, new TransferLineInput(already, null, null)), default)).Error.Code);
             Assert.Equal("validation.transfer_not_on_job", (await service.CreateAsync(Input(today, new TransferLineInput(housed, null, null)), default)).Error.Code);
             Assert.Equal("validation.transfer_delay_reason", (await service.CreateAsync(Input(today.AddDays(-5), new TransferLineInput(moving, null, null)), default)).Error.Code);
@@ -156,7 +161,10 @@ public sealed class TransferOrderTests(TestDatabase database)
             return user.Id;
         }
 
+        // The creator manages Jeddah's project (its CRM owner signs in as "mgr.jeddah"), without the general permission.
         var creator = await PersonAsync("منشئ أمر النقل", "operations.transfer.create", "operations.return.create", "commercial.prices.manage");
+        identity.ExternalLogins.Add(new ExternalLogin(creator, "ad-jrco", $"s-{Guid.NewGuid():N}", "mgr.jeddah"));
+        await identity.SaveChangesAsync();
         return (creator, await PersonAsync("مدير العمليات", "operations.transfer.approve"));
     }
 

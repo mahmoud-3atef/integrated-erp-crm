@@ -195,6 +195,7 @@ internal sealed class TransferOrderConfiguration : IEntityTypeConfiguration<Tran
     {
         builder.ToTable("transfer_order");
         builder.HasKey(o => o.Id);
+        builder.Property(o => o.FromProjectName).HasMaxLength(300);
         builder.Property(o => o.Id).ValueGeneratedNever();
         builder.Property(o => o.OrderNo).HasMaxLength(30).IsRequired();
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(30);

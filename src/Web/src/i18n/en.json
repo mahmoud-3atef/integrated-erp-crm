@@ -587,7 +587,10 @@
     "conflict_return_period_locked": "A timesheet or a payroll run (in approval or approved), or a settlement, is already built on the worker's periods from that day: they cannot change. Reopen or cancel that document first.",
     "validation_delivery_start_before_last_period": "A worker's start is on or before their latest period: the earliest is the day after it began.",
     "validation_transfer_start_before_last_period": "The transfer date is on or before a worker's latest period: the earliest is the day after it began.",
-    "validation_movement_before_last_period": "The date is on or before the worker's latest period: the earliest is the day after it began."
+    "validation_movement_before_last_period": "The date is on or before the worker's latest period: the earliest is the day after it began.",
+    "validation_transfer_from_project": "Choose the project the workers leave.",
+    "validation_transfer_not_on_from_project": "Every worker of the order must be on the project they leave.",
+    "validation_transfer_project_not_managed": "You can move workers only to a project you manage."
   },
   "menu": {
     "label": "Main menu",
@@ -1107,10 +1110,10 @@
     "stageNameAr": "Stage name (Arabic)",
     "stageNameEn": "Stage name (English)",
     "dueIn": "due in {{hours}} h",
-    "table": "Table to update",
+    "table": "Table",
     "tableHint": "The screen's own record, or a table linked to it by a declared relation.",
     "noRelatedTables": "This screen has no related tables yet; the screen's own record is updated.",
-    "thisRecord": "Screen record: {{screen}}",
+    "thisRecord": "This record",
     "relatedTable": "Related table: {{table}}",
     "assigneeCount": "Approvers: {{count}}",
     "run": {
@@ -2110,7 +2113,7 @@
         "prices": "New prices",
         "review": "Review and send",
         "summary": "Transfer summary",
-        "hint": "Choose the new project and the date, then the workers, then check the new prices before sending for approval.",
+        "hint": "Choose the project moved from, the project moved to and the transfer date, then the workers of the project they leave, then check the new prices before sending it for approval.",
         "picked": "{{count}} workers chosen. Add more or go on to the prices."
       },
       "amend": {
@@ -2131,7 +2134,9 @@
         "cancelHint": "The work periods the order opened on the new project are removed, and each worker's period on their former project is open again. Not allowed if any of them has a later action.",
         "amendedBy": "Changed after approval by {{by}} on {{date}}",
         "canceledBy": "Cancelled after approval by {{by}} on {{date}}"
-      }
+      },
+      "fromProject": "Project moved from",
+      "noTargets": "No project you manage to move workers to (the general transfer permission opens every project)."
     }
   },
   "housing": {
