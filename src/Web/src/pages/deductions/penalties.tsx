@@ -43,7 +43,7 @@ import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { Money, NoteDialog, usePeople, usePeriods, type Person } from './advances';
@@ -503,7 +503,7 @@ export function PenaltyPage() {
       <HrPageHeader
         icon={<BalanceOutlinedIcon />}
         title={kindName(p, t, ar)}
-        status={<PenaltyStatusBadge status={p.status} />}
+        status={<ShownStatus approval={approval.detail}><PenaltyStatusBadge status={p.status} /></ShownStatus>}
         reference={p.penaltyNo}
         subtitle={
           <>

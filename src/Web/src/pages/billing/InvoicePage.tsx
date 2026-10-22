@@ -54,7 +54,7 @@ import { invoiceApi, noteComponents, type InvoiceComponent, type InvoiceDetail, 
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { isoToday, sar } from '../operations/delivery';
@@ -283,7 +283,7 @@ export function InvoicePage() {
         status={
           <>
             <Box sx={{ bgcolor: '#fff', borderRadius: 99, px: 0.25 }}>
-              <InvoiceStatusBadge status={inv.status} />
+              <ShownStatus approval={approval.detail}><InvoiceStatusBadge status={inv.status} /></ShownStatus>
             </Box>
             {payment && (
               <Box sx={{ px: 1.25, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 800, color: paymentLook[payment].fg, bgcolor: paymentLook[payment].bg }}>{t(`invoices.payment.${payment}`)}</Box>

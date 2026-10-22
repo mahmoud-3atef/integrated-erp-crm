@@ -1,6 +1,7 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined';
+import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
@@ -167,6 +168,7 @@ const menu = [
             { path: '/workflow/requests', labelKey: 'menu.requests', icon: _jsx(DescriptionOutlinedIcon, {}), anyOf: ['workflow.requests.create', 'workflow.requests.view'] },
             { path: '/workflow/monitor', labelKey: 'menu.monitor', icon: _jsx(MonitorHeartOutlinedIcon, {}), permission: 'workflow.instances.view', companyWide: true },
             { path: '/workflow/processes', labelKey: 'menu.processes', icon: _jsx(AltRouteOutlinedIcon, {}), permission: 'workflow.processes.view', companyWide: true },
+            { path: '/workflow/status-values', labelKey: 'menu.statusValues', icon: _jsx(LabelOutlinedIcon, {}), permission: 'workflow.processes.view', companyWide: true },
         ],
     },
     {

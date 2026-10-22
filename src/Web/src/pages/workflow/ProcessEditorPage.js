@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { localName } from '../../api/access';
 import { errorKey } from '../../api/auth';
 import { setupApi } from '../../api/setup';
-import { workflowApi } from '../../api/workflow';
+import { workflowApi, withStatusValues } from '../../api/workflow';
 import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
@@ -54,6 +54,11 @@ export function ProcessEditorPage() {
             const screen = screens.find((s) => s.code === d.process.screen);
             if (screen) {
                 setData({ screen, options, legalEntities });
+                // The status values the company added: an update step may set the record's status to them.
+                workflowApi
+                    .statusValues(screen.code)
+                    .then((statuses) => setData({ screen: withStatusValues(screen, statuses), options, legalEntities }))
+                    .catch(() => undefined);
             }
         })
             .catch((failure) => setError(errorKey(failure)));

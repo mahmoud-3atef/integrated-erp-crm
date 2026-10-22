@@ -15,7 +15,7 @@ import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrPageHeader, HrScope, hr, hrCard } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { LeaveStatusBadge } from './leave';
 import { DateField } from '../../components/DateField';
@@ -236,7 +236,7 @@ export function PermissionPage() {
       <HrPageHeader
         icon={<TimerOutlinedIcon />}
         title={t('permissions.title', { kind: t(`permissions.kinds.${p.kind}`) })}
-        status={<LeaveStatusBadge status={p.status} />}
+        status={<ShownStatus approval={approval.detail}><LeaveStatusBadge status={p.status} /></ShownStatus>}
         reference={p.requestNo}
         subtitle={
           <>

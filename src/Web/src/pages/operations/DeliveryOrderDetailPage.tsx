@@ -38,7 +38,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle, SummaryCard, SummaryDates, SummaryFact, SummaryGroup, SummaryNote, SummaryBand } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DeliveryStatusBadge, sar } from './delivery';
@@ -124,7 +124,7 @@ export function DeliveryOrderDetailPage({ editing = false }: { editing?: boolean
         number={o.orderNo}
         status={
           <>
-            <DeliveryStatusBadge row={o} />
+            <ShownStatus approval={approval.detail}><DeliveryStatusBadge row={o} /></ShownStatus>
             {o.source === 'Crm' && <Badge tone="neutral">{t('operations.delivery.fromCrm')}</Badge>}
           </>
         }

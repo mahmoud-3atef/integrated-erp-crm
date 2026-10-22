@@ -168,7 +168,9 @@ internal sealed class ProcessService(WorkflowDbContext db, ApprovalEngine engine
         }
 
         var definition = DefinitionJson.Read(process.Draft);
-        var rules = DefinitionRules.Validate(definition, adapter.Screen);
+        var added = (await db.StatusValues.AsNoTracking().Where(v => v.Screen == process.Screen && v.IsActive).Select(v => v.Code)
+            .ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet(StringComparer.Ordinal);
+        var rules = DefinitionRules.Validate(definition, adapter.Screen, added);
         if (rules.IsFailure)
         {
             return rules;

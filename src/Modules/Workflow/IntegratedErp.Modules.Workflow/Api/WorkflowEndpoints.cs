@@ -40,6 +40,19 @@ internal static class WorkflowEndpoints
                     : Results.Ok(Array.Empty<string>()))
             .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
 
+        // The values a company adds to a screen's status (under «in approval»), with the screen's fixed ones.
+        group.MapGet("/status-values", async (string screen, StatusValues values, CancellationToken ct) =>
+                (await values.ListAsync(screen, ct).ConfigureAwait(false)) is { IsSuccess: true } r ? Results.Ok(r.Value) : Results.Problem(statusCode: 400, title: "validation.status_value_screen"))
+            .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);
+
+        group.MapPost("/status-values", async (StatusValueInput input, StatusValues values, CancellationToken ct) =>
+                ToHttp(await values.CreateAsync(input, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
+        group.MapPut("/status-values/{id:guid}", async (Guid id, StatusValueChange change, StatusValues values, CancellationToken ct) =>
+                ToHttp(await values.UpdateAsync(id, change, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkflowPermissions.ProcessesManage, companyWide: true);
+
         group.MapGet("/processes", async (ProcessService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(ct).ConfigureAwait(false)))
             .RequirePermission(WorkflowPermissions.ProcessesView, companyWide: true);

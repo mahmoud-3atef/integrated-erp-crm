@@ -38,7 +38,7 @@ import { useCrumb } from '../../app/breadcrumbs';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrScope, hr } from '../../components/hr/Hr';
 import { GlassChip, GlassFact, GlassHero, GlassKpi, GlassRow, glassButton, glassPanel } from '../../components/glass';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { Money, sar, useYears } from './settlementParts';
 import { DateField } from '../../components/DateField';
@@ -114,7 +114,7 @@ export function SettlementPage() {
           </>
         }
         title={t(end ? 'settlements.titleEnd' : 'settlements.titleVacation', { name: d.name })}
-        chip={<GlassChip>{t(`settlements.status.${d.status}`)}</GlassChip>}
+        chip={<ShownStatus approval={approval.detail}><GlassChip>{t(`settlements.status.${d.status}`)}</GlassChip></ShownStatus>}
         subtitle={
           end
             ? `${t(`settlements.reason.${d.reason}`)} · ${t('settlements.lastDayOn', { date: date(d.lastDay) })}`

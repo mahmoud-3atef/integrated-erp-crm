@@ -14,7 +14,7 @@ import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { localRef } from './AttendanceMonthPage';
 import { DateField } from '../../components/DateField';
@@ -202,7 +202,7 @@ export function OvertimePage() {
       <HrPageHeader
         icon={<MoreTimeOutlinedIcon />}
         title={t('overtime.title')}
-        status={<OvertimeBadge status={o.status} />}
+        status={<ShownStatus approval={approval.detail}><OvertimeBadge status={o.status} /></ShownStatus>}
         reference={o.requestNo}
         subtitle={
           <>

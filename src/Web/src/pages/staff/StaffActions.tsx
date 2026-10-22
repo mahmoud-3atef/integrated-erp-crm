@@ -22,7 +22,7 @@ import { actionKinds, staffApi, type ActionKind, type ActionRow, type ActionStat
 import { useCrumb } from '../../app/breadcrumbs';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useLegalEntities } from '../payroll/RunDialogs';
 import { DateField } from '../../components/DateField';
@@ -289,7 +289,7 @@ export function StaffActionPage() {
       <HrPageHeader
         icon={actionIcon[a.kind]}
         title={t(`staffActions.kind.${a.kind}`)}
-        status={<ActionStatusBadge status={a.status} />}
+        status={<ShownStatus approval={approval.detail}><ActionStatusBadge status={a.status} /></ShownStatus>}
         reference={a.actionNo}
         subtitle={
           <>

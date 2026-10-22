@@ -238,7 +238,8 @@ public sealed record ConditionGroup(bool MatchAll, IReadOnlyList<ConditionRule> 
 /// <summary>Checks a definition against the screen's declared fields before it can be published.</summary>
 public static class DefinitionRules
 {
-    public static Result Validate(ProcessDefinition definition, ApprovalScreen screen)
+    /// <param name="statusValues">The values the company added to the screen's status: an update step may set the record's status to them.</param>
+    public static Result Validate(ProcessDefinition definition, ApprovalScreen screen, IReadOnlySet<string>? statusValues = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(screen);
@@ -394,6 +395,12 @@ public static class DefinitionRules
 
                         foreach (var change in u.Changes)
                         {
+                            // An added value of the status: always settable while the record is in approval.
+                            if (u.Target is null && change.FieldKey == "status" && change.FromField is null && change.Value is { } added && statusValues?.Contains(added) == true)
+                            {
+                                continue;
+                            }
+
                             if (!targetFields.TryGetValue(change.FieldKey, out var field) || !field.Updatable)
                             {
                                 errors.Add($"Field \"{change.FieldKey}\" cannot be updated by a process.");

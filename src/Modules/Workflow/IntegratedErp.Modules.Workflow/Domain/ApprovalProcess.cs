@@ -250,6 +250,12 @@ public sealed class ApprovalInstance : ITenantOwned
 
     public string? Error { get; private set; }
 
+    /// <summary>
+    /// The value the company added to the screen's status that the record shows while in approval (set by a process's
+    /// update step; docs/02-target-architecture/19). Cleared when a fixed status is set or the approval ends.
+    /// </summary>
+    public string? StatusValue { get; private set; }
+
     public DateTimeOffset? CompletedAt { get; private set; }
 
     /// <summary>Two people acting at once: the second save fails and is told to refresh.</summary>
@@ -273,9 +279,12 @@ public sealed class ApprovalInstance : ITenantOwned
         WaitingStepEn = null;
     }
 
+    public void SetStatusValue(string? code) => StatusValue = code;
+
     public void Complete(InstanceStatus status, DateTimeOffset at)
     {
         StopWaiting();
+        StatusValue = null;
         Status = status;
         CompletedAt = at;
         Error = null;

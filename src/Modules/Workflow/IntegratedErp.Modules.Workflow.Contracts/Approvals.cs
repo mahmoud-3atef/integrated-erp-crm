@@ -219,7 +219,13 @@ public sealed record ApprovalStatusInfo(
     DateTimeOffset SubmittedAt,
     IReadOnlyList<ApprovalStageInfo> Stages,
     IReadOnlyList<ApprovalTimelineEntry> History,
-    IReadOnlyList<ApprovalPlannedStage>? Planned = null);
+    IReadOnlyList<ApprovalPlannedStage>? Planned = null)
+{
+    /// <summary>The value the company added to the screen's status that the record shows now (null: its own status).</summary>
+    public string? StatusValueAr { get; init; }
+
+    public string? StatusValueEn { get; init; }
+}
 
 /// <summary>Used by modules that own records: start, follow and cancel approvals.</summary>
 public interface IApprovalService

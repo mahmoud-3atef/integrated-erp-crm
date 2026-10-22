@@ -29,6 +29,7 @@ public sealed class WorkflowModule : IModule
         services.AddScoped<ApprovalEngine>();
         services.AddScoped<IApprovalService>(sp => sp.GetRequiredService<ApprovalEngine>());
         services.AddScoped<ProcessService>();
+        services.AddScoped<StatusValues>();
         services.AddScoped<ApprovalQueries>();
         services.AddScoped<InternalRequestService>();
         services.AddScoped<IApprovalRecordAdapter, InternalRequestAdapter>();

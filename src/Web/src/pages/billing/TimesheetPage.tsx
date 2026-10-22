@@ -45,7 +45,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
 import { PillTabs } from '../../components/ui';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
@@ -193,7 +193,7 @@ export function TimesheetPage() {
         number={sheet.timesheetNo}
         status={
           <Box sx={{ bgcolor: '#fff', borderRadius: 99, px: 0.25 }}>
-            <TimesheetStatusBadge status={sheet.status} />
+            <ShownStatus approval={approval.detail}><TimesheetStatusBadge status={sheet.status} /></ShownStatus>
           </Box>
         }
         title={sheet.projectName}

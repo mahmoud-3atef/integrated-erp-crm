@@ -1,7 +1,29 @@
 // Approval processes, the engine's inbox and requests, and internal requests (src/Modules/Workflow/.../Api/WorkflowEndpoints.cs).
 import { request } from './auth';
 const base = '/api/v1/workflow';
+/** A screen as a process sees it, with the status values the company added (settable by an update step). */
+export function withStatusValues(screen, statuses) {
+    const added = (statuses?.added ?? []).filter((v) => v.isActive);
+    if (added.length === 0)
+        return screen;
+    return {
+        ...screen,
+        fields: screen.fields.map((f) => f.key !== 'status'
+            ? f
+            : {
+                ...f,
+                updatable: true,
+                options: [
+                    ...(f.options ?? []).map((o) => (f.updatable ? o : { ...o, settable: false })),
+                    ...added.map((v) => ({ value: v.code, nameAr: v.nameAr, nameEn: `${v.nameEn} · In approval`, settable: true })),
+                ],
+            }),
+    };
+}
 export const workflowApi = {
+    statusValues: (screen) => request('GET', `${base}/status-values?screen=${encodeURIComponent(screen)}`),
+    createStatusValue: (input) => request('POST', `${base}/status-values`, input),
+    updateStatusValue: (id, change) => request('PUT', `${base}/status-values/${id}`, change),
     /** The values a text field of the screen's table (or of a related table) holds, to pick one. */
     fieldValues: (screen, relation, field) => request('GET', `${base}/screens/${encodeURIComponent(screen)}/values?field=${encodeURIComponent(field)}${relation ? `&relation=${encodeURIComponent(relation)}` : ''}`),
     currentStages: (screen, ids) => request('GET', `${base}/current-stages?screen=${encodeURIComponent(screen)}&ids=${ids.join(',')}`),

@@ -61,7 +61,7 @@ import {
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrAccents, hrCard, type HrAccent } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DaysDrawer } from './DaysDrawer';
 import { ImportDialog } from './ImportDialog';
@@ -176,7 +176,7 @@ export function AttendanceMonthPage() {
       <HrPageHeader
         icon={<AccessTimeOutlinedIcon />}
         title={t('attendance.title')}
-        status={month && <HrStatusBadge label={t(`attendance.monthStatus.${month.status}`)} {...monthLook[month.status]} />}
+        status={month && <ShownStatus approval={approval.detail}><HrStatusBadge label={t(`attendance.monthStatus.${month.status}`)} {...monthLook[month.status]} /></ShownStatus>}
         reference={`ATT-${period}`}
         subtitle={
           month ? (

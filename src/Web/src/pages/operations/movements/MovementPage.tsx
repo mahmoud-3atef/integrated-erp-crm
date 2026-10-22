@@ -22,7 +22,7 @@ import { useCrumb } from '../../../app/breadcrumbs';
 import { tokens } from '../../../app/theme';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../../components/RecordLayout';
-import { ApprovalBar, useRecordApproval } from '../../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
 import { sar } from '../../operations/delivery';
 import { Journey, JourneyLine, WorkerFact, WorkerHead } from '../recordParts';
@@ -82,7 +82,7 @@ export function MovementPage({ editing = false }: { editing?: boolean } = {}) {
         number={m.movementNo}
         status={
           <Box sx={{ bgcolor: '#fff', borderRadius: 99, px: 0.25 }}>
-            <MovementStatusBadge status={m.status} />
+            <ShownStatus approval={approval.detail}><MovementStatusBadge status={m.status} /></ShownStatus>
           </Box>
         }
         actions={

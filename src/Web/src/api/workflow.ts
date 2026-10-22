@@ -314,6 +314,9 @@ export interface ApprovalStatus {
   history: HistoryEntry[];
   /** The stages ahead if everything is approved (a forecast); empty once the approval ended. */
   planned?: PlannedStage[] | null;
+  /** The value the company added to the screen's status that the record shows now (null: its own status). */
+  statusValueAr?: string | null;
+  statusValueEn?: string | null;
 }
 
 export interface FieldValue {
@@ -382,9 +385,54 @@ export interface CurrentStage {
   stepEn: string | null;
   since: string | null;
   waitingFor: string[];
+  /** The value the company added to the screen's status that the record shows (null: its own status). */
+  statusAr?: string | null;
+  statusEn?: string | null;
+}
+
+/** A value the company added to a screen's status (under «in approval»). */
+export interface StatusValue {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  sortOrder: number;
+  isActive: boolean;
+  /** Approvals on it now. */
+  inUse: number;
+}
+
+export interface ScreenStatuses {
+  screen: string;
+  system: FieldOption[];
+  added: StatusValue[];
+}
+
+/** A screen as a process sees it, with the status values the company added (settable by an update step). */
+export function withStatusValues(screen: Screen, statuses: ScreenStatuses | null): Screen {
+  const added = (statuses?.added ?? []).filter((v) => v.isActive);
+  if (added.length === 0) return screen;
+  return {
+    ...screen,
+    fields: screen.fields.map((f) =>
+      f.key !== 'status'
+        ? f
+        : {
+            ...f,
+            updatable: true,
+            options: [
+              ...(f.options ?? []).map((o) => (f.updatable ? o : { ...o, settable: false })),
+              ...added.map((v) => ({ value: v.code, nameAr: v.nameAr, nameEn: `${v.nameEn} · In approval`, settable: true })),
+            ],
+          },
+    ),
+  };
 }
 
 export const workflowApi = {
+  statusValues: (screen: string) => request<ScreenStatuses>('GET', `${base}/status-values?screen=${encodeURIComponent(screen)}`),
+  createStatusValue: (input: { screen: string; nameAr: string; nameEn: string }) => request<StatusValue>('POST', `${base}/status-values`, input),
+  updateStatusValue: (id: string, change: { nameAr: string; nameEn: string; sortOrder: number; isActive: boolean }) => request<void>('PUT', `${base}/status-values/${id}`, change),
   /** The values a text field of the screen's table (or of a related table) holds, to pick one. */
   fieldValues: (screen: string, relation: string | null | undefined, field: string) =>
     request<string[]>('GET', `${base}/screens/${encodeURIComponent(screen)}/values?field=${encodeURIComponent(field)}${relation ? `&relation=${encodeURIComponent(relation)}` : ''}`),

@@ -59,7 +59,7 @@ import { payslipsPath } from '../../api/payslips';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrCoverageCard, HrDrawer, HrEmptyState, HrKpiCard, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { exclusionLook, money, noteLook, RunStatusBadge, useMonthName } from './payroll';
 import { SponsorsDialog } from './RunDialogs';
@@ -159,7 +159,7 @@ export function PayrollRunPage() {
       <HrPageHeader
         icon={<RequestQuoteOutlinedIcon />}
         title={`${t('payroll.runTitle')} · ${monthName(run.to)}`}
-        status={<RunStatusBadge status={run.status} />}
+        status={<ShownStatus approval={approval.detail}><RunStatusBadge status={run.status} /></ShownStatus>}
         reference={run.runNo}
         subtitle={
           <>

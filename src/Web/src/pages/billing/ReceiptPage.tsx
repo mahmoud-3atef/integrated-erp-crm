@@ -40,7 +40,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { AttachmentsDialog } from '../../components/AttachmentsDialog';
 import { recordTones, SectionTitle } from '../../components/RecordLayout';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from '../operations/delivery';
@@ -157,7 +157,7 @@ export function ReceiptPage({ editing = false }: { editing?: boolean } = {}) {
               {r.receiptNo ?? t('receipts.noNumber')}
             </Typography>
           </Box>
-          <ReceiptStatusBadge status={r.status} />
+          <ShownStatus approval={approval.detail}><ReceiptStatusBadge status={r.status} /></ShownStatus>
         </Stack>
         <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
           {r.canEdit && (

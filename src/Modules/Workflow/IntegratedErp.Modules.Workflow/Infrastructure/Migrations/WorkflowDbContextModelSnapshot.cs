@@ -490,6 +490,11 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("status");
 
+                    b.Property<string>("StatusValue")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("status_value");
+
                     b.Property<DateTimeOffset>("SubmittedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("submitted_at");
@@ -849,6 +854,71 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasDatabaseName("ix_internal_request_tenant_id_number");
 
                     b.ToTable("internal_request", "workflow");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.StatusValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("name_en");
+
+                    b.Property<string>("Screen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("screen");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_status_value");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_status_value_tenant_id");
+
+                    b.HasIndex("TenantId", "Screen", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_status_value_tenant_id_screen_code");
+
+                    b.ToTable("status_value", "workflow");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Workflow.Domain.ApprovalHistoryEntry", b =>

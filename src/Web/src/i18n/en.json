@@ -590,7 +590,11 @@
     "validation_movement_before_last_period": "The date is on or before the worker's latest period: the earliest is the day after it began.",
     "validation_transfer_from_project": "Choose the project the workers leave.",
     "validation_transfer_not_on_from_project": "Every worker of the order must be on the project they leave.",
-    "validation_transfer_project_not_managed": "You can move workers only to a project you manage."
+    "validation_transfer_project_not_managed": "You can move workers only to a project you manage.",
+    "validation_status_value_screen": "This screen has no record status.",
+    "validation_status_value_name": "Enter the value's Arabic and English names (100 characters at most).",
+    "conflict_status_value_taken": "The screen already has a value with this name.",
+    "not_found_status_value": "The value was not found."
   },
   "menu": {
     "label": "Main menu",
@@ -662,7 +666,8 @@
     "executive": "CEO report",
     "movement": "Workforce movement",
     "hrSettlements": "Settlements",
-    "management": "Executive dashboard"
+    "management": "Executive dashboard",
+    "statusValues": "Status values"
   },
   "roles": {
     "title": "Roles and permissions",
@@ -6284,5 +6289,32 @@
         "first": "First work"
       }
     }
+  },
+  "statusValues": {
+    "overline": "Approvals",
+    "title": "Status values",
+    "subtitle": "Add values to any screen's status during approval. The system's fixed statuses can't be changed or deleted.",
+    "add": "Add a value",
+    "screen": "Screen",
+    "system": "Fixed statuses (from the system)",
+    "systemHint": "The code relies on them: before approval, its outcome and carrying out the action. They can’t be changed or deleted.",
+    "added": "Added values",
+    "addedHint": "Each added value is part of «In approval»: a process’s update step sets it, and the record shows it on its page and list until the status changes or the approval ends.",
+    "empty": "No values added to this screen yet.",
+    "nameAr": "Arabic name",
+    "nameEn": "English name",
+    "code": "Code",
+    "under": "Part of",
+    "inApproval": "In approval",
+    "inUse": "On it now",
+    "active": "Active",
+    "order": "Order",
+    "up": "Move up",
+    "down": "Move down",
+    "edit": "Edit",
+    "addTitle": "Add a status value",
+    "editTitle": "Edit the value",
+    "underHint": "The value is part of «In approval»: the system treats a record on it as in approval.",
+    "codeFixed": "The code doesn't change:"
   }
 }

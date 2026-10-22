@@ -1,4 +1,4 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
@@ -95,6 +95,8 @@ export function StageLine({ stage }) {
         return null;
     }
     const name = i18n.language === 'ar' ? stage.stepAr : stage.stepEn;
+    // A value the company added to the status: the record's status while in approval.
+    const value = i18n.language === 'ar' ? stage.statusAr : stage.statusEn;
     const minutes = stage.since ? Math.max(0, (Date.now() - Date.parse(stage.since)) / 60000) : null;
     const since = minutes === null
         ? ''
@@ -104,5 +106,5 @@ export function StageLine({ stage }) {
                 ? t('tracker.hours', { count: Math.floor(minutes / 60) })
                 : t('tracker.days', { count: Math.floor(minutes / 60 / 24) });
     const late = minutes !== null && minutes >= 60 * 24 * 2;
-    return (_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 0.4, mt: 0.4, fontSize: 11.5, color: late ? tokens.danger : tokens.gray500, '& svg': { fontSize: 14 } }, children: [_jsx(HourglassBottomOutlinedIcon, {}), _jsxs(Box, { component: "span", sx: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }, children: [name, since && ` · ${t('lists.since', { time: since })}`] })] }));
+    return (_jsxs(_Fragment, { children: [value && (_jsx(Box, { component: "span", sx: { display: 'inline-block', mt: 0.4, px: 1, py: 0.15, borderRadius: 999, fontSize: 11.5, fontWeight: 700, color: tokens.navy700, bgcolor: tokens.navy50, whiteSpace: 'nowrap' }, children: value })), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 0.4, mt: 0.4, fontSize: 11.5, color: late ? tokens.danger : tokens.gray500, '& svg': { fontSize: 14 } }, children: [_jsx(HourglassBottomOutlinedIcon, {}), _jsxs(Box, { component: "span", sx: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }, children: [name, since && ` · ${t('lists.since', { time: since })}`] })] })] }));
 }

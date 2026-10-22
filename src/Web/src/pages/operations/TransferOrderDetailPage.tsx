@@ -23,7 +23,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { recordTones, RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { sar } from './delivery';
@@ -131,7 +131,7 @@ export function TransferOrderDetailPage({ editing = false }: { editing?: boolean
         icon={<SwapHorizIcon />}
         kind={t('operations.transfer.kind')}
         number={o.orderNo}
-        status={<TransferStatusBadge status={o.status} />}
+        status={<ShownStatus approval={approval.detail}><TransferStatusBadge status={o.status} /></ShownStatus>}
         actions={
           <>
             {order.canEdit && (

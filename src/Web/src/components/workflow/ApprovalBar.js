@@ -74,7 +74,7 @@ export function useStageName() {
  * server decides who may; the page answers the others). Distant stages fold into chips.
  */
 export function GlobalCompactApprovalBar({ status, actions, loadingActions, onViewAll, }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const phone = !useMediaQuery(theme.breakpoints.up('sm'));
     const { day } = useWhen();
@@ -122,7 +122,7 @@ export function GlobalCompactApprovalBar({ status, actions, loadingActions, onVi
                             color: state.main,
                             bgcolor: state.soft,
                             '& svg': { fontSize: 15 },
-                        }, children: [state.icon, running ? t('approvalBar.inProgress') : t(`approval.instance.${status.status}`), ended && endedAt && _jsx("bdi", { children: day(endedAt) })] }), _jsx(Button, { size: "small", onClick: onViewAll, "aria-label": t('approvalBar.viewAll'), startIcon: phone ? undefined : _jsx(FormatListBulletedIcon, {}), sx: {
+                        }, children: [state.icon, running ? ((i18n.language === 'ar' ? status.statusValueAr : status.statusValueEn) ?? t('approvalBar.inProgress')) : t(`approval.instance.${status.status}`), ended && endedAt && _jsx("bdi", { children: day(endedAt) })] }), _jsx(Button, { size: "small", onClick: onViewAll, "aria-label": t('approvalBar.viewAll'), startIcon: phone ? undefined : _jsx(FormatListBulletedIcon, {}), sx: {
                             flex: '0 0 auto',
                             height: 28,
                             borderRadius: 999,

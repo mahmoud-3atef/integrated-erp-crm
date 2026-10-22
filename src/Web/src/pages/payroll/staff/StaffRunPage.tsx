@@ -60,7 +60,7 @@ import { useCrumb } from '../../../app/breadcrumbs';
 import { useSession } from '../../../app/session';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { HrAvatar, HrCoverageCard, HrDrawer, HrEmptyState, HrKpiCard, HrPageHeader, HrScope, HrStatusBadge, hr, hrCard } from '../../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../../components/workflow/RecordApproval';
 import { useMonthName as usePeriodName } from '../../attendance/AttendanceMonthPage';
 import { PayslipEmailDialog } from './PayslipEmailDialog';
 import { useCommercialFormat } from '../../commercial/ProjectsPage';
@@ -177,7 +177,7 @@ export function StaffRunPage() {
       <HrPageHeader
         icon={<RequestQuoteOutlinedIcon />}
         title={`${t('staffPayroll.runTitle')} · ${periodName(run.period)}`}
-        status={<RunStatusBadge status={run.status} />}
+        status={<ShownStatus approval={approval.detail}><RunStatusBadge status={run.status} /></ShownStatus>}
         reference={run.runNo}
         subtitle={
           <>

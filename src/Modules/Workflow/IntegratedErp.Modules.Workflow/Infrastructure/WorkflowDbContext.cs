@@ -21,6 +21,8 @@ internal sealed class WorkflowDbContext(DbContextOptions<WorkflowDbContext> opti
 
     public DbSet<ApprovalInstance> Instances => Set<ApprovalInstance>();
 
+    public DbSet<StatusValue> StatusValues => Set<StatusValue>();
+
     public DbSet<ApprovalWorkItem> WorkItems => Set<ApprovalWorkItem>();
 
     public DbSet<ApprovalHistoryEntry> History => Set<ApprovalHistoryEntry>();
@@ -117,6 +119,22 @@ internal sealed class ApprovalProcessVersionConfiguration : IEntityTypeConfigura
     }
 }
 
+internal sealed class StatusValueConfiguration : IEntityTypeConfiguration<StatusValue>
+{
+    public void Configure(EntityTypeBuilder<StatusValue> builder)
+    {
+        builder.ToTable("status_value");
+        builder.HasKey(v => v.Id);
+        builder.Property(v => v.Id).ValueGeneratedNever();
+        builder.Property(v => v.Screen).HasMaxLength(100).IsRequired();
+        builder.Property(v => v.Code).HasMaxLength(60).IsRequired();
+        builder.Property(v => v.NameAr).HasMaxLength(100).IsRequired();
+        builder.Property(v => v.NameEn).HasMaxLength(100).IsRequired();
+        builder.Property(v => v.CreatedByName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(v => new { v.TenantId, v.Screen, v.Code }).IsUnique();
+    }
+}
+
 internal sealed class ApprovalInstanceConfiguration : IEntityTypeConfiguration<ApprovalInstance>
 {
     public void Configure(EntityTypeBuilder<ApprovalInstance> builder)
@@ -133,6 +151,7 @@ internal sealed class ApprovalInstanceConfiguration : IEntityTypeConfiguration<A
         builder.Property(i => i.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(i => i.Cursor).HasMaxLength(4000).IsRequired();
         builder.Property(i => i.WaitingStepId).HasMaxLength(40);
+        builder.Property(i => i.StatusValue).HasMaxLength(60);
         builder.Property(i => i.WaitingStepAr).HasMaxLength(200);
         builder.Property(i => i.WaitingStepEn).HasMaxLength(200);
         builder.Property(i => i.Error).HasMaxLength(1000);

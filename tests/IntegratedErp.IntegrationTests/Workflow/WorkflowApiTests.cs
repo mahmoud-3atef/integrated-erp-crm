@@ -376,6 +376,51 @@ public sealed class WorkflowApiTests : IAsyncLifetime
         Assert.Equal("validation.process_invalid", (await Json(invalid)).GetProperty("title").GetString());
     }
 
+    [SkippableFact]
+    public async Task An_added_status_value_is_set_by_the_process_shown_while_in_approval_and_cleared_when_it_ends()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+
+        // The company adds a value under «in approval»: the screen's fixed values stay listed and locked.
+        var added = await _adminClient.PostAsJsonAsync("/api/v1/workflow/status-values", new { screen = Screen, nameAr = "بانتظار المدير المباشر", nameEn = "Waiting for the direct manager" });
+        Assert.Equal(HttpStatusCode.OK, added.StatusCode);
+        var code = (await Json(added)).GetProperty("code").GetString();
+        Assert.Equal("waiting_for_the_direct_manager", code);
+        var listed = await Json(await _adminClient.GetAsync($"/api/v1/workflow/status-values?screen={Screen}"));
+        Assert.Contains(listed.GetProperty("system").EnumerateArray(), s => s.GetProperty("value").GetString() == "Approved");
+        Assert.Equal(HttpStatusCode.Conflict, (await _adminClient.PostAsJsonAsync("/api/v1/workflow/status-values", new { screen = Screen, nameAr = "بانتظار المدير المباشر", nameEn = "Other" })).StatusCode);
+
+        // A process sets it before the manager's stage; an unknown value is refused.
+        static object Process(string value) => new
+        {
+            startCondition = (object?)null,
+            steps = new object[]
+            {
+                new { type = "update", id = "mark", changes = new[] { new { fieldKey = "status", value } } },
+                new { type = "approval", id = "manager", nameAr = "اعتماد المدير", nameEn = "Manager", assignees = new[] { new { kind = "UserField", fieldKey = "direct_manager" } }, rule = "Any" },
+            },
+        };
+        var draft = await _adminClient.PostAsJsonAsync("/api/v1/workflow/processes", new { screen = Screen, nameAr = "عملية", nameEn = "Process", priority = 10 });
+        var processId = (await Json(draft)).GetProperty("process").GetProperty("id").GetGuid();
+        await _adminClient.PutAsJsonAsync($"/api/v1/workflow/processes/{processId}/draft", new { nameAr = "عملية", nameEn = "Process", priority = 10, definition = Process("no_such_value") });
+        Assert.NotEqual(HttpStatusCode.OK, (await _adminClient.PostAsync($"/api/v1/workflow/processes/{processId}/publish", null)).StatusCode);
+        await SaveAndPublishAsync(processId, Process(code!));
+
+        var id = await NewRequestAsync("شراء طابعة", 900m, _managerId);
+        await _employeeClient.PostAsync($"/api/v1/workflow/requests/{id}/submit", null);
+        var request = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
+        Assert.Equal("Waiting for the direct manager", request.GetProperty("approval").GetProperty("statusValueEn").GetString());
+        var stages = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/current-stages?screen={Screen}&ids={id}"));
+        Assert.Equal("بانتظار المدير المباشر", stages.EnumerateArray().Single().GetProperty("statusAr").GetString());
+
+        // Once decided, the record shows its own status again.
+        var task = Assert.Single(await InboxAsync(_managerClient));
+        Assert.Equal(HttpStatusCode.NoContent, (await DecideAsync(_managerClient, task, "Approve", null)).StatusCode);
+        request = await Json(await _employeeClient.GetAsync($"/api/v1/workflow/requests/{id}"));
+        Assert.Equal("Approved", request.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, request.GetProperty("approval").GetProperty("statusValueEn").ValueKind);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private async Task<Guid> PublishAsync(object definition)

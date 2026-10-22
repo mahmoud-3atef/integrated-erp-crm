@@ -469,8 +469,9 @@ internal sealed partial class ApprovalEngine(
 
         var instances = await db.Instances.AsNoTracking()
             .Where(i => i.Screen == screen && recordIds.Contains(i.RecordId) && i.Status == InstanceStatus.InProgress)
-            .Select(i => new { i.Id, i.RecordId, i.WaitingStepAr, i.WaitingStepEn })
+            .Select(i => new { i.Id, i.RecordId, i.WaitingStepAr, i.WaitingStepEn, i.StatusValue })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var names = instances.Any(i => i.StatusValue is not null) ? await StatusNamesAsync(screen, cancellationToken).ConfigureAwait(false) : [];
         var ids = instances.Select(i => i.Id).ToList();
         var open = await db.WorkItems.AsNoTracking()
             .Where(w => ids.Contains(w.InstanceId) && w.Status == WorkItemStatus.Pending)
@@ -479,8 +480,10 @@ internal sealed partial class ApprovalEngine(
         return instances.Select(i =>
             {
                 var items = open.Where(w => w.InstanceId == i.Id).ToList();
+                var shown = i.StatusValue is { } code && names.TryGetValue(code, out var name) ? name : default;
                 return new CurrentStageDto(
-                    i.RecordId, i.WaitingStepAr, i.WaitingStepEn, items.Count > 0 ? items.Min(w => w.CreatedAt) : null, items.Select(w => w.AssigneeName).Distinct().ToList());
+                    i.RecordId, i.WaitingStepAr, i.WaitingStepEn, items.Count > 0 ? items.Min(w => w.CreatedAt) : null, items.Select(w => w.AssigneeName).Distinct().ToList(),
+                    shown.Ar, shown.En);
             })
             .ToList();
     }
@@ -499,6 +502,8 @@ internal sealed partial class ApprovalEngine(
         var definition = await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false);
         var rules = DefinitionRules.Walk(definition.Steps).OfType<ApprovalStep>()
             .GroupBy(s => s.Id, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Rule.ToString(), StringComparer.Ordinal);
+        var shown = instance.Status == InstanceStatus.InProgress && instance.StatusValue is { } code
+            && (await StatusNamesAsync(instance.Screen, cancellationToken).ConfigureAwait(false)).TryGetValue(code, out var name) ? name : default;
         return new ApprovalStatusInfo(
             instance.Id, instance.ProcessNameAr, instance.ProcessNameEn, instance.Version, instance.Status.ToString(),
             instance.WaitingStepAr, instance.WaitingStepEn, waiting, instance.SubmittedByName, instance.SubmittedAt,
@@ -507,7 +512,11 @@ internal sealed partial class ApprovalEngine(
                 h.Sequence, h.Kind, h.StepNameAr, h.StepNameEn, h.ActorName, h.OnBehalfOf, h.Outcome, h.Comment,
                 h.Kind == nameof(HistoryKind.RecordUpdated) && h.Details is not null ? JsonSerializer.Deserialize<Dictionary<string, string?>>(h.Details) : null,
                 h.At)).ToList(),
-            await PlannedAsync(instance, definition, cancellationToken).ConfigureAwait(false));
+            await PlannedAsync(instance, definition, cancellationToken).ConfigureAwait(false))
+        {
+            StatusValueAr = shown.Ar,
+            StatusValueEn = shown.En,
+        };
     }
 
     /// <summary>
@@ -680,7 +689,21 @@ internal sealed partial class ApprovalEngine(
                         c => c.FieldKey,
                         c => c.FromField is { } from ? values.GetValueOrDefault(from) : c.Value,
                         StringComparer.Ordinal);
-                    var applied = await adapter.ApplyAsync(instance.RecordId, update.Target, changes, cancellationToken).ConfigureAwait(false);
+
+                    // The record's status: a value the company added is kept on the approval (the record shows it while in
+                    // approval); a fixed one goes to the record, and the added one no longer shows.
+                    var toRecord = new Dictionary<string, string?>(changes, StringComparer.Ordinal);
+                    if (update.Target is null && changes.TryGetValue("status", out var status))
+                    {
+                        var added = status is not null && await db.StatusValues.AnyAsync(v => v.Screen == instance.Screen && v.Code == status, cancellationToken).ConfigureAwait(false);
+                        instance.SetStatusValue(added ? status : null);
+                        if (added)
+                        {
+                            toRecord.Remove("status");
+                        }
+                    }
+
+                    var applied = toRecord.Count == 0 ? Result.Success() : await adapter.ApplyAsync(instance.RecordId, update.Target, toRecord, cancellationToken).ConfigureAwait(false);
                     if (applied.IsFailure)
                     {
                         Fail(instance, step, $"The record refused the update: {applied.Error.Message}");
@@ -933,8 +956,20 @@ internal sealed partial class ApprovalEngine(
     private async Task<IReadOnlyDictionary<string, string?>?> ValuesAsync(ApprovalInstance instance, IApprovalRecordAdapter adapter, CancellationToken cancellationToken)
     {
         var definition = await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false);
-        return await ReadAsync(adapter, instance.RecordId, RelationsUsed(definition), cancellationToken).ConfigureAwait(false);
+        var values = await ReadAsync(adapter, instance.RecordId, RelationsUsed(definition), cancellationToken).ConfigureAwait(false);
+
+        // The status the record shows: a value the company added, while the approval has one.
+        if (values is null || instance.StatusValue is not { } shown)
+        {
+            return values;
+        }
+
+        return new Dictionary<string, string?>(values, StringComparer.Ordinal) { ["status"] = shown };
     }
+
+    /// <summary>The names of a screen's added status values, by code.</summary>
+    private async Task<Dictionary<string, (string Ar, string En)>> StatusNamesAsync(string screen, CancellationToken cancellationToken) =>
+        await db.StatusValues.AsNoTracking().Where(v => v.Screen == screen).ToDictionaryAsync(v => v.Code, v => (v.NameAr, v.NameEn), StringComparer.Ordinal, cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// The related tables a process reads: those its conditions, assignees, recipients and texts name ("relation.field"
@@ -1135,4 +1170,5 @@ internal static class DefinitionJson
 }
 
 /// <summary>The stage a record's approval waits at, since when, and for whom.</summary>
-public sealed record CurrentStageDto(Guid RecordId, string? StepAr, string? StepEn, DateTimeOffset? Since, IReadOnlyList<string> WaitingFor);
+/// <param name="StatusAr">The value the company added to the screen's status that the record shows while in approval (null: its own status).</param>
+public sealed record CurrentStageDto(Guid RecordId, string? StepAr, string? StepEn, DateTimeOffset? Since, IReadOnlyList<string> WaitingFor, string? StatusAr = null, string? StatusEn = null);

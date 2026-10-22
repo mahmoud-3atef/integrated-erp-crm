@@ -109,7 +109,7 @@ export function GlobalCompactApprovalBar({
   loadingActions?: boolean;
   onViewAll: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const phone = !useMediaQuery(theme.breakpoints.up('sm'));
   const { day } = useWhen();
@@ -183,7 +183,7 @@ export function GlobalCompactApprovalBar({
           }}
         >
           {state.icon}
-          {running ? t('approvalBar.inProgress') : t(`approval.instance.${status.status}`)}
+          {running ? ((i18n.language === 'ar' ? status.statusValueAr : status.statusValueEn) ?? t('approvalBar.inProgress')) : t(`approval.instance.${status.status}`)}
           {ended && endedAt && <bdi>{day(endedAt)}</bdi>}
         </Box>
         <Button

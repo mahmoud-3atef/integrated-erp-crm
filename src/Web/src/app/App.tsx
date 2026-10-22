@@ -81,6 +81,7 @@ import { ApprovalDetailPage } from '../pages/workflow/ApprovalDetailPage';
 import { InboxPage, MonitorPage, MyApprovalsPage } from '../pages/workflow/InboxPage';
 import { ProcessEditorPage } from '../pages/workflow/ProcessEditorPage';
 import { ProcessesPage } from '../pages/workflow/ProcessesPage';
+import { StatusValuesPage } from '../pages/workflow/StatusValuesPage';
 import { BranchesPage } from '../pages/setup/BranchesPage';
 import { LegalEntitiesPage } from '../pages/setup/LegalEntitiesPage';
 import { ModulesPage } from '../pages/setup/ModulesPage';
@@ -219,6 +220,7 @@ export function App() {
                 <Route path="/workflow/monitor" element={<MonitorPage />} />
                 <Route path="/workflow/approvals/:id" element={<ApprovalDetailPage />} />
                 <Route path="/workflow/processes" element={<EnglishScope><ProcessesPage /></EnglishScope>} />
+                <Route path="/workflow/status-values" element={<StatusValuesPage />} />
                 <Route path="/workflow/processes/:id" element={<EnglishScope><ProcessEditorPage /></EnglishScope>} />
                 <Route path="/workflow/requests" element={<RequestsPage />} />
                 <Route path="/workflow/requests/:id" element={<RequestDetailPage />} />

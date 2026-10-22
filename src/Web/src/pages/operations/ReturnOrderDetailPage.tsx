@@ -22,7 +22,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { RecordHero, SectionTitle, SummaryBand, SummaryCard, SummaryFact, SummaryGroup, SummaryNote } from '../../components/RecordLayout';
 import { Badge } from '../../components/ui';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { RunProcessButton } from '../../components/workflow/RunProcessButton';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useStateName } from './movements/movementMeta';
@@ -101,7 +101,7 @@ export function ReturnOrderDetailPage({ editing = false }: { editing?: boolean }
         number={o.orderNo}
         status={
           <>
-            <ReturnStatusBadge row={o} />
+            <ShownStatus approval={approval.detail}><ReturnStatusBadge row={o} /></ShownStatus>
             {o.source === 'Crm' && <Badge tone="neutral">{t('operations.delivery.fromCrm')}</Badge>}
           </>
         }

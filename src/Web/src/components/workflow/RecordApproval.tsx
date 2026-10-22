@@ -1,11 +1,12 @@
 import BlockIcon from '@mui/icons-material/Block';
+import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ForwardIcon from '@mui/icons-material/Forward';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ReplyIcon from '@mui/icons-material/Reply';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localName } from '../../api/access';
 import { errorKey } from '../../api/auth';
@@ -246,6 +247,25 @@ export function ApprovalBar({
         />
       )}
     </>
+  );
+}
+
+/**
+ * A record's status as it shows: while in approval, the value the company added to the screen's status that the
+ * approval set (docs/02-target-architecture/19); otherwise the record's own status badge.
+ */
+export function ShownStatus({ approval, children }: { approval: InstanceDetail | null; children: ReactNode }) {
+  const { i18n } = useTranslation();
+  const status = approval?.status;
+  const value = status?.status === 'InProgress' ? (i18n.language === 'ar' ? status.statusValueAr : status.statusValueEn) : null;
+  if (!value) {
+    return <>{children}</>;
+  }
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.3, borderRadius: 999, fontSize: 12.5, fontWeight: 800, color: tokens.navy700, bgcolor: '#fff', border: `1px solid ${tokens.navy100}`, whiteSpace: 'nowrap', '& svg': { fontSize: 15 } }}>
+      <HourglassBottomOutlinedIcon />
+      {value}
+    </Box>
   );
 }
 

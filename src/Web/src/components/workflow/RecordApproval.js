@@ -1,5 +1,6 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import BlockIcon from '@mui/icons-material/Block';
+import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ForwardIcon from '@mui/icons-material/Forward';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -161,6 +162,19 @@ export function ApprovalBar({ status, detail, loading, onChanged, }) {
                     setNotice({ key: 'approvalBar.alreadyProcessed', severity: 'info' });
                     onChanged();
                 } }))] }));
+}
+/**
+ * A record's status as it shows: while in approval, the value the company added to the screen's status that the
+ * approval set (docs/02-target-architecture/19); otherwise the record's own status badge.
+ */
+export function ShownStatus({ approval, children }) {
+    const { i18n } = useTranslation();
+    const status = approval?.status;
+    const value = status?.status === 'InProgress' ? (i18n.language === 'ar' ? status.statusValueAr : status.statusValueEn) : null;
+    if (!value) {
+        return _jsx(_Fragment, { children: children });
+    }
+    return (_jsxs(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.3, borderRadius: 999, fontSize: 12.5, fontWeight: 800, color: tokens.navy700, bgcolor: '#fff', border: `1px solid ${tokens.navy100}`, whiteSpace: 'nowrap', '& svg': { fontSize: 15 } }, children: [_jsx(HourglassBottomOutlinedIcon, {}), value] }));
 }
 /** Every event of the approval (the detailed log, for the approval's own page and the request's approval tab). */
 export function ApprovalLog({ status, detail }) {

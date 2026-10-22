@@ -43,7 +43,7 @@ import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrEmptyState, HrPageHeader, HrScope, hr, hrAccents, hrCard, type HrAccent } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { LeaveRequestDialog, LeaveStatusBadge, RequestsTable, leaveLook, typeName } from './leave';
@@ -322,7 +322,7 @@ export function LeaveRequestPage() {
       <HrPageHeader
         icon={<BeachAccessOutlinedIcon />}
         title={t('leave.requestTitle', { type: typeName(r, ar) })}
-        status={<LeaveStatusBadge status={r.status} />}
+        status={<ShownStatus approval={approval.detail}><LeaveStatusBadge status={r.status} /></ShownStatus>}
         reference={r.requestNo}
         subtitle={
           <>

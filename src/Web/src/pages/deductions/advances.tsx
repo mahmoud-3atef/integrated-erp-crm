@@ -62,7 +62,7 @@ import { useCrumb } from '../../app/breadcrumbs';
 import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { HrAvatar, HrEmptyState, HrPageHeader, HrScope, HrStatusBadge, hr, hrAccents, hrCard, type HrAccent } from '../../components/hr/Hr';
-import { ApprovalBar, useRecordApproval } from '../../components/workflow/RecordApproval';
+import { ApprovalBar, useRecordApproval, ShownStatus } from '../../components/workflow/RecordApproval';
 import { useMonthName } from '../attendance/AttendanceMonthPage';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { DateField } from '../../components/DateField';
@@ -645,7 +645,7 @@ export function AdvancePage() {
       <HrPageHeader
         icon={<CreditCardOutlinedIcon />}
         title={t('deductions.advance.pageTitle', { amount: sar(a.amount) })}
-        status={<AdvanceStatusBadge status={a.status} />}
+        status={<ShownStatus approval={approval.detail}><AdvanceStatusBadge status={a.status} /></ShownStatus>}
         reference={a.advanceNo}
         subtitle={
           <>
