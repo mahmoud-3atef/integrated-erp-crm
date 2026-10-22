@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Plan, waiting for the user's review. No code changes yet. |
+| **Status** | Plan reviewed by the user on 22 October 2026 (decisions in §8). Nothing is built yet: Phase 1 starts when the user asks. |
 | **Date** | 22 October 2026 |
 | **Asked for by the user** | «عمليات النقل مش محتاج يبقي كود النقل جزء من المشروع الحالي لان احنا بعد نقل البيانات هنقفل النظام القديم تماما … ممكن نبني بعد كدة اكواد استيراد بيانات بس هتكون من ملفات اكسيل» |
 
@@ -78,7 +78,7 @@ Some screens show the old system's history. Not all of it has a home in the new 
 
 **Decision A: the old reports' history.** The executive, CEO, profit and management reports count old invoices and tasks.
 
-- **A1 (recommended):** at cutover, freeze what the reports need into a small read-only `archive` schema: invoices, their lines and tasks, with only the columns the reports use. The reports read the archive for months before cutover and the new system's invoices after. The archive is data with no code that knows the CRM. The rest of the staging copy is dropped.
+- **A1 (chosen by the user, 2026-10-22):** at cutover, freeze what the reports need into a small read-only `archive` schema: invoices, their lines and tasks, with only the columns the reports use. The reports read the archive for months before cutover and the new system's invoices after. The archive is data with no code that knows the CRM. The rest of the staging copy is dropped.
 - **A2:** keep the full staging copy as a frozen database. It is simpler, but it keeps CRM shapes (`new_*` JSON) inside the product.
 - **A3:** the reports start at the cutover month. The old history stays only in a backup.
 
@@ -166,12 +166,12 @@ These are for a new company or site, not for CarePro.
 
 Phase 4 has its own plan and approval when a real need comes.
 
-## 8. Decisions needed from the user
+## 8. The user's decisions (22 October 2026)
 
-1. **Decision A** (§4): A1 archive (recommended), A2 frozen staging, or A3 reports from cutover.
-2. **The readiness gate (§3):** go through it row by row, and set who confirms each row.
-3. **How long the old system stays readable** after cutover, and when Phase 3 is released.
-4. **HeadOffice:** its 4 invoices (H-F00002/3/4/6) did not come over. Should HeadOffice become a project in the new system, or should these invoices stay in the archive only?
+1. **Decision A: A1.** At cutover, the reports' history is frozen into a read-only `archive` schema.
+2. **The readiness gate (§3): agreed.** It is reviewed with the user row by row before the date is set.
+3. **How long the old system stays readable, and when Phase 3 is released:** decided once the new system is complete.
+4. **HeadOffice is not brought over.** It was used only to prepare the head office staff's timesheets, and the new system already keeps the head office staff apart. Its 4 invoices (H-F00002/3/4/6) stay outside the timesheets and go to the archive with the rest of the history.
 
 ## 9. Temporary code to remove in Phase 3 (kept current until then)
 
