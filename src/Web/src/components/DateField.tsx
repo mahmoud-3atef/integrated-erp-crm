@@ -1,7 +1,7 @@
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import type { SxProps, Theme } from '@mui/material';
 import dayjs from 'dayjs';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 /** A change in the same shape as a date text field's, so the forms keep their handlers. */
 export type DateChange = { target: { value: string } };
@@ -18,6 +18,8 @@ export interface DateFieldProps {
   fullWidth?: boolean;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Picked only: no clear mark, and a click anywhere on the field opens the calendar (no typing). */
+  pickOnly?: boolean;
   sx?: SxProps<Theme>;
   /** As a date text field takes them: the first and last days that can be picked (min/max on htmlInput). */
   slotProps?: { htmlInput?: { min?: string; max?: string }; inputLabel?: unknown };
@@ -32,7 +34,8 @@ const day = (value: string | null | undefined) => {
  * The one date field of the system: a calendar that opens from the field (today and clear in its bar), typed or
  * picked, in the language of the screen (the LocalizationProvider in App). Its value and changes are ISO days.
  */
-export function DateField({ label, value, onChange, required, error, helperText, size, fullWidth, disabled, autoFocus, sx, slotProps }: DateFieldProps) {
+export function DateField({ label, value, onChange, required, error, helperText, size, fullWidth, disabled, autoFocus, pickOnly, sx, slotProps }: DateFieldProps) {
+  const [open, setOpen] = useState(false);
   const min = day(slotProps?.htmlInput?.min);
   const max = day(slotProps?.htmlInput?.max);
   return (
@@ -45,10 +48,11 @@ export function DateField({ label, value, onChange, required, error, helperText,
       autoFocus={autoFocus}
       {...(min ? { minDate: min } : {})}
       {...(max ? { maxDate: max } : {})}
+      {...(pickOnly ? { open, onOpen: () => setOpen(true), onClose: () => setOpen(false) } : {})}
       slotProps={{
-        textField: { size, fullWidth, required, error, helperText, sx },
-        actionBar: { actions: required ? ['today', 'accept'] : ['clear', 'today', 'accept'] },
-        field: { clearable: !required },
+        textField: { size, fullWidth, required, error, helperText, sx, ...(pickOnly ? { onClick: () => !disabled && setOpen(true) } : {}) },
+        actionBar: { actions: required || pickOnly ? ['today', 'accept'] : ['clear', 'today', 'accept'] },
+        field: { clearable: !required && !pickOnly, ...(pickOnly ? { readOnly: true } : {}) },
       }}
     />
   );

@@ -67,10 +67,6 @@ export function ManagementDashboardPage() {
 
   return (
     <Box sx={{ color: md.ink }}>
-      <Typography component="h1" sx={{ fontSize: 22, fontWeight: 700, color: md.navy, mb: 1.5 }}>
-        {t('mgmt.title')}
-      </Typography>
-
       {/* The tabs and the period on a glass strip; each tab a translucent glass pill, the active one tinted with its colour. */}
       <Stack
         direction={{ xs: 'column', lg: 'row' }}
@@ -133,8 +129,8 @@ export function ManagementDashboardPage() {
           })}
         </Stack>
         <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <DateField label={t('mgmt.from')} value={draft[0]} onChange={(e) => setDraft(([, b]) => [e.target.value, b])} sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
-          <DateField label={t('mgmt.to')} value={draft[1]} onChange={(e) => setDraft(([a]) => [a, e.target.value])} sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
+          <DateField pickOnly label={t('mgmt.from')} value={draft[0]} onChange={(e) => setDraft(([, b]) => [e.target.value, b])} sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
+          <DateField pickOnly label={t('mgmt.to')} value={draft[1]} onChange={(e) => setDraft(([a]) => [a, e.target.value])} sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: '999px', bgcolor: 'rgba(255,255,255,.8)' } }} />
           <Button variant="contained" disableElevation disabled={!valid} onClick={() => (setDefaulted(false), setPeriod(draft))} sx={{ borderRadius: '999px', px: 2.5, height: 38, bgcolor: md.navy, fontWeight: 700, '&:hover': { bgcolor: md.navyDeep } }}>
             {t('mgmt.refresh')}
           </Button>
