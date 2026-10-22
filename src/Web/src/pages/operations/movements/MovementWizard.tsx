@@ -635,7 +635,7 @@ function DocumentActions({ worker }: { worker: WorkerCard }) {
       from: '#0e7c86',
       reason: worker.available ? null : ended ? t('movements.docs.ended') : t('movements.docs.deliveryWhen'),
       suggested: worker.available && worker.placement === 'Housing',
-      open: () => navigate('/operations/delivery-orders/new', { state: { workerIds: [worker.id] } }),
+      open: () => navigate('/operations/delivery-orders/new', { state: { workerIds: [worker.id], fromWorker: true } }),
     },
     {
       key: 'return',
@@ -644,7 +644,7 @@ function DocumentActions({ worker }: { worker: WorkerCard }) {
       from: '#b38a0f',
       reason: worker.onJob ? null : worker.placement === 'Housing' ? t('movements.docs.inHousing') : ended ? t('movements.docs.ended') : t('movements.docs.returnWhen'),
       suggested: worker.onJob,
-      open: () => navigate('/operations/return-orders/new', { state: { workerId: worker.id } }),
+      open: () => navigate('/operations/return-orders/new', { state: { workerId: worker.id, fromWorker: true } }),
     },
   ].filter((a) => a.show);
   if (actions.length === 0) return null;

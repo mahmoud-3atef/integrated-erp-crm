@@ -49,10 +49,24 @@ function initials(name: string) {
  * A new or returned delivery order, in four steps: the order (project, dates, receiver), the workers, their prices and
  * start dates, then a review before it goes for approval. Saving starts the approval (the creator confirms first).
  */
-export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: { id?: string; initialWorkerIds?: string[]; onClose: () => void; onSaved: (id: string, approvalError: string | null) => void }) {
+export function DeliveryOrderWizard({
+  id,
+  initialWorkerIds,
+  fixedWorkers = false,
+  onClose,
+  onSaved,
+}: {
+  id?: string;
+  initialWorkerIds?: string[];
+  /** Opened from a worker's file: the workers are chosen already, so there is no workers step. */
+  fixedWorkers?: boolean;
+  onClose: () => void;
+  onSaved: (id: string, approvalError: string | null) => void;
+}) {
   const { t } = useTranslation();
   const { date } = useCommercialFormat();
   const [step, setStep] = useState(0);
+  const [fixed, setFixed] = useState(fixedWorkers && !id);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [deliverOn, setDeliverOn] = useState(isoToday());
@@ -117,7 +131,10 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
       .availableWorkers()
       .then((list) => {
         const ids = initial.split(',');
-        add(list.filter((a) => ids.includes(a.worker.id) && !a.busyOrderNo).map((a) => a.worker));
+        const free = list.filter((a) => ids.includes(a.worker.id) && !a.busyOrderNo).map((a) => a.worker);
+        add(free);
+        // The worker cannot be delivered now (on another order…): choose the workers as usual.
+        if (free.length === 0) setFixed(false);
       })
       .catch((failure: unknown) => setError(errorKey(failure)));
   }, [id, initial]);
@@ -155,7 +172,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
   };
   const startProblem = (l: Line) => !l.startOn || l.startOn < deliverOn;
   const pricesReady = lines.length > 0 && lines.every((l) => priceProblem(l) === null && !startProblem(l));
-  const ready = [orderReady, lines.length > 0, pricesReady, orderReady && lines.length > 0 && pricesReady];
+  const ready: Record<string, boolean> = { order: orderReady, workers: lines.length > 0, prices: pricesReady, review: orderReady && lines.length > 0 && pricesReady };
 
   const save = async () => {
     setBusy(true);
@@ -189,7 +206,8 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
     { key: 'workers', label: t('operations.delivery.wizard.workers') },
     { key: 'prices', label: t('operations.delivery.wizard.prices') },
     { key: 'review', label: t('operations.delivery.wizard.review') },
-  ];
+  ].filter((s) => !fixed || s.key !== 'workers');
+  const at = steps[step]?.key;
 
   const workerCell = (workerId: string) => {
     const w = cardOf(workerId);
@@ -223,7 +241,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
       steps={steps}
       step={step}
       onStep={setStep}
-      canNext={ready[step] ?? false}
+      canNext={at ? (ready[at] ?? false) : false}
       onClose={onClose}
       onFinish={() => void save()}
       finishLabel={t('operations.delivery.submit')}
@@ -234,12 +252,17 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
           <WizardFact icon={<ApartmentOutlinedIcon />} label={t('commercial.col.project')} value={project?.name} sub={project?.customerName} />
           <WizardFact icon={<EventOutlinedIcon />} label={t('operations.delivery.col.deliverOn')} value={deliverOn ? date(deliverOn) : null} sub={startOn ? `${t('operations.delivery.col.startOn')}: ${date(startOn)}` : null} />
           <WizardFact icon={<BadgeOutlinedIcon />} label={t('operations.delivery.receiverName')} value={receiverName.trim()} sub={receiverTitle.trim() || null} />
-          <WizardFact icon={<GroupsOutlinedIcon />} label={t('operations.delivery.col.workers')} value={lines.length ? t('operations.delivery.workersCount', { count: lines.length }) : null} />
+          <WizardFact
+            icon={<GroupsOutlinedIcon />}
+            label={fixed && lines.length === 1 ? t('operations.return.col.worker') : t('operations.delivery.col.workers')}
+            value={fixed && lines.length === 1 ? cardOf(lines[0]!.workerId)?.name : lines.length ? t('operations.delivery.workersCount', { count: lines.length }) : null}
+            sub={fixed && lines.length === 1 ? cardOf(lines[0]!.workerId)?.workerNo : null}
+          />
           <WizardFact icon={<PaymentsOutlinedIcon />} label={t('operations.delivery.monthlyTotal')} value={lines.length && projectId ? `${sar(total)} ${t('operations.delivery.sarUnit')}` : null} />
         </WizardAside>
       }
     >
-      {step === 0 && (
+      {at === 'order' && (
         <WizardCard title={t('operations.delivery.sections.order')} icon={<LocalShippingOutlinedIcon />}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' }, gap: 2 }}>
             <Autocomplete
@@ -291,7 +314,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
         </WizardCard>
       )}
 
-      {step === 1 && (
+      {at === 'workers' && (
         <>
           {lines.length > 0 && (
             <Alert severity="success" sx={{ mb: 2 }}>
@@ -302,7 +325,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
         </>
       )}
 
-      {step === 2 && (
+      {at === 'prices' && (
         <WizardCard
           title={t('operations.delivery.sections.workers', { count: lines.length })}
           icon={<PaymentsOutlinedIcon />}
@@ -388,7 +411,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
                         />
                       </TableCell>
                       <TableCell>
-                        <IconButton size="small" onClick={() => remove(line.workerId)}>
+                        <IconButton size="small" disabled={fixed} onClick={() => remove(line.workerId)}>
                           <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
@@ -401,7 +424,7 @@ export function DeliveryOrderWizard({ id, initialWorkerIds, onClose, onSaved }: 
         </WizardCard>
       )}
 
-      {step === 3 && (
+      {at === 'review' && (
         <>
           <WizardCard title={t('operations.delivery.wizard.review')} icon={<FactCheckOutlinedIcon />}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5, mb: 2 }}>

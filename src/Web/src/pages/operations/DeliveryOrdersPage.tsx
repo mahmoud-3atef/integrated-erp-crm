@@ -220,7 +220,8 @@ export function DeliveryOrdersPage({ creating = false }: { creating?: boolean } 
       {wizard && (
         <DeliveryOrderWizard
           initialWorkerIds={creating ? (location.state as { workerIds?: string[] } | null)?.workerIds : undefined}
-          onClose={() => (creating ? navigate('/operations/delivery-orders') : setWizard(false))}
+          fixedWorkers={creating && !!(location.state as { fromWorker?: boolean } | null)?.fromWorker}
+          onClose={() => (creating ? ((location.state as { fromWorker?: boolean } | null)?.fromWorker ? navigate(-1) : navigate('/operations/delivery-orders')) : setWizard(false))}
           onSaved={(saved, failed) => navigate(`/operations/delivery-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
         />
       )}

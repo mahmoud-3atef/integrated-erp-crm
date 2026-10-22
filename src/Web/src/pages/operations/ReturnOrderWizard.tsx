@@ -47,11 +47,25 @@ const daysAgo = (iso: string) => Math.floor((Date.parse(isoToday()) - Date.parse
  * A new or returned return order, in three steps: the worker on the job, the return (arrival in housing, reason,
  * room, salary), then a review drawing the way back before it goes for approval.
  */
-export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { id?: string; initialWorkerId?: string; onClose: () => void; onSaved: (id: string, approvalError: string | null) => void }) {
+export function ReturnOrderWizard({
+  id,
+  initialWorkerId,
+  fixedWorker = false,
+  onClose,
+  onSaved,
+}: {
+  id?: string;
+  initialWorkerId?: string;
+  /** Opened from a worker's file: the worker is chosen already, so there is no worker step. */
+  fixedWorker?: boolean;
+  onClose: () => void;
+  onSaved: (id: string, approvalError: string | null) => void;
+}) {
   const { t } = useTranslation();
   const { ar, date } = useCommercialFormat();
   const stateName = useStateName();
   const [step, setStep] = useState(0);
+  const [fixed, setFixed] = useState(fixedWorker && !id);
   const [workers, setWorkers] = useState<AvailableWorker[] | null>(null);
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
@@ -77,7 +91,10 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
         // From a worker's page («إجراء جديد»): that worker is chosen.
         if (!id && initialWorkerId && list.some((w) => w.worker.id === initialWorkerId && !w.busyOrderNo)) {
           setWorkerId(initialWorkerId);
-          setStep(1);
+          if (!fixedWorker) setStep(1);
+        } else if (fixedWorker) {
+          // The worker cannot return now (on another order…): choose the worker as usual.
+          setFixed(false);
         }
       })
       .catch((failure: unknown) => setError(errorKey(failure)));
@@ -114,7 +131,7 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
   const housing = room ? room.label : housingName.trim();
   const late = !!arrivedOn && daysAgo(arrivedOn) > 2;
   const detailsReady = !!arrivedOn && !!reason && (reason !== 'Other' || reasonNotes.trim() !== '') && (!late || delayReason.trim() !== '');
-  const ready = [!!workerId, detailsReady, !!workerId && detailsReady];
+  const ready: Record<string, boolean> = { worker: !!workerId, details: detailsReady, review: !!workerId && detailsReady };
 
   const save = async () => {
     setBusy(true);
@@ -143,7 +160,8 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
     { key: 'worker', label: t('operations.return.wizard.worker') },
     { key: 'details', label: t('operations.return.wizard.details') },
     { key: 'review', label: t('operations.return.wizard.review') },
-  ];
+  ].filter((s) => !fixed || s.key !== 'worker');
+  const at = steps[step]?.key;
   const worked = daysBetween(chosen?.projectJoinedOn, arrivedOn);
 
   return (
@@ -155,7 +173,7 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
       steps={steps}
       step={step}
       onStep={setStep}
-      canNext={ready[step] ?? false}
+      canNext={at ? (ready[at] ?? false) : false}
       onClose={onClose}
       onFinish={() => void save()}
       finishLabel={t('operations.delivery.submit')}
@@ -172,7 +190,7 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
         </WizardAside>
       }
     >
-      {step === 0 && (
+      {at === 'worker' && (
         <WizardCard title={t('operations.return.sections.worker', { count: workers?.length ?? 0 })} icon={<EngineeringOutlinedIcon />}>
           <Typography sx={{ fontSize: 12.5, color: tokens.gray500, mb: 1.5 }}>{t('operations.return.workerHint')}</Typography>
           <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, mb: 1.5 }}>
@@ -258,7 +276,7 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
         </WizardCard>
       )}
 
-      {step === 1 && (
+      {at === 'details' && (
         <WizardCard title={t('operations.return.sections.details')} icon={<KeyboardReturnOutlinedIcon />}>
           {chosen && (
             <Alert severity="info" sx={{ mb: 2 }}>
@@ -343,7 +361,7 @@ export function ReturnOrderWizard({ id, initialWorkerId, onClose, onSaved }: { i
         </WizardCard>
       )}
 
-      {step === 2 && (
+      {at === 'review' && (
         <>
           <WizardCard title={t('operations.return.journey')} icon={<FactCheckOutlinedIcon />}>
             <Journey

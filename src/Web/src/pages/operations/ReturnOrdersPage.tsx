@@ -221,7 +221,8 @@ export function ReturnOrdersPage({ creating = false }: { creating?: boolean } = 
       {wizard && (
         <ReturnOrderWizard
           initialWorkerId={creating ? (location.state as { workerId?: string } | null)?.workerId : undefined}
-          onClose={() => (creating ? navigate('/operations/return-orders') : setWizard(false))}
+          fixedWorker={creating && !!(location.state as { fromWorker?: boolean } | null)?.fromWorker}
+          onClose={() => (creating ? ((location.state as { fromWorker?: boolean } | null)?.fromWorker ? navigate(-1) : navigate('/operations/return-orders')) : setWizard(false))}
           onSaved={(saved, failed) => navigate(`/operations/return-orders/${saved}${failed ? `?error=errors.${failed.replace('.', '_')}` : ''}`)}
         />
       )}
