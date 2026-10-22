@@ -61,6 +61,10 @@ export interface ConditionRule {
   values?: string[] | null;
   /** The related table the field belongs to (its key); none: the record itself. */
   relation?: string | null;
+  /** Dynamic value: compare with this field (of the same type) instead of a fixed value… */
+  valueFromField?: string | null;
+  /** …of this related table (none: the record itself). */
+  valueFromRelation?: string | null;
 }
 
 export interface ConditionGroup {

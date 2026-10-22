@@ -31,6 +31,15 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
     onChange({ ...value, rules: value.rules.map((r, i) => (i === index ? { ...r, ...change } : r)) });
   const relations = screen.relations ?? [];
   const fieldsOf = (relation: string | null | undefined) => (relation ? (relations.find((r) => r.key === relation)?.fields ?? []) : screen.fields);
+  const tables = [{ key: '', label: t('process.thisRecord') }, ...relations.map((r) => ({ key: r.key, label: localName(r, i18n.language) }))];
+  // The first field of the same type: of the record, else of a related table (what a dynamic value starts with).
+  const firstOfType = (type: FieldType | undefined, except: string) => {
+    for (const table of tables) {
+      const match = fieldsOf(table.key || null).find((f) => f.type === type && `${table.key}.${f.key}` !== except);
+      if (match) return { valueFromRelation: table.key || null, valueFromField: match.key };
+    }
+    return null;
+  };
 
   return (
     <Box>
@@ -53,6 +62,9 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
           const field = tableFields.find((f) => f.key === rule.fieldKey);
           const operators = operatorsFor(field?.type);
           const needsValue = rule.operator !== 'IsEmpty' && rule.operator !== 'IsNotEmpty';
+          const self = `${rule.relation ?? ''}.${rule.fieldKey}`;
+          const dynamic = !!rule.valueFromField && rule.operator !== 'In';
+          const canBeDynamic = needsValue && rule.operator !== 'In' && firstOfType(field?.type, self) !== null;
           return (
             <Stack key={index} direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'center' } }}>
               {index > 0 && (
@@ -68,7 +80,7 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                   slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
                   onChange={(e) => {
                     const relation = e.target.value || null;
-                    update(index, { relation, fieldKey: fieldsOf(relation)[0]?.key ?? '', operator: 'Equals', value: null, values: null });
+                    update(index, { relation, fieldKey: fieldsOf(relation)[0]?.key ?? '', operator: 'Equals', value: null, values: null, valueFromField: null, valueFromRelation: null });
                   }}
                   sx={{ minWidth: 170 }}
                 >
@@ -86,7 +98,7 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                 label={t('process.field')}
                 value={rule.fieldKey}
                 disabled={readOnly}
-                onChange={(e) => update(index, { fieldKey: e.target.value, operator: 'Equals', value: null, values: null })}
+                onChange={(e) => update(index, { fieldKey: e.target.value, operator: 'Equals', value: null, values: null, valueFromField: null, valueFromRelation: null })}
                 sx={{ minWidth: 170 }}
               >
                 {tableFields.map((f) => (
@@ -101,7 +113,12 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                 label={t('process.operator')}
                 value={operators.includes(rule.operator) ? rule.operator : 'Equals'}
                 disabled={readOnly}
-                onChange={(e) => update(index, { operator: e.target.value as Operator, value: null, values: null })}
+                onChange={(e) => {
+                  const op = e.target.value as Operator;
+                  // «In» and the empty tests take no other field.
+                  const keep = op === 'In' || op === 'IsEmpty' || op === 'IsNotEmpty' ? { valueFromField: null, valueFromRelation: null } : {};
+                  update(index, { operator: op, value: null, values: null, ...keep });
+                }}
                 sx={{ minWidth: 150 }}
               >
                 {operators.map((op) => (
@@ -110,9 +127,73 @@ export function ConditionEditor({ value, onChange }: { value: ConditionGroup; on
                   </MenuItem>
                 ))}
               </TextField>
-              {needsValue && rule.operator !== 'In' && (
+              {canBeDynamic && (
+                <TextField
+                  select
+                  size="small"
+                  label={t('process.valueFrom')}
+                  value={dynamic ? 'field' : 'value'}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    update(
+                      index,
+                      e.target.value === 'field' ? { ...firstOfType(field?.type, self), value: null, values: null } : { valueFromField: null, valueFromRelation: null },
+                    )
+                  }
+                  sx={{ minWidth: 150 }}
+                >
+                  <MenuItem value="value">{field?.type === 'User' ? t('process.valueUser') : t('process.valueFixed')}</MenuItem>
+                  <MenuItem value="field">{t('process.valueField')}</MenuItem>
+                </TextField>
+              )}
+              {needsValue && dynamic && (
+                <>
+                  {relations.length > 0 && (
+                    <TextField
+                      select
+                      size="small"
+                      label={t('process.valueTable')}
+                      value={rule.valueFromRelation ?? ''}
+                      disabled={readOnly}
+                      slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                      onChange={(e) => {
+                        const table = e.target.value || null;
+                        const first = fieldsOf(table).find((f) => f.type === field?.type && `${table ?? ''}.${f.key}` !== self);
+                        update(index, { valueFromRelation: table, valueFromField: first?.key ?? null });
+                      }}
+                      sx={{ minWidth: 170 }}
+                    >
+                      {tables
+                        .filter((tb) => fieldsOf(tb.key || null).some((f) => f.type === field?.type && `${tb.key}.${f.key}` !== self))
+                        .map((tb) => (
+                          <MenuItem key={tb.key} value={tb.key}>
+                            {tb.label}
+                          </MenuItem>
+                        ))}
+                    </TextField>
+                  )}
+                  <TextField
+                    select
+                    size="small"
+                    label={t('process.valueFieldName')}
+                    value={rule.valueFromField ?? ''}
+                    disabled={readOnly}
+                    onChange={(e) => update(index, { valueFromField: e.target.value })}
+                    sx={{ flex: 1, minWidth: 170 }}
+                  >
+                    {fieldsOf(rule.valueFromRelation)
+                      .filter((f) => f.type === field?.type && `${rule.valueFromRelation ?? ''}.${f.key}` !== self)
+                      .map((f) => (
+                        <MenuItem key={f.key} value={f.key}>
+                          {localName(f, i18n.language)}
+                        </MenuItem>
+                      ))}
+                  </TextField>
+                </>
+              )}
+              {needsValue && !dynamic && rule.operator !== 'In' && (
                 <Box sx={{ flex: 1, minWidth: 160 }}>
-                  <FieldValueInput field={field} value={rule.value} label={t('process.value')} onChange={(v) => update(index, { value: v })} />
+                  <FieldValueInput field={field} value={rule.value} label={field?.type === 'User' ? t('process.valueUser') : t('process.value')} onChange={(v) => update(index, { value: v })} />
                 </Box>
               )}
               {rule.operator === 'In' && field?.options && (

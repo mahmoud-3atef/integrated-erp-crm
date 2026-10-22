@@ -9,4 +9,7 @@ public interface IUserDirectory
 
     /// <summary>The names a user signs in with through the directory (Windows accounts without the domain, lower case).</summary>
     Task<IReadOnlyList<string>> LoginsAsync(Guid userAccountId, CancellationToken cancellationToken);
+
+    /// <summary>The users who sign in with these names (lower case, without the domain): name → user account.</summary>
+    Task<IReadOnlyDictionary<string, Guid>> UsersByLoginsAsync(IReadOnlyCollection<string> logins, CancellationToken cancellationToken);
 }

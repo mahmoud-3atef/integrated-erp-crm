@@ -1,3 +1,4 @@
+using IntegratedErp.Modules.Identity.Contracts;
 using IntegratedErp.Modules.Commercial.Contracts;
 using System.Globalization;
 using System.Text.Json;
@@ -17,7 +18,7 @@ namespace IntegratedErp.Modules.Operations.Application;
 /// default process (the creator confirms ⇒ sent to the operations manager ⇒ transferred), and the end of the approval.
 /// When the last stage approves, every worker's work period moves to the new project in the period ledger.
 /// </summary>
-internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IProjectDirectory projects, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger ledger, IProjectDirectory projects, IUserDirectory users, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "operations.transfer_order";
     public const string SourceType = "transfer_order";
@@ -26,17 +27,7 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
     public const string ToProject = "to_project";
     public const string FromProject = "from_project";
 
-    private static readonly RecordField[] ProjectFields =
-    [
-        new("code", "رمز المشروع", "Project code", RecordFieldType.Text, Updatable: false),
-        new("name", "اسم المشروع", "Project name", RecordFieldType.Text, Updatable: false),
-        new("customer", "العميل", "Customer", RecordFieldType.Text, Updatable: false),
-        new("contract_type", "نوع العقد", "Contract type", RecordFieldType.Text, Updatable: false),
-        new("manager", "مدير المشروع", "Project manager", RecordFieldType.Text, Updatable: false),
-        new("city", "المدينة", "City", RecordFieldType.Text, Updatable: false),
-        new("sector", "القطاع", "Sector", RecordFieldType.Text, Updatable: false),
-        new("active", "المشروع نشط", "Project active", RecordFieldType.Boolean, Updatable: false),
-    ];
+
 
     /// <summary>The order's code: the workers' periods move to the new project (the order means nothing without it).</summary>
     public const string MoveWorkers = "move_workers";
@@ -94,6 +85,9 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
         [
             new("project", "المشروع الجديد", "New project", RecordFieldType.Text, Updatable: false),
             new("from_project", "المشروع المنقول منه", "Project left", RecordFieldType.Text, Updatable: false),
+            new("order_no", "رقم الأمر", "Order number", RecordFieldType.Text, Updatable: false),
+            new("receiver", "المستلم في المشروع الجديد", "Receiver on the new project", RecordFieldType.Text, Updatable: false),
+            new("created_on", "تاريخ إنشاء الأمر", "Order created on", RecordFieldType.Date, Updatable: false),
             new("customer", "العميل", "Customer", RecordFieldType.Text, Updatable: false),
             new("contract_type", "نوع العقد", "Contract type", RecordFieldType.Text, Updatable: false),
             new("transfer_on", "تاريخ النقل", "Transfer date", RecordFieldType.Date, Updatable: false),
@@ -107,8 +101,8 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
         ],
         Relations:
         [
-            new(ToProject, "المشروع المنقول إليه", "Project moved to", ProjectFields),
-            new(FromProject, "المشروع المنقول منه", "Project moved from", ProjectFields),
+            new(ToProject, "المشروع المنقول إليه", "Project moved to", ProjectRecord.Fields),
+            new(FromProject, "المشروع المنقول منه", "Project moved from", ProjectRecord.Fields),
         ],
         DefaultProcess: new DefaultApprovalProcess("اعتماد أمر النقل", "Transfer order approval", DefaultDefinition),
         Actions:
@@ -135,6 +129,9 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
         {
             ["project"] = o.ProjectName,
             ["from_project"] = o.FromProjectName ?? o.Lines.Select(l => l.FromProjectName).FirstOrDefault(n => n is not null),
+            ["order_no"] = o.OrderNo,
+            ["receiver"] = o.ReceiverName,
+            ["created_on"] = DateOnly.FromDateTime(o.CreatedAt.UtcDateTime.AddHours(3)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["customer"] = o.CustomerName,
             ["contract_type"] = o.ContractType,
             ["transfer_on"] = o.TransferOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -158,22 +155,12 @@ internal sealed class TransferOrderAdapter(OperationsDbContext db, IPeriodLedger
             FromProject => o?.FromProjectId ?? o?.Lines.Select(l => l.FromProjectId).FirstOrDefault(x => x is not null),
             _ => null,
         };
-        if (id is not { } projectId || await projects.FindAsync([projectId], [], cancellationToken).ConfigureAwait(false) is not [var p, ..])
+        if (id is not { } projectId)
         {
             return null;
         }
 
-        return new Dictionary<string, string?>
-        {
-            ["code"] = p.Code,
-            ["name"] = p.Name,
-            ["customer"] = p.CustomerName,
-            ["contract_type"] = p.ContractType,
-            ["manager"] = p.Manager,
-            ["city"] = p.City,
-            ["sector"] = p.Sector,
-            ["active"] = p.IsActive ? "true" : "false",
-        };
+        return await ProjectRecord.ReadAsync(projects, users, projectId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>A process may set the order's status while it is in approval (e.g. "sent to the operations manager").</summary>

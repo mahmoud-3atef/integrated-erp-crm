@@ -1128,7 +1128,13 @@
     "actionHint": "The system's own code, chosen by name, run at its place in the process as the user whose decision reached it.",
     "noActions": "This screen has no codes.",
     "noAction": "No code chosen",
-    "requiredAction": "required"
+    "requiredAction": "required",
+    "valueFrom": "Value from",
+    "valueFixed": "A fixed value",
+    "valueUser": "A chosen user",
+    "valueField": "A field (dynamic value)",
+    "valueTable": "The field's table",
+    "valueFieldName": "Compared field"
   },
   "myApprovals": {
     "title": "My submissions",

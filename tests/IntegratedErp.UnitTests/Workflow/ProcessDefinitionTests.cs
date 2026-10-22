@@ -133,6 +133,20 @@ public sealed class ProcessDefinitionTests
     }
 
     [Fact]
+    public void A_condition_can_compare_with_another_field_of_the_same_type()
+    {
+        // The amount against the project's budget (both money): valid; a user field against money is refused.
+        var rule = new ConditionRule("amount", ConditionOperator.GreaterThan, ValueFromField: "budget", ValueFromRelation: "project");
+        Assert.True(DefinitionRules.Validate(new ProcessDefinition(new ConditionGroup(true, [rule]), [Stage("a")]), Screen).IsSuccess);
+        AssertInvalid(new ProcessDefinition(new ConditionGroup(true, [rule with { FieldKey = "manager" }]), [Stage("a")]), "another type");
+        AssertInvalid(new ProcessDefinition(new ConditionGroup(true, [rule with { ValueFromField = "nothing" }]), [Stage("a")]), "unknown field");
+
+        var fields = ConditionFields.Of(Screen);
+        Assert.True(FieldValues.Matches(new ConditionGroup(true, [rule]), fields, new Dictionary<string, string?> { ["amount"] = "300000", ["project.budget"] = "250000" }));
+        Assert.False(FieldValues.Matches(new ConditionGroup(true, [rule]), fields, new Dictionary<string, string?> { ["amount"] = "100000", ["project.budget"] = "250000" }));
+    }
+
+    [Fact]
     public void All_and_any_groups_combine_rules()
     {
         var values = new Dictionary<string, string?> { ["amount"] = "500", ["category"] = "LEAVE" };

@@ -27,4 +27,21 @@ internal sealed class UserDirectory(IdentityDbContext db) : IUserDirectory
         .Where(n => n.Length > 0)
         .Distinct()
         .ToList();
+
+    public async Task<IReadOnlyDictionary<string, Guid>> UsersByLoginsAsync(IReadOnlyCollection<string> logins, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(logins);
+        var wanted = logins.Select(l => l.Trim().ToLowerInvariant()).Where(l => l.Length > 0).ToHashSet(StringComparer.Ordinal);
+        if (wanted.Count == 0)
+        {
+            return new Dictionary<string, Guid>();
+        }
+
+        var all = await db.ExternalLogins.AsNoTracking().Select(l => new { l.UserName, l.UserAccountId }).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return all
+            .Select(l => (Name: l.UserName[(l.UserName.LastIndexOf('\\') + 1)..].Trim().ToLowerInvariant(), l.UserAccountId))
+            .Where(l => wanted.Contains(l.Name))
+            .GroupBy(l => l.Name, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().UserAccountId, StringComparer.Ordinal);
+    }
 }

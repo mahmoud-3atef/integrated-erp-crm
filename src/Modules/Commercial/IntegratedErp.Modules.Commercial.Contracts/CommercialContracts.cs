@@ -48,6 +48,34 @@ public sealed record ProjectInfo(
     string? City = null,
     string? Sector = null);
 
+/// <summary>Every field of a project, with its customer's and its contract's.</summary>
+public sealed record ProjectDetails(
+    Guid Id,
+    Guid CrmId,
+    string Code,
+    string Name,
+    string? NameAr,
+    string? NameEn,
+    string? Manager,
+    string? ManagerLogin,
+    string? CommercialRegistration,
+    string? City,
+    string? Sector,
+    string? ContactName,
+    string? ContactMobile,
+    string? ContactEmails,
+    bool IsActive,
+    DateTimeOffset? CrmCreatedAt,
+    string? CustomerName,
+    string? CustomerNo,
+    string? CustomerVatNumber,
+    string? CustomerCity,
+    string? ContractNo,
+    string? ContractType,
+    string? ContractStatus,
+    DateOnly? ContractStartsOn,
+    DateOnly? ContractEndsOn);
+
 /// <summary>The projects of the current company.</summary>
 public interface IProjectDirectory
 {
@@ -59,6 +87,9 @@ public interface IProjectDirectory
 
     /// <summary>These projects (by id or by CRM id); unknown ones are left out.</summary>
     Task<IReadOnlyList<ProjectInfo>> FindAsync(IReadOnlyCollection<Guid> ids, IReadOnlyCollection<Guid> crmIds, CancellationToken cancellationToken);
+
+    /// <summary>Every field of a project (null when it is unknown).</summary>
+    Task<ProjectDetails?> DetailsAsync(Guid projectId, CancellationToken cancellationToken);
 
     /// <summary>Who the project's invoices are addressed to (null when the project is unknown).</summary>
     Task<ProjectBillTo?> BillToAsync(Guid projectId, CancellationToken cancellationToken);

@@ -1128,7 +1128,13 @@
     "actionHint": "من كود النظام نفسه، يُختار بالاسم، ويُنفَّذ في مكانه من المسار باسم من وصل قراره إليه.",
     "noActions": "لا أكواد لهذه الشاشة.",
     "noAction": "لم يُختر كود",
-    "requiredAction": "أساسي"
+    "requiredAction": "أساسي",
+    "valueFrom": "القيمة من",
+    "valueFixed": "قيمة ثابتة",
+    "valueUser": "مستخدم محدد",
+    "valueField": "حقل (قيمة ديناميكية)",
+    "valueTable": "جدول الحقل",
+    "valueFieldName": "الحقل المقارَن به"
   },
   "myApprovals": {
     "title": "طلباتي للاعتماد",

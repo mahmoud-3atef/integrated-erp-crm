@@ -176,8 +176,24 @@ public enum ConditionOperator
     IsNotEmpty,
 }
 
-/// <summary>A test on a field of the record (<paramref name="Relation"/> null) or of one of its related tables (the relation's key).</summary>
-public sealed record ConditionRule(string FieldKey, ConditionOperator Operator, string? Value = null, IReadOnlyList<string>? Values = null, string? Relation = null);
+/// <summary>
+/// A test on a field of the record (<paramref name="Relation"/> null) or of one of its related tables (the relation's
+/// key), against a value — a fixed one (<paramref name="Value"/>, a chosen user for a user field) or, dynamically, the
+/// value of another field of the same type (<paramref name="ValueFromField"/>, of the record or of the related table
+/// <paramref name="ValueFromRelation"/>), as Dynamics CRM's workflow conditions compare with dynamic values.
+/// </summary>
+public sealed record ConditionRule(
+    string FieldKey,
+    ConditionOperator Operator,
+    string? Value = null,
+    IReadOnlyList<string>? Values = null,
+    string? Relation = null,
+    string? ValueFromField = null,
+    string? ValueFromRelation = null)
+{
+    /// <summary>The rule compares with another field's value.</summary>
+    public bool IsDynamic => ValueFromField is not null;
+}
 
 /// <summary>
 /// The fields a condition can test: the record's, and each related table's as "relation.field" — the same keys the
@@ -191,6 +207,13 @@ public static class ConditionFields
     {
         ArgumentNullException.ThrowIfNull(rule);
         return Key(rule.Relation, rule.FieldKey);
+    }
+
+    /// <summary>The key of the field a dynamic rule compares with (null for a fixed value).</summary>
+    public static string? ValueKey(ConditionRule rule)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        return rule.ValueFromField is { } field ? Key(rule.ValueFromRelation, field) : null;
     }
 
     public static Dictionary<string, RecordField> Of(ApprovalScreen screen)
@@ -463,6 +486,26 @@ public static class DefinitionRules
             }
 
             var ordered = field.Type is RecordFieldType.Number or RecordFieldType.Money or RecordFieldType.Date;
+            if (ConditionFields.ValueKey(rule) is { } other)
+            {
+                // Against another field: it exists, has the same type, and the operator compares two values.
+                if (!fields.TryGetValue(other, out var compared))
+                {
+                    errors.Add($"The {where} compares with an unknown field \"{other}\".");
+                }
+                else if (compared.Type != field.Type)
+                {
+                    errors.Add($"The {where} rule on \"{field.NameEn}\" compares with a field of another type.");
+                }
+                else if (rule.Operator is ConditionOperator.In or ConditionOperator.IsEmpty or ConditionOperator.IsNotEmpty
+                         || (!ordered && rule.Operator is not (ConditionOperator.Equals or ConditionOperator.NotEquals)))
+                {
+                    errors.Add($"The {where} rule on \"{field.NameEn}\" is not valid for its type.");
+                }
+
+                continue;
+            }
+
             var valid = rule.Operator switch
             {
                 ConditionOperator.IsEmpty or ConditionOperator.IsNotEmpty => true,
@@ -508,8 +551,19 @@ public static class FieldValues
             return true;
         }
 
-        bool Check(ConditionRule rule) =>
-            fields.TryGetValue(ConditionFields.Key(rule), out var field) && Compare(field, values.GetValueOrDefault(ConditionFields.Key(rule)), rule);
+        bool Check(ConditionRule rule)
+        {
+            if (!fields.TryGetValue(ConditionFields.Key(rule), out var field))
+            {
+                return false;
+            }
+
+            var actual = values.GetValueOrDefault(ConditionFields.Key(rule));
+            // A dynamic rule takes its value from the other field now.
+            return ConditionFields.ValueKey(rule) is { } other
+                ? Compare(field, actual, rule with { Value = values.GetValueOrDefault(other), Values = null })
+                : Compare(field, actual, rule);
+        }
 
         return group.MatchAll ? group.Rules.All(Check) : group.Rules.Any(Check);
     }
