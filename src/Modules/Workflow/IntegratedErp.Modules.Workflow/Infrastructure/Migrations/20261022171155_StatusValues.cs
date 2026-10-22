@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Persistence;
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -52,11 +53,15 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                 table: "status_value",
                 columns: new[] { "tenant_id", "screen", "code" },
                 unique: true);
+
+            migrationBuilder.AddTenantSecurityPolicy("workflow", "status_value");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTenantSecurityPolicy("workflow", "status_value");
+
             migrationBuilder.DropTable(
                 name: "status_value",
                 schema: "workflow");
