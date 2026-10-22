@@ -32,6 +32,7 @@ public sealed class WorkflowModule : IModule
         services.AddScoped<ApprovalQueries>();
         services.AddScoped<InternalRequestService>();
         services.AddScoped<IApprovalRecordAdapter, InternalRequestAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, WorkflowEntities>();
         services.AddScoped<AlertCenter>();
         services.AddHostedService<AlertDigestWorker>();
         services.AddPermissions(WorkflowPermissions.All);

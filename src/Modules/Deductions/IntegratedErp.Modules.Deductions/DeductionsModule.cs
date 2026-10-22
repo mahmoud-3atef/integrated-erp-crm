@@ -35,6 +35,7 @@ public sealed class DeductionsModule : IModule
         services.AddScoped<DeductionQueries>();
         services.AddScoped<IStaffDeductions, StaffDeductions>();
         services.AddScoped<IApprovalRecordAdapter, AdvanceAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, DeductionEntities>();
         services.AddScoped<IApprovalRecordAdapter, PenaltyAdapter>();
         services.AddScoped<IApprovalRecordAdapter, OtherDeductionAdapter>();
         services.AddPermissions(DeductionPermissions.All);

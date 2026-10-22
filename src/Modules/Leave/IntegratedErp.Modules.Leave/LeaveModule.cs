@@ -37,6 +37,7 @@ public sealed class LeaveModule : IModule
         services.AddScoped<IApprovedTimeOff, ApprovedTimeOffs>();
         services.AddScoped<ILeavePayroll, LeavePayroll>();
         services.AddScoped<IApprovalRecordAdapter, LeaveAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, LeaveEntities>();
         services.AddScoped<IApprovalRecordAdapter, PermissionAdapter>();
         services.AddAlertProvider<LeaveAlerts>();
         services.AddPermissions(LeavePermissions.All);

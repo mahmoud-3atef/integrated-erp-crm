@@ -26,11 +26,14 @@ internal sealed class EntityCatalog(IEnumerable<IEntitySource> sources)
 
     public EntityDefinition? Find(string? key) => key is not null && Entities.TryGetValue(key, out var e) ? e.Definition : null;
 
-    /// <summary>The related tables of a table: each lookup chain up to <see cref="MaxDepth"/>, never back to a table already on the path.</summary>
+    /// <summary>
+    /// The related tables of a table: each lookup chain up to <see cref="MaxDepth"/> (the depth bounds it — a chain may
+    /// reach the same table again as another record, e.g. a leave's employee's department's manager).
+    /// </summary>
     public IReadOnlyList<(string Path, string NameAr, string NameEn, EntityDefinition Target)> RelatedOf(string entity)
     {
         var found = new List<(string, string, string, EntityDefinition)>();
-        void Walk(EntityDefinition from, string path, string ar, string en, int depth, HashSet<string> seen)
+        void Walk(EntityDefinition from, string path, string ar, string en, int depth)
         {
             if (depth >= MaxDepth)
             {
@@ -39,7 +42,7 @@ internal sealed class EntityCatalog(IEnumerable<IEntitySource> sources)
 
             foreach (var lookup in from.Lookups)
             {
-                if (Find(lookup.Target) is not { } target || seen.Contains(target.Key))
+                if (Find(lookup.Target) is not { } target)
                 {
                     continue;
                 }
@@ -48,13 +51,13 @@ internal sealed class EntityCatalog(IEnumerable<IEntitySource> sources)
                 var nameAr = ar.Length == 0 ? lookup.NameAr : $"{ar} › {lookup.NameAr}";
                 var nameEn = en.Length == 0 ? lookup.NameEn : $"{en} › {lookup.NameEn}";
                 found.Add((key, nameAr, nameEn, target));
-                Walk(target, key, nameAr, nameEn, depth + 1, [.. seen, target.Key]);
+                Walk(target, key, nameAr, nameEn, depth + 1);
             }
         }
 
         if (Find(entity) is { } root)
         {
-            Walk(root, string.Empty, string.Empty, string.Empty, 0, [root.Key]);
+            Walk(root, string.Empty, string.Empty, string.Empty, 0);
         }
 
         return found;

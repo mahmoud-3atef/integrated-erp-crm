@@ -33,6 +33,7 @@ public sealed class BillingModule : IModule
         services.AddScoped<TimesheetQueries>();
         services.AddScoped<ITimesheetPayroll, TimesheetPayroll>();
         services.AddScoped<IApprovalRecordAdapter, TimesheetAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, BillingEntities>();
         services.AddScoped<IWorkerPeriodLocks, TimesheetPeriodLocks>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<InvoiceQueries>();

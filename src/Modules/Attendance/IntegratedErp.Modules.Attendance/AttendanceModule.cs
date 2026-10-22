@@ -36,6 +36,7 @@ public sealed class AttendanceModule : IModule
         services.AddScoped<IAttendanceMonths, AttendanceMonths>();
         services.AddScoped<IAttendanceCalendar, AttendanceCalendar>();
         services.AddScoped<IApprovalRecordAdapter, MonthAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, AttendanceEntities>();
         services.AddScoped<IApprovalRecordAdapter, OvertimeAdapter>();
         services.AddAlertProvider<AttendanceAlerts>();
         services.AddPermissions(AttendancePermissions.All);

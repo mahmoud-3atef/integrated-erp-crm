@@ -32,6 +32,7 @@ public sealed class PayrollModule : IModule
         services.AddScoped<PayrollService>();
         services.AddScoped<PayrollQueries>();
         services.AddScoped<IApprovalRecordAdapter, PayrollAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, PayrollEntities>();
         services.AddScoped<StaffPayrollService>();
         services.AddScoped<StaffPayrollQueries>();
         services.AddScoped<IApprovalRecordAdapter, StaffPayrollAdapter>();

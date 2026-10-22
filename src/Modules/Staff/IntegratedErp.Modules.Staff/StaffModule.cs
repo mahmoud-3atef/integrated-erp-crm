@@ -38,6 +38,7 @@ public sealed class StaffModule : IModule
         services.AddScoped<StaffActionApplier>();
         services.AddScoped<StaffActionQueries>();
         services.AddScoped<IApprovalRecordAdapter, StaffActionAdapter>();
+        services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IEntitySource, StaffEntities>();
         services.AddAlertProvider<StaffAlerts>();
         services.AddPermissions(StaffPermissions.All);
         services.AddNumberSequences(
