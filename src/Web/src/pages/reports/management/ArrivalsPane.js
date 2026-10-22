@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { useFreshKey, useLive } from '../../../components/live';
 import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard } from './mdKit';
 const statusLook = {
     working: { color: md.teal, bg: md.glassHi },
@@ -31,11 +32,15 @@ export function ArrivalsPane({ from, to }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState({});
+    const tick = useLive();
+    const fresh = useFreshKey(`${from}|${to}`);
     useEffect(() => {
         let live = true;
-        setData(null);
+        if (fresh()) {
+            setData(null);
+            setFilter({});
+        }
         setError(null);
-        setFilter({});
         managementApi
             .newArrivals(from, to)
             .then((d) => live && setData(d))
@@ -43,7 +48,8 @@ export function ArrivalsPane({ from, to }) {
         return () => {
             live = false;
         };
-    }, [from, to]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [from, to, tick]);
     const rows = useMemo(() => (data?.rows ?? []).filter((r) => (!filter.status || r.status === filter.status) && (!filter.supplier || (r.supplier ?? '—') === filter.supplier) && (!filter.undelivered || r.firstWorkOn === null)), [data, filter]);
     const columns = useMemo(() => [
         { key: 'arrived', label: t('mgmt.arrivals.col.arrived'), render: (r) => _jsx("bdi", { children: r.arrivedOn }) },

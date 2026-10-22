@@ -19,6 +19,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { useFreshKey, useLive } from '../../../components/live';
 import { DataTable, Donut, finCard, md, Pill, useNumbers } from './mdKit';
 /** «المالية»: the old finance tab — its banner, five cards, the monthly billing against collection, statuses, debt ages, debtors, managers, coverage, invoices. */
 export function FinanceTab({ from, to, overview }) {
@@ -29,9 +30,12 @@ export function FinanceTab({ from, to, overview }) {
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [showInvoices, setShowInvoices] = useState(false);
+    const tick = useLive();
+    const fresh = useFreshKey(`${from}|${to}|${project}`);
     useEffect(() => {
         let live = true;
-        setData(null);
+        if (fresh())
+            setData(null);
         setError(null);
         managementApi
             .finance(from, to, project || null)
@@ -55,7 +59,8 @@ export function FinanceTab({ from, to, overview }) {
         return () => {
             live = false;
         };
-    }, [from, to, project]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [from, to, project, tick]);
     if (error)
         return _jsx(ErrorMessage, { messageKey: error });
     const cov = overview?.coverage;

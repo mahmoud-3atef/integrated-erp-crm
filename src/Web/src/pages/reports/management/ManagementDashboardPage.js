@@ -12,6 +12,7 @@ import { managementApi } from '../../../api/management';
 import { useSession } from '../../../app/session';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { DateField } from '../../../components/DateField';
+import { LiveProvider, useFreshKey, useLiveTick } from '../../../components/live';
 import { presetRange } from '../reportKit';
 import { FinanceTab } from './FinanceTab';
 import { md, NightSky } from './mdKit';
@@ -22,7 +23,7 @@ import { TasksTab } from './TasksTab';
 const financeFrom = '2026-06-01';
 /** Each tab's colour, as the old page tinted its active tab (navy, teal, brown, green). */
 const tabs = [
-    { key: 'overview', icon: _jsx(SpeedOutlinedIcon, {}), color: md.title },
+    { key: 'overview', icon: _jsx(SpeedOutlinedIcon, {}), color: md.blue },
     { key: 'finance', icon: _jsx(RequestQuoteOutlinedIcon, {}), color: md.teal },
     { key: 'housing', icon: _jsx(BedOutlinedIcon, {}), color: md.brown },
     { key: 'tasks', icon: _jsx(ChecklistOutlinedIcon, {}), color: md.green },
@@ -44,11 +45,15 @@ export function ManagementDashboardPage() {
     const [defaulted, setDefaulted] = useState(true);
     const allowed = can('reports.management.view', true);
     const finance = can('billing.invoices.view', true);
+    // Live (the user's request, 2026-10-22): any saved change refreshes the open tab quietly, without a reload.
+    const tick = useLiveTick();
+    const fresh = useFreshKey(`${period[0]}|${period[1]}`);
     useEffect(() => {
         if (!allowed)
             return;
         let live = true;
-        setOverview(null);
+        if (fresh())
+            setOverview(null);
         setError(null);
         managementApi
             .overview(period[0], period[1])
@@ -57,7 +62,8 @@ export function ManagementDashboardPage() {
         return () => {
             live = false;
         };
-    }, [period, allowed]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [period, allowed, tick]);
     if (!allowed)
         return _jsx(Alert, { severity: "warning", children: t('mgmt.noAccess') });
     const shown = tabs.filter((x) => x.key !== 'finance' || finance);
@@ -104,5 +110,5 @@ export function ManagementDashboardPage() {
                                     '&:hover': { bgcolor: active ? `color-mix(in srgb, ${x.color} 65%, transparent)` : md.glassHi },
                                     '&:focus-visible': { outline: `2px solid ${x.color}`, outlineOffset: 2 },
                                 }, children: [_jsx(Box, { "aria-hidden": true, sx: { width: 26, height: 26, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 19 } }, children: x.icon }), _jsx(Box, { children: _jsx(Typography, { title: t(`mgmt.tab.${x.key}Hint`), sx: { fontSize: 13.5, fontWeight: 700, lineHeight: 1.3 }, children: t(`mgmt.tab.${x.key}`) }) })] }, x.key));
-                        }) }), _jsxs(Stack, { direction: "row", sx: { gap: 1, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx(DateField, { pickOnly: true, label: t('mgmt.from'), value: draft[0], onChange: (e) => setDraft(([, b]) => [e.target.value, b]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(DateField, { pickOnly: true, label: t('mgmt.to'), value: draft[1], onChange: (e) => setDraft(([a]) => [a, e.target.value]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(Button, { variant: "contained", disableElevation: true, disabled: !valid, onClick: () => (setDefaulted(false), setPeriod(draft)), sx: { borderRadius: '999px', px: 2.25, height: 34, bgcolor: md.glow, color: md.sky, fontWeight: 700, boxShadow: '0 0 18px rgba(45,212,191,.4)', '&:hover': { bgcolor: '#7FF0DE' } }, children: t('mgmt.refresh') })] })] }), _jsx(ErrorMessage, { messageKey: error }), tab === 'overview' && _jsx(OverviewTab, { from: period[0], to: period[1], overview: overview }), tab === 'finance' && finance && _jsx(FinanceTab, { from: period[0], to: period[1], overview: overview }), tab === 'tasks' && _jsx(TasksTab, { from: period[0], to: period[1] })] }));
+                        }) }), _jsxs(Stack, { direction: "row", sx: { gap: 1, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx(DateField, { pickOnly: true, label: t('mgmt.from'), value: draft[0], onChange: (e) => setDraft(([, b]) => [e.target.value, b]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(DateField, { pickOnly: true, label: t('mgmt.to'), value: draft[1], onChange: (e) => setDraft(([a]) => [a, e.target.value]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(Button, { variant: "contained", disableElevation: true, disabled: !valid, onClick: () => (setDefaulted(false), setPeriod(draft)), sx: { borderRadius: '999px', px: 2.25, height: 34, bgcolor: md.glow, color: md.sky, fontWeight: 700, boxShadow: '0 0 18px rgba(45,212,191,.4)', '&:hover': { bgcolor: '#7FF0DE' } }, children: t('mgmt.refresh') })] })] }), _jsx(ErrorMessage, { messageKey: error }), _jsxs(LiveProvider, { tick: tick, children: [tab === 'overview' && _jsx(OverviewTab, { from: period[0], to: period[1], overview: overview }), tab === 'finance' && finance && _jsx(FinanceTab, { from: period[0], to: period[1], overview: overview }), tab === 'tasks' && _jsx(TasksTab, { from: period[0], to: period[1] })] })] }));
 }

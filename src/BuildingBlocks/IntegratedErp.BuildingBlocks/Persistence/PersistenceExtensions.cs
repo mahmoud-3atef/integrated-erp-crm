@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Live;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +31,7 @@ public static class PersistenceExtensions
 
         services.AddDbContext<TContext>((provider, options) =>
             Configure(options, connectionString, schema)
-                .AddInterceptors(provider.GetRequiredService<TenantSessionContextInterceptor>()));
+                .AddInterceptors(provider.GetRequiredService<TenantSessionContextInterceptor>(), provider.GetRequiredService<LiveChangesInterceptor>()));
         services.AddScoped<IModuleDatabase, ModuleDatabase<TContext>>();
 
         return services;

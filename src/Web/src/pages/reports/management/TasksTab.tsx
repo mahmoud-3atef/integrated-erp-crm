@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../../api/auth';
 import { managementApi, type TaskRow, type TaskStatus, type Tasks, type TaskType } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { useFreshKey, useLive } from '../../../components/live';
 import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers, type Column } from './mdKit';
 
 type StatusFilter = 'pending' | TaskStatus | 'all';
@@ -44,11 +45,16 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
   const [ownerSearch, setOwnerSearch] = useState('');
   const [shown, setShown] = useState<TaskRow | null>(null);
 
+  const tick = useLive();
+  const fresh = useFreshKey(`${from}|${to}`);
   useEffect(() => {
     let live = true;
-    setData(null);
+    // A live refresh keeps the figures and the chosen employee until the new ones arrive.
+    if (fresh()) {
+      setData(null);
+      setOwner(null);
+    }
     setError(null);
-    setOwner(null);
     managementApi
       .tasks(from, to)
       .then((d) => live && setData(d))
@@ -56,7 +62,8 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
     return () => {
       live = false;
     };
-  }, [from, to]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to, tick]);
 
   const rows = useMemo(
     () =>

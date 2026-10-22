@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../../api/auth';
 import { managementApi, type ArrivalStatus, type NewArrivals, type NewWorker } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { useFreshKey, useLive } from '../../../components/live';
 import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard, type Column } from './mdKit';
 
 const statusLook: Record<ArrivalStatus, { color: string; bg: string }> = {
@@ -33,11 +34,15 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<{ status?: ArrivalStatus; supplier?: string; undelivered?: boolean }>({});
 
+  const tick = useLive();
+  const fresh = useFreshKey(`${from}|${to}`);
   useEffect(() => {
     let live = true;
-    setData(null);
+    if (fresh()) {
+      setData(null);
+      setFilter({});
+    }
     setError(null);
-    setFilter({});
     managementApi
       .newArrivals(from, to)
       .then((d) => live && setData(d))
@@ -45,7 +50,8 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
     return () => {
       live = false;
     };
-  }, [from, to]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to, tick]);
 
   const rows = useMemo(
     () =>

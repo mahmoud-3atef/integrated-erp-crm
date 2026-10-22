@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { useFreshKey, useLive } from '../../../components/live';
 import { ArrivalsPane } from './ArrivalsPane';
 import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard } from './mdKit';
 /** «نظرة عامة»: the six cards, then the project deliveries and the housing entries (docs/03-migration-plan/19). */
@@ -41,9 +42,13 @@ export function OverviewTab({ from, to, overview }) {
 function useLoad(load, keys) {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
+    const tick = useLive();
+    const fresh = useFreshKey(JSON.stringify(keys));
     useEffect(() => {
         let live = true;
-        setData(null);
+        // A live refresh keeps what is shown until the new figures arrive.
+        if (fresh())
+            setData(null);
         setError(null);
         load()
             .then((d) => live && setData(d))
@@ -52,7 +57,7 @@ function useLoad(load, keys) {
             live = false;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, keys);
+    }, [...keys, tick]);
     return { data, error };
 }
 const day = (v) => (v ? v.slice(0, 10) : '—');

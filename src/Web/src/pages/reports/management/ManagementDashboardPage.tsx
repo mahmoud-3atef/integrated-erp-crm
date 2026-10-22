@@ -12,6 +12,7 @@ import type { Overview } from '../../../api/reports';
 import { useSession } from '../../../app/session';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { DateField } from '../../../components/DateField';
+import { LiveProvider, useFreshKey, useLiveTick } from '../../../components/live';
 import { presetRange } from '../reportKit';
 import { FinanceTab } from './FinanceTab';
 import { md, NightSky } from './mdKit';
@@ -26,7 +27,7 @@ const financeFrom = '2026-06-01';
 
 /** Each tab's colour, as the old page tinted its active tab (navy, teal, brown, green). */
 const tabs: { key: Tab; icon: ReactNode; color: string }[] = [
-  { key: 'overview', icon: <SpeedOutlinedIcon />, color: md.title },
+  { key: 'overview', icon: <SpeedOutlinedIcon />, color: md.blue },
   { key: 'finance', icon: <RequestQuoteOutlinedIcon />, color: md.teal },
   { key: 'housing', icon: <BedOutlinedIcon />, color: md.brown },
   { key: 'tasks', icon: <ChecklistOutlinedIcon />, color: md.green },
@@ -49,11 +50,14 @@ export function ManagementDashboardPage() {
   const [defaulted, setDefaulted] = useState(true);
   const allowed = can('reports.management.view', true);
   const finance = can('billing.invoices.view', true);
+  // Live (the user's request, 2026-10-22): any saved change refreshes the open tab quietly, without a reload.
+  const tick = useLiveTick();
+  const fresh = useFreshKey(`${period[0]}|${period[1]}`);
 
   useEffect(() => {
     if (!allowed) return;
     let live = true;
-    setOverview(null);
+    if (fresh()) setOverview(null);
     setError(null);
     managementApi
       .overview(period[0], period[1])
@@ -62,7 +66,8 @@ export function ManagementDashboardPage() {
     return () => {
       live = false;
     };
-  }, [period, allowed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, allowed, tick]);
 
   if (!allowed) return <Alert severity="warning">{t('mgmt.noAccess')}</Alert>;
   const shown = tabs.filter((x) => x.key !== 'finance' || finance);
@@ -145,9 +150,11 @@ export function ManagementDashboardPage() {
       </Stack>
 
       <ErrorMessage messageKey={error} />
-      {tab === 'overview' && <OverviewTab from={period[0]} to={period[1]} overview={overview} />}
-      {tab === 'finance' && finance && <FinanceTab from={period[0]} to={period[1]} overview={overview} />}
-      {tab === 'tasks' && <TasksTab from={period[0]} to={period[1]} />}
+      <LiveProvider tick={tick}>
+        {tab === 'overview' && <OverviewTab from={period[0]} to={period[1]} overview={overview} />}
+        {tab === 'finance' && finance && <FinanceTab from={period[0]} to={period[1]} overview={overview} />}
+        {tab === 'tasks' && <TasksTab from={period[0]} to={period[1]} />}
+      </LiveProvider>
     </NightSky>
   );
 }

@@ -1,4 +1,5 @@
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.BuildingBlocks.Live;
 using IntegratedErp.BuildingBlocks.Numbering;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.BuildingBlocks.Time;
@@ -21,6 +22,8 @@ public static class PlatformServices
         services.AddScoped<ModuleDbContextDependencies>();
 
         services.AddScoped<TenantSessionContextInterceptor>();
+        services.AddSingleton<LiveChanges>();
+        services.AddScoped<LiveChangesInterceptor>();
         services.AddTransient<DatabaseMigrator>();
         services.AddScoped<NumberSequenceService>();
         services.TryAddSingleton<NumberingCatalog>();

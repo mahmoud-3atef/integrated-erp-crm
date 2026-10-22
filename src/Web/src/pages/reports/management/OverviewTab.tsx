@@ -15,6 +15,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi, type Delivery, type EntryRow, type HousingEntries, type StartRow } from '../../../api/management';
 import type { Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
+import { useFreshKey, useLive } from '../../../components/live';
 import { ArrivalsPane } from './ArrivalsPane';
 import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column } from './mdKit';
 
@@ -97,9 +98,12 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
 function useLoad<T>(load: () => Promise<T>, keys: unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const tick = useLive();
+  const fresh = useFreshKey(JSON.stringify(keys));
   useEffect(() => {
     let live = true;
-    setData(null);
+    // A live refresh keeps what is shown until the new figures arrive.
+    if (fresh()) setData(null);
     setError(null);
     load()
       .then((d) => live && setData(d))
@@ -108,7 +112,7 @@ function useLoad<T>(load: () => Promise<T>, keys: unknown[]) {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, keys);
+  }, [...keys, tick]);
   return { data, error };
 }
 
