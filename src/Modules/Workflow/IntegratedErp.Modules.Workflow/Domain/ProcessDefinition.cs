@@ -251,7 +251,7 @@ public static class DefinitionRules
 
         if (definition.StartCondition is { } start)
         {
-            CheckGroup(start, tested, errors, "start condition");
+            CheckGroup(start, tested, errors, "start condition", statusValues);
         }
 
         if (definition.Steps.Count == 0)
@@ -356,7 +356,7 @@ public static class DefinitionRules
 
                         foreach (var branch in c.Branches)
                         {
-                            CheckGroup(branch.Condition, tested, errors, "condition");
+                            CheckGroup(branch.Condition, tested, errors, "condition", statusValues);
                             CheckList(branch.Steps, depth + 1);
                         }
 
@@ -478,7 +478,7 @@ public static class DefinitionRules
         }
     }
 
-    private static void CheckGroup(ConditionGroup group, Dictionary<string, RecordField> fields, List<string> errors, string where)
+    private static void CheckGroup(ConditionGroup group, Dictionary<string, RecordField> fields, List<string> errors, string where, IReadOnlySet<string>? statusValues)
     {
         if (group.Rules.Count > 20)
         {
@@ -514,13 +514,16 @@ public static class DefinitionRules
                 continue;
             }
 
+            // The record's status may also be one of the values the company added to it (set by an update step).
+            bool Fits(string? value) => FieldValues.IsValid(field, value)
+                || (rule.Relation is null && rule.FieldKey == "status" && value is not null && statusValues?.Contains(value) == true);
             var valid = rule.Operator switch
             {
                 ConditionOperator.IsEmpty or ConditionOperator.IsNotEmpty => true,
                 ConditionOperator.GreaterThan or ConditionOperator.GreaterOrEqual or ConditionOperator.LessThan or ConditionOperator.LessOrEqual
                     => ordered && FieldValues.IsValid(field, rule.Value) && rule.Value is not null,
-                ConditionOperator.In => rule.Values is { Count: > 0 } values && values.All(v => FieldValues.IsValid(field, v)),
-                _ => FieldValues.IsValid(field, rule.Value),
+                ConditionOperator.In => rule.Values is { Count: > 0 } values && values.All(Fits),
+                _ => Fits(rule.Value),
             };
             if (!valid)
             {

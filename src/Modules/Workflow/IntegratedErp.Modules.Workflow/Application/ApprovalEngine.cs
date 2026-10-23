@@ -560,6 +560,22 @@ internal sealed partial class ApprovalEngine(
                     var index = condition.Branches.ToList().FindIndex(b => FieldValues.Matches(b.Condition, fields, values));
                     cursor.Advance(condition, index >= 0 ? $"b{index}" : ProcessCursor.Else, definition);
                     break;
+                case UpdateStep update when update.Target is null:
+                    // What the update will set (e.g. an added status value) decides the conditions after it.
+                    values ??= await ValuesAsync(instance, adapter, cancellationToken).ConfigureAwait(false);
+                    if (values is not null)
+                    {
+                        var next = new Dictionary<string, string?>(values, StringComparer.Ordinal);
+                        foreach (var change in update.Changes)
+                        {
+                            next[change.FieldKey] = change.FromField is { } from ? values.GetValueOrDefault(from) : change.Value;
+                        }
+
+                        values = next;
+                    }
+
+                    cursor.Advance(step, null, definition);
+                    break;
                 case UpdateStep or NotifyStep or ActionStep:
                     cursor.Advance(step, null, definition);
                     break;

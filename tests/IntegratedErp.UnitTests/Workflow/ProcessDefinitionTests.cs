@@ -36,6 +36,33 @@ public sealed class ProcessDefinitionTests
     };
 
     [Fact]
+    public void A_status_value_the_company_added_can_be_set_and_then_tested_by_a_condition()
+    {
+        // As the timesheet's process: a stage sets an added value, the next stage runs when the status is that value.
+        var process = new ProcessDefinition(null,
+        [
+            Stage("first", new UpdateStep { Id = "u", Changes = [new FieldChange("status", "finance_review")] }),
+            new ConditionStep
+            {
+                Id = "c",
+                Branches = [new ConditionBranch(new ConditionGroup(true, [new ConditionRule("status", ConditionOperator.Equals, "finance_review")]), [Stage("finance")])],
+            },
+            new ConditionStep
+            {
+                Id = "d",
+                Branches = [new ConditionBranch(new ConditionGroup(true, [new ConditionRule("status", ConditionOperator.In, Values: ["finance_review", "UnderReview"])]), [Stage("again")])],
+            },
+        ]);
+        HashSet<string> added = ["finance_review"];
+        Assert.True(DefinitionRules.Validate(process, Screen, added).IsSuccess);
+
+        // Without the added value (or another field than the status) it is still refused.
+        Assert.Contains("not valid", DefinitionRules.Validate(process, Screen).Error.Message, StringComparison.Ordinal);
+        var other = new ProcessDefinition(null, [Stage("a"), new ConditionStep { Id = "c", Branches = [new ConditionBranch(new ConditionGroup(true, [new ConditionRule("category", ConditionOperator.Equals, "finance_review")]), [Stage("b")])] }]);
+        Assert.False(DefinitionRules.Validate(other, Screen, added).IsSuccess);
+    }
+
+    [Fact]
     public void A_valid_process_passes_and_common_mistakes_are_reported()
     {
         var valid = new ProcessDefinition(
