@@ -42,9 +42,9 @@ const salaryParts = ['basic', 'food', 'housing', 'transport', 'other'] as const;
 const pageSizes = [25, 50, 100];
 
 /**
- * Workers, or company staff (the user's redesign, 2026-10-23; docs/02-target-architecture/22): the title, one toolbar
+ * Workers, or company staff (the user's redesign, 2026-10-23; docs/02-target-architecture/22): one toolbar
  * (search, status, columns, the total) with the applied filters, and a dense table with the worker column and the header
- * held in place — no status cards and no notes (the user's choice). The server pages, sorts and searches as before; the
+ * held in place — no title (the breadcrumb names the page), no status cards and no notes (the user's choice). The server pages, sorts and searches as before; the
  * search, the status, the sort, the page and its size live in the address, so coming back from a worker finds the same view.
  */
 export function WorkersPage({ kind }: { kind: WorkerKind }) {
@@ -110,12 +110,6 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
 
   return (
     <Box>
-      <Box sx={{ mb: 2 }}>
-        <Typography component="h1" sx={{ fontSize: 24, fontWeight: 600, color: wf.navy, lineHeight: 1.3 }}>
-          {t(`workforce.${k}.title`)}
-        </Typography>
-      </Box>
-
       <Box sx={{ ...(card as object), p: { xs: 1.5, md: 2 } }}>
         {/* Toolbar: search, status, columns, the count. */}
         <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.25, alignItems: { md: 'center' }, mb: 1.25, flexWrap: 'wrap' }}>
@@ -191,7 +185,7 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
         )}
         <Box sx={{ height: 4, mb: 0.5 }}>{busy && data && <LinearProgress sx={{ borderRadius: 2, '& .MuiLinearProgress-bar': { bgcolor: wf.gold }, bgcolor: wf.subtle }} />}</Box>
 
-        <TableContainer sx={{ maxHeight: 'calc(100dvh - 230px)', minHeight: 240, border: `1px solid ${wf.border}`, borderRadius: wf.control }}>
+        <TableContainer sx={{ maxHeight: 'calc(100dvh - 180px)', minHeight: 240, border: `1px solid ${wf.border}`, borderRadius: wf.control }}>
           <Table
             size="small"
             stickyHeader
