@@ -227,9 +227,6 @@ export function TimesheetPage() {
               </Button>
             )}
             {canRun && <RunProcessButton screen="billing.timesheet" recordId={sheet.id} title={`${sheet.timesheetNo} — ${sheet.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />}
-            <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
-              {t('timesheets.excel.download')}
-            </Button>
             <Button variant="outlined" startIcon={<MoreHorizIcon />} onClick={(e) => setMenu(e.currentTarget)}>
               {t('invoices.more')}
             </Button>
@@ -246,14 +243,6 @@ export function TimesheetPage() {
               <AutoModeOutlinedIcon fontSize="small" />
             </ListItemIcon>
             {t('timesheets.regenerate')}
-          </MenuItem>
-        )}
-        {sheet.canEdit && (
-          <MenuItem onClick={() => (setMenu(null), setUploading(true))}>
-            <ListItemIcon>
-              <UploadFileOutlinedIcon fontSize="small" />
-            </ListItemIcon>
-            {t('timesheets.excel.upload')}
           </MenuItem>
         )}
         <MenuItem onClick={() => (setMenu(null), setSettings(true))}>
@@ -384,7 +373,7 @@ export function TimesheetPage() {
                 </Stack>
               }
             />
-            <WorkersTab sheet={sheet} onAdjust={setAdjusting} onVariables={sheet.canEdit && !busy ? () => setVariables(true) : undefined} />
+            <WorkersTab sheet={sheet} onAdjust={setAdjusting} onVariables={sheet.canEdit && !busy ? () => setVariables(true) : undefined} onExcel={sheet.canEdit && !busy ? () => setUploading(true) : undefined} />
           </Box>
 
           {/* What the timesheet makes, in detail. */}
@@ -549,7 +538,7 @@ function PlusMinus({ plus, minus }: { plus: number; minus: number }) {
  * element, and the worker's side; the optional columns are chosen from «columns». A search and filters above it, every
  * column sorts from its header, and «إضافة المتغيرات» sits on the table's end (the user's request, 2026-10-23).
  */
-function WorkersTab({ sheet, onAdjust, onVariables }: { sheet: TimesheetDetail; onAdjust: (line: TimesheetLine) => void; onVariables?: () => void }) {
+function WorkersTab({ sheet, onAdjust, onVariables, onExcel }: { sheet: TimesheetDetail; onAdjust: (line: TimesheetLine) => void; onVariables?: () => void; onExcel?: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { ar, date } = useCommercialFormat();
@@ -638,6 +627,16 @@ function WorkersTab({ sheet, onAdjust, onVariables }: { sheet: TimesheetDetail; 
             shown={shown}
             toggle={toggle}
           />
+          {/* «رفع Excel» opens the dialog that downloads the file first; a timesheet no longer editable downloads it only. */}
+          {onExcel ? (
+            <Button variant="outlined" size="small" startIcon={<UploadFileOutlinedIcon />} onClick={onExcel}>
+              {t('timesheets.excel.upload')}
+            </Button>
+          ) : (
+            <Button variant="outlined" size="small" startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
+              {t('timesheets.excel.download')}
+            </Button>
+          )}
           {onVariables && (
             <Button variant="contained" size="small" startIcon={<PlaylistAddOutlinedIcon />} onClick={onVariables}>
               {t('timesheets.variables.button')}

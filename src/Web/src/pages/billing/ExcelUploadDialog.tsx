@@ -1,5 +1,6 @@
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import {
   Alert,
@@ -19,7 +20,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorKey, upload } from '../../api/auth';
 import { tokens } from '../../app/theme';
@@ -33,8 +34,9 @@ interface ExcelPreview {
 }
 
 /**
- * Uploads the filled-in timesheet file: first a preview (its problems, or the changes it makes), then — when it has
- * no problem — applying it. Nothing is saved before the confirmation.
+ * «رفع Excel» (one button for both, the user's request, 2026-10-23): first download this timesheet's file, then upload
+ * it filled in — a preview (its problems, or the changes it makes), then, when it has no problem, applying it.
+ * Nothing is saved before the confirmation.
  */
 export function ExcelUploadDialog({ timesheetId, onClose, onApplied }: { timesheetId: string; onClose: () => void; onApplied: () => void }) {
   const { t } = useTranslation();
@@ -90,12 +92,18 @@ export function ExcelUploadDialog({ timesheetId, onClose, onApplied }: { timeshe
         <ErrorMessage messageKey={error} />
         <Typography sx={{ fontSize: 13, color: tokens.gray600, mb: 2 }}>{t('timesheets.excel.uploadHint')}</Typography>
         <input ref={input} type="file" accept=".xlsx" hidden onChange={(e) => void choose(e.target.files?.[0])} />
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Button variant="outlined" startIcon={<UploadFileOutlinedIcon />} disabled={busy} onClick={() => (input.current && ((input.current.value = ''), input.current.click()))}>
-            {file ? t('timesheets.excel.chooseOther') : t('timesheets.excel.choose')}
-          </Button>
-          {file && <Typography sx={{ fontSize: 13, color: tokens.navy800, fontWeight: 700 }}>{file.name}</Typography>}
-        </Stack>
+        <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, mb: 2 }}>
+          <Step number={1} title={t('timesheets.excel.step1')} hint={t('timesheets.excel.step1Hint')}>
+            <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${timesheetId}/excel`} download>
+              {t('timesheets.excel.download')}
+            </Button>
+          </Step>
+          <Step number={2} title={t('timesheets.excel.step2')} hint={file ? file.name : t('timesheets.excel.step2Hint')}>
+            <Button variant="contained" startIcon={<UploadFileOutlinedIcon />} disabled={busy} onClick={() => (input.current && ((input.current.value = ''), input.current.click()))}>
+              {file ? t('timesheets.excel.chooseOther') : t('timesheets.excel.choose')}
+            </Button>
+          </Step>
+        </Box>
         {busy && <LinearProgress sx={{ mb: 2, borderRadius: 2 }} />}
 
         {preview && preview.problems.length > 0 && (
@@ -183,5 +191,19 @@ export function ExcelUploadDialog({ timesheetId, onClose, onApplied }: { timeshe
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+/** One step of the dialog: its number, what to do, and its button. */
+function Step({ number, title, hint, children }: { number: number; title: string; hint: string; children: ReactNode }) {
+  return (
+    <Stack sx={{ gap: 1, p: 1.5, borderRadius: `${tokens.radius}px`, border: `1px solid ${tokens.gray100}`, bgcolor: tokens.gray50 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 24, height: 24, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12.5, fontWeight: 800, color: '#fff', bgcolor: tokens.navy700 }}>{number}</Box>
+        <Typography sx={{ fontSize: 13.5, fontWeight: 800, color: tokens.navy800 }}>{title}</Typography>
+      </Stack>
+      <Typography sx={{ fontSize: 12.5, color: tokens.gray600, overflowWrap: 'anywhere' }}>{hint}</Typography>
+      <Box>{children}</Box>
+    </Stack>
   );
 }
