@@ -1,13 +1,17 @@
+import CloseIcon from '@mui/icons-material/Close';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import {
   Link,
-  Alert,
   Box,
   Button,
   ButtonBase,
+  Chip,
   InputAdornment,
   LinearProgress,
+  MenuItem,
+  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -25,22 +29,26 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { kindPath, workforceApi, type Placement, type WorkerKind, type WorkerList, type WorkerQuery } from '../../api/workforce';
-import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
-import { Initials, PageHeader } from '../../components/ui';
+import { Initials } from '../../components/ui';
 import { placementCards, placementLook } from '../../components/workforce/placement';
+import { card, StatusPill, toneOf, wf } from './workforceUi';
 
 type Sort = NonNullable<WorkerQuery['sort']>;
+const sorts: Sort[] = ['name', 'joined', 'salary', 'number'];
 
 // The grid's optional columns (the name, its number, the status and the salary total always show).
 const optional = ['iqama', 'profession', 'nationality', 'sponsor', 'basic', 'food', 'housing', 'transport', 'other', 'joined', 'workDays'] as const;
 type Column = (typeof optional)[number];
 const salaryParts = ['basic', 'food', 'housing', 'transport', 'other'] as const;
+const pageSizes = [25, 50, 100];
 
 /**
- * Workers, or company staff: status cards as on the old page (click to filter), search, and the old columns.
- * Staff have no supplier and no project work days.
+ * Workers, or company staff (the user's redesign, 2026-10-23; docs/02-target-architecture/22): a short header, white
+ * status cards that filter the table (gold when chosen), one toolbar with the applied filters, and a dense table with
+ * the worker column and the header held in place. The server pages, sorts, searches and counts as before; the search,
+ * the status, the sort, the page and its size live in the address, so coming back from a worker finds the same view.
  */
 export function WorkersPage({ kind }: { kind: WorkerKind }) {
   const { t, i18n } = useTranslation();
@@ -52,14 +60,17 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
   const k = staff ? 'staff' : 'workers';
   const search = params.get('q') ?? '';
   const page = Number(params.get('page') ?? '1');
+  const sort: Sort = sorts.includes(params.get('sort') as Sort) ? (params.get('sort') as Sort) : 'number';
+  const desc = params.get('desc') === '1';
+  const pageSize = pageSizes.includes(Number(params.get('size'))) ? Number(params.get('size')) : 50;
   const [text, setText] = useState(search);
-  const [sort, setSort] = useState<Sort>('number');
-  const [desc, setDesc] = useState(false);
-  const [pageSize, setPageSize] = useState(50);
   const [data, setData] = useState<WorkerList | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const { shown, toggle } = useHiddenColumns<Column>(`erp.cols.${k}`, optional);
+
+  useEffect(() => setText(search), [search]);
 
   const update = useCallback(
     (changes: Record<string, string | null>) => {
@@ -84,120 +95,131 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
     return () => {
       cancelled = true;
     };
-  }, [kind, search, placement, sort, desc, page, pageSize]);
+  }, [kind, search, placement, sort, desc, page, pageSize, attempt]);
 
   const money = (value: number) => new Intl.NumberFormat(ar ? 'ar-SA-u-nu-latn' : 'en-US', { maximumFractionDigits: 0 }).format(value);
   const date = (value: string | null) => (value ? value.slice(0, 10).replaceAll('-', '/') : '—');
   const withSalary = data?.items.some((i) => i.salary) ?? false;
-  const sortBy = (key: Sort) => {
-    if (sort === key) {
-      setDesc((d) => !d);
-    } else {
-      setSort(key);
-      setDesc(false);
-    }
-  };
+  const parts = salaryParts.filter(shown);
+  const sortBy = (key: Sort) => update(sort === key ? { sort: key, desc: desc ? null : '1' } : { sort: key === 'number' ? null : key, desc: null });
   const head = (key: Sort, label: string) => (
-    <TableSortLabel active={sort === key} direction={desc ? 'desc' : 'asc'} onClick={() => sortBy(key)} sx={{ color: 'inherit !important', '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }}>
+    <TableSortLabel active={sort === key} direction={desc ? 'desc' : 'asc'} onClick={() => sortBy(key)} sx={{ color: '#fff !important', '& .MuiTableSortLabel-icon': { color: `${wf.gold} !important` } }}>
       {label}
     </TableSortLabel>
   );
+  const statusName = (p: Placement) => t(staff && p === 'Exited' ? 'workforce.staffExited' : `workforce.placement.${p}`);
+  const filtered = !!(search || placement);
+  const statusOptions: Placement[] = [...placementCards[kind], ...(staff ? [] : (['Inactive'] as Placement[]))];
 
   return (
     <Box>
-      <PageHeader title={t(`workforce.${k}.title`)} subtitle={t(`workforce.${k}.intro`)} />
-      <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: 2 }}>
-        {t('workforce.readOnly')}
-      </Alert>
-      <ErrorMessage messageKey={error} />
+      {/* Header: the title, and that the list is read-only from the old system's sync (no separate strip). */}
+      <Box sx={{ mb: 2 }}>
+        <Typography component="h1" sx={{ fontSize: 24, fontWeight: 600, color: wf.navy, lineHeight: 1.3 }}>
+          {t(`workforce.${k}.title`)}
+        </Typography>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap', fontSize: 13, color: wf.textSecondary }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, borderRadius: 999, bgcolor: wf.subtle, color: wf.navy, fontWeight: 600, fontSize: 12, '& svg': { fontSize: 15 } }}>
+            <SyncOutlinedIcon />
+            {t('workforce.ui.readOnlyChip')}
+          </Box>
+          <span>{t(`workforce.${k}.intro`)}</span>
+        </Stack>
+      </Box>
 
-      {/* Status cards (.cp-kpi): the round icon sits on the card's top edge. */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: `repeat(${placementCards[kind].length}, 1fr)` }, gap: `${tokens.gap}px`, pt: '22px', mb: `${tokens.gap}px` }}>
+      {/* Status cards: they filter the table, gold when chosen. */}
+      <Box component="nav" aria-label={t('workforce.ui.cards')} sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))', lg: `repeat(${placementCards[kind].length}, minmax(0, 1fr))` }, gap: 1.5, mb: 1.5 }}>
         {placementCards[kind].map((p) => {
-          const look = placementLook[p];
+          const tone = toneOf(p);
           const active = placement === p;
           return (
             <ButtonBase
               key={p}
               onClick={() => update({ status: active ? null : p })}
+              aria-pressed={active}
               sx={{
-                position: 'relative',
+                ...(card as object),
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'stretch',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+                minHeight: 90,
+                px: 2,
+                py: 1.5,
                 textAlign: 'start',
-                bgcolor: '#fff',
-                borderRadius: `${tokens.radius}px`,
-                boxShadow: active ? `0 0 0 2px ${look.tone}, ${tokens.shadowMd}` : tokens.shadowSm,
-                transition: 'box-shadow .15s, transform .15s',
-                '&:hover': { boxShadow: tokens.shadowMd, transform: 'translateY(-2px)' },
+                borderColor: active ? wf.gold : wf.border,
+                bgcolor: active ? wf.goldSoft : wf.surface,
+                boxShadow: active ? `inset 0 0 0 1px ${wf.gold}` : (card as { boxShadow: string }).boxShadow,
+                transition: 'background-color 150ms, border-color 150ms',
+                '&:hover': { borderColor: active ? wf.gold : '#C5CFDB' },
+                '&:focus-visible': { outline: `2px solid ${wf.gold}`, outlineOffset: 2 },
               }}
             >
-              <Box
-                aria-hidden
-                sx={{
-                  position: 'absolute',
-                  top: -22,
-                  insetInlineStart: 14,
-                  display: 'grid',
-                  placeItems: 'center',
-                  width: 52,
-                  height: 52,
-                  borderRadius: '50%',
-                  bgcolor: look.tone,
-                  color: '#fff',
-                  boxShadow: `0 0 0 4px ${tokens.bg}, 0 6px 14px rgba(13, 74, 108, .22)`,
-                  '& svg': { fontSize: 22 },
-                }}
-              >
-                {look.icon}
-              </Box>
-              <Box sx={{ p: '12px 16px', textAlign: 'end' }}>
-                <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{t(staff && p === 'Exited' ? 'workforce.staffExited' : `workforce.placement.${p}`)}</Typography>
-                <Typography sx={{ fontSize: 24, fontWeight: 700, lineHeight: 1.25, color: tokens.navy800, fontVariantNumeric: 'tabular-nums' }}>
-                  {(data?.counts[p] ?? 0).toLocaleString('en-US')}
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontSize: 13, color: wf.textSecondary, lineHeight: 1.3 }}>{statusName(p)}</Typography>
+                <Typography sx={{ fontSize: 24, fontWeight: 600, lineHeight: 1.25, color: wf.navy, fontVariantNumeric: 'tabular-nums' }}>
+                  {data ? (data.counts[p] ?? 0).toLocaleString('en-US') : <Skeleton width={48} />}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: active ? wf.goldText : wf.textSecondary, fontWeight: active ? 600 : 400, lineHeight: 1.3 }}>
+                  {active ? `✓ ${t('workforce.currentFilter')}` : t(staff ? 'workforce.cardFoot.staff' : `workforce.cardFoot.${p}`)}
                 </Typography>
               </Box>
-              <Box sx={{ mt: 'auto', px: 2, py: 1.25, borderTop: `1px solid ${tokens.border}`, fontSize: 12.5, color: active ? look.tone : tokens.gray600, fontWeight: active ? 700 : 400 }}>
-                {active ? `✓ ${t('workforce.currentFilter')}` : t(staff ? 'workforce.cardFoot.staff' : `workforce.cardFoot.${p}`)}
+              <Box aria-hidden sx={{ flex: '0 0 auto', width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: tone.bg, color: tone.fg, '& svg': { fontSize: 19 } }}>
+                {placementLook[p].icon}
               </Box>
             </ButtonBase>
           );
         })}
       </Box>
-      {!staff && (data?.counts.Inactive ?? 0) > 0 && (
-        <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: `${tokens.gap}px` }}>
-          {t('workforce.inactiveNote', { count: data?.counts.Inactive ?? 0 })}{' '}
-          {placement === 'Inactive' ? (
-            <Link component="button" onClick={() => update({ status: null })}>
-              {t('workforce.reset')}
-            </Link>
-          ) : (
-            <Link component="button" onClick={() => update({ status: 'Inactive' })}>
-              {t('workforce.inactiveShow')}
-            </Link>
-          )}
-        </Alert>
-      )}
 
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
-          <Box component="form" sx={{ display: 'flex', gap: 1, flex: 1, minWidth: { md: 320 }, maxWidth: 520 }} onSubmit={(e) => (e.preventDefault(), update({ q: text.trim() || null }))}>
+      {/* What each number counts (the server's rules, unchanged), and the workers of inactive projects. */}
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, mb: 1.5, flexWrap: 'wrap', fontSize: 12.5, color: wf.textSecondary, '& > svg': { fontSize: 16 } }}>
+        <InfoOutlinedIcon />
+        <span>{t('workforce.ui.scope')}</span>
+        {!staff && (data?.counts.Inactive ?? 0) > 0 && (
+          <>
+            <span>·</span>
+            <span>{t('workforce.inactiveNote', { count: data?.counts.Inactive ?? 0 })}</span>
+            <Link component="button" onClick={() => update({ status: placement === 'Inactive' ? null : 'Inactive' })} sx={{ fontSize: 12.5, fontWeight: 600, color: wf.navy }}>
+              {placement === 'Inactive' ? t('workforce.reset') : t('workforce.inactiveShow')}
+            </Link>
+          </>
+        )}
+      </Stack>
+
+      <Box sx={{ ...(card as object), p: { xs: 1.5, md: 2 } }}>
+        {/* Toolbar: search, status, columns, the count. */}
+        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.25, alignItems: { md: 'center' }, mb: 1.25, flexWrap: 'wrap' }}>
+          <Box component="form" role="search" sx={{ display: 'flex', gap: 1, flex: 1, minWidth: { md: 300 }, maxWidth: 480 }} onSubmit={(e) => (e.preventDefault(), update({ q: text.trim() || null }))}>
             <TextField
               size="small"
               fullWidth
+              label={t('workforce.ui.searchLabel')}
               placeholder={t('workforce.search')}
               value={text}
               onChange={(e) => setText(e.target.value)}
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: wf.control, height: 40 } }}
             />
-            <Button type="submit" variant="contained">
+            <Button type="submit" variant="contained" sx={{ borderRadius: wf.control, height: 40, bgcolor: wf.navy, boxShadow: 'none', '&:hover': { bgcolor: wf.navyHover } }}>
               {t('workforce.searchButton')}
             </Button>
-            {(search || placement) && (
-              <Button onClick={() => (setText(''), setParams(new URLSearchParams(), { replace: true }))}>{t('workforce.reset')}</Button>
-            )}
           </Box>
+          <TextField
+            select
+            size="small"
+            label={t('workforce.col.status')}
+            value={placement}
+            onChange={(e) => update({ status: e.target.value || null })}
+            sx={{ width: { xs: '100%', md: 190 }, '& .MuiOutlinedInput-root': { borderRadius: wf.control, height: 40 } }}
+          >
+            <MenuItem value="">{t('workforce.ui.allStatuses')}</MenuItem>
+            {statusOptions.map((p) => (
+              <MenuItem key={p} value={p}>
+                {statusName(p)}
+              </MenuItem>
+            ))}
+          </TextField>
           <Box sx={{ flex: 1 }} />
           <ColumnsButton
             columns={optional
@@ -210,26 +232,57 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
             shown={shown}
             toggle={toggle}
           />
-          <Box sx={{ px: 1.5, py: 0.5, borderRadius: 999, bgcolor: tokens.navy50, color: tokens.navy700, fontWeight: 700, fontSize: 13 }}>
-            {t(`workforce.${k}.count`, { count: data?.total ?? 0 })}
+          <Box sx={{ textAlign: 'end' }}>
+            <Typography sx={{ fontSize: 12, color: wf.textSecondary, lineHeight: 1.2 }}>{t(`workforce.ui.total.${k}`)}</Typography>
+            <Typography sx={{ fontSize: 18, fontWeight: 600, color: wf.navy, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{data ? data.total.toLocaleString('en-US') : '—'}</Typography>
           </Box>
         </Stack>
-        {busy && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
 
-        <TableContainer>
+        {/* The applied filters, each removable, and «clear all». */}
+        {filtered && (
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, mb: 1.25, flexWrap: 'wrap' }}>
+            <Typography sx={{ fontSize: 12.5, color: wf.textSecondary }}>{t('workforce.ui.applied')}</Typography>
+            {placement && <Chip size="small" label={`${t('workforce.col.status')}: ${statusName(placement)}`} onDelete={() => update({ status: null })} deleteIcon={<CloseIcon />} sx={{ bgcolor: wf.goldSoft, color: wf.navy, fontWeight: 600, '& .MuiChip-deleteIcon': { color: wf.goldText } }} />}
+            {search && <Chip size="small" label={`${t('workforce.ui.searchLabel')}: ${search}`} onDelete={() => (setText(''), update({ q: null }))} deleteIcon={<CloseIcon />} sx={{ bgcolor: wf.goldSoft, color: wf.navy, fontWeight: 600, '& .MuiChip-deleteIcon': { color: wf.goldText } }} />}
+            <Link component="button" onClick={() => (setText(''), update({ q: null, status: null }))} sx={{ fontSize: 12.5, fontWeight: 600, color: wf.navy }}>
+              {t('workforce.ui.clearAll')}
+            </Link>
+          </Stack>
+        )}
+
+        {error && (
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1 }}>
+            <Box sx={{ flex: 1 }}>
+              <ErrorMessage messageKey={error} />
+            </Box>
+            <Button size="small" onClick={() => setAttempt((n) => n + 1)}>
+              {t('workforce.ui.retry')}
+            </Button>
+          </Stack>
+        )}
+        <Box sx={{ height: 4, mb: 0.5 }}>{busy && data && <LinearProgress sx={{ borderRadius: 2, '& .MuiLinearProgress-bar': { bgcolor: wf.gold }, bgcolor: wf.subtle }} />}</Box>
+
+        <TableContainer sx={{ maxHeight: 'calc(100dvh - 290px)', minHeight: 240, border: `1px solid ${wf.border}`, borderRadius: wf.control }}>
           <Table
             size="small"
+            stickyHeader
             sx={{
-              '& td': { fontVariantNumeric: 'tabular-nums' },
-              '& th.grp': { textAlign: 'center', bgcolor: '#155f45', borderBottom: '1px solid rgba(255,255,255,.18)' },
-              '& th.g-pay': { bgcolor: '#17734b' },
-              '& td.g-pay': { backgroundImage: 'linear-gradient(rgba(5,150,105,.05), rgba(5,150,105,.05))' },
-              '& .gs': { borderInlineStart: `2px solid ${tokens.border}` },
+              borderCollapse: 'separate',
+              '& th': { bgcolor: wf.navy, color: '#fff', fontSize: 12.5, fontWeight: 600, py: 1, borderBottom: 0, whiteSpace: 'nowrap' },
+              '& th.grp': { textAlign: 'center', bgcolor: wf.navyHover, borderBottom: '1px solid rgba(255,255,255,.14)' },
+              '& th.sub': { bgcolor: wf.navyHover, top: 37 },
+              '& td': { fontSize: 13, color: wf.text, height: 44, py: 0.5, borderBottom: `1px solid ${wf.subtle}`, fontVariantNumeric: 'tabular-nums' },
+              '& tbody tr:hover td': { bgcolor: wf.rowHover },
+              '& .gs': { borderInlineStart: `1px solid ${wf.border}` },
+              '& th.gs': { borderInlineStart: '1px solid rgba(255,255,255,.18)' },
+              // The worker column stays in view while scrolling sideways.
+              '& .pin': { position: 'sticky', insetInlineStart: 0, zIndex: 2, bgcolor: wf.surface, boxShadow: `inset -1px 0 0 ${wf.border}` },
+              '& th.pin': { zIndex: 4, bgcolor: wf.navy },
             }}
           >
             <TableHead>
               <TableRow>
-                <TableCell rowSpan={withSalary ? 2 : 1}>
+                <TableCell rowSpan={withSalary ? 2 : 1} className="pin" sx={{ minWidth: 220 }}>
                   <Stack sx={{ gap: 0.25 }}>
                     {head('name', t('workforce.col.name'))}
                     <Box sx={{ fontSize: 11, opacity: 0.85 }}>{head('number', t('workforce.col.number'))}</Box>
@@ -241,7 +294,7 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
                 {shown('nationality') && <TableCell rowSpan={withSalary ? 2 : 1}>{t('workforce.col.nationality')}</TableCell>}
                 {!staff && shown('sponsor') && <TableCell rowSpan={withSalary ? 2 : 1}>{t('workforce.col.sponsor')}</TableCell>}
                 {withSalary && (
-                  <TableCell className="grp gs" colSpan={salaryParts.filter(shown).length + 1}>
+                  <TableCell className="grp gs" colSpan={parts.length + 1}>
                     {t('workforce.salary.group')}
                   </TableCell>
                 )}
@@ -250,79 +303,88 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
               </TableRow>
               {withSalary && (
                 <TableRow>
-                  {salaryParts.filter(shown).map((c, i) => (
-                    <TableCell key={c} align="center" className={i === 0 ? 'g-pay gs' : 'g-pay'}>
+                  {parts.map((c, i) => (
+                    <TableCell key={c} align="center" className={i === 0 ? 'sub gs' : 'sub'}>
                       {t(`workforce.salary.short.${c}`)}
                     </TableCell>
                   ))}
-                  <TableCell align="center" className={salaryParts.filter(shown).length === 0 ? 'g-pay gs' : 'g-pay'}>
+                  <TableCell align="center" className={parts.length === 0 ? 'sub gs' : 'sub'}>
                     {head('salary', t('workforce.salary.short.total'))}
                   </TableCell>
                 </TableRow>
               )}
             </TableHead>
             <TableBody>
-              {data?.items.map((w) => {
-                const look = placementLook[w.placement];
-                const parts = salaryParts.filter(shown);
-                return (
-                  <TableRow key={w.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workforce/${kindPath(kind)}/${w.id}`)}>
-                    <TableCell>
-                      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                        <Initials name={w.name} size={26} />
-                        <Box sx={{ minWidth: 0, maxWidth: 230 }}>
-                          <Typography dir="auto" sx={{ fontSize: 12.5, fontWeight: 600, color: tokens.navy800, lineHeight: 1.3, unicodeBidi: 'plaintext', textAlign: 'start' }}>
-                            {w.name}
-                          </Typography>
-                          <Typography sx={{ fontSize: 11, color: tokens.gray500, textAlign: 'start' }}>
-                            <bdi>{w.workerNo}</bdi>
-                          </Typography>
-                        </Box>
-                      </Stack>
+              {!data &&
+                !error &&
+                Array.from({ length: 8 }, (_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={20}>
+                      <Skeleton height={28} />
                     </TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.25, borderRadius: 999, fontSize: 11.5, fontWeight: 700, color: look.tone, bgcolor: look.soft }}>
-                        <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: look.tone }} />
-                        {(ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`)}
-                      </Box>
-                    </TableCell>
-                    {shown('iqama') && (
-                      <TableCell>
-                        <bdi>{w.iqama ?? '—'}</bdi>
-                      </TableCell>
-                    )}
-                    {shown('profession') && <TableCell>{(ar ? w.professionAr : w.professionEn) ?? '—'}</TableCell>}
-                    {shown('nationality') && <TableCell>{(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}</TableCell>}
-                    {!staff && shown('sponsor') && (
-                      <TableCell sx={{ whiteSpace: 'nowrap', fontSize: 12 }}>
-                        <bdi>{w.sponsor ?? '—'}</bdi>
-                      </TableCell>
-                    )}
-                    {withSalary && (
-                      <>
-                        {parts.map((c, i) => (
-                          <TableCell key={c} align="center" className={i === 0 ? 'g-pay gs' : 'g-pay'}>
-                            {w.salary ? money(w.salary[c]) : '—'}
-                          </TableCell>
-                        ))}
-                        <TableCell align="center" className={parts.length === 0 ? 'g-pay gs' : 'g-pay'} sx={{ fontWeight: 700, color: tokens.navy800 }}>
-                          {w.salary ? money(w.salary.total) : '—'}
-                        </TableCell>
-                      </>
-                    )}
-                    {shown('joined') && (
-                      <TableCell className={withSalary ? 'gs' : undefined} sx={{ whiteSpace: 'nowrap' }}>
-                        <bdi>{date(w.projectJoinedOn)}</bdi>
-                      </TableCell>
-                    )}
-                    {!staff && shown('workDays') && <TableCell align="center">{w.workDays ?? '—'}</TableCell>}
                   </TableRow>
-                );
-              })}
+                ))}
+              {data?.items.map((w) => (
+                <TableRow
+                  key={w.id}
+                  hover
+                  tabIndex={0}
+                  sx={{ cursor: 'pointer', '&:focus-visible td': { bgcolor: wf.rowHover }, '&:focus-visible': { outline: `2px solid ${wf.gold}`, outlineOffset: -2 } }}
+                  onClick={() => navigate(`/workforce/${kindPath(kind)}/${w.id}`)}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/workforce/${kindPath(kind)}/${w.id}`)}
+                >
+                  <TableCell className="pin">
+                    <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+                      <Initials name={w.name} size={28} />
+                      <Box sx={{ minWidth: 0, maxWidth: 240 }}>
+                        <Typography dir="auto" sx={{ fontSize: 13, fontWeight: 600, color: wf.navy, lineHeight: 1.3, unicodeBidi: 'plaintext', textAlign: 'start' }}>
+                          {w.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: 11.5, color: wf.textSecondary, textAlign: 'start' }}>
+                          <bdi>{w.workerNo}</bdi>
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <StatusPill placement={w.placement}>{(ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`)}</StatusPill>
+                  </TableCell>
+                  {shown('iqama') && (
+                    <TableCell>
+                      <bdi>{w.iqama ?? '—'}</bdi>
+                    </TableCell>
+                  )}
+                  {shown('profession') && <TableCell>{(ar ? w.professionAr : w.professionEn) ?? '—'}</TableCell>}
+                  {shown('nationality') && <TableCell>{(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}</TableCell>}
+                  {!staff && shown('sponsor') && (
+                    <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '12.5px !important' }}>
+                      <bdi>{w.sponsor ?? '—'}</bdi>
+                    </TableCell>
+                  )}
+                  {withSalary && (
+                    <>
+                      {parts.map((c, i) => (
+                        <TableCell key={c} align="center" className={i === 0 ? 'gs' : undefined}>
+                          {w.salary ? money(w.salary[c]) : '—'}
+                        </TableCell>
+                      ))}
+                      <TableCell align="center" className={parts.length === 0 ? 'gs' : undefined} sx={{ fontWeight: 700, color: `${wf.navy} !important` }}>
+                        {w.salary ? money(w.salary.total) : '—'}
+                      </TableCell>
+                    </>
+                  )}
+                  {shown('joined') && (
+                    <TableCell className={withSalary ? 'gs' : undefined} sx={{ whiteSpace: 'nowrap' }}>
+                      <bdi>{date(w.projectJoinedOn)}</bdi>
+                    </TableCell>
+                  )}
+                  {!staff && shown('workDays') && <TableCell align="center">{w.workDays ?? '—'}</TableCell>}
+                </TableRow>
+              ))}
               {data && data.items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={20} align="center" sx={{ py: 5, color: tokens.gray500 }}>
-                    {t('workforce.empty')}
+                  <TableCell colSpan={20} align="center" sx={{ py: 5, color: `${wf.textSecondary} !important` }}>
+                    {filtered ? t('workforce.ui.noResults') : t('workforce.empty')}
                   </TableCell>
                 </TableRow>
               )}
@@ -335,8 +397,8 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
           page={Math.max(0, page - 1)}
           onPageChange={(_, p) => update({ page: String(p + 1) })}
           rowsPerPage={pageSize}
-          rowsPerPageOptions={[25, 50, 100]}
-          onRowsPerPageChange={(e) => (setPageSize(Number(e.target.value)), update({ page: null }))}
+          rowsPerPageOptions={pageSizes}
+          onRowsPerPageChange={(e) => update({ size: Number(e.target.value) === 50 ? null : String(e.target.value) })}
           labelRowsPerPage={t('workforce.perPage')}
           labelDisplayedRows={({ from, to, count }) => t('workforce.rows', { from, to, count })}
         />

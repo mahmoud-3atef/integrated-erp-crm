@@ -1,23 +1,29 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import CloseIcon from '@mui/icons-material/Close';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
-import { Link, Alert, Box, Button, ButtonBase, InputAdornment, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography, } from '@mui/material';
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
+import { Link, Box, Button, ButtonBase, Chip, InputAdornment, LinearProgress, MenuItem, Skeleton, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography, } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { kindPath, workforceApi } from '../../api/workforce';
-import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
-import { Initials, PageHeader } from '../../components/ui';
+import { Initials } from '../../components/ui';
 import { placementCards, placementLook } from '../../components/workforce/placement';
+import { card, StatusPill, toneOf, wf } from './workforceUi';
+const sorts = ['name', 'joined', 'salary', 'number'];
 // The grid's optional columns (the name, its number, the status and the salary total always show).
 const optional = ['iqama', 'profession', 'nationality', 'sponsor', 'basic', 'food', 'housing', 'transport', 'other', 'joined', 'workDays'];
 const salaryParts = ['basic', 'food', 'housing', 'transport', 'other'];
+const pageSizes = [25, 50, 100];
 /**
- * Workers, or company staff: status cards as on the old page (click to filter), search, and the old columns.
- * Staff have no supplier and no project work days.
+ * Workers, or company staff (the user's redesign, 2026-10-23; docs/02-target-architecture/22): a short header, white
+ * status cards that filter the table (gold when chosen), one toolbar with the applied filters, and a dense table with
+ * the worker column and the header held in place. The server pages, sorts, searches and counts as before; the search,
+ * the status, the sort, the page and its size live in the address, so coming back from a worker finds the same view.
  */
 export function WorkersPage({ kind }) {
     const { t, i18n } = useTranslation();
@@ -29,14 +35,16 @@ export function WorkersPage({ kind }) {
     const k = staff ? 'staff' : 'workers';
     const search = params.get('q') ?? '';
     const page = Number(params.get('page') ?? '1');
+    const sort = sorts.includes(params.get('sort')) ? params.get('sort') : 'number';
+    const desc = params.get('desc') === '1';
+    const pageSize = pageSizes.includes(Number(params.get('size'))) ? Number(params.get('size')) : 50;
     const [text, setText] = useState(search);
-    const [sort, setSort] = useState('number');
-    const [desc, setDesc] = useState(false);
-    const [pageSize, setPageSize] = useState(50);
     const [data, setData] = useState(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
+    const [attempt, setAttempt] = useState(0);
     const { shown, toggle } = useHiddenColumns(`erp.cols.${k}`, optional);
+    useEffect(() => setText(search), [search]);
     const update = useCallback((changes) => {
         const next = new URLSearchParams(params);
         Object.entries(changes).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)));
@@ -56,63 +64,55 @@ export function WorkersPage({ kind }) {
         return () => {
             cancelled = true;
         };
-    }, [kind, search, placement, sort, desc, page, pageSize]);
+    }, [kind, search, placement, sort, desc, page, pageSize, attempt]);
     const money = (value) => new Intl.NumberFormat(ar ? 'ar-SA-u-nu-latn' : 'en-US', { maximumFractionDigits: 0 }).format(value);
     const date = (value) => (value ? value.slice(0, 10).replaceAll('-', '/') : '—');
     const withSalary = data?.items.some((i) => i.salary) ?? false;
-    const sortBy = (key) => {
-        if (sort === key) {
-            setDesc((d) => !d);
-        }
-        else {
-            setSort(key);
-            setDesc(false);
-        }
-    };
-    const head = (key, label) => (_jsx(TableSortLabel, { active: sort === key, direction: desc ? 'desc' : 'asc', onClick: () => sortBy(key), sx: { color: 'inherit !important', '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }, children: label }));
-    return (_jsxs(Box, { children: [_jsx(PageHeader, { title: t(`workforce.${k}.title`), subtitle: t(`workforce.${k}.intro`) }), _jsx(Alert, { severity: "info", icon: _jsx(InfoOutlinedIcon, {}), sx: { mb: 2 }, children: t('workforce.readOnly') }), _jsx(ErrorMessage, { messageKey: error }), _jsx(Box, { sx: { display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: `repeat(${placementCards[kind].length}, 1fr)` }, gap: `${tokens.gap}px`, pt: '22px', mb: `${tokens.gap}px` }, children: placementCards[kind].map((p) => {
-                    const look = placementLook[p];
+    const parts = salaryParts.filter(shown);
+    const sortBy = (key) => update(sort === key ? { sort: key, desc: desc ? null : '1' } : { sort: key === 'number' ? null : key, desc: null });
+    const head = (key, label) => (_jsx(TableSortLabel, { active: sort === key, direction: desc ? 'desc' : 'asc', onClick: () => sortBy(key), sx: { color: '#fff !important', '& .MuiTableSortLabel-icon': { color: `${wf.gold} !important` } }, children: label }));
+    const statusName = (p) => t(staff && p === 'Exited' ? 'workforce.staffExited' : `workforce.placement.${p}`);
+    const filtered = !!(search || placement);
+    const statusOptions = [...placementCards[kind], ...(staff ? [] : ['Inactive'])];
+    return (_jsxs(Box, { children: [_jsxs(Box, { sx: { mb: 2 }, children: [_jsx(Typography, { component: "h1", sx: { fontSize: 24, fontWeight: 600, color: wf.navy, lineHeight: 1.3 }, children: t(`workforce.${k}.title`) }), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap', fontSize: 13, color: wf.textSecondary }, children: [_jsxs(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, borderRadius: 999, bgcolor: wf.subtle, color: wf.navy, fontWeight: 600, fontSize: 12, '& svg': { fontSize: 15 } }, children: [_jsx(SyncOutlinedIcon, {}), t('workforce.ui.readOnlyChip')] }), _jsx("span", { children: t(`workforce.${k}.intro`) })] })] }), _jsx(Box, { component: "nav", "aria-label": t('workforce.ui.cards'), sx: { display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))', lg: `repeat(${placementCards[kind].length}, minmax(0, 1fr))` }, gap: 1.5, mb: 1.5 }, children: placementCards[kind].map((p) => {
+                    const tone = toneOf(p);
                     const active = placement === p;
-                    return (_jsxs(ButtonBase, { onClick: () => update({ status: active ? null : p }), sx: {
-                            position: 'relative',
+                    return (_jsxs(ButtonBase, { onClick: () => update({ status: active ? null : p }), "aria-pressed": active, sx: {
+                            ...card,
                             display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'stretch',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 1,
+                            minHeight: 90,
+                            px: 2,
+                            py: 1.5,
                             textAlign: 'start',
-                            bgcolor: '#fff',
-                            borderRadius: `${tokens.radius}px`,
-                            boxShadow: active ? `0 0 0 2px ${look.tone}, ${tokens.shadowMd}` : tokens.shadowSm,
-                            transition: 'box-shadow .15s, transform .15s',
-                            '&:hover': { boxShadow: tokens.shadowMd, transform: 'translateY(-2px)' },
-                        }, children: [_jsx(Box, { "aria-hidden": true, sx: {
-                                    position: 'absolute',
-                                    top: -22,
-                                    insetInlineStart: 14,
-                                    display: 'grid',
-                                    placeItems: 'center',
-                                    width: 52,
-                                    height: 52,
-                                    borderRadius: '50%',
-                                    bgcolor: look.tone,
-                                    color: '#fff',
-                                    boxShadow: `0 0 0 4px ${tokens.bg}, 0 6px 14px rgba(13, 74, 108, .22)`,
-                                    '& svg': { fontSize: 22 },
-                                }, children: look.icon }), _jsxs(Box, { sx: { p: '12px 16px', textAlign: 'end' }, children: [_jsx(Typography, { sx: { fontSize: 12.5, color: tokens.gray600 }, children: t(staff && p === 'Exited' ? 'workforce.staffExited' : `workforce.placement.${p}`) }), _jsx(Typography, { sx: { fontSize: 24, fontWeight: 700, lineHeight: 1.25, color: tokens.navy800, fontVariantNumeric: 'tabular-nums' }, children: (data?.counts[p] ?? 0).toLocaleString('en-US') })] }), _jsx(Box, { sx: { mt: 'auto', px: 2, py: 1.25, borderTop: `1px solid ${tokens.border}`, fontSize: 12.5, color: active ? look.tone : tokens.gray600, fontWeight: active ? 700 : 400 }, children: active ? `✓ ${t('workforce.currentFilter')}` : t(staff ? 'workforce.cardFoot.staff' : `workforce.cardFoot.${p}`) })] }, p));
-                }) }), !staff && (data?.counts.Inactive ?? 0) > 0 && (_jsxs(Alert, { severity: "info", icon: _jsx(InfoOutlinedIcon, {}), sx: { mb: `${tokens.gap}px` }, children: [t('workforce.inactiveNote', { count: data?.counts.Inactive ?? 0 }), ' ', placement === 'Inactive' ? (_jsx(Link, { component: "button", onClick: () => update({ status: null }), children: t('workforce.reset') })) : (_jsx(Link, { component: "button", onClick: () => update({ status: 'Inactive' }), children: t('workforce.inactiveShow') }))] })), _jsxs(Box, { sx: { bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }, children: [_jsxs(Stack, { direction: { xs: 'column', md: 'row' }, sx: { gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }, children: [_jsxs(Box, { component: "form", sx: { display: 'flex', gap: 1, flex: 1, minWidth: { md: 320 }, maxWidth: 520 }, onSubmit: (e) => (e.preventDefault(), update({ q: text.trim() || null })), children: [_jsx(TextField, { size: "small", fullWidth: true, placeholder: t('workforce.search'), value: text, onChange: (e) => setText(e.target.value), slotProps: { input: { startAdornment: _jsx(InputAdornment, { position: "start", children: _jsx(SearchIcon, { fontSize: "small" }) }) } } }), _jsx(Button, { type: "submit", variant: "contained", children: t('workforce.searchButton') }), (search || placement) && (_jsx(Button, { onClick: () => (setText(''), setParams(new URLSearchParams(), { replace: true })), children: t('workforce.reset') }))] }), _jsx(Box, { sx: { flex: 1 } }), _jsx(ColumnsButton, { columns: optional
+                            borderColor: active ? wf.gold : wf.border,
+                            bgcolor: active ? wf.goldSoft : wf.surface,
+                            boxShadow: active ? `inset 0 0 0 1px ${wf.gold}` : card.boxShadow,
+                            transition: 'background-color 150ms, border-color 150ms',
+                            '&:hover': { borderColor: active ? wf.gold : '#C5CFDB' },
+                            '&:focus-visible': { outline: `2px solid ${wf.gold}`, outlineOffset: 2 },
+                        }, children: [_jsxs(Box, { sx: { minWidth: 0 }, children: [_jsx(Typography, { sx: { fontSize: 13, color: wf.textSecondary, lineHeight: 1.3 }, children: statusName(p) }), _jsx(Typography, { sx: { fontSize: 24, fontWeight: 600, lineHeight: 1.25, color: wf.navy, fontVariantNumeric: 'tabular-nums' }, children: data ? (data.counts[p] ?? 0).toLocaleString('en-US') : _jsx(Skeleton, { width: 48 }) }), _jsx(Typography, { sx: { fontSize: 12, color: active ? wf.goldText : wf.textSecondary, fontWeight: active ? 600 : 400, lineHeight: 1.3 }, children: active ? `✓ ${t('workforce.currentFilter')}` : t(staff ? 'workforce.cardFoot.staff' : `workforce.cardFoot.${p}`) })] }), _jsx(Box, { "aria-hidden": true, sx: { flex: '0 0 auto', width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: tone.bg, color: tone.fg, '& svg': { fontSize: 19 } }, children: placementLook[p].icon })] }, p));
+                }) }), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 0.75, mb: 1.5, flexWrap: 'wrap', fontSize: 12.5, color: wf.textSecondary, '& > svg': { fontSize: 16 } }, children: [_jsx(InfoOutlinedIcon, {}), _jsx("span", { children: t('workforce.ui.scope') }), !staff && (data?.counts.Inactive ?? 0) > 0 && (_jsxs(_Fragment, { children: [_jsx("span", { children: "\u00B7" }), _jsx("span", { children: t('workforce.inactiveNote', { count: data?.counts.Inactive ?? 0 }) }), _jsx(Link, { component: "button", onClick: () => update({ status: placement === 'Inactive' ? null : 'Inactive' }), sx: { fontSize: 12.5, fontWeight: 600, color: wf.navy }, children: placement === 'Inactive' ? t('workforce.reset') : t('workforce.inactiveShow') })] }))] }), _jsxs(Box, { sx: { ...card, p: { xs: 1.5, md: 2 } }, children: [_jsxs(Stack, { direction: { xs: 'column', md: 'row' }, sx: { gap: 1.25, alignItems: { md: 'center' }, mb: 1.25, flexWrap: 'wrap' }, children: [_jsxs(Box, { component: "form", role: "search", sx: { display: 'flex', gap: 1, flex: 1, minWidth: { md: 300 }, maxWidth: 480 }, onSubmit: (e) => (e.preventDefault(), update({ q: text.trim() || null })), children: [_jsx(TextField, { size: "small", fullWidth: true, label: t('workforce.ui.searchLabel'), placeholder: t('workforce.search'), value: text, onChange: (e) => setText(e.target.value), slotProps: { input: { startAdornment: _jsx(InputAdornment, { position: "start", children: _jsx(SearchIcon, { fontSize: "small" }) }) } }, sx: { '& .MuiOutlinedInput-root': { borderRadius: wf.control, height: 40 } } }), _jsx(Button, { type: "submit", variant: "contained", sx: { borderRadius: wf.control, height: 40, bgcolor: wf.navy, boxShadow: 'none', '&:hover': { bgcolor: wf.navyHover } }, children: t('workforce.searchButton') })] }), _jsxs(TextField, { select: true, size: "small", label: t('workforce.col.status'), value: placement, onChange: (e) => update({ status: e.target.value || null }), sx: { width: { xs: '100%', md: 190 }, '& .MuiOutlinedInput-root': { borderRadius: wf.control, height: 40 } }, children: [_jsx(MenuItem, { value: "", children: t('workforce.ui.allStatuses') }), statusOptions.map((p) => (_jsx(MenuItem, { value: p, children: statusName(p) }, p)))] }), _jsx(Box, { sx: { flex: 1 } }), _jsx(ColumnsButton, { columns: optional
                                     .filter((c) => !(staff && (c === 'sponsor' || c === 'workDays')) && (withSalary || !salaryParts.includes(c)))
                                     .map((c) => ({
                                     key: c,
                                     label: salaryParts.includes(c) ? t(`workforce.salary.short.${c}`) : t(`workforce.col.${c === 'joined' && staff ? 'hired' : c}`),
                                     group: salaryParts.includes(c) ? t('workforce.salary.group') : undefined,
-                                })), shown: shown, toggle: toggle }), _jsx(Box, { sx: { px: 1.5, py: 0.5, borderRadius: 999, bgcolor: tokens.navy50, color: tokens.navy700, fontWeight: 700, fontSize: 13 }, children: t(`workforce.${k}.count`, { count: data?.total ?? 0 }) })] }), busy && _jsx(LinearProgress, { sx: { mb: 1, borderRadius: 2 } }), _jsx(TableContainer, { children: _jsxs(Table, { size: "small", sx: {
-                                '& td': { fontVariantNumeric: 'tabular-nums' },
-                                '& th.grp': { textAlign: 'center', bgcolor: '#155f45', borderBottom: '1px solid rgba(255,255,255,.18)' },
-                                '& th.g-pay': { bgcolor: '#17734b' },
-                                '& td.g-pay': { backgroundImage: 'linear-gradient(rgba(5,150,105,.05), rgba(5,150,105,.05))' },
-                                '& .gs': { borderInlineStart: `2px solid ${tokens.border}` },
-                            }, children: [_jsxs(TableHead, { children: [_jsxs(TableRow, { children: [_jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: _jsxs(Stack, { sx: { gap: 0.25 }, children: [head('name', t('workforce.col.name')), _jsx(Box, { sx: { fontSize: 11, opacity: 0.85 }, children: head('number', t('workforce.col.number')) })] }) }), _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.status') }), shown('iqama') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.iqama') }), shown('profession') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.profession') }), shown('nationality') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.nationality') }), !staff && shown('sponsor') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.sponsor') }), withSalary && (_jsx(TableCell, { className: "grp gs", colSpan: salaryParts.filter(shown).length + 1, children: t('workforce.salary.group') })), shown('joined') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, className: withSalary ? 'gs' : undefined, children: head('joined', t(staff ? 'workforce.col.hired' : 'workforce.col.joined')) }), !staff && shown('workDays') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, align: "center", children: t('workforce.col.workDays') })] }), withSalary && (_jsxs(TableRow, { children: [salaryParts.filter(shown).map((c, i) => (_jsx(TableCell, { align: "center", className: i === 0 ? 'g-pay gs' : 'g-pay', children: t(`workforce.salary.short.${c}`) }, c))), _jsx(TableCell, { align: "center", className: salaryParts.filter(shown).length === 0 ? 'g-pay gs' : 'g-pay', children: head('salary', t('workforce.salary.short.total')) })] }))] }), _jsxs(TableBody, { children: [data?.items.map((w) => {
-                                            const look = placementLook[w.placement];
-                                            const parts = salaryParts.filter(shown);
-                                            return (_jsxs(TableRow, { hover: true, sx: { cursor: 'pointer' }, onClick: () => navigate(`/workforce/${kindPath(kind)}/${w.id}`), children: [_jsx(TableCell, { children: _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1 }, children: [_jsx(Initials, { name: w.name, size: 26 }), _jsxs(Box, { sx: { minWidth: 0, maxWidth: 230 }, children: [_jsx(Typography, { dir: "auto", sx: { fontSize: 12.5, fontWeight: 600, color: tokens.navy800, lineHeight: 1.3, unicodeBidi: 'plaintext', textAlign: 'start' }, children: w.name }), _jsx(Typography, { sx: { fontSize: 11, color: tokens.gray500, textAlign: 'start' }, children: _jsx("bdi", { children: w.workerNo }) })] })] }) }), _jsx(TableCell, { sx: { whiteSpace: 'nowrap' }, children: _jsxs(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.25, borderRadius: 999, fontSize: 11.5, fontWeight: 700, color: look.tone, bgcolor: look.soft }, children: [_jsx(Box, { component: "span", sx: { width: 7, height: 7, borderRadius: '50%', bgcolor: look.tone } }), (ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`)] }) }), shown('iqama') && (_jsx(TableCell, { children: _jsx("bdi", { children: w.iqama ?? '—' }) })), shown('profession') && _jsx(TableCell, { children: (ar ? w.professionAr : w.professionEn) ?? '—' }), shown('nationality') && _jsx(TableCell, { children: (ar ? w.nationalityAr : w.nationalityEn) ?? '—' }), !staff && shown('sponsor') && (_jsx(TableCell, { sx: { whiteSpace: 'nowrap', fontSize: 12 }, children: _jsx("bdi", { children: w.sponsor ?? '—' }) })), withSalary && (_jsxs(_Fragment, { children: [parts.map((c, i) => (_jsx(TableCell, { align: "center", className: i === 0 ? 'g-pay gs' : 'g-pay', children: w.salary ? money(w.salary[c]) : '—' }, c))), _jsx(TableCell, { align: "center", className: parts.length === 0 ? 'g-pay gs' : 'g-pay', sx: { fontWeight: 700, color: tokens.navy800 }, children: w.salary ? money(w.salary.total) : '—' })] })), shown('joined') && (_jsx(TableCell, { className: withSalary ? 'gs' : undefined, sx: { whiteSpace: 'nowrap' }, children: _jsx("bdi", { children: date(w.projectJoinedOn) }) })), !staff && shown('workDays') && _jsx(TableCell, { align: "center", children: w.workDays ?? '—' })] }, w.id));
-                                        }), data && data.items.length === 0 && (_jsx(TableRow, { children: _jsx(TableCell, { colSpan: 20, align: "center", sx: { py: 5, color: tokens.gray500 }, children: t('workforce.empty') }) }))] })] }) }), _jsx(TablePagination, { component: "div", count: data?.total ?? 0, page: Math.max(0, page - 1), onPageChange: (_, p) => update({ page: String(p + 1) }), rowsPerPage: pageSize, rowsPerPageOptions: [25, 50, 100], onRowsPerPageChange: (e) => (setPageSize(Number(e.target.value)), update({ page: null })), labelRowsPerPage: t('workforce.perPage'), labelDisplayedRows: ({ from, to, count }) => t('workforce.rows', { from, to, count }) })] })] }));
+                                })), shown: shown, toggle: toggle }), _jsxs(Box, { sx: { textAlign: 'end' }, children: [_jsx(Typography, { sx: { fontSize: 12, color: wf.textSecondary, lineHeight: 1.2 }, children: t(`workforce.ui.total.${k}`) }), _jsx(Typography, { sx: { fontSize: 18, fontWeight: 600, color: wf.navy, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }, children: data ? data.total.toLocaleString('en-US') : '—' })] })] }), filtered && (_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 0.75, mb: 1.25, flexWrap: 'wrap' }, children: [_jsx(Typography, { sx: { fontSize: 12.5, color: wf.textSecondary }, children: t('workforce.ui.applied') }), placement && _jsx(Chip, { size: "small", label: `${t('workforce.col.status')}: ${statusName(placement)}`, onDelete: () => update({ status: null }), deleteIcon: _jsx(CloseIcon, {}), sx: { bgcolor: wf.goldSoft, color: wf.navy, fontWeight: 600, '& .MuiChip-deleteIcon': { color: wf.goldText } } }), search && _jsx(Chip, { size: "small", label: `${t('workforce.ui.searchLabel')}: ${search}`, onDelete: () => (setText(''), update({ q: null })), deleteIcon: _jsx(CloseIcon, {}), sx: { bgcolor: wf.goldSoft, color: wf.navy, fontWeight: 600, '& .MuiChip-deleteIcon': { color: wf.goldText } } }), _jsx(Link, { component: "button", onClick: () => (setText(''), update({ q: null, status: null })), sx: { fontSize: 12.5, fontWeight: 600, color: wf.navy }, children: t('workforce.ui.clearAll') })] })), error && (_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, mb: 1 }, children: [_jsx(Box, { sx: { flex: 1 }, children: _jsx(ErrorMessage, { messageKey: error }) }), _jsx(Button, { size: "small", onClick: () => setAttempt((n) => n + 1), children: t('workforce.ui.retry') })] })), _jsx(Box, { sx: { height: 4, mb: 0.5 }, children: busy && data && _jsx(LinearProgress, { sx: { borderRadius: 2, '& .MuiLinearProgress-bar': { bgcolor: wf.gold }, bgcolor: wf.subtle } }) }), _jsx(TableContainer, { sx: { maxHeight: 'calc(100dvh - 290px)', minHeight: 240, border: `1px solid ${wf.border}`, borderRadius: wf.control }, children: _jsxs(Table, { size: "small", stickyHeader: true, sx: {
+                                borderCollapse: 'separate',
+                                '& th': { bgcolor: wf.navy, color: '#fff', fontSize: 12.5, fontWeight: 600, py: 1, borderBottom: 0, whiteSpace: 'nowrap' },
+                                '& th.grp': { textAlign: 'center', bgcolor: wf.navyHover, borderBottom: '1px solid rgba(255,255,255,.14)' },
+                                '& th.sub': { bgcolor: wf.navyHover, top: 37 },
+                                '& td': { fontSize: 13, color: wf.text, height: 44, py: 0.5, borderBottom: `1px solid ${wf.subtle}`, fontVariantNumeric: 'tabular-nums' },
+                                '& tbody tr:hover td': { bgcolor: wf.rowHover },
+                                '& .gs': { borderInlineStart: `1px solid ${wf.border}` },
+                                '& th.gs': { borderInlineStart: '1px solid rgba(255,255,255,.18)' },
+                                // The worker column stays in view while scrolling sideways.
+                                '& .pin': { position: 'sticky', insetInlineStart: 0, zIndex: 2, bgcolor: wf.surface, boxShadow: `inset -1px 0 0 ${wf.border}` },
+                                '& th.pin': { zIndex: 4, bgcolor: wf.navy },
+                            }, children: [_jsxs(TableHead, { children: [_jsxs(TableRow, { children: [_jsx(TableCell, { rowSpan: withSalary ? 2 : 1, className: "pin", sx: { minWidth: 220 }, children: _jsxs(Stack, { sx: { gap: 0.25 }, children: [head('name', t('workforce.col.name')), _jsx(Box, { sx: { fontSize: 11, opacity: 0.85 }, children: head('number', t('workforce.col.number')) })] }) }), _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.status') }), shown('iqama') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.iqama') }), shown('profession') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.profession') }), shown('nationality') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.nationality') }), !staff && shown('sponsor') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, children: t('workforce.col.sponsor') }), withSalary && (_jsx(TableCell, { className: "grp gs", colSpan: parts.length + 1, children: t('workforce.salary.group') })), shown('joined') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, className: withSalary ? 'gs' : undefined, children: head('joined', t(staff ? 'workforce.col.hired' : 'workforce.col.joined')) }), !staff && shown('workDays') && _jsx(TableCell, { rowSpan: withSalary ? 2 : 1, align: "center", children: t('workforce.col.workDays') })] }), withSalary && (_jsxs(TableRow, { children: [parts.map((c, i) => (_jsx(TableCell, { align: "center", className: i === 0 ? 'sub gs' : 'sub', children: t(`workforce.salary.short.${c}`) }, c))), _jsx(TableCell, { align: "center", className: parts.length === 0 ? 'sub gs' : 'sub', children: head('salary', t('workforce.salary.short.total')) })] }))] }), _jsxs(TableBody, { children: [!data &&
+                                            !error &&
+                                            Array.from({ length: 8 }, (_, i) => (_jsx(TableRow, { children: _jsx(TableCell, { colSpan: 20, children: _jsx(Skeleton, { height: 28 }) }) }, i))), data?.items.map((w) => (_jsxs(TableRow, { hover: true, tabIndex: 0, sx: { cursor: 'pointer', '&:focus-visible td': { bgcolor: wf.rowHover }, '&:focus-visible': { outline: `2px solid ${wf.gold}`, outlineOffset: -2 } }, onClick: () => navigate(`/workforce/${kindPath(kind)}/${w.id}`), onKeyDown: (e) => e.key === 'Enter' && navigate(`/workforce/${kindPath(kind)}/${w.id}`), children: [_jsx(TableCell, { className: "pin", children: _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1 }, children: [_jsx(Initials, { name: w.name, size: 28 }), _jsxs(Box, { sx: { minWidth: 0, maxWidth: 240 }, children: [_jsx(Typography, { dir: "auto", sx: { fontSize: 13, fontWeight: 600, color: wf.navy, lineHeight: 1.3, unicodeBidi: 'plaintext', textAlign: 'start' }, children: w.name }), _jsx(Typography, { sx: { fontSize: 11.5, color: wf.textSecondary, textAlign: 'start' }, children: _jsx("bdi", { children: w.workerNo }) })] })] }) }), _jsx(TableCell, { children: _jsx(StatusPill, { placement: w.placement, children: (ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`) }) }), shown('iqama') && (_jsx(TableCell, { children: _jsx("bdi", { children: w.iqama ?? '—' }) })), shown('profession') && _jsx(TableCell, { children: (ar ? w.professionAr : w.professionEn) ?? '—' }), shown('nationality') && _jsx(TableCell, { children: (ar ? w.nationalityAr : w.nationalityEn) ?? '—' }), !staff && shown('sponsor') && (_jsx(TableCell, { sx: { whiteSpace: 'nowrap', fontSize: '12.5px !important' }, children: _jsx("bdi", { children: w.sponsor ?? '—' }) })), withSalary && (_jsxs(_Fragment, { children: [parts.map((c, i) => (_jsx(TableCell, { align: "center", className: i === 0 ? 'gs' : undefined, children: w.salary ? money(w.salary[c]) : '—' }, c))), _jsx(TableCell, { align: "center", className: parts.length === 0 ? 'gs' : undefined, sx: { fontWeight: 700, color: `${wf.navy} !important` }, children: w.salary ? money(w.salary.total) : '—' })] })), shown('joined') && (_jsx(TableCell, { className: withSalary ? 'gs' : undefined, sx: { whiteSpace: 'nowrap' }, children: _jsx("bdi", { children: date(w.projectJoinedOn) }) })), !staff && shown('workDays') && _jsx(TableCell, { align: "center", children: w.workDays ?? '—' })] }, w.id))), data && data.items.length === 0 && (_jsx(TableRow, { children: _jsx(TableCell, { colSpan: 20, align: "center", sx: { py: 5, color: `${wf.textSecondary} !important` }, children: filtered ? t('workforce.ui.noResults') : t('workforce.empty') }) }))] })] }) }), _jsx(TablePagination, { component: "div", count: data?.total ?? 0, page: Math.max(0, page - 1), onPageChange: (_, p) => update({ page: String(p + 1) }), rowsPerPage: pageSize, rowsPerPageOptions: pageSizes, onRowsPerPageChange: (e) => update({ size: Number(e.target.value) === 50 ? null : String(e.target.value) }), labelRowsPerPage: t('workforce.perPage'), labelDisplayedRows: ({ from, to, count }) => t('workforce.rows', { from, to, count }) })] })] }));
 }

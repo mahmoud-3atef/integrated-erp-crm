@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Study only, written 23 October 2026. No code is changed yet; it waits for the user's decisions in §6. |
+| **Status** | Built on 23 October 2026, after the user approved it («موافق طبقه والسيرفر بعدين»). It is applied to the workers' list and file, and to staff (the same pages). The three server items in §2 are deferred. |
 | **Request** | The user's proposal (in chat) to redesign `/workforce/workers` and the worker file. The goal: «الا يتم اضافة او تعديل شيئ يؤثر علي اداء النظام». |
 
 ## 1. What the two pages are today

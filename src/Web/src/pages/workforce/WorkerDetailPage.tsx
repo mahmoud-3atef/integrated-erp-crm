@@ -2,33 +2,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
-import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
-import FlightLandOutlinedIcon from '@mui/icons-material/FlightLandOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
-import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import MoreTimeOutlinedIcon from '@mui/icons-material/MoreTimeOutlined';
 import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
-import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
-import RedeemOutlinedIcon from '@mui/icons-material/RedeemOutlined';
-import RestaurantOutlinedIcon from '@mui/icons-material/RestaurantOutlined';
-import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
-import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
-import TagOutlinedIcon from '@mui/icons-material/TagOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
-import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined';
-import WalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
-import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
-import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
-import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import { Alert, Box, Button, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,23 +19,22 @@ import { photoUrl, profileApi } from '../../api/showroom';
 import { ceoApi } from '../../api/reports';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { FieldBox, FieldSection } from '../../components/FieldSection';
-import { Badge, Initials, PillTabs } from '../../components/ui';
+import { Badge, Initials } from '../../components/ui';
+import { card, CopyButton, NotRecorded, Row, Section, StatusPill, UnderlineTabs, wf } from './workforceUi';
 import { WorkerActions, periodDays } from './WorkerActions';
 import { WorkerInvoices } from './WorkerInvoices';
 import { useService } from '../staff/staff';
 import { WorkerProfileTab } from './WorkerProfileTab';
 import { WorkerCostTab } from './WorkerCostTab';
-import { placementLook } from '../../components/workforce/placement';
 import { useCrumb } from '../../app/breadcrumbs';
 
 type Tab = 'info' | 'actions' | 'invoices' | 'ids' | 'profile' | 'cost';
 
 /**
- * One worker's or staff member's file, laid out as the old employee page (HR_EmployeeDetails.aspx, as the staff file):
- * the hero with the key facts and the dark «ملخص عام» card, pill tabs, then the data sections; the actions tab is the
- * old screen's actions timeline, each action opening its document. Staff have no supplier, agent, current project,
- * work days, invoices, marketing profile or cost.
+ * One worker's or staff member's file (the user's redesign, 2026-10-23; docs/02-target-architecture/22): the title with
+ * the new action, a white identity card with the current project and the key facts, the operational summary, underlined
+ * tabs, then the data sections as labels and values; the actions tab is the old screen's actions timeline, each action
+ * opening its document. Staff have no supplier, agent, current project, work days, invoices, marketing profile or cost.
  */
 export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const { t, i18n } = useTranslation();
@@ -115,7 +92,6 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   }
 
   const w = worker.summary;
-  const look = placementLook[w.placement];
   const status = (ar ? w.statusAr : w.statusEn) ?? t(`workforce.placement.${w.placement}`);
   const date = (value: string | null) =>
     value ? new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value)) : '—';
@@ -145,6 +121,10 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const iqamaEnds = worker.identifiers.find((i) => i.type === 'Iqama' && i.isCurrent)?.expiresOn ?? null;
   const since = (worker.arrivedOn ?? worker.crmCreatedAt)?.slice(0, 10) ?? null;
 
+  const title = t(staff ? 'workforce.ui.staffTitle' : 'workforce.ui.workerTitle');
+  const missing = <NotRecorded />;
+  const text = (value: string | null | undefined, ltr = false) => (value ? ltr ? <bdi>{value}</bdi> : value : missing);
+
   return (
     <Box>
       <ErrorMessage messageKey={error} />
@@ -154,127 +134,104 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
         </Alert>
       )}
 
-      {/* The hero (.cp-ed-hero) and the overview (.cp-ed-summary) */}
-      <Box sx={{ display: 'grid', gap: `${tokens.gap}px`, gridTemplateColumns: { xs: '1fr', lg: staff ? '1fr' : 'minmax(0, 1fr) 380px' }, mb: `${tokens.gap}px` }}>
-        <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 2.75 } }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' } }}>
-            <Stack direction="row" sx={{ gap: 2, alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <Box sx={{ flex: '0 0 auto', borderRadius: '50%', boxShadow: `0 0 0 4px ${tokens.navy50}` }}>
-                {photo ? (
-                  <Box component="img" src={photo} alt="" sx={{ display: 'block', width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center 20%' }} />
-                ) : (
-                  <Initials name={w.name} size={72} />
-                )}
-              </Box>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography component="h1" dir="ltr" sx={{ fontSize: 22, fontWeight: 700, color: tokens.navy800, lineHeight: 1.3, textAlign: 'start', overflowWrap: 'anywhere' }}>
+      {/* The page's title, with the new action and the way back beside it. */}
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+        <Typography component="h1" sx={{ fontSize: 24, fontWeight: 600, color: wf.navy, lineHeight: 1.3 }}>
+          {title}
+        </Typography>
+        <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
+          {can('operations.movements.manage', true) && (
+            <Button variant="contained" startIcon={<MultipleStopOutlinedIcon />} onClick={() => setActing(true)} sx={{ height: 40, borderRadius: wf.control, bgcolor: wf.navy, boxShadow: 'none', px: 2.25, '&:hover': { bgcolor: wf.navyHover, boxShadow: 'none' } }}>
+              {t('movements.new')}
+            </Button>
+          )}
+          <Button variant="outlined" startIcon={<ArrowBackIcon sx={flip} />} onClick={() => navigate(-1)} sx={{ height: 40, borderRadius: wf.control, borderColor: wf.border, color: wf.navy, bgcolor: wf.surface }}>
+            {t('common.back')}
+          </Button>
+        </Stack>
+      </Stack>
+
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: staff ? '1fr' : 'minmax(0, 1fr) 360px' }, mb: 2, alignItems: 'start' }}>
+        {/* Who the worker is: photo, name, number and iqama (copyable), status, arrival and service. */}
+        <Box sx={{ ...(card as object), p: { xs: 2, md: 2.5 } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, alignItems: { sm: 'flex-start' } }}>
+            <Box sx={{ flex: '0 0 auto' }}>
+              {photo ? (
+                <Box component="img" src={photo} alt="" sx={{ display: 'block', width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center 20%', border: `2px solid ${wf.border}` }} />
+              ) : (
+                <Initials name={w.name} size={72} />
+              )}
+            </Box>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, flexWrap: 'wrap' }}>
+                <Typography component="h2" dir="ltr" sx={{ fontSize: 19, fontWeight: 600, color: wf.navy, lineHeight: 1.35, textAlign: 'start', overflowWrap: 'anywhere' }}>
                   {w.name}
                 </Typography>
-                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: '4px 16px', mt: 0.25, fontSize: 12.5, color: tokens.gray600, '& svg': { fontSize: 15, color: tokens.navy400, verticalAlign: 'middle', marginInlineEnd: 0.4 } }}>
-                  <span>
-                    <TagOutlinedIcon />
-                    <bdi>{w.workerNo}</bdi>
-                  </span>
-                  {w.iqama && (
-                    <span>
-                      <BadgeOutlinedIcon />
-                      <bdi>{w.iqama}</bdi>
-                    </span>
-                  )}
-                  {worker.arrivedOn ? (
-                    <span>
-                      <FlightLandOutlinedIcon />
-                      {t('workforce.field.arrived')} <b>{date(worker.arrivedOn)}</b>
-                    </span>
-                  ) : (
-                    worker.crmCreatedAt && (
-                      <span>
-                        <CalendarMonthOutlinedIcon />
-                        {t('workforce.createdOn')} <b>{date(worker.crmCreatedAt)}</b>
-                      </span>
-                    )
-                  )}
-                  {staff && (
-                    <span>
-                      <Badge tone="primary">{t(`workforce.kind.${w.kind}`)}</Badge>
-                    </span>
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
-            <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Typography component="p" sx={{ color: look.tone, fontWeight: 800, fontSize: 18, display: 'flex', alignItems: 'center', gap: 0.75, '& svg': { fontSize: 22 } }}>
-                {look.icon}
-                {status}
-              </Typography>
-              {since && (
-                <Box sx={{ display: 'inline-flex', gap: 1, alignItems: 'center', border: '1px solid #cfe3ec', borderRadius: 99, px: 1.75, py: 0.6, bgcolor: '#f3f9fc', fontSize: 12.5 }}>
-                  <b style={{ color: tokens.navy700 }}>{t('workforce.overview.service')}</b>
-                  <span style={{ color: tokens.gray500 }}>{service(since) ?? '—'}</span>
+                <StatusPill placement={w.placement}>{status}</StatusPill>
+                {staff && <StatusPill placement="Other">{t(`workforce.kind.${w.kind}`)}</StatusPill>}
+              </Stack>
+              <Stack direction="row" sx={{ flexWrap: 'wrap', alignItems: 'center', gap: '4px 18px', mt: 0.75, fontSize: 13, color: wf.textSecondary, '& b': { color: wf.text, fontWeight: 600 } }}>
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                  {t(staff ? 'workforce.field.employeeNo' : 'workforce.col.number')} <b><bdi>{w.workerNo}</bdi></b>
+                  <CopyButton value={w.workerNo} label={t(staff ? 'workforce.field.employeeNo' : 'workforce.col.number')} />
                 </Box>
-              )}
-              {can('operations.movements.manage', true) && (
-                <Button variant="contained" startIcon={<MultipleStopOutlinedIcon />} onClick={() => setActing(true)} sx={{ borderRadius: 99, bgcolor: tokens.navy800, boxShadow: '0 6px 14px rgba(10,60,88,.25)', px: 2.5 }}>
-                  {t('movements.new')}
-                </Button>
-              )}
-              <Button startIcon={<ArrowBackIcon sx={flip} />} onClick={() => navigate(-1)} sx={{ borderRadius: 99 }}>
-                {t('common.back')}
-              </Button>
-            </Stack>
-          </Stack>
-          {w.fromLedger && (
-            <Typography sx={{ mt: 1, fontSize: 12, color: tokens.gray500 }}>{t('workforce.fromLedger', { status: (ar ? w.crmStatusAr : w.crmStatusEn) ?? '—' })}</Typography>
-          )}
-
-          <Box component="dl" sx={{ m: 0, mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.25 }}>
-            {working && (
-              <Fact wide icon={<AccountTreeOutlinedIcon />} label={t('workforce.currentProject')}>
-                {w.projectName ?? '—'}
-                {w.projectJoinedOn && (
-                  <Box component="span" sx={{ fontSize: 12, fontWeight: 500, color: tokens.gray600, marginInlineStart: 1 }}>
-                    · {t('workforce.startedOn')} <b>{date(w.projectJoinedOn)}</b>
-                    {w.workDays !== null && (
-                      <>
-                        {' · '}
-                        <b>{w.workDays}</b> {t('workforce.workDaysSuffix')}
-                      </>
-                    )}
+                {w.iqama && (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                    {t('workforce.field.iqama')} <b><bdi>{w.iqama}</bdi></b>
+                    <CopyButton value={w.iqama} label={t('workforce.field.iqama')} />
                   </Box>
                 )}
-              </Fact>
-            )}
-            {staff && (
-              <Fact wide icon={<CalendarMonthOutlinedIcon />} label={t('workforce.col.hired')}>
-                {date(w.projectJoinedOn)}
-              </Fact>
-            )}
-            <Fact icon={<WorkOutlineOutlinedIcon />} label={t(staff ? 'workforce.field.jobTitle' : 'workforce.col.profession')}>
-              {(ar ? w.professionAr : w.professionEn) ?? '—'}
-            </Fact>
-            <Fact icon={<FlagOutlinedIcon />} label={t('workforce.col.nationality')}>
-              {(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}
-            </Fact>
-            {staff ? (
-              <Fact icon={<CreditCardOutlinedIcon />} label={t('workforce.overview.iqamaEnds')}>
-                {date(iqamaEnds)}
-              </Fact>
-            ) : (
-              <>
-                <Fact icon={<LocalShippingOutlinedIcon />} label={t('workforce.col.sponsor')}>
-                  <bdi>{w.sponsor ?? '—'}</bdi>
-                </Fact>
-                <Fact icon={<CreditCardOutlinedIcon />} label={t('workforce.overview.iqamaEnds')}>
-                  {date(iqamaEnds)}
-                </Fact>
-                <Fact icon={<SupportAgentOutlinedIcon />} label={t('workforce.field.agent')}>
-                  <bdi>{worker.recruitmentAgent ?? '—'}</bdi>
-                </Fact>
-                <Fact icon={<SellOutlinedIcon />} label={t('workforce.overview.lastPrice')}>
-                  {lastPrice === null ? '—' : money(lastPrice)}
-                </Fact>
-              </>
-            )}
+                {worker.arrivedOn ? (
+                  <span>
+                    {t('workforce.field.arrived')} <b>{date(worker.arrivedOn)}</b>
+                  </span>
+                ) : (
+                  worker.crmCreatedAt && (
+                    <span>
+                      {t('workforce.createdOn')} <b>{date(worker.crmCreatedAt)}</b>
+                    </span>
+                  )
+                )}
+                {since && (
+                  <span>
+                    {t('workforce.overview.service')} <b>{service(since) ?? '—'}</b>
+                  </span>
+                )}
+              </Stack>
+              {w.fromLedger && <Typography sx={{ mt: 0.75, fontSize: 12, color: wf.textSecondary }}>{t('workforce.fromLedger', { status: (ar ? w.crmStatusAr : w.crmStatusEn) ?? '—' })}</Typography>}
+            </Box>
+          </Stack>
+
+          {/* The current project (a neutral strip), then the key facts in one simple grid. */}
+          {working && (
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, mt: 2, px: 1.75, py: 1.25, borderRadius: wf.control, bgcolor: wf.subtle, border: `1px solid ${wf.border}`, flexWrap: 'wrap', '& > svg': { color: wf.navy, fontSize: 20 } }}>
+              <AccountTreeOutlinedIcon />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontSize: 12, color: wf.textSecondary }}>{t('workforce.currentProject')}</Typography>
+                <Typography sx={{ fontSize: 14, fontWeight: 600, color: wf.navy, overflowWrap: 'anywhere' }}>{text(w.projectName)}</Typography>
+              </Box>
+              <Box sx={{ flex: 1 }} />
+              {w.projectJoinedOn && (
+                <Typography sx={{ fontSize: 13, color: wf.textSecondary }}>
+                  {t('workforce.startedOn')} <b style={{ color: wf.text }}>{date(w.projectJoinedOn)}</b>
+                  {w.workDays !== null && (
+                    <>
+                      {' · '}
+                      <b style={{ color: wf.text }}>{w.workDays.toLocaleString('en-US')}</b> {t('workforce.workDaysSuffix')}
+                    </>
+                  )}
+                </Typography>
+              )}
+            </Stack>
+          )}
+          <Box component="dl" sx={{ m: 0, mt: 1.5, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, columnGap: 2.5 }}>
+            {staff && <Row label={t('workforce.col.hired')}>{w.projectJoinedOn ? date(w.projectJoinedOn) : missing}</Row>}
+            <Row label={t(staff ? 'workforce.field.jobTitle' : 'workforce.col.profession')}>{text(ar ? w.professionAr : w.professionEn)}</Row>
+            <Row label={t('workforce.col.nationality')}>{text(ar ? w.nationalityAr : w.nationalityEn)}</Row>
+            {!staff && <Row label={t('workforce.col.sponsor')}>{text(w.sponsor, true)}</Row>}
+            <Row label={t('workforce.overview.iqamaEnds')}>{iqamaEnds ? date(iqamaEnds) : missing}</Row>
+            {!staff && <Row label={t('workforce.field.agent')}>{text(worker.recruitmentAgent, true)}</Row>}
+            {!staff && <Row label={t('workforce.overview.lastPrice')}>{lastPrice === null ? missing : money(lastPrice)}</Row>}
           </Box>
         </Box>
 
@@ -283,215 +240,185 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
         )}
       </Box>
 
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
-        <PillTabs<Tab>
+      <Box sx={{ ...(card as object), overflow: 'hidden' }}>
+        <UnderlineTabs<Tab>
           value={tab}
           onChange={setTab}
+          label={title}
           options={[
             { value: 'info', label: t(staff ? 'workforce.tabs.staffInfo' : 'workforce.tabs.info') },
-            { value: 'actions', label: periods ? t(staff ? 'workforce.tabs.staffActionsCount' : 'workforce.tabs.actionsCount', { count: periods.length }) : t(staff ? 'workforce.tabs.staffActions' : 'workforce.tabs.actions') },
+            { value: 'actions', label: t(staff ? 'workforce.tabs.staffActions' : 'workforce.tabs.actions'), count: periods?.length },
             ...(staff || !can('billing.invoices.view', true) ? [] : [{ value: 'invoices' as const, label: t('workforce.tabs.invoices') }]),
-            { value: 'ids', label: t('workforce.tabs.ids', { count: worker.identifiers.length }) },
+            { value: 'ids', label: t('workforce.ui.idsTab'), count: worker.identifiers.length },
             ...(staff ? [] : [{ value: 'profile' as const, label: t('workforce.tabs.profile') }]),
             ...(staff || !can('workforce.costs.view', true) ? [] : [{ value: 'cost' as const, label: t('workforce.tabs.cost') }]),
           ]}
         />
 
-        {tab === 'invoices' ? (
-          <WorkerInvoices workerId={id!} />
-        ) : tab === 'actions' ? (
-          periods ? <WorkerActions workerId={id!} periods={periods} withDocuments={!staff} /> : <LinearProgress />
-        ) : tab === 'cost' ? (
-          <WorkerCostTab workerId={id!} name={w.name} />
-        ) : tab === 'profile' ? (
-          <WorkerProfileTab workerId={id!} />
-        ) : tab === 'info' ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5, alignItems: 'start' }}>
-            <Stack spacing={2.5}>
-              <FieldSection title={t('workforce.sections.basic')} icon={<BadgeOutlinedIcon />}>
-                <FieldBox label={t(staff ? 'workforce.field.employeeNo' : 'workforce.col.number')} icon={<TagOutlinedIcon />}>
-                  <span dir="ltr">{w.workerNo}</span>
-                </FieldBox>
-                <FieldBox label={t('workforce.field.iqama')} icon={<CreditCardOutlinedIcon />}>
-                  <span dir="ltr">{w.iqama ?? '—'}</span>
-                </FieldBox>
-                <FieldBox label={t('workforce.field.name')} icon={<PersonOutlinedIcon />} wide>
-                  <span dir="ltr">{w.name}</span>
-                </FieldBox>
-                <FieldBox label={t('workforce.col.nationality')} icon={<FlagOutlinedIcon />}>
-                  {(ar ? w.nationalityAr : w.nationalityEn) ?? '—'}
-                </FieldBox>
-                <FieldBox label={t('workforce.col.status')} icon={look.icon}>
-                  <Box component="span" sx={{ color: look.tone }}>
-                    {status}
-                  </Box>
-                </FieldBox>
-              </FieldSection>
+        <Box role="tabpanel" sx={{ p: { xs: 1.5, md: 2.5 } }}>
+          {tab === 'invoices' ? (
+            <WorkerInvoices workerId={id!} />
+          ) : tab === 'actions' ? (
+            periods ? <WorkerActions workerId={id!} periods={periods} withDocuments={!staff} /> : <LinearProgress />
+          ) : tab === 'cost' ? (
+            <WorkerCostTab workerId={id!} name={w.name} />
+          ) : tab === 'profile' ? (
+            <WorkerProfileTab workerId={id!} />
+          ) : tab === 'info' ? (
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2, alignItems: 'start' }}>
+              <Stack spacing={2}>
+                <Section title={t('workforce.sections.basic')} icon={<BadgeOutlinedIcon />}>
+                  <Row label={t(staff ? 'workforce.field.employeeNo' : 'workforce.col.number')}>
+                    <bdi>{w.workerNo}</bdi>
+                  </Row>
+                  <Row label={t('workforce.field.iqama')}>{text(w.iqama, true)}</Row>
+                  <Row label={t('workforce.field.name')} wide>
+                    <bdi>{w.name}</bdi>
+                  </Row>
+                  <Row label={t('workforce.col.nationality')}>{text(ar ? w.nationalityAr : w.nationalityEn)}</Row>
+                  <Row label={t('workforce.col.status')}>
+                    <StatusPill placement={w.placement}>{status}</StatusPill>
+                  </Row>
+                </Section>
 
-              {staff ? (
-                <FieldSection title={t('workforce.sections.staffJob')} icon={<WorkOutlineOutlinedIcon />}>
-                  <FieldBox label={t('workforce.field.jobTitle')} icon={<WorkOutlineOutlinedIcon />} wide>
-                    {(ar ? w.professionAr : w.professionEn) ?? '—'}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.col.hired')} icon={<CalendarMonthOutlinedIcon />}>
-                    {date(w.projectJoinedOn)}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.arrived')} icon={<FlightLandOutlinedIcon />}>
-                    {date(worker.arrivedOn)}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.iqamaProfession')} icon={<CreditCardOutlinedIcon />} wide>
-                    {(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn) ?? '—'}
-                  </FieldBox>
-                </FieldSection>
-              ) : (
-                <FieldSection title={t('workforce.sections.job')} icon={<AccountTreeOutlinedIcon />}>
-                  <FieldBox label={t('workforce.col.profession')} icon={<WorkOutlineOutlinedIcon />}>
-                    {(ar ? w.professionAr : w.professionEn) ?? '—'}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.col.sponsor')} icon={<LocalShippingOutlinedIcon />}>
-                    <span dir="ltr">{w.sponsor ?? '—'}</span>
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.project')} icon={<AccountTreeOutlinedIcon />} wide>
-                    {w.projectName ?? '—'}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.projectJoined')} icon={<CalendarMonthOutlinedIcon />}>
-                    {date(w.projectJoinedOn)}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.col.workDays')} icon={<ScheduleOutlinedIcon />}>
-                    {days(w.workDays)}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.iqamaProfession')} icon={<CreditCardOutlinedIcon />}>
-                    {(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn) ?? '—'}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.arrived')} icon={<FlightLandOutlinedIcon />}>
-                    {date(worker.arrivedOn)}
-                  </FieldBox>
-                  <FieldBox label={t('workforce.field.agent')} icon={<SupportAgentOutlinedIcon />} wide>
-                    <span dir="ltr">{worker.recruitmentAgent ?? '—'}</span>
-                  </FieldBox>
-                </FieldSection>
-              )}
-            </Stack>
-
-            <Stack spacing={2.5}>
-              <FieldSection title={t('workforce.sections.salary')} icon={<PaidOutlinedIcon />} tone="green">
-                {w.salary ? (
-                  <>
-                    <FieldBox label={t('workforce.salary.basic')} icon={<PaidOutlinedIcon />}>{money(w.salary.basic)}</FieldBox>
-                    <FieldBox label={t('workforce.salary.housing')} icon={<HomeOutlinedIcon />}>{money(w.salary.housing)}</FieldBox>
-                    <FieldBox label={t('workforce.salary.food')} icon={<RestaurantOutlinedIcon />}>{money(w.salary.food)}</FieldBox>
-                    <FieldBox label={t('workforce.salary.transport')} icon={<DirectionsCarOutlinedIcon />}>{money(w.salary.transport)}</FieldBox>
-                    <FieldBox label={t('workforce.salary.overtime')} icon={<MoreTimeOutlinedIcon />}>{money(w.salary.overtime)}</FieldBox>
-                    <FieldBox label={t('workforce.salary.other')} icon={<RedeemOutlinedIcon />}>{money(w.salary.other)}</FieldBox>
-                    <FieldBox label={t(staff ? 'workforce.salary.fixed' : 'workforce.salary.project')} icon={<WorkOutlineOutlinedIcon />}>{money(w.salary.project)}</FieldBox>
-                    {w.salary.hardship > 0 && (
-                      <FieldBox label={t('workforce.salary.hardship')} icon={<WorkOutlineOutlinedIcon />}>{money(w.salary.hardship)}</FieldBox>
-                    )}
-                    <FieldBox label={t('workforce.salary.total')} icon={<WalletOutlinedIcon />} highlight wide>
-                      {money(w.salary.total)}
-                    </FieldBox>
-                  </>
+                {staff ? (
+                  <Section title={t('workforce.sections.staffJob')} icon={<WorkOutlineOutlinedIcon />}>
+                    <Row label={t('workforce.field.jobTitle')} wide>{text(ar ? w.professionAr : w.professionEn)}</Row>
+                    <Row label={t('workforce.col.hired')}>{w.projectJoinedOn ? date(w.projectJoinedOn) : missing}</Row>
+                    <Row label={t('workforce.field.arrived')}>{worker.arrivedOn ? date(worker.arrivedOn) : missing}</Row>
+                    <Row label={t('workforce.field.iqamaProfession')} wide>{text(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn)}</Row>
+                  </Section>
                 ) : (
-                  <Typography sx={{ gridColumn: '1 / -1', fontSize: 13, color: tokens.gray500 }}>{t('workforce.noSalaryPermission')}</Typography>
+                  <Section title={t('workforce.sections.job')} icon={<AccountTreeOutlinedIcon />}>
+                    <Row label={t('workforce.col.profession')}>{text(ar ? w.professionAr : w.professionEn)}</Row>
+                    <Row label={t('workforce.col.sponsor')}>{text(w.sponsor, true)}</Row>
+                    <Row label={t('workforce.field.project')} wide>{text(w.projectName)}</Row>
+                    <Row label={t('workforce.field.projectJoined')}>{w.projectJoinedOn ? date(w.projectJoinedOn) : missing}</Row>
+                    <Row label={t('workforce.col.workDays')}>{days(w.workDays)}</Row>
+                    <Row label={t('workforce.field.iqamaProfession')}>{text(ar ? worker.iqamaProfessionAr : worker.iqamaProfessionEn)}</Row>
+                    <Row label={t('workforce.field.arrived')}>{worker.arrivedOn ? date(worker.arrivedOn) : missing}</Row>
+                    <Row label={t('workforce.field.agent')} wide>{text(worker.recruitmentAgent, true)}</Row>
+                  </Section>
                 )}
-              </FieldSection>
+              </Stack>
 
-              <FieldSection title={t('workforce.sections.contract')} icon={<DescriptionOutlinedIcon />} tone="sky">
-                <FieldBox label={t('workforce.field.contractStart')} icon={<EventAvailableOutlinedIcon />}>{date(worker.contract.startsOn)}</FieldBox>
-                <FieldBox label={t('workforce.field.contractMonths')} icon={<HourglassBottomOutlinedIcon />}>
-                  {worker.contract.months ?? '—'}
-                  {worker.contract.months !== null && unit(t('workforce.months'))}
-                </FieldBox>
-                <FieldBox label={t('workforce.field.contractEnd')} icon={<EventBusyOutlinedIcon />}>{date(worker.contract.endsOn)}</FieldBox>
-              </FieldSection>
+              <Stack spacing={2}>
+                <Section title={t('workforce.sections.salary')} icon={<PaidOutlinedIcon />}>
+                  {w.salary ? (
+                    <>
+                      <Row label={t('workforce.salary.basic')}>{money(w.salary.basic)}</Row>
+                      <Row label={t('workforce.salary.housing')}>{money(w.salary.housing)}</Row>
+                      <Row label={t('workforce.salary.food')}>{money(w.salary.food)}</Row>
+                      <Row label={t('workforce.salary.transport')}>{money(w.salary.transport)}</Row>
+                      <Row label={t('workforce.salary.overtime')}>{money(w.salary.overtime)}</Row>
+                      <Row label={t('workforce.salary.other')}>{money(w.salary.other)}</Row>
+                      <Row label={t(staff ? 'workforce.salary.fixed' : 'workforce.salary.project')}>{money(w.salary.project)}</Row>
+                      {w.salary.hardship > 0 && <Row label={t('workforce.salary.hardship')}>{money(w.salary.hardship)}</Row>}
+                      <Row label={t('workforce.salary.total')} highlight>
+                        {money(w.salary.total)}
+                      </Row>
+                    </>
+                  ) : (
+                    <Typography sx={{ gridColumn: '1 / -1', fontSize: 13, color: wf.textSecondary }}>{t('workforce.noSalaryPermission')}</Typography>
+                  )}
+                </Section>
 
-              <FieldSection title={t('workforce.sections.leave')} icon={<BeachAccessOutlinedIcon />} tone="sky">
-                <FieldBox label={t('workforce.leave.annual')} icon={<FlightLandOutlinedIcon />}>{days(worker.leave.annualDays)}</FieldBox>
-                <FieldBox label={t('workforce.leave.balance')} icon={<WalletOutlinedIcon />}>{days(worker.leave.balance)}</FieldBox>
-                <FieldBox label={t('workforce.leave.oldConsumed')} icon={<HistoryOutlinedIcon />}>{days(worker.leave.oldConsumed)}</FieldBox>
-                <FieldBox label={t('workforce.leave.consumed')} icon={<ScheduleOutlinedIcon />}>{days(worker.leave.consumed)}</FieldBox>
-                <FieldBox label={t('workforce.leave.remaining')} icon={<BeachAccessOutlinedIcon />} highlight wide>{days(worker.leave.remaining)}</FieldBox>
-              </FieldSection>
-            </Stack>
-          </Box>
-        ) : (
-          <Identifiers worker={worker} date={date} />
-        )}
+                <Section title={t('workforce.sections.contract')} icon={<DescriptionOutlinedIcon />}>
+                  <Row label={t('workforce.field.contractStart')}>{worker.contract.startsOn ? date(worker.contract.startsOn) : missing}</Row>
+                  <Row label={t('workforce.field.contractMonths')}>
+                    {worker.contract.months === null ? missing : (
+                      <>
+                        {worker.contract.months}
+                        {unit(t('workforce.months'))}
+                      </>
+                    )}
+                  </Row>
+                  <Row label={t('workforce.field.contractEnd')}>{worker.contract.endsOn ? date(worker.contract.endsOn) : missing}</Row>
+                </Section>
 
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 2.5, fontSize: 12.5, color: tokens.gray500 }}>
-          <InfoOutlinedIcon sx={{ fontSize: 16 }} />
-          {t('workforce.readOnly')}
-        </Stack>
+                <Section title={t('workforce.sections.leave')} icon={<BeachAccessOutlinedIcon />}>
+                  <Row label={t('workforce.leave.annual')}>{days(worker.leave.annualDays)}</Row>
+                  <Row label={t('workforce.leave.balance')}>{days(worker.leave.balance)}</Row>
+                  <Row label={t('workforce.leave.oldConsumed')}>{days(worker.leave.oldConsumed)}</Row>
+                  <Row label={t('workforce.leave.consumed')}>{days(worker.leave.consumed)}</Row>
+                  <Row label={t('workforce.leave.remaining')} highlight>
+                    {days(worker.leave.remaining)}
+                  </Row>
+                </Section>
+              </Stack>
+            </Box>
+          ) : (
+            <Identifiers worker={worker} date={date} />
+          )}
+
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 2, fontSize: 12.5, color: wf.textSecondary }}>
+            <InfoOutlinedIcon sx={{ fontSize: 16 }} />
+            {t('workforce.readOnly')}
+          </Stack>
+        </Box>
       </Box>
       {acting && <ActionDialog workerId={w.id} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
     </Box>
   );
 }
 
-function Fact({ icon, label, children, wide }: { icon: ReactNode; label: string; children: ReactNode; wide?: boolean }) {
-  return (
-    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, p: '10px 14px', borderRadius: `${tokens.radius}px`, bgcolor: wide ? tokens.navy50 : tokens.gray50, minWidth: 0 }}>
-      <Typography component="dt" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 12, color: tokens.gray500, mb: 0.25, '& svg': { fontSize: 16, color: tokens.navy400 } }}>
-        {icon}
-        {label}
-      </Typography>
-      <Box component="dd" sx={{ m: 0, fontSize: wide ? 15 : 14, fontWeight: 600, color: tokens.navy800, overflowWrap: 'anywhere' }}>
-        {children}
-      </Box>
-    </Box>
-  );
-}
-
-/** The dark overview card (.cp-ed-summary): the share of the days on projects since arrival, and the last month's profit. */
+/**
+ * «الملخص التشغيلي»: the share of the days on projects since arrival (project days ÷ project and housing days, as
+ * before), as a small navy ring, then the project and housing days, the projects and the last month's profit.
+ */
 function Overview({ usage, projectDays, housingDays, projects, profit, loading }: { usage: number | null; projectDays: number; housingDays: number; projects: number; profit: number | null | undefined; loading: boolean }) {
   const { t } = useTranslation();
   const n = (v: number) => v.toLocaleString('en-US');
-  const rows: { icon: ReactNode; label: string; value: ReactNode }[] = [
-    { icon: <WorkOutlineOutlinedIcon />, label: t('workforce.overview.projectDays'), value: n(projectDays) },
-    { icon: <HomeOutlinedIcon />, label: t('workforce.overview.housingDays'), value: n(housingDays) },
-    { icon: <AccountTreeOutlinedIcon />, label: t('workforce.overview.projects'), value: n(projects) },
+  const rows: { label: string; value: ReactNode }[] = [
+    { label: t('workforce.overview.projectDays'), value: n(projectDays) },
+    { label: t('workforce.overview.housingDays'), value: n(housingDays) },
+    { label: t('workforce.overview.projects'), value: n(projects) },
   ];
   if (profit !== undefined) {
     rows.push({
-      icon: <TrendingUpOutlinedIcon />,
       label: t('workforce.overview.profit'),
       value: profit === null ? '—' : (
         <>
-          {profit.toLocaleString('en-US', { maximumFractionDigits: 0 })} <small style={{ fontWeight: 500, opacity: 0.8 }}>{t('workforce.sar')}</small>
+          {profit.toLocaleString('en-US', { maximumFractionDigits: 0 })} <small style={{ fontWeight: 500, color: wf.textSecondary }}>{t('workforce.sar')}</small>
         </>
       ),
     });
   }
   const ring = usage ?? 0;
+  const r = 30;
+  const circumference = 2 * Math.PI * r;
   return (
-    <Box sx={{ borderRadius: `${tokens.radiusLg}px`, p: 2.5, color: '#fff', background: 'linear-gradient(135deg, #0a3c58 0%, #0d5e72 55%, #127c86 100%)', boxShadow: tokens.shadowSm }}>
+    <Box component="section" sx={{ ...(card as object), p: 2.5 }}>
+      <Typography component="h2" sx={{ fontSize: 16, fontWeight: 600, color: wf.navy, mb: 1.5 }}>
+        {t('workforce.ui.opsTitle')}
+      </Typography>
       <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
-        <Box role="img" aria-label={t('workforce.overview.usage', { value: usage ?? '—' })} sx={{ flex: '0 0 auto', width: 96, height: 96, borderRadius: '50%', background: `conic-gradient(#7ee0a8 0 ${ring}%, rgba(255,255,255,.18) ${ring}% 100%)`, display: 'grid', placeItems: 'center' }}>
-          <Box sx={{ width: 78, height: 78, borderRadius: '50%', bgcolor: '#0c4a63', display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 800 }}>
+        <Box role="img" aria-label={t('workforce.overview.usage', { value: usage ?? '—' })} sx={{ position: 'relative', flex: '0 0 auto', width: 76, height: 76 }}>
+          <svg width="76" height="76" viewBox="0 0 76 76" aria-hidden>
+            <circle cx="38" cy="38" r={r} fill="none" stroke={wf.subtle} strokeWidth="7" />
+            {ring > 0 && <circle cx="38" cy="38" r={r} fill="none" stroke={wf.navy} strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(circumference * ring) / 100} ${circumference}`} transform="rotate(-90 38 38)" />}
+          </svg>
+          <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 17, fontWeight: 600, color: wf.navy, fontVariantNumeric: 'tabular-nums' }}>
             <bdi>{loading || usage === null ? '—' : `${usage}%`}</bdi>
           </Box>
         </Box>
-        <Box>
-          <Typography sx={{ fontSize: 19, fontWeight: 800, display: 'flex', gap: 0.75, alignItems: 'center' }}>
-            <ReceiptLongOutlinedIcon />
-            {t('workforce.overview.title')}
-          </Typography>
-          <Typography sx={{ mt: 0.5, fontSize: 12.5, opacity: 0.85 }}>{t('workforce.overview.usageHint')}</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, color: wf.text }}>{t('workforce.ui.usageLabel')}</Typography>
+          <Typography sx={{ mt: 0.25, fontSize: 12.5, color: wf.textSecondary, lineHeight: 1.5 }}>{t('workforce.ui.usageHint')}</Typography>
         </Box>
       </Stack>
-      <Stack sx={{ gap: 0.9, mt: 2 }}>
-        {rows.map((r) => (
-          <Stack key={r.label} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', bgcolor: 'rgba(255,255,255,.1)', borderRadius: '10px', px: 1.5, py: 0.9, fontSize: 13, '& svg': { fontSize: 17, opacity: 0.85 } }}>
-            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-              {r.icon}
-              {r.label}
+      <Box component="dl" sx={{ m: 0, mt: 1.5 }}>
+        {rows.map((row) => (
+          <Stack key={row.label} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', py: 1, borderTop: `1px solid ${wf.subtle}`, fontSize: 13.5 }}>
+            <Box component="dt" sx={{ color: wf.textSecondary }}>
+              {row.label}
             </Box>
-            <Box component="b" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              {r.value}
+            <Box component="dd" sx={{ m: 0, fontWeight: 600, color: wf.text, fontVariantNumeric: 'tabular-nums' }}>
+              {row.value}
             </Box>
           </Stack>
         ))}
-      </Stack>
+      </Box>
     </Box>
   );
 }

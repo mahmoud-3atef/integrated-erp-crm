@@ -1639,6 +1639,30 @@
         "Returned": "Returned for changes",
         "Issued": "Issued"
       }
+    },
+    "ui": {
+      "readOnlyChip": "Read only · from the old system's sync",
+      "cards": "Filter by status",
+      "scope": "The cards count every status of the current search; the table and its total leave out the workers of inactive projects unless asked for.",
+      "searchLabel": "Search",
+      "allStatuses": "All statuses",
+      "total": {
+        "workers": "Total workers",
+        "staff": "Total staff"
+      },
+      "applied": "Applied filters:",
+      "clearAll": "Clear all",
+      "retry": "Retry",
+      "noResults": "No results match the search or the filter.",
+      "notRecorded": "Not recorded",
+      "copy": "Copy {{what}}",
+      "copied": "Copied",
+      "workerTitle": "Worker details",
+      "staffTitle": "Employee details",
+      "opsTitle": "Operational summary",
+      "usageLabel": "Share of days on projects",
+      "usageHint": "Project days (the customer's vacation included) out of all project and housing days since arrival.",
+      "idsTab": "IDs and documents"
     }
   },
   "commercial": {
