@@ -32,13 +32,11 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import NotificationImportantOutlinedIcon from '@mui/icons-material/NotificationImportantOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
-import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import MultipleStopOutlinedIcon from '@mui/icons-material/MultipleStopOutlined';
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
@@ -52,7 +50,7 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import TimelapseOutlinedIcon from '@mui/icons-material/TimelapseOutlined';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import { Box, ButtonBase, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Drawer, IconButton, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -66,6 +64,8 @@ import { companyName } from '../pages/ChooseCompanyPage';
 import { Breadcrumbs, CrumbProvider } from './breadcrumbs';
 import { SessionProvider, useSession } from './session';
 import { tokens } from './theme';
+import { SmartDock, dockWidth } from '../components/nav/SmartDock';
+import type { DockModule } from '../components/nav/dockModel';
 
 interface MenuItem {
   path: string;
@@ -226,24 +226,18 @@ export function AppShell() {
 
 function Shell() {
   const { can } = useSession();
+  const { t } = useTranslation();
   const theme = useTheme();
   const wide = useMediaQuery(theme.breakpoints.up('md'));
+  const location = useLocation();
+  const taskCount = useTaskCount(location.pathname);
   const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(readPinned);
-  // An item was just chosen on the folded rail: it folds at once (the user's request, 2026-10-23), and opens again only
-  // when the mouse comes back after leaving it.
-  const [picked, setPicked] = useState(false);
-  const fold = () => {
-    if (pinned) return;
-    setPicked(true);
-    // The chosen item keeps the focus, which would keep the rail open (it opens on focus for the keyboard).
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  };
-  const togglePin = () => {
-    const next = !pinned;
-    setPinned(next);
+  const [compact, setCompact] = useState(readCompact);
+  const toggleCompact = () => {
+    const next = !compact;
+    setCompact(next);
     try {
-      window.localStorage.setItem(pinKey, next ? '1' : '0');
+      window.localStorage.setItem(compactKey, next ? '1' : '0');
     } catch {
       // The choice simply is not remembered (private window, blocked storage).
     }
@@ -252,6 +246,12 @@ function Shell() {
   const sections = menu
     .map((section) => ({ ...section, items: section.items.filter((item) => (item.anyOf ? item.anyOf.some((code) => can(code)) : !item.permission || can(item.permission, item.companyWide))) }))
     .filter((section) => section.items.length > 0);
+  const modules = toModules(sections, taskCount);
+  const brand = (
+    <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 44, height: 44, borderRadius: '50%', bgcolor: '#fff', overflow: 'hidden' }}>
+      <Box component="img" src="/brand/carepro-logo.png" alt="" sx={{ width: 38, height: 'auto' }} />
+    </Box>
+  );
 
   return (
     <Box sx={{ display: 'flex', gap: `${tokens.gap}px`, minHeight: '100dvh', p: { xs: 1, md: `${tokens.gap}px` }, bgcolor: 'background.default' }}>
@@ -262,31 +262,19 @@ function Shell() {
             position: 'sticky',
             top: tokens.gap,
             zIndex: 40,
-            flex: `0 0 ${pinned ? tokens.sidebarWidth : railWidth}px`,
+            flex: `0 0 ${compact ? dockWidth.compact : dockWidth.expanded}px`,
             height: `calc(100dvh - ${tokens.gap * 2}px)`,
-            transition: 'flex-basis .22s ease',
+            transition: 'flex-basis 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+            '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
           }}
-          onMouseLeave={() => setPicked(false)}
         >
-          <Box
-            sx={{
-              position: 'absolute',
-              insetBlock: 0,
-              insetInlineStart: 0,
-              width: pinned ? tokens.sidebarWidth : railWidth,
-              borderRadius: `${tokens.radiusLg}px`,
-              boxShadow: tokens.shadowMd,
-              overflow: 'hidden',
-              transition: 'width .22s ease, box-shadow .22s ease',
-              ...(pinned ? {} : picked ? pickedStyles : railStyles),
-            }}
-          >
-            <Sidebar sections={sections} pinned={pinned} onPin={togglePin} onNavigate={fold} />
-          </Box>
+          <SmartDock modules={modules} compact={compact} onToggleCompact={toggleCompact} brand={brand} title={t('app.name')} subtitle={t('app.tagline')} />
         </Box>
       ) : (
-        <Drawer open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: tokens.sidebarWidth, border: 0 } } }}>
-          <Sidebar sections={sections} onNavigate={() => setOpen(false)} />
+        <Drawer open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: dockWidth.expanded, border: 0, bgcolor: 'transparent', boxShadow: 'none' } } }}>
+          <Box sx={{ position: 'relative', height: '100%' }}>
+            <SmartDock modules={modules} magnify={false} onNavigate={() => setOpen(false)} brand={brand} title={t('app.name')} subtitle={t('app.tagline')} />
+          </Box>
         </Drawer>
       )}
 
@@ -300,217 +288,35 @@ function Shell() {
   );
 }
 
-const railWidth = 76;
-const pinKey = 'erp.sidebarPinned';
-const folded = '&:not(:hover):not(:focus-within)';
+const compactKey = 'erp.sidebarCompact';
 
 /**
- * The folded rail (as on the old portal): icons only; the mouse resting on it (a moment, not passing over) or the
- * keyboard's focus opens it over the page without moving the page.
+ * Compact (icons only) or expanded, as the user left it (this browser only). Before the Dock, the menu was a folded
+ * rail unless pinned open: that choice carries over.
  */
-const railStyles = {
-  '&:hover, &:focus-within': { width: tokens.sidebarWidth, boxShadow: '0 20px 50px rgba(7,45,67,.35)', transitionDelay: '.12s' },
-  [`${folded} .rail-fade`]: { opacity: 0 },
-  [`${folded} .rail-wide`]: { display: 'none' },
-  [`${folded} .rail-line`]: { display: 'block' },
-  [`${folded} .rail-current`]: { bgcolor: 'rgba(255,255,255,.16)' },
-} as const;
-
-/** Just after an item was chosen: folded, even with the mouse still on it (texts hidden as on the rail). */
-const pickedStyles = {
-  '& .rail-fade': { opacity: 0 },
-  '& .rail-wide': { display: 'none' },
-  '& .rail-line': { display: 'block' },
-  '& .rail-current': { bgcolor: 'rgba(255,255,255,.16)' },
-} as const;
-
-/** Folded unless the user pinned it open (remembered in this browser only). */
-function readPinned() {
+function readCompact() {
   try {
-    return window.localStorage.getItem(pinKey) === '1';
+    const saved = window.localStorage.getItem(compactKey);
+    return saved !== null ? saved === '1' : window.localStorage.getItem('erp.sidebarPinned') !== '1';
   } catch {
     return false;
   }
 }
 
-/**
- * The navigation as on the old portal: the brand, the home items, then one group per section opening on a click (one
- * open at a time, the current page's group open). Folded, it is a rail of icons: the texts fade out, the section
- * titles become lines and the groups show their icons only.
- */
-function Sidebar({ sections, pinned, onPin, onNavigate }: { sections: MenuSection[]; pinned?: boolean; onPin?: () => void; onNavigate?: () => void }) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const taskCount = useTaskCount(location.pathname);
-  // The item whose path matches the page best (/housing/showroom is not also «/housing»).
-  const best = sections
-    .flatMap((section) => section.items.map((item) => item.path))
-    .filter((path) => isActive(path, location.pathname))
-    .sort((a, b) => b.length - a.length)[0];
-  const current = sections.find((section) => section.titleKey && section.items.some((item) => item.path === best))?.titleKey;
-  const [openKey, setOpenKey] = useState<string | undefined>(current);
-  useEffect(() => setOpenKey(current), [current]);
-
-  const text = { whiteSpace: 'nowrap', overflow: 'hidden', transition: 'opacity .15s' } as const;
-  const badge = (active: boolean) => (
-    <Box
-      component="span"
-      className="rail-fade"
-      aria-label={t('tasks.waiting', { count: taskCount })}
-      sx={{
-        marginInlineStart: 'auto',
-        minWidth: 22,
-        px: 0.9,
-        borderRadius: 999,
-        fontSize: 11,
-        fontWeight: 700,
-        textAlign: 'center',
-        bgcolor: active ? tokens.navy700 : '#fff',
-        color: active ? '#fff' : tokens.navy700,
-        ...text,
-      }}
-    >
-      {taskCount}
-    </Box>
-  );
-  const link = (item: MenuItem, sub: boolean) => {
-    const active = item.path === best;
-    return (
-      <ButtonBase
-        key={item.path}
-        onClick={() => {
-          navigate(item.path);
-          onNavigate?.();
-        }}
-        aria-current={active ? 'page' : undefined}
-        title={t(item.labelKey)}
-        sx={{
-          display: 'flex',
-          justifyContent: 'flex-start',
-          gap: 1.5,
-          width: '100%',
-          px: '16px',
-          py: sub ? 1 : 1.25,
-          mb: 0.4,
-          borderRadius: 999,
-          fontSize: sub ? 13 : 13.5,
-          fontWeight: active ? 700 : 500,
-          textAlign: 'start',
-          color: active ? tokens.navy700 : sub ? 'rgba(255,255,255,.74)' : 'rgba(255,255,255,.86)',
-          bgcolor: active ? '#fff' : 'transparent',
-          boxShadow: active ? '0 6px 16px rgba(0,0,0,.14)' : 'none',
-          transition: 'background-color .15s, color .15s',
-          '&:hover': { bgcolor: active ? '#fff' : 'rgba(255,255,255,.09)', color: active ? tokens.navy700 : '#fff' },
-          '& > svg': { flex: '0 0 auto', fontSize: sub ? 18 : 20, color: active ? tokens.navy700 : sub ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.9)' },
-        }}
-      >
-        {item.icon}
-        <Box component="span" className="rail-fade" sx={text}>
-          {t(item.labelKey)}
-        </Box>
-        {item.showTaskCount && taskCount > 0 && badge(active)}
-      </ButtonBase>
-    );
-  };
-
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: tokens.sidebarWidth, bgcolor: tokens.navy700, color: '#fff' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: '15px', pt: 2.75, pb: 2.25 }}>
-        <Box sx={{ display: 'grid', placeItems: 'center', flex: '0 0 auto', width: 46, height: 46, borderRadius: '50%', bgcolor: '#fff', overflow: 'hidden' }}>
-          <Box component="img" src="/brand/carepro-logo.png" alt="" sx={{ width: 40, height: 'auto' }} />
-        </Box>
-        <Box className="rail-fade" sx={{ minWidth: 0, flex: 1, ...text }}>
-          <Typography noWrap sx={{ fontWeight: 700, fontSize: 15.5, lineHeight: 1.2, color: '#fff' }}>{t('app.name')}</Typography>
-          <Typography noWrap sx={{ fontSize: 11.5, color: 'rgba(255,255,255,.6)' }}>{t('app.tagline')}</Typography>
-        </Box>
-        {onPin && (
-          <Tooltip title={pinned ? t('menu.unpin') : t('menu.pin')}>
-            <IconButton
-              onClick={onPin}
-              aria-label={pinned ? t('menu.unpin') : t('menu.pin')}
-              aria-pressed={pinned}
-              size="small"
-              className="rail-wide"
-              sx={{
-                flex: '0 0 auto',
-                width: 32,
-                height: 32,
-                bgcolor: pinned ? '#fff' : 'rgba(255,255,255,.1)',
-                color: pinned ? tokens.navy700 : 'rgba(255,255,255,.75)',
-                transform: pinned ? 'none' : 'rotate(45deg)',
-                transition: 'background-color .15s, color .15s, transform .2s',
-                '&:hover': { bgcolor: pinned ? '#fff' : 'rgba(255,255,255,.2)', color: pinned ? tokens.navy700 : '#fff' },
-                '& svg': { fontSize: 17 },
-              }}
-            >
-              <PushPinOutlinedIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Box>
-
-      <Box component="nav" aria-label={t('menu.label')} sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 1.5, pb: 1.5, scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,.2) transparent' }}>
-        {sections.map((section, index) => {
-          if (!section.titleKey) {
-            return <Box key={index}>{section.items.map((item) => link(item, false))}</Box>;
-          }
-
-          const key = section.titleKey;
-          const isOpen = openKey === key;
-          const holdsCurrent = current === key;
-          const holdsTasks = taskCount > 0 && section.items.some((item) => item.showTaskCount);
-          return (
-            <Box key={key}>
-              {index === 1 && (
-                <>
-                  <Typography noWrap className="rail-wide" sx={{ px: 1.5, pt: 2, pb: 0.75, fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,.45)' }}>
-                    {t('menu.sections')}
-                  </Typography>
-                  <Box aria-hidden className="rail-line" sx={{ display: 'none', height: '1px', my: 1.5, mx: 1.25, bgcolor: 'rgba(255,255,255,.14)' }} />
-                </>
-              )}
-              <ButtonBase
-                onClick={() => setOpenKey(isOpen ? undefined : key)}
-                aria-expanded={isOpen}
-                title={t(key)}
-                className={holdsCurrent ? 'rail-current' : undefined}
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  gap: 1.5,
-                  width: '100%',
-                  px: '16px',
-                  py: 1.25,
-                  mb: 0.4,
-                  borderRadius: 999,
-                  fontSize: 13.5,
-                  fontWeight: 500,
-                  textAlign: 'start',
-                  color: 'rgba(255,255,255,.86)',
-                  bgcolor: isOpen ? 'rgba(255,255,255,.12)' : 'transparent',
-                  transition: 'background-color .15s, color .15s',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,.09)', color: '#fff' },
-                  '& > svg:first-of-type': { flex: '0 0 auto', fontSize: 20, color: 'rgba(255,255,255,.9)' },
-                }}
-              >
-                {section.icon}
-                <Box component="span" className="rail-fade" sx={{ ...text, flex: 1 }}>
-                  {t(key)}
-                </Box>
-                {holdsTasks && !isOpen && badge(false)}
-                <ExpandMoreIcon className="rail-fade" sx={{ flex: '0 0 auto', fontSize: 18, color: 'rgba(255,255,255,.55)', transform: isOpen ? 'rotate(180deg)' : 'none', ...text, transition: 'transform .2s, opacity .15s' }} />
-              </ButtonBase>
-              {isOpen && (
-                <Box className="rail-wide" sx={{ mt: 0.5, mb: 1, paddingInlineStart: 1.75 }}>
-                  {section.items.map((item) => link(item, true))}
-                </Box>
-              )}
-            </Box>
-          );
-        })}
-      </Box>
-    </Box>
+/** The menu as the Dock's modules: the home items each a module of their own, every section a module of its items. */
+function toModules(sections: MenuSection[], taskCount: number): DockModule[] {
+  return sections.flatMap<DockModule>((section) =>
+    !section.titleKey
+      ? section.items.map((item) => ({ key: item.path, labelKey: item.labelKey, icon: item.icon, path: item.path, badge: item.showTaskCount ? taskCount : undefined }))
+      : [
+          {
+            key: section.titleKey,
+            labelKey: section.titleKey,
+            icon: section.icon,
+            badge: section.items.some((item) => item.showTaskCount) ? taskCount : undefined,
+            items: section.items.map((item) => ({ path: item.path, labelKey: item.labelKey, icon: item.icon, badge: item.showTaskCount ? taskCount : undefined })),
+          },
+        ],
   );
 }
 
@@ -605,10 +411,6 @@ function TopBar({ title, onMenu }: { title: ReactNode; onMenu?: () => void }) {
 }
 
 /** Home matches only itself; other items also match their sub-pages (e.g. a chosen reference list). */
-function isActive(path: string, pathname: string) {
-  return path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
-}
-
 /** Tasks waiting for the user: refreshed every minute and on each page change. */
 function useTaskCount(pathname: string) {
   const [count, setCount] = useState(0);

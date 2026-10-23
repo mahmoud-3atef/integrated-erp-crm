@@ -673,7 +673,9 @@
     "movement": "Workforce movement",
     "hrSettlements": "Settlements",
     "management": "Executive dashboard",
-    "statusValues": "Status values"
+    "statusValues": "Status values",
+    "compact": "Compact menu (icons only)",
+    "expand": "Expand the menu"
   },
   "roles": {
     "title": "Roles and permissions",
