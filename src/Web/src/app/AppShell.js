@@ -201,6 +201,17 @@ function Shell() {
     const wide = useMediaQuery(theme.breakpoints.up('md'));
     const [open, setOpen] = useState(false);
     const [pinned, setPinned] = useState(readPinned);
+    // An item was just chosen on the folded rail: it folds at once (the user's request, 2026-10-23), and opens again only
+    // when the mouse comes back after leaving it.
+    const [picked, setPicked] = useState(false);
+    const fold = () => {
+        if (pinned)
+            return;
+        setPicked(true);
+        // The chosen item keeps the focus, which would keep the rail open (it opens on focus for the keyboard).
+        if (document.activeElement instanceof HTMLElement)
+            document.activeElement.blur();
+    };
     const togglePin = () => {
         const next = !pinned;
         setPinned(next);
@@ -221,7 +232,7 @@ function Shell() {
                     flex: `0 0 ${pinned ? tokens.sidebarWidth : railWidth}px`,
                     height: `calc(100dvh - ${tokens.gap * 2}px)`,
                     transition: 'flex-basis .22s ease',
-                }, children: _jsx(Box, { sx: {
+                }, onMouseLeave: () => setPicked(false), children: _jsx(Box, { sx: {
                         position: 'absolute',
                         insetBlock: 0,
                         insetInlineStart: 0,
@@ -230,8 +241,8 @@ function Shell() {
                         boxShadow: tokens.shadowMd,
                         overflow: 'hidden',
                         transition: 'width .22s ease, box-shadow .22s ease',
-                        ...(pinned ? {} : railStyles),
-                    }, children: _jsx(Sidebar, { sections: sections, pinned: pinned, onPin: togglePin }) }) })) : (_jsx(Drawer, { open: open, onClose: () => setOpen(false), slotProps: { paper: { sx: { width: tokens.sidebarWidth, border: 0 } } }, children: _jsx(Sidebar, { sections: sections, onNavigate: () => setOpen(false) }) })), _jsxs(Box, { sx: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: `${tokens.gap}px` }, children: [_jsx(TopBar, { title: _jsx(Breadcrumbs, { sections: sections }), onMenu: wide ? undefined : () => setOpen(true) }), _jsx(Box, { component: "main", sx: { width: '100%', px: { xs: 0.5, md: 0 } }, children: _jsx(Outlet, {}) })] })] }));
+                        ...(pinned ? {} : picked ? pickedStyles : railStyles),
+                    }, children: _jsx(Sidebar, { sections: sections, pinned: pinned, onPin: togglePin, onNavigate: fold }) }) })) : (_jsx(Drawer, { open: open, onClose: () => setOpen(false), slotProps: { paper: { sx: { width: tokens.sidebarWidth, border: 0 } } }, children: _jsx(Sidebar, { sections: sections, onNavigate: () => setOpen(false) }) })), _jsxs(Box, { sx: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: `${tokens.gap}px` }, children: [_jsx(TopBar, { title: _jsx(Breadcrumbs, { sections: sections }), onMenu: wide ? undefined : () => setOpen(true) }), _jsx(Box, { component: "main", sx: { width: '100%', px: { xs: 0.5, md: 0 } }, children: _jsx(Outlet, {}) })] })] }));
 }
 const railWidth = 76;
 const pinKey = 'erp.sidebarPinned';
@@ -246,6 +257,13 @@ const railStyles = {
     [`${folded} .rail-wide`]: { display: 'none' },
     [`${folded} .rail-line`]: { display: 'block' },
     [`${folded} .rail-current`]: { bgcolor: 'rgba(255,255,255,.16)' },
+};
+/** Just after an item was chosen: folded, even with the mouse still on it (texts hidden as on the rail). */
+const pickedStyles = {
+    '& .rail-fade': { opacity: 0 },
+    '& .rail-wide': { display: 'none' },
+    '& .rail-line': { display: 'block' },
+    '& .rail-current': { bgcolor: 'rgba(255,255,255,.16)' },
 };
 /** Folded unless the user pinned it open (remembered in this browser only). */
 function readPinned() {

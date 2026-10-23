@@ -230,6 +230,15 @@ function Shell() {
   const wide = useMediaQuery(theme.breakpoints.up('md'));
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(readPinned);
+  // An item was just chosen on the folded rail: it folds at once (the user's request, 2026-10-23), and opens again only
+  // when the mouse comes back after leaving it.
+  const [picked, setPicked] = useState(false);
+  const fold = () => {
+    if (pinned) return;
+    setPicked(true);
+    // The chosen item keeps the focus, which would keep the rail open (it opens on focus for the keyboard).
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  };
   const togglePin = () => {
     const next = !pinned;
     setPinned(next);
@@ -257,6 +266,7 @@ function Shell() {
             height: `calc(100dvh - ${tokens.gap * 2}px)`,
             transition: 'flex-basis .22s ease',
           }}
+          onMouseLeave={() => setPicked(false)}
         >
           <Box
             sx={{
@@ -268,10 +278,10 @@ function Shell() {
               boxShadow: tokens.shadowMd,
               overflow: 'hidden',
               transition: 'width .22s ease, box-shadow .22s ease',
-              ...(pinned ? {} : railStyles),
+              ...(pinned ? {} : picked ? pickedStyles : railStyles),
             }}
           >
-            <Sidebar sections={sections} pinned={pinned} onPin={togglePin} />
+            <Sidebar sections={sections} pinned={pinned} onPin={togglePin} onNavigate={fold} />
           </Box>
         </Box>
       ) : (
@@ -304,6 +314,14 @@ const railStyles = {
   [`${folded} .rail-wide`]: { display: 'none' },
   [`${folded} .rail-line`]: { display: 'block' },
   [`${folded} .rail-current`]: { bgcolor: 'rgba(255,255,255,.16)' },
+} as const;
+
+/** Just after an item was chosen: folded, even with the mouse still on it (texts hidden as on the rail). */
+const pickedStyles = {
+  '& .rail-fade': { opacity: 0 },
+  '& .rail-wide': { display: 'none' },
+  '& .rail-line': { display: 'block' },
+  '& .rail-current': { bgcolor: 'rgba(255,255,255,.16)' },
 } as const;
 
 /** Folded unless the user pinned it open (remembered in this browser only). */
