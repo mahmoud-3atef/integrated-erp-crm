@@ -1,12 +1,9 @@
 import CloseIcon from '@mui/icons-material/Close';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
-import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import {
   Link,
   Box,
   Button,
-  ButtonBase,
   Chip,
   InputAdornment,
   LinearProgress,
@@ -32,8 +29,8 @@ import { kindPath, workforceApi, type Placement, type WorkerKind, type WorkerLis
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
 import { Initials } from '../../components/ui';
-import { placementCards, placementLook } from '../../components/workforce/placement';
-import { card, StatusPill, toneOf, wf } from './workforceUi';
+import { placementCards } from '../../components/workforce/placement';
+import { card, StatusPill, wf } from './workforceUi';
 
 type Sort = NonNullable<WorkerQuery['sort']>;
 const sorts: Sort[] = ['name', 'joined', 'salary', 'number'];
@@ -45,10 +42,10 @@ const salaryParts = ['basic', 'food', 'housing', 'transport', 'other'] as const;
 const pageSizes = [25, 50, 100];
 
 /**
- * Workers, or company staff (the user's redesign, 2026-10-23; docs/02-target-architecture/22): a short header, white
- * status cards that filter the table (gold when chosen), one toolbar with the applied filters, and a dense table with
- * the worker column and the header held in place. The server pages, sorts, searches and counts as before; the search,
- * the status, the sort, the page and its size live in the address, so coming back from a worker finds the same view.
+ * Workers, or company staff (the user's redesign, 2026-10-23; docs/02-target-architecture/22): the title, one toolbar
+ * (search, status, columns, the total) with the applied filters, and a dense table with the worker column and the header
+ * held in place — no status cards and no notes (the user's choice). The server pages, sorts and searches as before; the
+ * search, the status, the sort, the page and its size live in the address, so coming back from a worker finds the same view.
  */
 export function WorkersPage({ kind }: { kind: WorkerKind }) {
   const { t, i18n } = useTranslation();
@@ -113,79 +110,11 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
 
   return (
     <Box>
-      {/* Header: the title, and that the list is read-only from the old system's sync (no separate strip). */}
       <Box sx={{ mb: 2 }}>
         <Typography component="h1" sx={{ fontSize: 24, fontWeight: 600, color: wf.navy, lineHeight: 1.3 }}>
           {t(`workforce.${k}.title`)}
         </Typography>
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap', fontSize: 13, color: wf.textSecondary }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, borderRadius: 999, bgcolor: wf.subtle, color: wf.navy, fontWeight: 600, fontSize: 12, '& svg': { fontSize: 15 } }}>
-            <SyncOutlinedIcon />
-            {t('workforce.ui.readOnlyChip')}
-          </Box>
-          <span>{t(`workforce.${k}.intro`)}</span>
-        </Stack>
       </Box>
-
-      {/* Status cards: they filter the table, gold when chosen. */}
-      <Box component="nav" aria-label={t('workforce.ui.cards')} sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))', lg: `repeat(${placementCards[kind].length}, minmax(0, 1fr))` }, gap: 1.5, mb: 1.5 }}>
-        {placementCards[kind].map((p) => {
-          const tone = toneOf(p);
-          const active = placement === p;
-          return (
-            <ButtonBase
-              key={p}
-              onClick={() => update({ status: active ? null : p })}
-              aria-pressed={active}
-              sx={{
-                ...(card as object),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 1,
-                minHeight: 90,
-                px: 2,
-                py: 1.5,
-                textAlign: 'start',
-                borderColor: active ? wf.gold : wf.border,
-                bgcolor: active ? wf.goldSoft : wf.surface,
-                boxShadow: active ? `inset 0 0 0 1px ${wf.gold}` : (card as { boxShadow: string }).boxShadow,
-                transition: 'background-color 150ms, border-color 150ms',
-                '&:hover': { borderColor: active ? wf.gold : '#C5CFDB' },
-                '&:focus-visible': { outline: `2px solid ${wf.gold}`, outlineOffset: 2 },
-              }}
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: 13, color: wf.textSecondary, lineHeight: 1.3 }}>{statusName(p)}</Typography>
-                <Typography sx={{ fontSize: 24, fontWeight: 600, lineHeight: 1.25, color: wf.navy, fontVariantNumeric: 'tabular-nums' }}>
-                  {data ? (data.counts[p] ?? 0).toLocaleString('en-US') : <Skeleton width={48} />}
-                </Typography>
-                <Typography sx={{ fontSize: 12, color: active ? wf.goldText : wf.textSecondary, fontWeight: active ? 600 : 400, lineHeight: 1.3 }}>
-                  {active ? `✓ ${t('workforce.currentFilter')}` : t(staff ? 'workforce.cardFoot.staff' : `workforce.cardFoot.${p}`)}
-                </Typography>
-              </Box>
-              <Box aria-hidden sx={{ flex: '0 0 auto', width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: tone.bg, color: tone.fg, '& svg': { fontSize: 19 } }}>
-                {placementLook[p].icon}
-              </Box>
-            </ButtonBase>
-          );
-        })}
-      </Box>
-
-      {/* What each number counts (the server's rules, unchanged), and the workers of inactive projects. */}
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, mb: 1.5, flexWrap: 'wrap', fontSize: 12.5, color: wf.textSecondary, '& > svg': { fontSize: 16 } }}>
-        <InfoOutlinedIcon />
-        <span>{t('workforce.ui.scope')}</span>
-        {!staff && (data?.counts.Inactive ?? 0) > 0 && (
-          <>
-            <span>·</span>
-            <span>{t('workforce.inactiveNote', { count: data?.counts.Inactive ?? 0 })}</span>
-            <Link component="button" onClick={() => update({ status: placement === 'Inactive' ? null : 'Inactive' })} sx={{ fontSize: 12.5, fontWeight: 600, color: wf.navy }}>
-              {placement === 'Inactive' ? t('workforce.reset') : t('workforce.inactiveShow')}
-            </Link>
-          </>
-        )}
-      </Stack>
 
       <Box sx={{ ...(card as object), p: { xs: 1.5, md: 2 } }}>
         {/* Toolbar: search, status, columns, the count. */}
@@ -262,7 +191,7 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
         )}
         <Box sx={{ height: 4, mb: 0.5 }}>{busy && data && <LinearProgress sx={{ borderRadius: 2, '& .MuiLinearProgress-bar': { bgcolor: wf.gold }, bgcolor: wf.subtle }} />}</Box>
 
-        <TableContainer sx={{ maxHeight: 'calc(100dvh - 290px)', minHeight: 240, border: `1px solid ${wf.border}`, borderRadius: wf.control }}>
+        <TableContainer sx={{ maxHeight: 'calc(100dvh - 230px)', minHeight: 240, border: `1px solid ${wf.border}`, borderRadius: wf.control }}>
           <Table
             size="small"
             stickyHeader

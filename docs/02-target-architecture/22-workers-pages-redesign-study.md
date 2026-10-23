@@ -95,3 +95,13 @@
 2. **Scope of the list.** Should the same look apply to `/workforce/staff` (the same page)? Recommended: yes, it is one page.
 3. **The three items in §2 that need the server:** the filters by project, nationality and supplier, and the last-sync time. Build them now, or later, or not at all?
 4. **The images:** send them if they are meant as the visual reference.
+
+## 7. After review (23 October 2026)
+
+The user's changes after trying it:
+
+- **The list.** No status cards and no notes: only the title, the toolbar and the table.
+  - The toolbar keeps the search, the status filter (including the workers of inactive projects), the columns, the total, and the applied filters with «مسح الكل».
+- **The worker file is back to its earlier design:** the hero, the dark «ملخص عام» card and pill tabs (as CLAUDE.md decision 8).
+  - §4 above no longer applies.
+
