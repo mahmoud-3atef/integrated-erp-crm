@@ -27,8 +27,8 @@ internal sealed class InvoiceService(
     ICurrentUser user,
     IClock clock)
 {
-    /// <summary>The approved timesheet's invoice, as a draft (one per timesheet).</summary>
-    public async Task<Result<Guid>> CreateFromTimesheetAsync(Guid timesheetId, CancellationToken cancellationToken)
+    /// <summary>The approved timesheet's invoice, as a draft (one per timesheet); or, made by its process, the one in approval.</summary>
+    public async Task<Result<Guid>> CreateFromTimesheetAsync(Guid timesheetId, CancellationToken cancellationToken, bool duringApproval = false)
     {
         var timesheet = await db.Timesheets.AsNoTracking().Include(t => t.Lines).FirstOrDefaultAsync(t => t.Id == timesheetId, cancellationToken).ConfigureAwait(false);
         if (timesheet is null)
@@ -53,7 +53,7 @@ internal sealed class InvoiceService(
             : new InvoiceBuyer(billTo.CustomerId, billTo.Name, billTo.NameEn, billTo.VatNumber, billTo.CommercialRegistration, billTo.City);
         var setting = await db.ProjectSettings.AsNoTracking().FirstOrDefaultAsync(s => s.ProjectId == timesheet.ProjectId, cancellationToken).ConfigureAwait(false)
             ?? ProjectBillingSetting.Default(timesheet.ProjectId);
-        var made = Invoice.FromTimesheet(timesheet, buyer, setting.VatRate, user.DisplayName, clock.UtcNow);
+        var made = Invoice.FromTimesheet(timesheet, buyer, setting.VatRate, user.DisplayName, clock.UtcNow, duringApproval);
         if (made.IsFailure)
         {
             return Result.Failure<Guid>(made.Error);

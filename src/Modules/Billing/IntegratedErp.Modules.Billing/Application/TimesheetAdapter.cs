@@ -7,16 +7,21 @@ using IntegratedErp.Modules.Billing.Infrastructure;
 using IntegratedErp.Modules.Workflow.Contracts;
 using IntegratedErp.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegratedErp.Modules.Billing.Application;
 
 /// <summary>
 /// The timesheet as the approval engine sees it: the fields a process can test, the default process (the operations
-/// manager approves), and the end of the approval: approved ⇒ locked for the invoice, the payroll and the statements.
+/// manager approves), the action «إنشاء الفاتورة» a process can run at any stage, and the end of the approval:
+/// approved ⇒ locked for the invoice, the payroll and the statements.
 /// </summary>
-internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, IClock clock) : IApprovalRecordAdapter
+internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, IClock clock, IServiceProvider services) : IApprovalRecordAdapter
 {
     public const string ScreenCode = "billing.timesheet";
+
+    /// <summary>Makes the timesheet's invoice (a draft) where the process puts it (the user's request, 2026-10-23).</summary>
+    public const string CreateInvoice = "create_invoice";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -50,7 +55,16 @@ internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, I
             new("invoice_total", "إجمالي الفاتورة قبل الضريبة", "Invoice before VAT", RecordFieldType.Money, Updatable: false),
             new("adjustments", "عدد التعديلات", "Number of adjustments", RecordFieldType.Number, Updatable: false),
         ],
-        DefaultProcess: new DefaultApprovalProcess("اعتماد التحضير الشهري", "Timesheet approval", DefaultDefinition));
+        DefaultProcess: new DefaultApprovalProcess("اعتماد التحضير الشهري", "Timesheet approval", DefaultDefinition),
+        Actions:
+        [
+            new(
+                CreateInvoice,
+                "إنشاء الفاتورة",
+                "Create the invoice",
+                "يُنشئ فاتورة التحضير مسودةً بأرقامه (لا تتغير أرقامه وهو قيد الاعتماد)، لتُراجع وتُرسل للاعتماد من صفحتها. إن لم يُعتمد التحضير في النهاية تُحذف المسودة.",
+                "Makes the timesheet's invoice as a draft with its figures (they cannot change while it is in approval), to be reviewed and sent for approval from its page. If the timesheet is not approved in the end, the draft is deleted."),
+        ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
     {
@@ -95,6 +109,33 @@ internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, I
         return Result.Success();
     }
 
+    /// <summary>
+    /// «إنشاء الفاتورة»: the draft invoice from the timesheet's figures. Idempotent: a timesheet that already has its
+    /// invoice (or whose old-system invoice was already sent to the customer) is left as it is.
+    /// </summary>
+    public async Task<RecordActionResult> RunAsync(Guid recordId, string action, CancellationToken cancellationToken)
+    {
+        if (action != CreateInvoice)
+        {
+            return RecordActionResult.Failed($"A timesheet has no action \"{action}\".");
+        }
+
+        var timesheet = await db.Timesheets.AsNoTracking().FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
+        if (timesheet is null)
+        {
+            return RecordActionResult.Failed("The timesheet no longer exists.");
+        }
+
+        if (timesheet.LegacyIssued || await db.Invoices.AnyAsync(i => i.TimesheetId == recordId, cancellationToken).ConfigureAwait(false))
+        {
+            return RecordActionResult.Done;
+        }
+
+        // Resolved here, not injected: the invoice service starts approvals, and the approval engine holds the adapters.
+        var made = await services.GetRequiredService<InvoiceService>().CreateFromTimesheetAsync(recordId, cancellationToken, duringApproval: true).ConfigureAwait(false);
+        return made.IsSuccess || made.Error == InvoiceErrors.Exists ? RecordActionResult.Done : RecordActionResult.Failed($"The invoice could not be made: {made.Error.Message}");
+    }
+
     public async Task EndedAsync(Guid recordId, ApprovalEnd end, string? comment, CancellationToken cancellationToken)
     {
         var timesheet = await db.Timesheets.FirstOrDefaultAsync(x => x.Id == recordId, cancellationToken).ConfigureAwait(false);
@@ -110,6 +151,14 @@ internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, I
         else
         {
             timesheet.ApprovalEnded(comment);
+
+            // A draft invoice the process made goes with it: the timesheet may change before it is sent again.
+            var draft = await db.Invoices.Include(i => i.Items).Include(i => i.Workers)
+                .FirstOrDefaultAsync(i => i.TimesheetId == recordId, cancellationToken).ConfigureAwait(false);
+            if (draft is { IsEditable: true, InvoiceNo: null, Status: InvoiceStatus.Draft })
+            {
+                db.Invoices.Remove(draft);
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

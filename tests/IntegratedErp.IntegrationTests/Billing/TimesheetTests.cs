@@ -357,6 +357,84 @@ public sealed class TimesheetTests(TestDatabase database)
         }
     }
 
+    [SkippableFact]
+    public async Task A_process_can_make_the_invoice_at_one_of_its_stages_and_a_rejection_removes_the_draft()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        Guid tenantId;
+        using (var scope = database.Scope(system: true))
+        {
+            tenantId = (await scope.ServiceProvider.GetRequiredService<OrganizationService>().CreateTenantAsync($"ia-{Guid.NewGuid():N}"[..16], "شركة الفوترة", "Invoicing Co", default)).Value.Id;
+        }
+
+        var crm = new FakeCrm();
+        crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
+        var project = crm.Add("new_project", new() { ["new_name"] = "مشروع الرياض", ["new_code"] = "pro00900", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
+        WorkStart(crm, Worker(crm, "BSS0701", 100000000), project, "2026-08-01", 3000m);
+        await SyncAsync(tenantId, crm);
+        var (manager, approver) = await PeopleAsync(tenantId);
+
+        // The company's process: the first stage makes the invoice, a second stage decides.
+        using (var scope = database.Scope(tenantId, user: "setup"))
+        {
+            static ApprovalStep Stage(string id, params Step[] onApprove) => new()
+            {
+                Id = id,
+                NameAr = "مرحلة " + id,
+                NameEn = "Stage " + id,
+                Assignees = [new Assignee(AssigneeKind.Permission, Permission: "billing.timesheets.approve")],
+                OnApprove = onApprove,
+            };
+            var definition = new ProcessDefinition(null, [Stage("operations", new ActionStep { Id = "invoice", Action = TimesheetAdapter.CreateInvoice }), Stage("finance")]);
+            var screen = scope.ServiceProvider.GetServices<IApprovalRecordAdapter>().Single(a => a.Screen.Code == TimesheetAdapter.ScreenCode).Screen;
+            Assert.True(DefinitionRules.Validate(definition, screen).IsSuccess);
+            var process = new ApprovalProcess(screen.Code, "اعتماد التحضير", "Timesheet approval", 100, DefinitionJson.Write(definition));
+            process.Publish("setup", DateTimeOffset.UtcNow);
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            workflow.Processes.Add(process);
+            await workflow.SaveChangesAsync();
+        }
+
+        var september = new DateOnly(2026, 9, 1);
+        Guid id;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<TimesheetService>();
+            var projectId = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().MonthAsync(september, default)).Projects.Single().ProjectId!.Value;
+            id = (await service.GenerateAsync(new GenerateInput(projectId, september), default)).Value;
+            Assert.True((await service.SubmitAsync(id, default)).IsSuccess);
+        }
+
+        // The first stage approves: the draft invoice exists while the timesheet is still in approval.
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var sheet = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!;
+            var instance = await scope.ServiceProvider.GetRequiredService<WorkflowDbContext>().Instances.SingleAsync(i => i.RecordId == id);
+            Assert.Equal((InstanceStatus.InProgress, (string?)null), (instance.Status, instance.Error));
+            Assert.Equal(("InApproval", false), (sheet.Status, sheet.CanInvoice));
+            Assert.NotNull(sheet.InvoiceDoc);
+            var billing = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+            var invoice = await billing.Invoices.SingleAsync(i => i.TimesheetId == id);
+            Assert.Equal((InvoiceStatus.Draft, (string?)null), (invoice.Status, invoice.InvoiceNo));
+            Assert.Equal(sheet.Invoice.Amount, invoice.Amount);
+        }
+
+        // The second stage rejects: the timesheet can change again, so its draft invoice is gone.
+        using (var scope = database.Scope(tenantId, user: approver.ToString()))
+        {
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == approver && w.Status == WorkItemStatus.Pending);
+            Assert.True((await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Reject, "مرفوض", null, default)).IsSuccess);
+        }
+
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            Assert.False(await scope.ServiceProvider.GetRequiredService<BillingDbContext>().Invoices.AnyAsync(i => i.TimesheetId == id));
+            Assert.Null((await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!.InvoiceDoc);
+        }
+    }
+
     /// <summary>The approver takes their one open task and approves it.</summary>
     private async Task ApproveNextAsync(Guid tenantId, Guid approver)
     {

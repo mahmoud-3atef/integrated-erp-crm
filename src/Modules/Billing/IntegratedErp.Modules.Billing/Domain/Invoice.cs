@@ -183,11 +183,12 @@ public sealed class Invoice : ITenantOwned
     /// The monthly invoice of an approved timesheet: dated the cycle's last day, its lines the month's totals per part
     /// of the price, its workers the timesheet's lines. Its totals are the timesheet's, to the halala.
     /// </summary>
-    public static Result<Invoice> FromTimesheet(Timesheet timesheet, InvoiceBuyer buyer, decimal vatRate, string by, DateTimeOffset at)
+    /// <param name="duringApproval">Made by the timesheet's own process at one of its stages: its figures are locked while in approval.</param>
+    public static Result<Invoice> FromTimesheet(Timesheet timesheet, InvoiceBuyer buyer, decimal vatRate, string by, DateTimeOffset at, bool duringApproval = false)
     {
         ArgumentNullException.ThrowIfNull(timesheet);
         ArgumentNullException.ThrowIfNull(buyer);
-        if (timesheet.Status != TimesheetStatus.Approved)
+        if (timesheet.Status != TimesheetStatus.Approved && !(duringApproval && timesheet.IsInApproval))
         {
             return Result.Failure<Invoice>(InvoiceErrors.TimesheetNotApproved);
         }
