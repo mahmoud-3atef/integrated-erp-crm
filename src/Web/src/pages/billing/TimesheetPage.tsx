@@ -10,6 +10,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import {
   Alert,
@@ -21,6 +22,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   ListItemIcon,
   Menu,
   MenuItem,
@@ -32,15 +34,16 @@ import {
   TableFooter,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
-import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type TimesheetDetail, type TimesheetLine, type WorkerPay } from '../../api/billing';
+import { adjustmentTypes, billingApi, invoiceApi, type AdjustmentType, type TimesheetDetail, type TimesheetLine, type WorkerPay, type WorkerSource } from '../../api/billing';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { TimesheetSettingsDialog } from './timesheetSetup';
@@ -219,11 +222,6 @@ export function TimesheetPage() {
               </Button>
             )}
             {canRun && <RunProcessButton screen="billing.timesheet" recordId={sheet.id} title={`${sheet.timesheetNo} — ${sheet.projectName}`} onStarted={() => void reload().then(() => approval.reload())} />}
-            {sheet.canEdit && (
-              <Button variant="contained" startIcon={<PlaylistAddOutlinedIcon />} disabled={busy} onClick={() => setVariables(true)}>
-                {t('timesheets.variables.button')}
-              </Button>
-            )}
             <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} component="a" href={`/api/v1/billing/timesheets/${sheet.id}/excel`} download>
               {t('timesheets.excel.download')}
             </Button>
@@ -375,7 +373,7 @@ export function TimesheetPage() {
                 </Stack>
               }
             />
-            <WorkersTab sheet={sheet} onAdjust={setAdjusting} />
+            <WorkersTab sheet={sheet} onAdjust={setAdjusting} onVariables={sheet.canEdit && !busy ? () => setVariables(true) : undefined} />
           </Box>
 
           {/* What the timesheet makes, in detail. */}
@@ -486,55 +484,155 @@ function Hint({ text }: { text: string }) {
   );
 }
 
-// The register's optional columns (name, days, the invoice amount and the worker's net always show).
-type RegisterColumn = 'period' | 'price' | 'salary' | 'fees' | 'housing' | 'transport' | 'overtimeAmount' | 'additions' | 'deductions' | 'loans' | 'other' | 'gosi' | 'vat' | 'total' | 'internal';
-const registerColumns: { key: RegisterColumn; group: 'days' | 'invoice' | 'worker'; value: (l: TimesheetLine) => number; signed?: boolean }[] = [
+// The register's optional columns (name, days, the invoice amount and the worker's net always show). A column with
+// `plus` and `minus` shows both in one cell (the user's request, 2026-10-23): the addition in green, the deduction in red.
+type RegisterColumn = 'period' | 'price' | 'salary' | 'fees' | 'housing' | 'transport' | 'overtimeAmount' | 'adjust' | 'loans' | 'others' | 'gosi' | 'vat' | 'total' | 'internal';
+interface RegisterCol {
+  key: RegisterColumn;
+  group: 'invoice' | 'worker';
+  value: (l: TimesheetLine) => number;
+  signed?: boolean;
+  plus?: (l: TimesheetLine) => number;
+  minus?: (l: TimesheetLine) => number;
+}
+const registerColumns: RegisterCol[] = [
   { key: 'price', group: 'invoice', value: (l) => l.totalPrice },
   { key: 'salary', group: 'invoice', value: (l) => l.dueSalary - l.absenceAmount },
   { key: 'fees', group: 'invoice', value: (l) => l.dueFees },
   { key: 'housing', group: 'invoice', value: (l) => l.dueHousing },
   { key: 'transport', group: 'invoice', value: (l) => l.dueTransport },
   { key: 'overtimeAmount', group: 'invoice', value: (l) => l.overtime },
-  { key: 'additions', group: 'invoice', value: (l) => l.clientAdditions },
-  { key: 'deductions', group: 'invoice', value: (l) => -l.clientDeductions, signed: true },
+  { key: 'adjust', group: 'invoice', value: (l) => l.clientAdditions - l.clientDeductions, plus: (l) => l.clientAdditions, minus: (l) => l.clientDeductions },
   { key: 'loans', group: 'invoice', value: (l) => -l.customerLoans, signed: true },
-  { key: 'other', group: 'invoice', value: (l) => l.otherCosts },
+  { key: 'others', group: 'invoice', value: (l) => l.otherCosts - (l.otherDeductions ?? 0), plus: (l) => l.otherCosts, minus: (l) => l.otherDeductions ?? 0 },
   { key: 'gosi', group: 'invoice', value: (l) => l.gosi },
 ];
-const registerAfter: { key: RegisterColumn; group: 'invoice' | 'worker'; value: (l: TimesheetLine) => number; signed?: boolean }[] = [
+const registerAfter: RegisterCol[] = [
   { key: 'vat', group: 'invoice', value: (l) => l.vat },
   { key: 'total', group: 'invoice', value: (l) => l.invoiceTotal },
-  { key: 'internal', group: 'worker', value: (l) => l.internalAdditions - l.internalDeductions, signed: true },
+  { key: 'internal', group: 'worker', value: (l) => l.internalAdditions - l.internalDeductions, plus: (l) => l.internalAdditions, minus: (l) => l.internalDeductions },
 ];
-const registerOptional: RegisterColumn[] = ['period', 'price', 'salary', 'fees', 'housing', 'transport', 'overtimeAmount', 'additions', 'deductions', 'loans', 'other', 'gosi', 'vat', 'total', 'internal'];
+const registerOptional: RegisterColumn[] = ['period', 'price', 'salary', 'fees', 'housing', 'transport', 'overtimeAmount', 'adjust', 'loans', 'others', 'gosi', 'vat', 'total', 'internal'];
+
+/** What a column of the register sorts by. */
+type SortKey = 'name' | 'present' | 'absent' | 'overtimeHours' | 'amount' | 'net' | RegisterColumn;
+type SourceFilter = 'all' | WorkerSource | 'changed';
+
+const plusColor = '#16a34a';
+const minusColor = '#dc2626';
+
+/** An addition in green and a deduction in red, side by side (each only when it is not zero). */
+function PlusMinus({ plus, minus }: { plus: number; minus: number }) {
+  if (plus === 0 && minus === 0) return <Box component="span" sx={{ color: tokens.gray300 }}>—</Box>;
+  return (
+    <Stack direction="row" component="span" sx={{ gap: 0.75, justifyContent: 'flex-end', fontWeight: 700 }}>
+      {plus !== 0 && <bdi style={{ color: plusColor }}>+{sar(plus)}</bdi>}
+      {minus !== 0 && <bdi style={{ color: minusColor }}>−{sar(minus)}</bdi>}
+    </Stack>
+  );
+}
 
 /**
  * The attendance register as a dense grid (the user's request: as many of the timesheet's columns as the screen holds):
  * the worker, the month's bar, the days (present, absent, overtime), what the line puts on the invoice element by
- * element, and the worker's side; the optional columns are chosen from «columns».
+ * element, and the worker's side; the optional columns are chosen from «columns». A search and filters above it, every
+ * column sorts from its header, and «إضافة المتغيرات» sits on the table's end (the user's request, 2026-10-23).
  */
-function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (line: TimesheetLine) => void }) {
+function WorkersTab({ sheet, onAdjust, onVariables }: { sheet: TimesheetDetail; onAdjust: (line: TimesheetLine) => void; onVariables?: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { ar, date } = useCommercialFormat();
   const look = recordTones.timesheet;
-  const { shown, toggle } = useHiddenColumns<RegisterColumn>('timesheets.hiddenColumns', registerOptional, ['price', 'housing', 'transport', 'loans', 'other', 'gosi', 'vat']);
+  const { shown, toggle } = useHiddenColumns<RegisterColumn>('timesheets.hiddenColumns.v2', registerOptional, ['price', 'housing', 'transport', 'loans', 'gosi', 'vat']);
+  const [search, setSearch] = useState('');
+  const [source, setSource] = useState<SourceFilter>('all');
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean } | null>(null);
   const adjustments = (workerId: string) => sheet.adjustments.filter((a) => a.workerId === workerId).length;
-  const sum = (pick: (l: TimesheetLine) => number) => sheet.lines.reduce((s, l) => s + pick(l), 0);
   const before = registerColumns.filter((c) => shown(c.key));
   const after = registerAfter.filter((c) => shown(c.key));
   const invoiceCols = before.length + 1 + after.filter((c) => c.group === 'invoice').length;
   const workerCols = after.filter((c) => c.group === 'worker').length + 1;
   const label = (key: RegisterColumn) => t(`timesheets.grid.${key}`);
   const money = (v: number, signed?: boolean) => (v === 0 ? <Box component="span" sx={{ color: tokens.gray300 }}>—</Box> : <bdi style={{ color: signed && v < 0 ? '#b8770a' : undefined }}>{sar(v)}</bdi>);
+  const cell = (c: RegisterCol, l: TimesheetLine) => (c.plus && c.minus ? <PlusMinus plus={c.plus(l)} minus={c.minus(l)} /> : money(c.value(l), c.signed));
+
+  const lines = useMemo(() => {
+    const text = search.trim().toLowerCase();
+    const found = sheet.lines.filter(
+      (l) =>
+        (source === 'all' || (source === 'changed' ? sheet.adjustments.some((a) => a.workerId === l.workerId) : l.source === source)) &&
+        (!text || [l.name, l.workerNo, l.iqamaNo, l.professionAr, l.professionEn, l.supplierName].some((v) => v?.toLowerCase().includes(text))),
+    );
+    if (!sort) return found;
+    const all = [...registerColumns, ...registerAfter];
+    const pick: (l: TimesheetLine) => number | string =
+      sort.key === 'name' ? (l) => l.name
+      : sort.key === 'present' ? (l) => l.workDays - l.absenceDays
+      : sort.key === 'absent' ? (l) => l.absenceDays
+      : sort.key === 'overtimeHours' ? (l) => l.overtimeHours
+      : sort.key === 'amount' ? (l) => l.invoiceAmount
+      : sort.key === 'net' ? (l) => l.workerNet
+      : sort.key === 'period' ? (l) => l.lineFrom
+      : all.find((c) => c.key === sort.key)!.value;
+    return [...found].sort((a, b) => {
+      const x = pick(a);
+      const y = pick(b);
+      const order = typeof x === 'string' ? x.localeCompare(String(y), ar ? 'ar' : 'en') : x - (y as number);
+      return sort.desc ? -order : order;
+    });
+  }, [sheet, search, source, sort, ar]);
+  const filtered = lines.length !== sheet.lines.length;
+  const sum = (pick: (l: TimesheetLine) => number) => lines.reduce((s, l) => s + pick(l), 0);
+
+  /** A header that sorts its column: ascending, then descending, then back to the timesheet's order. */
+  const head = (key: SortKey, text: string) => (
+    <TableSortLabel
+      active={sort?.key === key}
+      direction={sort?.key === key && sort.desc ? 'desc' : 'asc'}
+      onClick={() => setSort((s) => (s?.key !== key ? { key, desc: false } : s.desc ? null : { key, desc: true }))}
+      sx={{ color: '#fff !important', '& .MuiTableSortLabel-icon': { color: '#fff !important', opacity: sort?.key === key ? 1 : 0.35 } }}
+    >
+      {text}
+    </TableSortLabel>
+  );
+
   return (
     <>
-      <Stack direction="row" sx={{ justifyContent: 'flex-end', mb: 1 }}>
-        <ColumnsButton
-          columns={registerOptional.map((key) => ({ key, label: label(key), group: t(`timesheets.grid.groups.${key === 'period' ? 'days' : ([...registerColumns, ...registerAfter].find((c) => c.key === key)?.group ?? 'invoice')}`) }))}
-          shown={shown}
-          toggle={toggle}
-        />
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('timesheets.grid.search')}
+            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+            sx={{ width: { xs: '100%', sm: 280 } }}
+          />
+          <TextField select size="small" value={source} onChange={(e) => setSource(e.target.value as SourceFilter)} sx={{ width: 190 }} aria-label={t('timesheets.grid.filter')}>
+            {(['all', 'Company', 'Supplier', 'Unknown', 'changed'] as const).map((v) => (
+              <MenuItem key={v} value={v}>
+                {t(`timesheets.grid.filters.${v}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          {filtered && (
+            <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>
+              {t('timesheets.grid.shownOf', { shown: lines.length, total: sheet.lines.length })}
+            </Typography>
+          )}
+        </Stack>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+          <ColumnsButton
+            columns={registerOptional.map((key) => ({ key, label: label(key), group: t(`timesheets.grid.groups.${key === 'period' ? 'days' : ([...registerColumns, ...registerAfter].find((c) => c.key === key)?.group ?? 'invoice')}`) }))}
+            shown={shown}
+            toggle={toggle}
+          />
+          {onVariables && (
+            <Button variant="contained" size="small" startIcon={<PlaylistAddOutlinedIcon />} onClick={onVariables}>
+              {t('timesheets.variables.button')}
+            </Button>
+          )}
+        </Stack>
       </Stack>
       <TableContainer sx={{ border: `1px solid ${tokens.gray100}`, borderRadius: `${tokens.radius}px`, maxHeight: 720 }}>
         <Table
@@ -568,7 +666,7 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
           >
             <TableRow>
               <TableCell rowSpan={2} className="pin" sx={{ minWidth: 170 }}>
-                {t('workforce.col.name')}
+                {head('name', t('workforce.col.name'))}
               </TableCell>
               <TableCell colSpan={shown('period') ? 4 : 3} className="grp g-days gs">
                 {t('timesheets.grid.groups.days')}
@@ -582,31 +680,31 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
               {sheet.canEdit && <TableCell rowSpan={2} />}
             </TableRow>
             <TableRow>
-              {shown('period') && <TableCell className="g-days gs">{label('period')}</TableCell>}
-              <TableCell align="center" className={shown('period') ? 'g-days' : 'g-days gs'}>{t('timesheets.register.present')}</TableCell>
-              <TableCell align="center" className="g-days">{t('timesheets.register.absent')}</TableCell>
-              <TableCell align="center" className="g-days">{t('timesheets.grid.overtimeHours')}</TableCell>
+              {shown('period') && <TableCell className="g-days gs">{head('period', label('period'))}</TableCell>}
+              <TableCell align="center" className={shown('period') ? 'g-days' : 'g-days gs'}>{head('present', t('timesheets.register.present'))}</TableCell>
+              <TableCell align="center" className="g-days">{head('absent', t('timesheets.register.absent'))}</TableCell>
+              <TableCell align="center" className="g-days">{head('overtimeHours', t('timesheets.grid.overtimeHours'))}</TableCell>
               {before.map((c) => (
                 <TableCell key={c.key} align="right" className={`g-invoice${c === before[0] ? ' gs' : ''}`}>
-                  {label(c.key)}
+                  {head(c.key, label(c.key))}
                 </TableCell>
               ))}
-              <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'}>{t('timesheets.grid.amount')}</TableCell>
+              <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'}>{head('amount', t('timesheets.grid.amount'))}</TableCell>
               {after.filter((c) => c.group === 'invoice').map((c) => (
                 <TableCell key={c.key} align="right" className="g-invoice">
-                  {label(c.key)}
+                  {head(c.key, label(c.key))}
                 </TableCell>
               ))}
               {after.filter((c) => c.group === 'worker').map((c) => (
                 <TableCell key={c.key} align="right" className="g-worker gs">
-                  {label(c.key)}
+                  {head(c.key, label(c.key))}
                 </TableCell>
               ))}
-              <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'}>{t('timesheets.grid.net')}</TableCell>
+              <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'}>{head('net', t('timesheets.grid.net'))}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {sheet.lines.map((l) => (
+            {lines.map((l) => (
               <TableRow key={l.id} hover>
                 <TableCell className="pin" sx={{ cursor: 'pointer' }} onClick={() => navigate(`/workforce/workers/${l.workerId}?tab=periods`)}>
                   <Typography sx={{ fontSize: 12, fontWeight: 700, color: tokens.navy800, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.name}>
@@ -635,7 +733,7 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
                 </TableCell>
                 {before.map((c) => (
                   <TableCell key={c.key} align="right" className={`g-invoice${c === before[0] ? ' gs' : ''}`}>
-                    {c.key === 'price' && l.totalPrice <= 0 ? <Box component="span" sx={{ color: tokens.danger, fontWeight: 700 }}>{t('timesheets.noPriceShort')}</Box> : money(c.value(l), c.signed)}
+                    {c.key === 'price' && l.totalPrice <= 0 ? <Box component="span" sx={{ color: tokens.danger, fontWeight: 700 }}>{t('timesheets.noPriceShort')}</Box> : cell(c, l)}
                   </TableCell>
                 ))}
                 <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'} sx={{ fontWeight: 800, color: `${tokens.navy800} !important` }}>
@@ -643,7 +741,7 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
                 </TableCell>
                 {after.map((c) => (
                   <TableCell key={c.key} align="right" className={c.group === 'worker' ? 'g-worker gs' : 'g-invoice'} sx={c.key === 'total' ? { fontWeight: 700 } : undefined}>
-                    {money(c.value(l), c.signed)}
+                    {cell(c, l)}
                   </TableCell>
                 ))}
                 <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'} sx={{ fontWeight: 700 }}>
@@ -665,21 +763,21 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
                 )}
               </TableRow>
             ))}
-            {sheet.lines.length === 0 && (
+            {lines.length === 0 && (
               <TableRow>
                 <TableCell colSpan={30} align="center" sx={{ py: 5, color: tokens.gray500 }}>
-                  {t('timesheets.noLines')}
+                  {sheet.lines.length === 0 ? t('timesheets.noLines') : t('timesheets.grid.noMatch')}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          {sheet.lines.length > 0 && (
+          {lines.length > 0 && (
             <TableFooter sx={{ '& .MuiTableCell-footer': { fontSize: 12, fontWeight: 800, color: tokens.navy800, borderTop: `2px solid ${look.main}`, bgcolor: '#f6faf8', position: 'sticky', bottom: 0, px: 0.75, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' } }}>
               <TableRow>
                 <TableCell className="pin" sx={{ bgcolor: '#f6faf8 !important' }}>
-                  {t('timesheets.grid.totalRow')}
+                  {t(filtered ? 'timesheets.grid.totalShown' : 'timesheets.grid.totalRow')}
                   <Typography component="span" sx={{ display: 'block', fontSize: 10.5, color: tokens.gray500 }}>
-                    {t('timesheets.grid.lines', { count: sheet.lines.length })}
+                    {t('timesheets.grid.lines', { count: lines.length })}
                   </Typography>
                 </TableCell>
                 {shown('period') && <TableCell className="g-days gs" />}
@@ -688,13 +786,13 @@ function WorkersTab({ sheet, onAdjust }: { sheet: TimesheetDetail; onAdjust: (li
                 <TableCell align="center" className="g-days" sx={{ color: '#1f6fd1 !important' }}>{sar(sum((l) => l.overtimeHours))}</TableCell>
                 {before.map((c) => (
                   <TableCell key={c.key} align="right" className={`g-invoice${c === before[0] ? ' gs' : ''}`}>
-                    {c.key === 'price' ? '' : sar(sum(c.value))}
+                    {c.key === 'price' ? '' : c.plus && c.minus ? <PlusMinus plus={sum(c.plus)} minus={sum(c.minus)} /> : sar(sum(c.value))}
                   </TableCell>
                 ))}
                 <TableCell align="right" className={before.length === 0 ? 'g-invoice gs' : 'g-invoice'}>{sar(sum((l) => l.invoiceAmount))}</TableCell>
                 {after.map((c) => (
                   <TableCell key={c.key} align="right" className={c.group === 'worker' ? 'g-worker gs' : 'g-invoice'}>
-                    {sar(sum(c.value))}
+                    {c.plus && c.minus ? <PlusMinus plus={sum(c.plus)} minus={sum(c.minus)} /> : sar(sum(c.value))}
                   </TableCell>
                 ))}
                 <TableCell align="right" className={shown('internal') ? 'g-worker' : 'g-worker gs'}>{sar(sum((l) => l.workerNet))}</TableCell>

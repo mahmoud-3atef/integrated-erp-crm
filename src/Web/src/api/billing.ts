@@ -110,6 +110,8 @@ export interface TimesheetLine {
   customerLoans: number;
   feeDays: number;
   otherCosts: number;
+  /** Other deductions (the invoice only). */
+  otherDeductions?: number;
   internalAdditions: number;
   internalDeductions: number;
   dueSalary: number;

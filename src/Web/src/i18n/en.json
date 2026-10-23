@@ -2485,15 +2485,12 @@
       "housing": "Of it housing",
       "transport": "Of it transport",
       "overtimeAmount": "Overtime",
-      "additions": "Customer additions",
-      "deductions": "Customer deductions",
       "loans": "Customer loans",
-      "other": "Other costs",
       "gosi": "GOSI",
       "vat": "VAT",
       "total": "With VAT",
       "totalRow": "Total",
-      "internal": "Internal",
+      "internal": "Addition/deduction",
       "amount": "Before VAT",
       "net": "Worker's net",
       "overtimeHours": "Overtime (h)",
@@ -2502,7 +2499,21 @@
         "invoice": "Invoice",
         "worker": "Worker"
       },
-      "lines": "{{count}} lines"
+      "lines": "{{count}} lines",
+      "adjust": "Additions/deductions",
+      "others": "Others",
+      "search": "Search by name, number, iqama or profession",
+      "filter": "Filter workers",
+      "shownOf": "Showing {{shown}} of {{total}} workers",
+      "totalShown": "Total shown",
+      "noMatch": "No workers match the search or the filter.",
+      "filters": {
+        "all": "All workers",
+        "Company": "The company's workers",
+        "Supplier": "Suppliers' workers",
+        "Unknown": "No known sponsor",
+        "changed": "With variables"
+      }
     },
     "create": {
       "button": "Create the monthly timesheet",
