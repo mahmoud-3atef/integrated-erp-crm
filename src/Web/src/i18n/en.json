@@ -598,7 +598,8 @@
     "conflict_timesheet_legacy": "This timesheet is the old system's invoice: it is not generated again from the ledger.",
     "conflict_timesheet_legacy_issued": "The old system already sent this invoice to the customer: no invoice is issued from it here.",
     "validation_bulk_too_many": "More than 300 users at once; split the list.",
-    "validation_bulk_file_unreadable": "The file is not an Excel file with a «User Name» column."
+    "validation_bulk_file_unreadable": "The file is not an Excel file with a «User Name» column.",
+    "conflict_timesheet_invoiced": "This timesheet's invoice was sent for approval or issued: the timesheet can no longer change."
   },
   "menu": {
     "label": "Main menu",

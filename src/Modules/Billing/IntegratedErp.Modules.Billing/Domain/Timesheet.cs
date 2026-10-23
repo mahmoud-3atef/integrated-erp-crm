@@ -751,6 +751,7 @@ public static class TimesheetErrors
     public static readonly Error OvertimeOverLimit = Error.Validation("timesheet_overtime_limit", "The overtime hours exceed the project's monthly limit.");
     public static readonly Error AdjustmentNotFound = Error.NotFound("timesheet_adjustment", "Adjustment not found.");
     public static readonly Error Settings = Error.Validation("timesheet_settings", "Check the billing settings' values.");
+    public static readonly Error Invoiced = Error.Conflict("timesheet_invoiced", "This timesheet's invoice was sent for approval or issued: the timesheet can no longer change.");
     public static readonly Error Legacy = Error.Conflict("timesheet_legacy", "This timesheet is the old system's invoice: it is not generated again from the ledger.");
     public static readonly Error LegacyIssued = Error.Conflict("timesheet_legacy_issued", "The old system already sent this invoice to the customer: no invoice is issued from it here.");
 }

@@ -358,7 +358,7 @@ public sealed class TimesheetTests(TestDatabase database)
     }
 
     [SkippableFact]
-    public async Task A_process_can_make_the_invoice_at_one_of_its_stages_and_a_rejection_removes_the_draft()
+    public async Task A_process_can_make_the_invoice_at_one_of_its_stages_and_the_draft_follows_the_timesheet_until_sent()
     {
         Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
         Guid tenantId;
@@ -420,18 +420,42 @@ public sealed class TimesheetTests(TestDatabase database)
             Assert.Equal(sheet.Invoice.Amount, invoice.Amount);
         }
 
-        // The second stage rejects: the timesheet can change again, so its draft invoice is gone.
+        // The second stage returns it: the timesheet changes, and its draft invoice follows.
         using (var scope = database.Scope(tenantId, user: approver.ToString()))
         {
             var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
             var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == approver && w.Status == WorkItemStatus.Pending);
-            Assert.True((await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Reject, "مرفوض", null, default)).IsSuccess);
+            Assert.True((await scope.ServiceProvider.GetRequiredService<ApprovalEngine>().DecideAsync(task.Id, Decision.Reject, "عدّل الإضافي", null, default)).IsSuccess);
+        }
+
+        Guid invoiceId;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var sheet = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!;
+            Assert.Equal(("Returned", true), (sheet.Status, sheet.CanEdit));
+            var worker = sheet.Lines.Single().WorkerId;
+            Assert.True((await scope.ServiceProvider.GetRequiredService<TimesheetService>().AdjustAsync(id, new AdjustmentInput(worker, "ClientAddition", 400, "إضافة للعميل"), default)).IsSuccess);
         }
 
         using (var scope = database.Scope(tenantId, user: manager.ToString()))
         {
-            Assert.False(await scope.ServiceProvider.GetRequiredService<BillingDbContext>().Invoices.AnyAsync(i => i.TimesheetId == id));
-            Assert.Null((await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!.InvoiceDoc);
+            var sheet = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!;
+            var invoice = await scope.ServiceProvider.GetRequiredService<BillingDbContext>().Invoices.Include(i => i.Items).Include(i => i.Workers).SingleAsync(i => i.TimesheetId == id);
+            invoiceId = invoice.Id;
+            Assert.Equal((sheet.Invoice.Amount, sheet.Invoice.Total), (invoice.Amount, invoice.Total));
+            Assert.Equal(400m, invoice.Items.Single(i => i.Component == InvoiceComponent.ClientAddition).Amount);
+            Assert.Equal(invoice.Amount, invoice.Items.Sum(i => i.Amount));
+
+            // Sent for its own approval: the timesheet no longer changes.
+            Assert.True((await scope.ServiceProvider.GetRequiredService<InvoiceService>().SubmitAsync(invoiceId, default)).IsSuccess);
+        }
+
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var sheet = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!;
+            Assert.False(sheet.CanEdit);
+            var worker = sheet.Lines.Single().WorkerId;
+            Assert.Equal("conflict.timesheet_invoiced", (await scope.ServiceProvider.GetRequiredService<TimesheetService>().AdjustAsync(id, new AdjustmentInput(worker, "ClientAddition", 100, "x"), default)).Error.Code);
         }
     }
 

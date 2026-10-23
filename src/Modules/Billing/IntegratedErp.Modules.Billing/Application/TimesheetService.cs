@@ -95,6 +95,12 @@ internal sealed class TimesheetService(
         var timesheet = await db.Timesheets.Include(t => t.Lines).Include(t => t.Adjustments)
             .OrderBy(t => t.LegacyInvoiceCrmId != null)
             .FirstOrDefaultAsync(t => t.ProjectId == project.Id && t.Month == month, cancellationToken).ConfigureAwait(false);
+        var (draft, allowed) = timesheet is null ? (null, Result.Success()) : await InvoiceOfAsync(timesheet.Id, cancellationToken).ConfigureAwait(false);
+        if (allowed.IsFailure)
+        {
+            return Result.Failure<Guid>(allowed.Error);
+        }
+
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         if (timesheet is null)
         {
@@ -115,6 +121,7 @@ internal sealed class TimesheetService(
         }
 
         db.TimesheetLines.AddRange(timesheet.Lines);
+        Follow(draft, timesheet);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success(timesheet.Id);
@@ -134,6 +141,12 @@ internal sealed class TimesheetService(
             return Result.Failure(TimesheetErrors.NotFound);
         }
 
+        var (draft, allowed) = await InvoiceOfAsync(id, cancellationToken).ConfigureAwait(false);
+        if (allowed.IsFailure)
+        {
+            return allowed;
+        }
+
         var added = timesheet.Adjust(input.WorkerId, type, input.Value, input.Reason, rules!, setting!.MaxOvertimeHours, user.DisplayName, clock.UtcNow);
         if (added.IsFailure)
         {
@@ -141,6 +154,7 @@ internal sealed class TimesheetService(
         }
 
         db.TimesheetAdjustments.Add(added.Value);
+        Follow(draft, timesheet);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
@@ -153,6 +167,12 @@ internal sealed class TimesheetService(
             return Result.Failure(TimesheetErrors.NotFound);
         }
 
+        var (draft, allowed) = await InvoiceOfAsync(id, cancellationToken).ConfigureAwait(false);
+        if (allowed.IsFailure)
+        {
+            return allowed;
+        }
+
         var adjustment = timesheet.Adjustments.FirstOrDefault(a => a.Id == adjustmentId);
         var removed = timesheet.RemoveAdjustment(adjustmentId, rules!);
         if (removed.IsFailure)
@@ -161,6 +181,7 @@ internal sealed class TimesheetService(
         }
 
         db.TimesheetAdjustments.Remove(adjustment!);
+        Follow(draft, timesheet);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
@@ -201,6 +222,12 @@ internal sealed class TimesheetService(
             return Result.Success(preview);
         }
 
+        var (draft, allowed) = await InvoiceOfAsync(id, cancellationToken).ConfigureAwait(false);
+        if (allowed.IsFailure)
+        {
+            return Result.Failure<ExcelPreview>(allowed.Error);
+        }
+
         var set = timesheet.SetTotals(totals, rules!, setting.MaxOvertimeHours, $"{user.DisplayName} (Excel)", clock.UtcNow);
         if (set.IsFailure)
         {
@@ -209,6 +236,7 @@ internal sealed class TimesheetService(
 
         db.TimesheetAdjustments.RemoveRange(set.Value.Removed);
         db.TimesheetAdjustments.AddRange(set.Value.Added);
+        Follow(draft, timesheet);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success(preview);
     }
@@ -262,6 +290,12 @@ internal sealed class TimesheetService(
             return Result.Failure(TimesheetErrors.Value);
         }
 
+        var (draft, allowed) = await InvoiceOfAsync(id, cancellationToken).ConfigureAwait(false);
+        if (allowed.IsFailure)
+        {
+            return allowed;
+        }
+
         var set = timesheet.SetTotals(Parse(totals, null), rules!, setting!.MaxOvertimeHours, user.DisplayName, clock.UtcNow);
         if (set.IsFailure)
         {
@@ -270,6 +304,7 @@ internal sealed class TimesheetService(
 
         db.TimesheetAdjustments.RemoveRange(set.Value.Removed);
         db.TimesheetAdjustments.AddRange(set.Value.Added);
+        Follow(draft, timesheet);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success();
     }
@@ -323,6 +358,30 @@ internal sealed class TimesheetService(
         string.IsNullOrWhiteSpace(sponsor) ? WorkerSource.Unknown
         : CompanySponsors.Any(c => sponsor.StartsWith(c, StringComparison.OrdinalIgnoreCase)) ? WorkerSource.Company
         : WorkerSource.Supplier;
+
+    /// <summary>
+    /// The timesheet's invoice: a draft follows the timesheet's changes (returned, it changes and its draft with it); one
+    /// sent for approval or issued locks the timesheet (the user's decision, 2026-10-23).
+    /// </summary>
+    private async Task<(Invoice? Draft, Result Allowed)> InvoiceOfAsync(Guid timesheetId, CancellationToken cancellationToken)
+    {
+        var invoice = await db.Invoices.Include(i => i.Items).Include(i => i.Workers).FirstOrDefaultAsync(i => i.TimesheetId == timesheetId, cancellationToken).ConfigureAwait(false);
+        return invoice switch
+        {
+            null => (null, Result.Success()),
+            { FollowsTimesheet: true } => (invoice, Result.Success()),
+            _ => (null, Result.Failure(TimesheetErrors.Invoiced)),
+        };
+    }
+
+    /// <summary>The draft again from the changed timesheet; when the timesheet can no longer make one (e.g. a worker without a price), it goes.</summary>
+    private void Follow(Invoice? draft, Timesheet timesheet)
+    {
+        if (draft is not null && draft.RefreshFrom(timesheet).IsFailure)
+        {
+            db.Invoices.Remove(draft);
+        }
+    }
 
     private async Task<(Timesheet? Timesheet, BillingRules? Rules, ProjectBillingSetting? Setting)> LoadAsync(Guid id, CancellationToken cancellationToken)
     {

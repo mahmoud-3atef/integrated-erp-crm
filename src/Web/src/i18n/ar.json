@@ -598,7 +598,8 @@
     "conflict_timesheet_legacy": "هذا التحضير فاتورة من النظام القديم: لا يُعاد توليده من سجل الفترات.",
     "conflict_timesheet_legacy_issued": "أرسل النظام القديم هذه الفاتورة للعميل: لا تُصدر منها فاتورة هنا.",
     "validation_bulk_too_many": "أكثر من 300 مستخدم في المرة الواحدة؛ قسّم القائمة.",
-    "validation_bulk_file_unreadable": "الملف ليس ملف Excel فيه عمود «User Name»."
+    "validation_bulk_file_unreadable": "الملف ليس ملف Excel فيه عمود «User Name».",
+    "conflict_timesheet_invoiced": "أُرسلت فاتورة هذا التحضير للاعتماد أو صدرت: لا يُعدَّل التحضير بعد ذلك."
   },
   "menu": {
     "label": "القائمة الرئيسية",

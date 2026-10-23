@@ -193,17 +193,6 @@ public sealed class Invoice : ITenantOwned
             return Result.Failure<Invoice>(InvoiceErrors.TimesheetNotApproved);
         }
 
-        var lines = timesheet.Lines;
-        if (lines.Count == 0)
-        {
-            return Result.Failure<Invoice>(TimesheetErrors.Empty);
-        }
-
-        if (lines.Any(l => l.TotalPrice <= 0 || l.WorkDays <= 0))
-        {
-            return Result.Failure<Invoice>(TimesheetErrors.NoPrice);
-        }
-
         var invoice = new Invoice
         {
             Id = Guid.CreateVersion7(),
@@ -226,6 +215,43 @@ public sealed class Invoice : ITenantOwned
             CreatedByName = by,
         };
         invoice.SetBuyer(buyer);
+        var filled = invoice.Fill(timesheet.Lines);
+        return filled.IsSuccess ? Result.Success(invoice) : Result.Failure<Invoice>(filled.Error);
+    }
+
+    /// <summary>A draft follows its timesheet (not yet sent for approval, no number); once sent or issued, it locks the timesheet.</summary>
+    public bool FollowsTimesheet => TimesheetId is not null && IsEditable && InvoiceNo is null;
+
+    /// <summary>The draft again from its timesheet's figures, after the timesheet changed (the user's request, 2026-10-23).</summary>
+    public Result RefreshFrom(Timesheet timesheet)
+    {
+        ArgumentNullException.ThrowIfNull(timesheet);
+        if (!FollowsTimesheet || timesheet.Id != TimesheetId)
+        {
+            return Result.Failure(InvoiceErrors.NotEditable);
+        }
+
+        PeriodFrom = timesheet.From;
+        PeriodTo = timesheet.To;
+        _items.Clear();
+        _workers.Clear();
+        return Fill(timesheet.Lines);
+    }
+
+    /// <summary>The invoice's items, workers and totals from the timesheet's lines.</summary>
+    private Result Fill(IReadOnlyList<TimesheetLine> lines)
+    {
+        if (lines.Count == 0)
+        {
+            return Result.Failure(TimesheetErrors.Empty);
+        }
+
+        if (lines.Any(l => l.TotalPrice <= 0 || l.WorkDays <= 0))
+        {
+            return Result.Failure(TimesheetErrors.NoPrice);
+        }
+
+        var invoice = this;
 
         // Housing and transport billed on their own leave the service fee; otherwise they stay in it.
         var housing = lines.Where(l => l.HousingBillable).Sum(l => l.DueHousing);
@@ -246,8 +272,8 @@ public sealed class Invoice : ITenantOwned
         invoice.Vat = lines.Sum(l => l.Vat);
         invoice.Total = lines.Sum(l => l.InvoiceTotal);
         return invoice._items.Sum(i => i.Amount) == invoice.Amount && invoice.Amount + invoice.Vat == invoice.Total
-            ? Result.Success(invoice)
-            : Result.Failure<Invoice>(InvoiceErrors.Mismatch);
+            ? Result.Success()
+            : Result.Failure(InvoiceErrors.Mismatch);
     }
 
     /// <summary>

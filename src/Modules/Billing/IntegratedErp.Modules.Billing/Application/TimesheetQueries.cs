@@ -252,8 +252,10 @@ internal sealed class TimesheetQueries(
         var approval = await approvals.StatusAsync(TimesheetAdapter.ScreenCode, id, cancellationToken).ConfigureAwait(false);
         var granted = await permissions.GetCurrentAsync(cancellationToken).ConfigureAwait(false);
         var canManage = granted.Has(BillingPermissions.TimesheetsManage);
-        var invoiceDoc = await db.Invoices.AsNoTracking().Where(i => i.TimesheetId == id)
-            .Select(i => new InvoiceRefDto(i.Id, i.InvoiceNo, i.Status.ToString())).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var invoiceRow = await db.Invoices.AsNoTracking().Where(i => i.TimesheetId == id)
+            .Select(i => new { Ref = new InvoiceRefDto(i.Id, i.InvoiceNo, i.Status.ToString()), Locks = i.InvoiceNo != null || i.AwaitingApproval || (i.Status != InvoiceStatus.Draft && i.Status != InvoiceStatus.Returned) })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var invoiceDoc = invoiceRow?.Ref;
         return new TimesheetDetailDto(
             t.Id, t.TimesheetNo, t.ProjectId, t.ProjectCode, t.ProjectName, t.CustomerName, t.ContractType, t.Month, t.From, t.To, t.DayBasis.ToString(),
             t.Status.ToString(), t.AwaitingApproval, t.GeneratedAt, t.GeneratedByName, t.ApprovedAt, t.ApprovedByName, t.LastComment,
@@ -264,7 +266,7 @@ internal sealed class TimesheetQueries(
             suppliers,
             pays.Where(p => p.Line.Source == WorkerSource.Unknown).Select(p => p.Pay).ToList(),
             approval,
-            CanEdit: canManage && t.IsEditable,
+            CanEdit: canManage && t.IsEditable && invoiceRow?.Locks != true,
             CanSubmit: canManage && t.IsEditable && t.Lines.Count > 0,
             invoiceDoc,
             CanInvoice: invoiceDoc is null && t.Status == TimesheetStatus.Approved && !t.LegacyIssued && granted.Has(BillingPermissions.InvoicesManage))

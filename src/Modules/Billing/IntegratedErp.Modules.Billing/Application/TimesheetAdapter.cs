@@ -62,8 +62,8 @@ internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, I
                 CreateInvoice,
                 "إنشاء الفاتورة",
                 "Create the invoice",
-                "يُنشئ فاتورة التحضير مسودةً بأرقامه (لا تتغير أرقامه وهو قيد الاعتماد)، لتُراجع وتُرسل للاعتماد من صفحتها. إن لم يُعتمد التحضير في النهاية تُحذف المسودة.",
-                "Makes the timesheet's invoice as a draft with its figures (they cannot change while it is in approval), to be reviewed and sent for approval from its page. If the timesheet is not approved in the end, the draft is deleted."),
+                "يُنشئ فاتورة التحضير مسودةً بأرقامه (لا تتغير أرقامه وهو قيد الاعتماد)، لتُراجع وتُرسل للاعتماد من صفحتها. إن أُعيد التحضير للتعديل تتبع المسودة تعديلاته.",
+                "Makes the timesheet's invoice as a draft with its figures (they cannot change while it is in approval), to be reviewed and sent for approval from its page. If the timesheet is returned for changes, the draft follows them."),
         ]);
 
     public async Task<IReadOnlyDictionary<string, string?>?> ReadAsync(Guid recordId, CancellationToken cancellationToken)
@@ -150,15 +150,8 @@ internal sealed class TimesheetAdapter(BillingDbContext db, ICurrentUser user, I
         }
         else
         {
+            // A draft invoice the process made stays: it follows the timesheet's changes until it is sent again.
             timesheet.ApprovalEnded(comment);
-
-            // A draft invoice the process made goes with it: the timesheet may change before it is sent again.
-            var draft = await db.Invoices.Include(i => i.Items).Include(i => i.Workers)
-                .FirstOrDefaultAsync(i => i.TimesheetId == recordId, cancellationToken).ConfigureAwait(false);
-            if (draft is { IsEditable: true, InvoiceNo: null, Status: InvoiceStatus.Draft })
-            {
-                db.Invoices.Remove(draft);
-            }
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
