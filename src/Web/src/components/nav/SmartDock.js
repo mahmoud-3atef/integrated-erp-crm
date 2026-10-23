@@ -42,6 +42,23 @@ export function SmartDock({ modules, compact = false, onToggleCompact, onNavigat
     const [nested, setNested] = useState(() => new Set());
     const [peek, setPeek] = useState(false);
     const labels = !compact || peek;
+    // Compact: the mouse resting on the rail a moment opens the full Dock over the page, leaving it folds it (as the old
+    // rail did, the user's request, 2026-10-23); just after a page is chosen it stays folded until the mouse leaves.
+    const hoverTimer = useRef(0);
+    const picked = useRef(false);
+    const enter = () => {
+        if (!compact || picked.current)
+            return;
+        window.clearTimeout(hoverTimer.current);
+        hoverTimer.current = window.setTimeout(() => setPeek(true), 140);
+    };
+    const leave = () => {
+        window.clearTimeout(hoverTimer.current);
+        picked.current = false;
+        if (compact)
+            setPeek(false);
+    };
+    useEffect(() => () => window.clearTimeout(hoverTimer.current), []);
     // The page changed (a click, Back, Forward, a refresh): its module and nested items open.
     useEffect(() => {
         setOpen(holder);
@@ -49,6 +66,8 @@ export function SmartDock({ modules, compact = false, onToggleCompact, onNavigat
         setNested(new Set(openTrail(module?.items, path).map((k) => `${holder}:${k}`)));
     }, [holder, path, modules]);
     const chosen = useCallback(() => {
+        window.clearTimeout(hoverTimer.current);
+        picked.current = true;
         setPeek(false);
         if (document.activeElement instanceof HTMLElement)
             document.activeElement.blur();
@@ -144,7 +163,7 @@ export function SmartDock({ modules, compact = false, onToggleCompact, onNavigat
         entries[next]?.focus();
     };
     const width = labels ? dockWidth.expanded : dockWidth.compact;
-    const panel = (_jsxs(Box, { sx: {
+    const panel = (_jsxs(Box, { onMouseEnter: enter, onMouseLeave: leave, sx: {
             position: 'absolute',
             insetBlock: 0,
             insetInlineStart: 0,

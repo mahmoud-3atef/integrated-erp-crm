@@ -52,6 +52,7 @@
   - The button at the top switches between 260px and 76px. The choice is kept in this browser (`erp.sidebarCompact`); the old pin's choice carries over the first time.
   - In compact mode, the icons have tooltips and the badges sit on the icons.
   - A module with items opens the full Dock over the page, without moving it, with that module open. Choosing a page, clicking outside or Escape folds it back. This is the user's earlier request that the menu close as soon as an item is chosen.
+  - As the old rail did, the mouse resting on the rail a moment (140ms) also opens the full Dock over the page, and leaving it folds it (the user's request, 2026-10-23). Just after a page is chosen it stays folded until the mouse leaves. Clicking still opens it, so nothing depends on hover alone.
 - **Phone.** A drawer with the full Dock and no magnification, which closes after a page is chosen.
 - **Keyboard and accessibility.**
   - The menu is a `nav` with lists. The modules are buttons with `aria-expanded` and `aria-controls`; the pages are links with `aria-current="page"`.
