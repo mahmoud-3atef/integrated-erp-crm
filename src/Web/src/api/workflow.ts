@@ -272,6 +272,9 @@ export interface HistoryEntry {
   comment: string | null;
   changes: Record<string, string | null> | null;
   at: string;
+  /** A return to an earlier stage: the stage it went back to. */
+  returnToAr?: string | null;
+  returnToEn?: string | null;
 }
 
 export interface ApprovalStage {
@@ -335,6 +338,8 @@ export interface AvailableActions {
   requiredFields: FieldValue[];
   /** Open tasks of the current stage an administrator of the tasks may give to someone else. */
   reassignable?: { workItemId: string; assigneeUserId: string; assigneeName: string }[] | null;
+  /** The earlier stages a return may go back to (the stages this approval already opened), oldest first. */
+  returnTargets?: { stepId: string; nameAr: string; nameEn: string }[];
 }
 
 export interface InstanceDetail {
@@ -456,8 +461,8 @@ export const workflowApi = {
   instances: (status: string) => request<InstanceSummary[]>('GET', `${base}/instances${status ? `?status=${status}` : ''}`),
   instance: (id: string) => request<InstanceDetail>('GET', `${base}/instances/${id}`),
   /** The same idempotency key sent again (a retry, a double click) returns the first result without deciding twice. */
-  decide: (workItemId: string, decision: Decision, comment: string, fields: Record<string, string | null>, idempotencyKey?: string) =>
-    request<void>('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields }, idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined),
+  decide: (workItemId: string, decision: Decision, comment: string, fields: Record<string, string | null>, idempotencyKey?: string, returnTo?: string | null) =>
+    request<void>('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields, returnTo: returnTo || null }, idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined),
   delegate: (workItemId: string, userId: string, comment: string) => request<void>('POST', `${base}/work-items/${workItemId}/delegate`, { userId, comment }),
   reassign: (workItemId: string, userId: string, reason: string) => request<void>('POST', `${base}/work-items/${workItemId}/reassign`, { userId, reason }),
   cancel: (instanceId: string, reason: string) => request<void>('POST', `${base}/instances/${instanceId}/cancel`, { reason }),

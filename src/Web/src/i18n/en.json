@@ -599,7 +599,8 @@
     "conflict_timesheet_legacy_issued": "The old system already sent this invoice to the customer: no invoice is issued from it here.",
     "validation_bulk_too_many": "More than 300 users at once; split the list.",
     "validation_bulk_file_unreadable": "The file is not an Excel file with a «User Name» column.",
-    "conflict_timesheet_invoiced": "This timesheet's invoice was sent for approval or issued: the timesheet can no longer change."
+    "conflict_timesheet_invoiced": "This timesheet's invoice was sent for approval or issued: the timesheet can no longer change.",
+    "validation_approval_return_target": "The approval can only return to a stage it has already passed."
   },
   "menu": {
     "label": "Main menu",
@@ -913,7 +914,13 @@
     "reassignTask": "Task (its current holder)",
     "reassignFrom": "Held now by: {{name}}",
     "reassignTo": "Assign to",
-    "reassignHint": "The task moves to the person you choose, yourself included. It is never given to the one who submitted. The reason is kept in the approval history, and both the former and the new holder are notified."
+    "reassignHint": "The task moves to the person you choose, yourself included. It is never given to the one who submitted. The reason is kept in the approval history, and both the former and the new holder are notified.",
+    "returnTo": "Return to",
+    "returnToSubmitter": "The submitter (for changes)",
+    "returnToStage": "Stage «{{name}}»",
+    "returnToSubmitterHint": "The record goes back to its submitter for changes; the approval starts over when it is sent again.",
+    "returnToStageHint": "The approval goes back to this stage to be reviewed again, then continues from it. The record does not change.",
+    "returnedTo": "→ to «{{name}}»"
   },
   "tasks": {
     "title": "My tasks",

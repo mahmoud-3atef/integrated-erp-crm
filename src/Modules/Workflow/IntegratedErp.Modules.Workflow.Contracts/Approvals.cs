@@ -177,7 +177,13 @@ public sealed record ApprovalTimelineEntry(
     string? Outcome,
     string? Comment,
     IReadOnlyDictionary<string, string?>? Changes,
-    DateTimeOffset At);
+    DateTimeOffset At)
+{
+    /// <summary>A return to an earlier stage: the stage it went back to.</summary>
+    public string? ReturnToAr { get; init; }
+
+    public string? ReturnToEn { get; init; }
+}
 
 /// <summary>
 /// One approval stage as people read it (the stage bar): who it is (or was) with, who decided what and when, and how

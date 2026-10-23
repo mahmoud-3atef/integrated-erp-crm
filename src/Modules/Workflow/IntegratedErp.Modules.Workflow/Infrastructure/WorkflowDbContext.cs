@@ -180,6 +180,7 @@ internal sealed class ApprovalWorkItemConfiguration : IEntityTypeConfiguration<A
         builder.Property(w => w.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(w => w.Comment).HasMaxLength(1000);
         builder.Property(w => w.DecisionKey).HasMaxLength(64);
+        builder.Property(w => w.StageStatusValue).HasMaxLength(60);
         builder.Ignore(w => w.IsOpen);
         builder.HasOne<ApprovalInstance>().WithMany().HasForeignKey(w => w.InstanceId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(w => new { w.TenantId, w.AssigneeUserId, w.Status });

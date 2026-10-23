@@ -299,6 +299,9 @@ function DecisionDialog({
   const ar = i18n.language === 'ar';
   const [comment, setComment] = useState('');
   const [delegateTo, setDelegateTo] = useState('');
+  // Return: to the submitter (empty), or back to one of the stages the approval has already passed.
+  const [returnTo, setReturnTo] = useState('');
+  const targets = detail.actions.returnTargets ?? [];
   const open = detail.actions.reassignable ?? [];
   const [task, setTask] = useState(open[0]?.workItemId ?? '');
   const holder = open.find((o) => o.workItemId === task);
@@ -334,7 +337,7 @@ function DecisionDialog({
       } else if (action === 'Cancel') {
         await workflowApi.cancel(detail.summary.id, comment);
       } else {
-        await workflowApi.decide(itemId, action, comment, action === 'Approve' ? fields : {}, key);
+        await workflowApi.decide(itemId, action, comment, action === 'Approve' ? fields : {}, key, action === 'Return' ? returnTo : null);
       }
       onDone();
     } catch (failure) {
@@ -382,6 +385,22 @@ function DecisionDialog({
                 helperText={t('approval.requiredFieldHint')}
               />
             ))}
+          {action === 'Return' && targets.length > 0 && (
+            <TextField
+              select
+              label={t('approval.returnTo')}
+              value={returnTo}
+              onChange={(e) => setReturnTo(e.target.value)}
+              helperText={returnTo ? t('approval.returnToStageHint') : t('approval.returnToSubmitterHint')}
+            >
+              <MenuItem value="">{t('approval.returnToSubmitter')}</MenuItem>
+              {targets.map((s) => (
+                <MenuItem key={s.stepId} value={s.stepId}>
+                  {t('approval.returnToStage', { name: ar ? s.nameAr : s.nameEn })}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           {action === 'Reassign' && open.length > 1 && (
             <TextField select label={t('approval.reassignTask')} value={task} onChange={(e) => (setTask(e.target.value), setDelegateTo(''))} required>
               {open.map((o) => (

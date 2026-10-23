@@ -459,6 +459,89 @@ public sealed class TimesheetTests(TestDatabase database)
         }
     }
 
+    [SkippableFact]
+    public async Task A_stage_can_return_the_approval_to_an_earlier_stage_which_opens_again_and_the_process_continues_from_it()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        Guid tenantId;
+        using (var scope = database.Scope(system: true))
+        {
+            tenantId = (await scope.ServiceProvider.GetRequiredService<OrganizationService>().CreateTenantAsync($"rt-{Guid.NewGuid():N}"[..16], "شركة الإرجاع", "Return Co", default)).Value.Id;
+        }
+
+        var crm = new FakeCrm();
+        crm.Add(CrmEntities.Profession, new() { ["new_name"] = "عامل", ["new_code"] = "6132115", ["new_professionenglish"] = "labour" });
+        var project = crm.Add("new_project", new() { ["new_name"] = "مشروع الرياض", ["new_code"] = "pro00900", ["new_contracttype"] = 2, ["statecode"] = 0 }, created: Created2025);
+        WorkStart(crm, Worker(crm, "BSS0701", 100000000), project, "2026-08-01", 3000m);
+        await SyncAsync(tenantId, crm);
+        var (manager, approver) = await PeopleAsync(tenantId);
+
+        using (var scope = database.Scope(tenantId, user: "setup"))
+        {
+            static ApprovalStep Stage(string id) => new()
+            {
+                Id = id,
+                NameAr = "مرحلة " + id,
+                NameEn = "Stage " + id,
+                Assignees = [new Assignee(AssigneeKind.Permission, Permission: "billing.timesheets.approve")],
+            };
+            var definition = new ProcessDefinition(null, [Stage("operations"), Stage("review"), Stage("finance")]);
+            var process = new ApprovalProcess(TimesheetAdapter.ScreenCode, "اعتماد التحضير", "Timesheet approval", 100, DefinitionJson.Write(definition));
+            process.Publish("setup", DateTimeOffset.UtcNow);
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            workflow.Processes.Add(process);
+            await workflow.SaveChangesAsync();
+        }
+
+        Guid id;
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var service = scope.ServiceProvider.GetRequiredService<TimesheetService>();
+            var projectId = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().MonthAsync(new DateOnly(2026, 9, 1), default)).Projects.Single().ProjectId!.Value;
+            id = (await service.GenerateAsync(new GenerateInput(projectId, new DateOnly(2026, 9, 1)), default)).Value;
+            Assert.True((await service.SubmitAsync(id, default)).IsSuccess);
+        }
+
+        await ApproveNextAsync(tenantId, approver); // operations
+        await ApproveNextAsync(tenantId, approver); // review
+
+        // Finance: the earlier stages are offered; a stage not passed yet is refused; it returns to «operations».
+        using (var scope = database.Scope(tenantId, user: approver.ToString()))
+        {
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var task = await workflow.WorkItems.SingleAsync(w => w.AssigneeUserId == approver && w.Status == WorkItemStatus.Pending);
+            Assert.Equal("finance", task.StepId);
+            var detail = (await scope.ServiceProvider.GetRequiredService<ApprovalQueries>().DetailAsync(task.InstanceId, default)).Value;
+            Assert.Equal(["operations", "review"], detail.Actions.ReturnTargets.Select(t => t.StepId));
+
+            var engine = scope.ServiceProvider.GetRequiredService<ApprovalEngine>();
+            Assert.Equal("validation.approval_return_target", (await engine.DecideAsync(task.Id, Decision.Return, "خطأ", null, default, returnToStepId: "nowhere")).Error.Code);
+            Assert.Equal("validation.approval_return_target", (await engine.DecideAsync(task.Id, Decision.Reject, "خطأ", null, default, returnToStepId: "operations")).Error.Code);
+            Assert.True((await engine.DecideAsync(task.Id, Decision.Return, "راجع الإضافي", null, default, returnToStepId: "operations")).IsSuccess);
+        }
+
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            var workflow = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var instance = await workflow.Instances.SingleAsync(i => i.RecordId == id);
+            Assert.Equal((InstanceStatus.InProgress, "operations"), (instance.Status, instance.WaitingStepId));
+            Assert.Equal(2, await workflow.WorkItems.Where(w => w.InstanceId == instance.Id && w.StepId == "operations").MaxAsync(w => w.Round));
+            var sheet = (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!;
+            Assert.Equal("InApproval", sheet.Status); // the record stays in approval
+            var returned = sheet.Approval!.History.Single(h => h.Kind == "Returned");
+            Assert.Equal("مرحلة operations", returned.ReturnToAr);
+        }
+
+        // From «operations» the process continues: review and finance again, then approved.
+        await ApproveNextAsync(tenantId, approver);
+        await ApproveNextAsync(tenantId, approver);
+        await ApproveNextAsync(tenantId, approver);
+        using (var scope = database.Scope(tenantId, user: manager.ToString()))
+        {
+            Assert.Equal("Approved", (await scope.ServiceProvider.GetRequiredService<TimesheetQueries>().GetAsync(id, default))!.Status);
+        }
+    }
+
     /// <summary>The approver takes their one open task and approves it.</summary>
     private async Task ApproveNextAsync(Guid tenantId, Guid approver)
     {

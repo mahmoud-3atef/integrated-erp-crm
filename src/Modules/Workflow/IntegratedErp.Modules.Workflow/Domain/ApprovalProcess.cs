@@ -334,8 +334,10 @@ public sealed class ApprovalWorkItem : ITenantOwned
         AssigneeName = string.Empty;
     }
 
-    public ApprovalWorkItem(Guid instanceId, Guid tenantId, string stepId, string stepNameAr, string stepNameEn, int round, Guid assignee, string assigneeName, DateTimeOffset createdAt, DateTimeOffset? dueAt, Guid? delegatedFrom = null)
+    public ApprovalWorkItem(Guid instanceId, Guid tenantId, string stepId, string stepNameAr, string stepNameEn, int round, Guid assignee, string assigneeName, DateTimeOffset createdAt, DateTimeOffset? dueAt, Guid? delegatedFrom = null, string? stageCursor = null, string? stageStatusValue = null)
     {
+        StageCursor = stageCursor;
+        StageStatusValue = stageStatusValue;
         Id = Guid.CreateVersion7();
         InstanceId = instanceId;
         TenantId = tenantId;
@@ -365,6 +367,12 @@ public sealed class ApprovalWorkItem : ITenantOwned
 
     /// <summary>Which time this stage opened in the approval (a stage can open again in another branch).</summary>
     public int Round { get; private set; }
+
+    /// <summary>Where the approval stood when this stage opened: a later stage can return the approval here.</summary>
+    public string? StageCursor { get; private set; }
+
+    /// <summary>The added status value the record showed when this stage opened (restored by a return here).</summary>
+    public string? StageStatusValue { get; private set; }
 
     public Guid AssigneeUserId { get; private set; }
 

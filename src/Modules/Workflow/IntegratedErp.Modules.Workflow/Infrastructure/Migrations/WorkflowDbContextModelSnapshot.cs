@@ -722,6 +722,15 @@ namespace IntegratedErp.Modules.Workflow.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("round");
 
+                    b.Property<string>("StageCursor")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("stage_cursor");
+
+                    b.Property<string>("StageStatusValue")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("stage_status_value");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)

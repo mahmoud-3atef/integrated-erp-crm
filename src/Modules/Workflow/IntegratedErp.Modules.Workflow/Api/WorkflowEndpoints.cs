@@ -17,7 +17,7 @@ internal static class WorkflowEndpoints
 
     public sealed record ActiveRequest(bool IsActive);
 
-    public sealed record DecisionRequest(Decision Decision, string? Comment, Dictionary<string, string?>? Fields);
+    public sealed record DecisionRequest(Decision Decision, string? Comment, Dictionary<string, string?>? Fields, string? ReturnTo = null);
 
     public sealed record DelegateRequest(Guid UserId, string? Comment);
 
@@ -105,7 +105,7 @@ internal static class WorkflowEndpoints
 
         // An Idempotency-Key repeated for the same task returns the first result without deciding again.
         group.MapPost("/work-items/{id:guid}/decision", async (Guid id, DecisionRequest r, HttpRequest http, ApprovalEngine engine, CancellationToken ct) =>
-            ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, r.Fields, ct, http.Headers["Idempotency-Key"].FirstOrDefault()).ConfigureAwait(false)));
+            ToHttp(await engine.DecideAsync(id, r.Decision, r.Comment, r.Fields, ct, http.Headers["Idempotency-Key"].FirstOrDefault(), r.ReturnTo).ConfigureAwait(false)));
 
         group.MapPost("/work-items/{id:guid}/delegate", async (Guid id, DelegateRequest r, ApprovalEngine engine, CancellationToken ct) =>
             ToHttp(await engine.DelegateAsync(id, r.UserId, r.Comment, ct).ConfigureAwait(false)));

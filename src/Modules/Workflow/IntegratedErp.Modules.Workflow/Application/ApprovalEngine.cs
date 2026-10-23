@@ -39,6 +39,7 @@ internal sealed partial class ApprovalEngine(
 
     public static readonly Error UnknownScreen = Error.Validation("approval_screen_unknown", "Unknown screen.");
     public static readonly Error RecordNotFound = Error.NotFound("approval_record", "The record was not found.");
+    public static readonly Error ReturnTargetUnknown = Error.Validation("approval_return_target", "The approval can only return to a stage it has already passed.");
     public static readonly Error NoProcess = Error.Validation("approval_no_process", "No active approval process applies to this record.");
     public static readonly Error AlreadyRunning = Error.Conflict("approval_in_progress", "The record is already in approval.");
     public static readonly Error ChangedMeanwhile = Error.Conflict("approval_changed", "Someone else acted first. Refresh and try again.");
@@ -162,13 +163,19 @@ internal sealed partial class ApprovalEngine(
     /// From the Idempotency-Key header: when this task was already decided with the same key, the first result is
     /// returned and nothing is done again.
     /// </param>
+    /// <param name="returnToStepId">
+    /// A return to an earlier stage of this approval (spec 16 §3.3: the return's target): the approval goes back to
+    /// where it stood when that stage opened, the stage opens again and the process continues from there. Without it,
+    /// a return goes to the submitter as before.
+    /// </param>
     public async Task<Result> DecideAsync(
         Guid workItemId,
         Decision decision,
         string? comment,
         IReadOnlyDictionary<string, string?>? fieldValues,
         CancellationToken cancellationToken,
-        string? idempotencyKey = null)
+        string? idempotencyKey = null,
+        string? returnToStepId = null)
     {
         idempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim();
         if (idempotencyKey?.Length > 64)
@@ -213,6 +220,20 @@ internal sealed partial class ApprovalEngine(
             return Result.Failure(Error.Validation("approval_return_not_allowed", "This stage does not allow returning."));
         }
 
+        // The earlier stage to return to: one this approval has already opened (its latest opening).
+        ApprovalWorkItem? returnTo = null;
+        if (!string.IsNullOrWhiteSpace(returnToStepId))
+        {
+            returnTo = decision != Decision.Return ? null : await db.WorkItems.AsNoTracking()
+                .Where(w => w.InstanceId == instance.Id && w.StepId == returnToStepId && w.StepId != item.StepId && w.StageCursor != null)
+                .OrderByDescending(w => w.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            if (returnTo is null)
+            {
+                return Result.Failure(ReturnTargetUnknown);
+            }
+        }
+
         // Fields the approver must fill (CRM "mandatory fields" on the task) are saved on the record first.
         if (decision == Decision.Approve && step.RequiredFields.Count > 0)
         {
@@ -234,7 +255,8 @@ internal sealed partial class ApprovalEngine(
         History(
             instance,
             decision switch { Decision.Approve => HistoryKind.Approved, Decision.Reject => HistoryKind.Rejected, _ => HistoryKind.Returned },
-            step, actor: true, onBehalfOf: onBehalf, comment: comment);
+            step, actor: true, onBehalfOf: onBehalf, comment: comment,
+            details: returnTo is null ? null : JsonSerializer.Serialize(new { returnToAr = returnTo.StepNameAr, returnToEn = returnTo.StepNameEn }));
 
         // Stage outcome: one rejection or return decides at once; approval needs one (Any) or everyone (All).
         var stageItems = await db.WorkItems.Where(w => w.InstanceId == instance.Id && w.StepId == item.StepId && w.Round == item.Round)
@@ -247,6 +269,15 @@ internal sealed partial class ApprovalEngine(
 
         stillOpen.ForEach(w => w.Close(now));
         instance.StopWaiting();
+        if (returnTo is not null)
+        {
+            // Back to where the approval stood when that stage opened (with the status the record showed then).
+            instance.MoveTo(returnTo.StageCursor!);
+            instance.SetStatusValue(returnTo.StageStatusValue);
+            await RunAsync(instance, adapter, cancellationToken).ConfigureAwait(false);
+            return await SaveDecisionAsync(workItemId, idempotencyKey, cancellationToken).ConfigureAwait(false);
+        }
+
         var cursor = ProcessCursor.Parse(instance.Cursor);
         var branch = decision switch { Decision.Approve => ProcessCursor.Approve, Decision.Reject => ProcessCursor.Reject, _ => ProcessCursor.Return };
         cursor.Advance(step, branch, definition);
@@ -314,7 +345,7 @@ internal sealed partial class ApprovalEngine(
         var now = clock.UtcNow;
         comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
         item.Decide(WorkItemStatus.Delegated, comment, now);
-        db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, item.StepId, item.StepNameAr, item.StepNameEn, item.Round, toUserId, toName, now, item.DueAt, item.AssigneeUserId));
+        db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, item.StepId, item.StepNameAr, item.StepNameEn, item.Round, toUserId, toName, now, item.DueAt, item.AssigneeUserId, item.StageCursor, item.StageStatusValue));
         History(instance, HistoryKind.Delegated, step, actor: true, comment: comment, details: JsonSerializer.Serialize(new { to = toName }));
         QueueNotification([toUserId], instance, "workflow.task_assigned",
             $"بانتظار اعتمادك: {instance.ProcessNameAr}", $"Awaiting your approval: {instance.ProcessNameEn}",
@@ -367,7 +398,7 @@ internal sealed partial class ApprovalEngine(
         var step = (ApprovalStep)DefinitionRules.Walk((await DefinitionAsync(instance.VersionId, cancellationToken).ConfigureAwait(false)).Steps).First(s => s.Id == item.StepId);
         var now = clock.UtcNow;
         item.Decide(WorkItemStatus.Reassigned, reason, now);
-        db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, item.StepId, item.StepNameAr, item.StepNameEn, item.Round, toUserId, toName, now, item.DueAt, item.AssigneeUserId));
+        db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, item.StepId, item.StepNameAr, item.StepNameEn, item.Round, toUserId, toName, now, item.DueAt, item.AssigneeUserId, item.StageCursor, item.StageStatusValue));
         History(instance, HistoryKind.Reassigned, step, actor: true, comment: reason, details: JsonSerializer.Serialize(new { from = item.AssigneeName, to = toName }));
         QueueNotification([toUserId], instance, "workflow.task_assigned",
             $"بانتظار اعتمادك: {instance.ProcessNameAr}", $"Awaiting your approval: {instance.ProcessNameEn}",
@@ -511,7 +542,11 @@ internal sealed partial class ApprovalEngine(
             history.Select(h => new ApprovalTimelineEntry(
                 h.Sequence, h.Kind, h.StepNameAr, h.StepNameEn, h.ActorName, h.OnBehalfOf, h.Outcome, h.Comment,
                 h.Kind == nameof(HistoryKind.RecordUpdated) && h.Details is not null ? JsonSerializer.Deserialize<Dictionary<string, string?>>(h.Details) : null,
-                h.At)).ToList(),
+                h.At)
+            {
+                ReturnToAr = ReturnTarget(h, "returnToAr"),
+                ReturnToEn = ReturnTarget(h, "returnToEn"),
+            }).ToList(),
             await PlannedAsync(instance, definition, cancellationToken).ConfigureAwait(false))
         {
             StatusValueAr = shown.Ar,
@@ -845,7 +880,7 @@ internal sealed partial class ApprovalEngine(
         var due = stage.DueHours is { } hours ? now.AddHours(hours) : (DateTimeOffset?)null;
         foreach (var id in people)
         {
-            db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, stage.Id, stage.NameAr, stage.NameEn, round, id, members[id], now, due));
+            db.WorkItems.Add(new ApprovalWorkItem(instance.Id, instance.TenantId, stage.Id, stage.NameAr, stage.NameEn, round, id, members[id], now, due, stageCursor: instance.Cursor, stageStatusValue: instance.StatusValue));
         }
 
         instance.Wait(stage.Id, stage.NameAr, stage.NameEn);
@@ -981,6 +1016,18 @@ internal sealed partial class ApprovalEngine(
         }
 
         return new Dictionary<string, string?>(values, StringComparer.Ordinal) { ["status"] = shown };
+    }
+
+    /// <summary>The stage a return went back to, from the history entry's details.</summary>
+    private static string? ReturnTarget(ApprovalHistoryEntry entry, string key)
+    {
+        if (entry.Kind != nameof(HistoryKind.Returned) || entry.Details is null)
+        {
+            return null;
+        }
+
+        using var details = JsonDocument.Parse(entry.Details);
+        return details.RootElement.TryGetProperty(key, out var value) ? value.GetString() : null;
     }
 
     /// <summary>The names of a screen's added status values, by code.</summary>

@@ -94,6 +94,7 @@ function Entry({ entry, last, when, ar, fieldName }: { entry: HistoryEntry; last
           {t(`approval.event.${entry.kind}`, { defaultValue: entry.kind })}
           {step ? ` — ${step}` : ''}
           {entry.kind === 'Completed' && entry.outcome ? ` (${t(`approval.instance.${entry.outcome}`)})` : ''}
+          {entry.kind === 'Returned' && (ar ? entry.returnToAr : entry.returnToEn) ? ` ${t('approval.returnedTo', { name: ar ? entry.returnToAr : entry.returnToEn })}` : ''}
         </Typography>
         {entry.actor && (
           <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>
@@ -161,6 +162,7 @@ export function ApprovalFeed({
                 {t(`approval.event.${entry.kind}`, { defaultValue: entry.kind })}
                 {step ? ` — ${step}` : ''}
                 {entry.kind === 'Completed' && entry.outcome ? ` (${t(`approval.instance.${entry.outcome}`)})` : ''}
+                {entry.kind === 'Returned' && (ar ? entry.returnToAr : entry.returnToEn) ? ` ${t('approval.returnedTo', { name: ar ? entry.returnToAr : entry.returnToEn })}` : ''}
               </Typography>
               {(by || entry.comment) && (
                 <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>

@@ -60,7 +60,14 @@ public sealed record AvailableActionsDto(
     bool CanCancel,
     bool CanRetry,
     IReadOnlyList<FieldValueDto> RequiredFields,
-    IReadOnlyList<ReassignableTaskDto>? Reassignable = null);
+    IReadOnlyList<ReassignableTaskDto>? Reassignable = null)
+{
+    /// <summary>The earlier stages a return may go back to (the stages this approval has already opened), oldest first.</summary>
+    public IReadOnlyList<ReturnTargetDto> ReturnTargets { get; init; } = [];
+}
+
+/// <summary>An earlier stage of the approval a return can go back to.</summary>
+public sealed record ReturnTargetDto(string StepId, string NameAr, string NameEn);
 
 /// <summary>An open task of the current stage that an administrator of the tasks may give to someone else.</summary>
 public sealed record ReassignableTaskDto(Guid WorkItemId, Guid AssigneeUserId, string AssigneeName);
@@ -164,6 +171,17 @@ internal sealed class ApprovalQueries(WorkflowDbContext db, ApprovalEngine engin
                 .Select(w => new ReassignableTaskDto(w.Id, w.AssigneeUserId, w.AssigneeName))
                 .ToListAsync(cancellationToken).ConfigureAwait(false)
             : [];
+        var targets = step?.AllowReturn == true
+            ? (await db.WorkItems.AsNoTracking()
+                    .Where(w => w.InstanceId == instance.Id && w.StepId != step.Id && w.StageCursor != null)
+                    .Select(w => new { w.StepId, w.StepNameAr, w.StepNameEn, w.CreatedAt })
+                    .ToListAsync(cancellationToken).ConfigureAwait(false))
+                .GroupBy(w => w.StepId)
+                .Select(g => g.OrderBy(w => w.CreatedAt).First())
+                .OrderBy(w => w.CreatedAt)
+                .Select(w => new ReturnTargetDto(w.StepId, w.StepNameAr, w.StepNameEn))
+                .ToList()
+            : [];
         var actions = new AvailableActionsDto(
             item?.Id,
             step is not null,
@@ -176,7 +194,10 @@ internal sealed class ApprovalQueries(WorkflowDbContext db, ApprovalEngine engin
                 ? []
                 : step.RequiredFields.Select(key => adapter.Screen.Fields.First(f => f.Key == key))
                     .Select(f => new FieldValueDto(f, values?.GetValueOrDefault(f.Key))).ToList(),
-            reassignable);
+            reassignable)
+        {
+            ReturnTargets = targets,
+        };
 
         return Result.Success(new InstanceDetailDto(Summary(instance), await engine.StatusOfAsync(instance, cancellationToken).ConfigureAwait(false), record, actions));
     }

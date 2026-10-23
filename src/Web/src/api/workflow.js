@@ -43,7 +43,7 @@ export const workflowApi = {
     instances: (status) => request('GET', `${base}/instances${status ? `?status=${status}` : ''}`),
     instance: (id) => request('GET', `${base}/instances/${id}`),
     /** The same idempotency key sent again (a retry, a double click) returns the first result without deciding twice. */
-    decide: (workItemId, decision, comment, fields, idempotencyKey) => request('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields }, idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined),
+    decide: (workItemId, decision, comment, fields, idempotencyKey, returnTo) => request('POST', `${base}/work-items/${workItemId}/decision`, { decision, comment, fields, returnTo: returnTo || null }, idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined),
     delegate: (workItemId, userId, comment) => request('POST', `${base}/work-items/${workItemId}/delegate`, { userId, comment }),
     reassign: (workItemId, userId, reason) => request('POST', `${base}/work-items/${workItemId}/reassign`, { userId, reason }),
     cancel: (instanceId, reason) => request('POST', `${base}/instances/${instanceId}/cancel`, { reason }),
