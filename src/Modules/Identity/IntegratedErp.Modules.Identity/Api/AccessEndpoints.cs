@@ -17,6 +17,8 @@ internal static class AccessEndpoints
 
     public sealed record AddMemberRequest(string UserName);
 
+    public sealed record BulkMembersRequest(IReadOnlyList<string>? UserNames, Guid? RoleId);
+
     public sealed record SetRolesRequest(IReadOnlyList<AssignmentDto>? Roles);
 
     public sealed record SetActiveRequest(bool IsActive);
@@ -46,6 +48,31 @@ internal static class AccessEndpoints
 
         group.MapPost("/members", async (AddMemberRequest request, AccessService service, CancellationToken ct) =>
             ToHttp(await service.AddMemberAsync(request.UserName, ct).ConfigureAwait(false), StatusCodes.Status201Created))
+            .RequirePermission(IdentityPermissions.UsersManage, companyWide: true);
+
+        // Several at once (the old system's users): the names of an Excel list, who would be added, then adding them.
+        group.MapPost("/members/bulk/read", async (HttpRequest request, CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType || (await request.ReadFormAsync(ct).ConfigureAwait(false)).Files.GetFile("file") is not { Length: > 0 } file)
+                {
+                    return Results.Problem("An Excel file is required.", statusCode: StatusCodes.Status400BadRequest, title: "validation.file_empty");
+                }
+
+                await using var content = file.OpenReadStream();
+                using var copy = new MemoryStream();
+                await content.CopyToAsync(copy, ct).ConfigureAwait(false);
+                copy.Position = 0;
+                return ToHttp(AccessService.ReadUserNames(copy), StatusCodes.Status200OK);
+            })
+            .DisableAntiforgery()
+            .RequirePermission(IdentityPermissions.UsersManage, companyWide: true);
+
+        group.MapPost("/members/bulk/preview", async (BulkMembersRequest request, AccessService service, CancellationToken ct) =>
+            ToHttp(await service.AddMembersAsync(request.UserNames ?? [], request.RoleId, apply: false, ct).ConfigureAwait(false), StatusCodes.Status200OK))
+            .RequirePermission(IdentityPermissions.UsersManage, companyWide: true);
+
+        group.MapPost("/members/bulk", async (BulkMembersRequest request, AccessService service, CancellationToken ct) =>
+            ToHttp(await service.AddMembersAsync(request.UserNames ?? [], request.RoleId, apply: true, ct).ConfigureAwait(false), StatusCodes.Status200OK))
             .RequirePermission(IdentityPermissions.UsersManage, companyWide: true);
 
         group.MapPut("/members/{id:guid}/roles", async (Guid id, SetRolesRequest request, AccessService service, CancellationToken ct) =>

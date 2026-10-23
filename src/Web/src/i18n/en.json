@@ -596,7 +596,9 @@
     "conflict_status_value_taken": "The screen already has a value with this name.",
     "not_found_status_value": "The value was not found.",
     "conflict_timesheet_legacy": "This timesheet is the old system's invoice: it is not generated again from the ledger.",
-    "conflict_timesheet_legacy_issued": "The old system already sent this invoice to the customer: no invoice is issued from it here."
+    "conflict_timesheet_legacy_issued": "The old system already sent this invoice to the customer: no invoice is issued from it here.",
+    "validation_bulk_too_many": "More than 300 users at once; split the list.",
+    "validation_bulk_file_unreadable": "The file is not an Excel file with a «User Name» column."
   },
   "menu": {
     "label": "Main menu",
@@ -707,7 +709,34 @@
     "userName": "User name",
     "employee": "Linked employee",
     "employeeIntro": "The employee file of this account: as it, the direct manager approves their team's requests (and later self-service).",
-    "employeePick": "Choose the employee"
+    "employeePick": "Choose the employee",
+    "bulk": {
+      "button": "Add several",
+      "title": "Add several users",
+      "intro": "Upload an Excel file with a «User Name» column (such as the old system's users export), or type the sign-in names, one user per line (JRCO\\name or the name alone). A preview from the directory shows before anything is added, and any name can be left out.",
+      "file": "Choose an Excel file",
+      "names": "Sign-in names",
+      "namesHint": "{{count}} names",
+      "role": "Role",
+      "roleHint": "Given to each user for all commercial registrations, kept with their current roles if already a member.",
+      "noRole": "No role",
+      "check": "Preview",
+      "back": "Back",
+      "add": "Add ({{count}})",
+      "previewHint": "{{count}} users will be added with the role «{{role}}». Untick anyone you do not want to add.",
+      "done": "{{added}} added, {{member}} already members (given the role), {{failed}} not added.",
+      "userName": "Sign-in name",
+      "name": "Name",
+      "email": "E-mail",
+      "outcome": "Status",
+      "outcomes": {
+        "new": "To be added",
+        "member": "Already a member",
+        "not_found": "Not in the directory",
+        "added": "Added",
+        "failed": "Could not be added"
+      }
+    }
   },
   "fields": {
     "Code": "Code",

@@ -199,6 +199,59 @@ public sealed class AccessControlTests : IAsyncLifetime
     private static async Task<JsonElement> Json(HttpResponseMessage response) =>
         JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
 
+    [SkippableFact]
+    public async Task Users_of_an_Excel_list_are_added_at_once_with_the_chosen_role()
+    {
+        Skip.IfNot(TestDatabase.IsAvailable, "No SQL Server available for integration tests.");
+        var first = $"bk1{Guid.NewGuid():N}"[..14];
+        var second = $"bk2{Guid.NewGuid():N}"[..14];
+        _directory.Add(first, Password, "Bulk One");
+        _directory.Add(second, Password, "Bulk Two");
+        var admin = await SignInAsync(_admin);
+
+        // The old system's export: hidden columns first, the names under «User Name» as DOMAIN\name.
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Enabled Users");
+        sheet.Cell(1, 1).Value = "(Do Not Modify) User";
+        sheet.Cell(1, 2).Value = "Full Name";
+        sheet.Cell(1, 3).Value = "User Name";
+        string[] names = [$"JRCO\\{first}", $"JRCO\\{second}", "JRCO\\nobody-here"];
+        for (var i = 0; i < names.Length; i++)
+        {
+            sheet.Cell(i + 2, 1).Value = Guid.NewGuid().ToString();
+            sheet.Cell(i + 2, 2).Value = $"Person {i}";
+            sheet.Cell(i + 2, 3).Value = names[i];
+        }
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(stream.ToArray()), "file", "users.xlsx" } };
+        var read = await admin.PostAsync("/api/v1/access/members/bulk/read", form);
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        var userNames = (await Json(read)).EnumerateArray().Select(n => n.GetString()!).ToList();
+        Assert.Equal(names, userNames);
+
+        var roles = await Json(await admin.GetAsync("/api/v1/access/roles"));
+        var readOnly = roles.EnumerateArray().First(r => r.GetProperty("code").GetString() == "read-only").GetProperty("id").GetGuid();
+
+        var preview = await Json(await admin.PostAsJsonAsync("/api/v1/access/members/bulk/preview", new { userNames, roleId = readOnly }));
+        Assert.Equal([(first, "new"), (second, "new"), ("nobody-here", "not_found")], preview.EnumerateArray().Select(r => (r.GetProperty("userName").GetString(), r.GetProperty("outcome").GetString())));
+        Assert.DoesNotContain((await Json(await admin.GetAsync("/api/v1/access/members"))).EnumerateArray(), m => m.GetProperty("userName").GetString() == first);
+
+        var added = await Json(await admin.PostAsJsonAsync("/api/v1/access/members/bulk", new { userNames, roleId = readOnly }));
+        Assert.Equal(["added", "added", "not_found"], added.EnumerateArray().Select(r => r.GetProperty("outcome").GetString()));
+        var members = (await Json(await admin.GetAsync("/api/v1/access/members"))).EnumerateArray().ToList();
+        foreach (var name in new[] { first, second })
+        {
+            var member = members.Single(m => m.GetProperty("userName").GetString() == name);
+            Assert.Equal([readOnly], member.GetProperty("roles").EnumerateArray().Select(r => r.GetProperty("roleId").GetGuid()));
+        }
+
+        // Again: already members, nothing doubled.
+        var again = await Json(await admin.PostAsJsonAsync("/api/v1/access/members/bulk", new { userNames, roleId = readOnly }));
+        Assert.Equal(["member", "member", "not_found"], again.EnumerateArray().Select(r => r.GetProperty("outcome").GetString()));
+    }
+
     /// <summary>Password ⇒ MFA (enrolled on first sign-in) ⇒ the single company.</summary>
     private async Task<HttpClient> SignInAsync(string userName)
     {

@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import {
   Box,
   Button,
@@ -36,6 +37,7 @@ import { useSession } from '../../app/session';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { Badge, EmptyState, Initials, PageHeader, Panel, StatusDot } from '../../components/ui';
+import { BulkMembersDialog } from './BulkMembersDialog';
 
 const allEntities = 'all';
 
@@ -47,6 +49,7 @@ export function UsersPage() {
   const [entities, setEntities] = useState<LegalEntity[]>([]);
   const [editing, setEditing] = useState<Member | null>(null);
   const [adding, setAdding] = useState(false);
+  const [bulk, setBulk] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canManage = can('identity.users.manage', true);
 
@@ -78,9 +81,14 @@ export function UsersPage() {
         subtitle={t('users.intro')}
         actions={
           canManage && (
-            <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAdding(true)}>
-              {t('users.add')}
-            </Button>
+            <Stack direction="row" sx={{ gap: 1 }}>
+              <Button variant="outlined" startIcon={<GroupAddOutlinedIcon />} onClick={() => setBulk(true)}>
+                {t('users.bulk.button')}
+              </Button>
+              <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAdding(true)}>
+                {t('users.add')}
+              </Button>
+            </Stack>
           )
         }
       />
@@ -154,6 +162,7 @@ export function UsersPage() {
           }}
         />
       )}
+      {bulk && <BulkMembersDialog roles={roles} onClose={() => setBulk(false)} onDone={() => void load()} />}
       {editing && (
         <MemberDialog
           member={editing}
