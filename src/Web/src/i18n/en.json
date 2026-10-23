@@ -2297,8 +2297,8 @@
       "vat": "VAT",
       "total": "Invoice total",
       "payroll": "Company workers' payroll",
-      "suppliers": "Supplier statements",
-      "unknown": "Unknown source",
+      "suppliers": "Suppliers' payroll",
+      "unknown": "Payroll with no known source",
       "workersCount": "{{count}} workers",
       "suppliersCount": "{{count}} suppliers"
     },
@@ -2619,6 +2619,15 @@
         "279640006": "Sent to the project supervisor",
         "279640008": "Awaiting payment"
       }
+    },
+    "files": {
+      "title": "Attachments ({{count}})",
+      "none": "No attachments on this timesheet.",
+      "add": "Add an attachment: choose a file or drop it here",
+      "kinds": "PDF or an image (or Word and Excel), up to 20 MB",
+      "open": "Open {{name}}",
+      "download": "Download",
+      "remove": "Remove the attachment"
     }
   },
   "invoices": {

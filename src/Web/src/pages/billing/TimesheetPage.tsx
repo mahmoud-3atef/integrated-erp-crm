@@ -48,6 +48,7 @@ import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { TimesheetSettingsDialog } from './timesheetSetup';
 import { VariablesDialog } from './VariablesDialog';
+import { TimesheetFiles } from './TimesheetFiles';
 import { LegacyBadge } from './LegacyImportDialog';
 import PlaylistAddOutlinedIcon from '@mui/icons-material/PlaylistAddOutlined';
 import { recordTones, RecordHero, SectionTitle } from '../../components/RecordLayout';
@@ -61,6 +62,7 @@ import { ExcelUploadDialog } from './ExcelUploadDialog';
 import { InvoiceStatusBadge } from './invoices';
 import { SourceBadge, TimesheetStatusBadge } from './timesheets';
 import { useCrumb } from '../../app/breadcrumbs';
+import { useSession } from '../../app/session';
 
 type Tab = 'invoice' | 'payroll' | 'suppliers' | 'unknown';
 
@@ -150,6 +152,7 @@ export function TimesheetPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+  const { can } = useSession();
 
   if (!sheet) {
     return <ErrorMessage messageKey={error} />;
@@ -176,6 +179,8 @@ export function TimesheetPage() {
   const attendance = days > 0 ? Math.round(((days - absence) / days) * 1000) / 10 : 0;
   const payroll = sheet.payroll.reduce((s, p) => s + p.net, 0);
   const suppliers = sheet.suppliers.reduce((s, p) => s + p.net, 0);
+  const unknown = sheet.unknownSource.reduce((s, p) => s + p.net, 0);
+  const canFiles = can('billing.timesheets.manage', true);
   const noPrice = sheet.lines.filter((l) => l.totalPrice <= 0);
   const canRun = (!sheet.awaitingApproval && sheet.canEdit) || approval.detail?.summary.status === 'Failed';
   const monthName = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(sheet.month));
@@ -287,8 +292,10 @@ export function TimesheetPage() {
           {/* What the timesheet makes. */}
           <Box sx={{ ...card, overflow: 'hidden' }}>
             <Box sx={{ px: 2.25, py: 1.25, color: '#fff', background: look.dark, fontSize: 14, fontWeight: 800 }}>{t('timesheets.effect.title')}</Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '230px minmax(0, 1fr)' }, alignItems: 'center', columnGap: 1 }}>
-            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.75, px: 2.25, py: 1.5 }}>
+            {/* Half the box: the attendance and what the timesheet makes, one under the other; the other half: its files. */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' } }}>
+            <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.75, px: 2.25, pt: 1.5, pb: 0.5 }}>
               <Box sx={{ position: 'relative', width: 78, height: 78, flex: '0 0 auto' }}>
                 <CircularProgress variant="determinate" value={100} size={78} thickness={5} sx={{ color: tokens.gray100, position: 'absolute' }} />
                 <CircularProgress variant="determinate" value={attendance} size={78} thickness={5} sx={{ color: look.main, position: 'absolute', '& circle': { strokeLinecap: 'round' } }} />
@@ -307,20 +314,24 @@ export function TimesheetPage() {
                 </Typography>
               </Box>
             </Stack>
-            <Box sx={{ px: 2.25, py: 1.25, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, columnGap: 3 }}>
+            <Box sx={{ px: 2.25, py: 1 }}>
               {[
                 [t('timesheets.tiles.amount'), sar(sheet.invoice.amount), tokens.navy800],
                 [t('timesheets.tiles.vat'), sar(sheet.invoice.vat), tokens.navy800],
                 [t('timesheets.tiles.total'), sar(sheet.invoice.total), recordTones.invoice.main],
                 [t('timesheets.tiles.payroll'), sar(payroll), look.main],
                 [t('timesheets.tiles.suppliers'), sar(suppliers), tokens.navy800],
-                ...(sheet.unknownSource.length > 0 ? [[t('timesheets.tiles.unknown'), String(sheet.unknownSource.length), tokens.warning]] : []),
+                [t('timesheets.tiles.unknown'), sar(unknown), unknown !== 0 ? tokens.warning : tokens.navy800],
               ].map(([label, value, color], n) => (
                 <Stack key={label} direction="row" sx={{ justifyContent: 'space-between', gap: 2, py: 0.85, borderBottom: `1px solid ${tokens.gray100}` }}>
                   <Typography sx={{ fontSize: 13, color: tokens.gray500 }}>{label}</Typography>
                   <Typography sx={{ fontSize: n === 2 || n === 3 ? 15 : 13.5, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>{value}</Typography>
                 </Stack>
               ))}
+            </Box>
+            </Box>
+            <Box sx={{ minWidth: 0, px: 2.25, py: 1.5, borderInlineStart: { md: `1px solid ${tokens.gray100}` }, borderTop: { xs: `1px solid ${tokens.gray100}`, md: 0 } }}>
+              <TimesheetFiles timesheetId={sheet.id} canManage={canFiles} />
             </Box>
             </Box>
             {sheet.invoiceDoc && (
