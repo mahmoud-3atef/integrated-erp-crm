@@ -60,18 +60,19 @@ export function SmartDock({ modules, compact = false, onToggleCompact, onNavigat
   const [peek, setPeek] = useState(false);
   const labels = !compact || peek;
 
-  // Compact: the mouse resting on the rail a moment opens the full Dock over the page, leaving it folds it (as the old
-  // rail did, the user's request, 2026-10-23); just after a page is chosen it stays folded until the mouse leaves.
+  // Compact: the mouse opens and folds the Dock, not the choice (the user's request, 2026-10-23) — resting on the rail a
+  // moment opens the full Dock over the page, leaving it folds it, and choosing a page while on it keeps it open.
   const hoverTimer = useRef(0);
-  const picked = useRef(false);
+  const inside = useRef(false);
   const enter = () => {
-    if (!compact || picked.current) return;
+    inside.current = true;
+    if (!compact) return;
     window.clearTimeout(hoverTimer.current);
     hoverTimer.current = window.setTimeout(() => setPeek(true), 140);
   };
   const leave = () => {
+    inside.current = false;
     window.clearTimeout(hoverTimer.current);
-    picked.current = false;
     if (compact) setPeek(false);
   };
   useEffect(() => () => window.clearTimeout(hoverTimer.current), []);
@@ -84,9 +85,8 @@ export function SmartDock({ modules, compact = false, onToggleCompact, onNavigat
   }, [holder, path, modules]);
 
   const chosen = useCallback(() => {
-    window.clearTimeout(hoverTimer.current);
-    picked.current = true;
-    setPeek(false);
+    // Opened without the mouse (keyboard, touch, a click from outside): it folds once a page is chosen.
+    if (!inside.current) setPeek(false);
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     onNavigate?.();
   }, [onNavigate]);
