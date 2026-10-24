@@ -100,7 +100,8 @@
       "title": "Where the workers are",
       "subtitle": "From the period ledger, then the old system's status",
       "center": "active workers",
-      "gone": "Besides {{exited}} final exits and {{absconded}} absconders."
+      "gone": "Besides {{exited}} final exits and {{absconded}} absconders.",
+      "count": "{{n}} active workers · {{subtitle}}"
     },
     "moves": {
       "title": "Monthly movements",
@@ -158,6 +159,12 @@
       "iqama30": "Iqamas expiring within 30 days",
       "iqamaExpired": "Expired iqamas",
       "noExpiry": "No expiry dates recorded in the old system"
+    },
+    "figures": "Key figures",
+    "delta": {
+      "same": "Unchanged from {{month}}",
+      "up": "▲ {{n}} from {{month}}",
+      "down": "▼ {{n}} from {{month}}"
     }
   },
   "common": {
@@ -1650,7 +1657,8 @@
       "applied": "Applied filters:",
       "clearAll": "Clear all",
       "retry": "Retry",
-      "noResults": "No results match the search or the filter."
+      "noResults": "No results match the search or the filter.",
+      "pageTotal": "Page total · {{count}}"
     }
   },
   "commercial": {
@@ -3004,6 +3012,19 @@
       "days90": "61–90 days",
       "days180": "91–180 days",
       "over180": "Over 180 days"
+    },
+    "sar": "SAR",
+    "distribution": "Distribution by age",
+    "none": "None",
+    "totalAll": "Total of all projects",
+    "totalShown": "Total of the results shown ({{count}})",
+    "kpi": {
+      "overdue": "Past due",
+      "over60": "Over 60 days past due",
+      "ofOwed": "{{pct}} of the amount owed",
+      "over60Sub": "{{pct}} of the amount owed · needs collection follow-up",
+      "netAfterCredit": "After the credit ({{credit}} SAR)",
+      "noCredit": "No credit on the projects"
     }
   },
   "statement": {

@@ -1,8 +1,9 @@
 import SearchIcon from '@mui/icons-material/Search';
 import {
   Box,
+  Button,
   InputAdornment,
-  LinearProgress,
+  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -15,30 +16,43 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  type SxProps,
+  type Theme,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { receivablesApi, type Aging, type AgingRow } from '../../api/billing';
-import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { PageHeader } from '../../components/ui';
-import { isoToday, sar } from '../operations/delivery';
 import { DateField } from '../../components/DateField';
+import { card, KpiCard, navyHead, num, wf } from '../../components/designKit';
+import { PageHeader } from '../../components/ui';
+import { isoToday } from '../operations/delivery';
 
+// From not due yet to the oldest debt: one scale that darkens with the delay (colour is never the only sign: every
+// cell also has its column's name and the amount). `heat` tints a table cell.
 const buckets = [
-  { key: 'current', tone: '#1f9d55' },
-  { key: 'days30', tone: '#7cb342' },
-  { key: 'days60', tone: '#f0a20b' },
-  { key: 'days90', tone: '#e8710a' },
-  { key: 'days180', tone: '#d64545' },
-  { key: 'over180', tone: '#8e1b1b' },
+  { key: 'current', tone: '#6B8BAE', heat: 'transparent' },
+  { key: 'days30', tone: '#D9A520', heat: '#FDF4DC' },
+  { key: 'days60', tone: '#D9782F', heat: '#FBE6D2' },
+  { key: 'days90', tone: '#C24A33', heat: '#F8D8D0' },
+  { key: 'days180', tone: '#8F1D14', heat: '#F2C2BC' },
+  { key: 'over180', tone: '#4D0D08', heat: '#EAA59D' },
 ] as const;
 
 type Group = 'project' | 'manager';
 
-/** The debts' ages: what each project owes by days past due, its credit and its net, by project or by project manager. */
+// Money with two decimals, so the columns line up.
+const sar = (value: number) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct = (part: number, whole: number) => (whole > 0 ? `${((part / whole) * 100).toFixed(1)}%` : '—');
+
+/**
+ * The debts' ages: what each project owes by days past due, its credit and its net, by project or by project manager.
+ * Laid out as the proposal of 2026-10-24 (three figures, the distribution, a table whose cells darken with the delay),
+ * in the system's shared look (components/designKit). Everything comes from one request; the grouping and search are
+ * done here.
+ */
 export function AgingPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -47,17 +61,16 @@ export function AgingPage() {
   const [search, setSearch] = useState('');
   const [data, setData] = useState<Aging | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setData(null);
+    setError(null);
     receivablesApi
       .aging(asOf)
-      .then((value) => {
-        setData(value);
-        setError(null);
-      })
+      .then(setData)
       .catch((failure: unknown) => setError(errorKey(failure)));
-  }, [asOf]);
+  }, [asOf, attempt]);
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -90,121 +103,169 @@ export function AgingPage() {
     return [...byManager.values()].sort((a, b) => b.net - a.net);
   }, [data, search, group, t]);
 
+  // The figures and the distribution are the server's totals (all projects), whatever the search shows.
+  const totals = data?.totals;
+  const overdue = totals ? totals.days30 + totals.days60 + totals.days90 + totals.days180 + totals.over180 : 0;
+  const over60 = totals ? totals.days90 + totals.days180 + totals.over180 : 0;
+  const hasCredit = (data?.rows ?? []).some((r) => r.credit > 0);
   const sum = (pick: (r: AgingRow) => number) => rows.reduce((s, r) => s + pick(r), 0);
-  const total = sum((r) => r.total);
+  const filtered = search.trim() !== '';
+  const columns = 2 + buckets.length + (hasCredit ? 2 : 0);
 
   return (
     <Box>
-      <PageHeader title={t('aging.title')} subtitle={t('aging.intro')} />
-      <ErrorMessage messageKey={error} />
-
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5, mb: `${tokens.gap}px` }}>
-        <Typography sx={{ fontSize: 12.5, color: tokens.gray500 }}>{t('aging.totalOwed')}</Typography>
-        <Typography sx={{ fontSize: 26, fontWeight: 800, color: tokens.navy800 }}>{sar(sum((r) => r.net))}</Typography>
-        <Box sx={{ display: 'flex', height: 14, borderRadius: 999, overflow: 'hidden', bgcolor: tokens.gray100, my: 1.5 }}>
-          {total > 0 &&
-            buckets.map((b) => {
-              const value = sum((r) => r[b.key]);
-              return value > 0 ? <Box key={b.key} title={`${t(`aging.buckets.${b.key}`)}: ${sar(value)}`} sx={{ width: `${(value / total) * 100}%`, bgcolor: b.tone }} /> : null;
-            })}
-        </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.25 }}>
-          {buckets.map((b) => (
-            <Box key={b.key} sx={{ p: 1.25, borderRadius: `${tokens.radius}px`, bgcolor: tokens.navy50, borderInlineStart: `4px solid ${b.tone}` }}>
-              <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{t(`aging.buckets.${b.key}`)}</Typography>
-              <Typography sx={{ fontSize: 17, fontWeight: 800, color: tokens.navy800 }}>{sar(sum((r) => r[b.key]))}</Typography>
-            </Box>
-          ))}
-          <Box sx={{ p: 1.25, borderRadius: `${tokens.radius}px`, bgcolor: tokens.navy50, borderInlineStart: '4px solid #2b7bd9' }}>
-            <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{t('aging.credit')}</Typography>
-            <Typography sx={{ fontSize: 17, fontWeight: 800, color: '#2b7bd9' }}>{sar(sum((r) => r.credit))}</Typography>
+      <PageHeader
+        title={t('aging.title')}
+        subtitle={t('aging.intro')}
+        actions={<DateField size="small" label={t('aging.asOf')} value={asOf} onChange={(e) => e.target.value && setAsOf(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />}
+      />
+      {error && (
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <ErrorMessage messageKey={error} />
           </Box>
-        </Box>
+          <Button variant="outlined" onClick={() => setAttempt((n) => n + 1)}>
+            {t('workforce.ui.retry')}
+          </Button>
+        </Stack>
+      )}
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2, mb: 2 }}>
+        <KpiCard
+          label={t('aging.totalOwed')}
+          loading={!data && !error}
+          value={totals ? sar(totals.net) : null}
+          unit={t('aging.sar')}
+          sub={totals && (totals.credit > 0 ? t('aging.kpi.netAfterCredit', { credit: sar(totals.credit) }) : t('aging.kpi.noCredit'))}
+        />
+        <KpiCard label={t('aging.kpi.overdue')} loading={!data && !error} value={totals ? sar(overdue) : null} unit={t('aging.sar')} sub={totals && t('aging.kpi.ofOwed', { pct: pct(overdue, totals.total) })} />
+        <KpiCard
+          label={t('aging.kpi.over60')}
+          loading={!data && !error}
+          value={totals ? sar(over60) : null}
+          unit={t('aging.sar')}
+          tone={over60 > 0 ? 'danger' : undefined}
+          sub={totals && t('aging.kpi.over60Sub', { pct: pct(over60, totals.total) })}
+        />
       </Box>
 
-      <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
-          <TextField
-            size="small"
-            sx={{ minWidth: 280 }}
-            placeholder={t('aging.search')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
-          />
-          <DateField size="small" label={t('aging.asOf')} value={asOf} onChange={(e) => e.target.value && setAsOf(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-          <Box sx={{ flex: 1 }} />
+      <Box sx={{ ...card, p: 2.5, mb: 2 } as SxProps<Theme>}>
+        <Typography component="h2" sx={{ m: 0, fontSize: 15, fontWeight: 700, color: wf.navy, mb: 1.5 }}>
+          {t('aging.distribution')}
+        </Typography>
+        {totals ? (
+          <>
+            <Box
+              role="img"
+              aria-label={buckets.map((b) => `${t(`aging.buckets.${b.key}`)} ${pct(totals[b.key], totals.total)}`).join('، ')}
+              sx={{ display: 'flex', height: 16, borderRadius: 999, overflow: 'hidden', gap: '2px', bgcolor: wf.subtle }}
+            >
+              {totals.total > 0 && buckets.map((b) => (totals[b.key] > 0 ? <Box key={b.key} sx={{ width: `${(totals[b.key] / totals.total) * 100}%`, bgcolor: b.tone }} /> : null))}
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.5, mt: 1.75 }}>
+              {buckets.map((b) => (
+                <Box key={b.key}>
+                  <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, fontSize: 13, fontWeight: 600, color: wf.textSecondary }}>
+                    <Box component="span" aria-hidden sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: b.tone }} />
+                    {t(`aging.buckets.${b.key}`)}
+                  </Stack>
+                  <Typography sx={{ ...num, fontSize: 16, fontWeight: 700, color: wf.navy } as SxProps<Theme>}>{totals[b.key] > 0 ? sar(totals[b.key]) : '—'}</Typography>
+                  <Typography sx={{ ...num, fontSize: 12.5, color: wf.textSecondary } as SxProps<Theme>}>{totals[b.key] > 0 ? pct(totals[b.key], totals.total) : t('aging.none')}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </>
+        ) : (
+          !error && <Skeleton variant="rounded" height={70} />
+        )}
+      </Box>
+
+      <Box sx={{ ...card, overflow: 'hidden' } as SxProps<Theme>}>
+        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 1.5, alignItems: { md: 'center' }, justifyContent: 'space-between', p: 2 }}>
           <ToggleButtonGroup size="small" exclusive sx={{ whiteSpace: 'nowrap' }} value={group} onChange={(_, v: Group | null) => v && setGroup(v)}>
             <ToggleButton value="project">{t('aging.byProject')}</ToggleButton>
             <ToggleButton value="manager">{t('aging.byManager')}</ToggleButton>
           </ToggleButtonGroup>
+          <TextField
+            size="small"
+            sx={{ minWidth: { md: 320 } }}
+            placeholder={t('aging.search')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }, htmlInput: { 'aria-label': t('aging.search') } }}
+          />
         </Stack>
-        {!data && !error && <LinearProgress sx={{ mb: 1, borderRadius: 2 }} />}
-        <TableContainer>
-          <Table size="small" sx={{ '& th, & td': { px: 1, fontSize: 12.5 }, '& th': { whiteSpace: 'nowrap' } }}>
+        <TableContainer sx={{ maxHeight: 'calc(100dvh - 220px)' }}>
+          <Table size="small" stickyHeader sx={{ ...navyHead, '& th, & td': { px: 1.25 }, '& td': { whiteSpace: 'nowrap' } } as SxProps<Theme>}>
             <TableHead>
               <TableRow>
                 <TableCell>{group === 'project' ? t('commercial.col.project') : t('commercial.col.manager')}</TableCell>
                 {buckets.map((b) => (
-                  <TableCell key={b.key} align="center">
+                  <TableCell key={b.key} align="right">
                     {t(`aging.buckets.${b.key}`)}
                   </TableCell>
                 ))}
-                <TableCell align="center">{t('aging.total')}</TableCell>
-                <TableCell align="center">{t('aging.credit')}</TableCell>
-                <TableCell align="center">{t('aging.net')}</TableCell>
+                {hasCredit && <TableCell align="right">{t('aging.total')}</TableCell>}
+                {hasCredit && <TableCell align="right">{t('aging.credit')}</TableCell>}
+                <TableCell align="right">{t('aging.net')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
+              {!data &&
+                !error &&
+                Array.from({ length: 6 }, (_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: columns }, (_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton variant="text" width={j === 0 ? 180 : 80} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
               {rows.map((r) => (
                 <TableRow
                   key={group === 'project' ? r.projectCrmId : r.projectName}
-                  hover
                   sx={{ cursor: group === 'project' ? 'pointer' : 'default' }}
                   onClick={() => group === 'project' && navigate(`/billing/statements/${r.projectId ?? r.projectCrmId}`)}
                 >
-                  <TableCell sx={{ minWidth: 190 }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800 }}>{r.projectName}</Typography>
-                    <Typography sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+                  <TableCell sx={{ minWidth: 200, whiteSpace: 'normal !important' }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: wf.navy }}>{r.projectName}</Typography>
+                    <Typography sx={{ fontSize: 12, color: wf.textSecondary }}>
                       {group === 'project' ? [r.customerName, r.manager].filter(Boolean).join(' · ') || '—' : t('aging.projects', { count: r.items })}
                     </Typography>
                   </TableCell>
                   {buckets.map((b) => (
-                    <TableCell key={b.key} align="center" sx={{ whiteSpace: 'nowrap', color: r[b.key] > 0 ? b.tone : tokens.gray300, fontWeight: r[b.key] > 0 ? 700 : 400 }}>
+                    <TableCell key={b.key} align="right" sx={{ ...num, bgcolor: r[b.key] > 0 ? `${b.heat} !important` : undefined, color: r[b.key] > 0 ? wf.text : wf.border } as SxProps<Theme>}>
                       {r[b.key] > 0 ? sar(r[b.key]) : '—'}
                     </TableCell>
                   ))}
-                  <TableCell align="center" sx={{ fontWeight: 700 }}>
-                    {sar(r.total)}
-                  </TableCell>
-                  <TableCell align="center" sx={{ color: '#2b7bd9' }}>
-                    {r.credit > 0 ? sar(r.credit) : '—'}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 800, color: tokens.navy800 }}>
+                  {hasCredit && <TableCell align="right" sx={num}>{sar(r.total)}</TableCell>}
+                  {hasCredit && <TableCell align="right" sx={num}>{r.credit > 0 ? sar(r.credit) : '—'}</TableCell>}
+                  <TableCell align="right" sx={{ ...num, fontWeight: 700, color: wf.navy } as SxProps<Theme>}>
                     {sar(r.net)}
                   </TableCell>
                 </TableRow>
               ))}
               {data && rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 5, color: tokens.gray500 }}>
-                    {t('aging.empty')}
+                  <TableCell colSpan={columns} align="center" sx={{ py: 5, color: wf.textSecondary }}>
+                    {filtered ? t('workforce.ui.noResults') : t('aging.empty')}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
             {rows.length > 0 && (
-              <TableFooter>
-                <TableRow sx={{ '& td': { fontWeight: 800, color: tokens.navy800, fontSize: 13 } }}>
-                  <TableCell>{t('aging.total')}</TableCell>
+              <TableFooter sx={{ position: 'sticky', bottom: 0 }}>
+                <TableRow>
+                  <TableCell>{filtered ? t('aging.totalShown', { count: rows.length }) : t('aging.totalAll')}</TableCell>
                   {buckets.map((b) => (
-                    <TableCell key={b.key} align="center">
+                    <TableCell key={b.key} align="right" sx={num}>
                       {sar(sum((r) => r[b.key]))}
                     </TableCell>
                   ))}
-                  <TableCell align="center">{sar(total)}</TableCell>
-                  <TableCell align="center">{sar(sum((r) => r.credit))}</TableCell>
-                  <TableCell align="center">{sar(sum((r) => r.net))}</TableCell>
+                  {hasCredit && <TableCell align="right" sx={num}>{sar(sum((r) => r.total))}</TableCell>}
+                  {hasCredit && <TableCell align="right" sx={num}>{sar(sum((r) => r.credit))}</TableCell>}
+                  <TableCell align="right" sx={num}>{sar(sum((r) => r.net))}</TableCell>
                 </TableRow>
               </TableFooter>
             )}

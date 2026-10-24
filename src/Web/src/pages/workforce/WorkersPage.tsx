@@ -14,6 +14,7 @@ import {
   TableBody,
   TableCell,
   TableContainer,
+  TableFooter,
   TableHead,
   TablePagination,
   TableRow,
@@ -39,6 +40,10 @@ const sorts: Sort[] = ['name', 'joined', 'salary', 'number'];
 const optional = ['iqama', 'profession', 'nationality', 'sponsor', 'basic', 'food', 'housing', 'transport', 'other', 'joined', 'workDays'] as const;
 type Column = (typeof optional)[number];
 const salaryParts = ['basic', 'food', 'housing', 'transport', 'other'] as const;
+
+// An iqama in the list shows its first four and last three digits (the proposal of 2026-10-24); the worker's file shows it
+// whole, and the search still finds it by any part.
+const maskId = (value: string) => (value.length > 7 ? `${value.slice(0, 4)}•••${value.slice(-3)}` : value);
 const pageSizes = [25, 50, 100];
 
 /**
@@ -98,6 +103,10 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
   const date = (value: string | null) => (value ? value.slice(0, 10).replaceAll('-', '/') : '—');
   const withSalary = data?.items.some((i) => i.salary) ?? false;
   const parts = salaryParts.filter(shown);
+  // The page's totals (said so in the row: the server knows the whole list's, the page sums only what it shows).
+  const pageItems = data?.items ?? [];
+  const beforeSalary = 1 + [shown('iqama'), shown('profession'), shown('nationality'), !staff && shown('sponsor')].filter(Boolean).length;
+  const afterSalary = [shown('joined'), !staff && shown('workDays')].filter(Boolean).length;
   const sortBy = (key: Sort) => update(sort === key ? { sort: key, desc: desc ? null : '1' } : { sort: key === 'number' ? null : key, desc: null });
   const head = (key: Sort, label: string) => (
     <TableSortLabel active={sort === key} direction={desc ? 'desc' : 'asc'} onClick={() => sortBy(key)} sx={{ color: '#fff !important', '& .MuiTableSortLabel-icon': { color: `${wf.gold} !important` } }}>
@@ -195,7 +204,10 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
               '& th.grp': { textAlign: 'center', bgcolor: wf.navyHover, borderBottom: '1px solid rgba(255,255,255,.14)' },
               '& th.sub': { bgcolor: wf.navyHover, top: 37 },
               '& td': { fontSize: 13, color: wf.text, height: 44, py: 0.5, borderBottom: `1px solid ${wf.subtle}`, fontVariantNumeric: 'tabular-nums' },
+              '& tbody tr:nth-of-type(even) td': { bgcolor: '#FAFBFC' },
               '& tbody tr:hover td': { bgcolor: wf.rowHover },
+              '& tfoot td': { position: 'sticky', bottom: 0, zIndex: 1, bgcolor: wf.subtle, color: wf.navy, fontWeight: 700, borderTop: `1px solid ${wf.border}`, borderBottom: 0 },
+              '& tfoot td.pin': { zIndex: 3, bgcolor: wf.subtle },
               '& .gs': { borderInlineStart: `1px solid ${wf.border}` },
               '& th.gs': { borderInlineStart: '1px solid rgba(255,255,255,.18)' },
               // The worker column stays in view while scrolling sideways.
@@ -274,7 +286,7 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
                   </TableCell>
                   {shown('iqama') && (
                     <TableCell>
-                      <bdi>{w.iqama ?? '—'}</bdi>
+                      <bdi>{w.iqama ? maskId(w.iqama) : '—'}</bdi>
                     </TableCell>
                   )}
                   {shown('profession') && <TableCell>{(ar ? w.professionAr : w.professionEn) ?? '—'}</TableCell>}
@@ -312,6 +324,23 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
                 </TableRow>
               )}
             </TableBody>
+            {withSalary && pageItems.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell className="pin">{t('workforce.ui.pageTotal', { count: pageItems.length })}</TableCell>
+                  <TableCell colSpan={beforeSalary} />
+                  {parts.map((c, i) => (
+                    <TableCell key={c} align="center" className={i === 0 ? 'gs' : undefined}>
+                      {money(pageItems.reduce((sum, w) => sum + (w.salary?.[c] ?? 0), 0))}
+                    </TableCell>
+                  ))}
+                  <TableCell align="center" className={parts.length === 0 ? 'gs' : undefined}>
+                    {money(pageItems.reduce((sum, w) => sum + (w.salary?.total ?? 0), 0))}
+                  </TableCell>
+                  {afterSalary > 0 && <TableCell colSpan={afterSalary} className="gs" />}
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </TableContainer>
         <TablePagination

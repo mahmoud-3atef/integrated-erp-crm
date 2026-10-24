@@ -1,72 +1,39 @@
-import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import AddIcon from '@mui/icons-material/Add';
 import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
-import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
-import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
-import EngineeringOutlinedIcon from '@mui/icons-material/EngineeringOutlined';
-import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
-import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import PendingActionsOutlinedIcon from '@mui/icons-material/PendingActionsOutlined';
-import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
-import { Alert, Box, Button, ButtonBase, Skeleton, Stack, Typography } from '@mui/material';
-import { keyframes } from '@mui/material/styles';
+import { Alert, Box, Button, ButtonBase, Skeleton, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { dashboardApi, type NamedCount, type OperationsDashboard, type WorkforceDashboard } from '../api/dashboard';
 import { housingApi, type HousingOverview } from '../api/housing';
 import { useSession } from '../app/session';
-import { tokens } from '../app/theme';
-import { Columns, CountUp, Donut, Legend, palette, RankedBars, Ring, type Slice } from '../components/charts';
+import { Columns, Ring } from '../components/charts';
+import { card, KpiCard, num, placementTone, wf } from '../components/designKit';
+import type { Placement } from '../api/workforce';
 import { companyName } from './ChooseCompanyPage';
 
-const rise = keyframes`from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; }`;
-const float = keyframes`0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); }`;
+const fmt = (n: number) => n.toLocaleString('en-US');
+const pct = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : '—');
 
-const placementColors: Record<string, string> = {
-  Working: '#23a455',
-  Housing: '#0d4a6c',
-  New: '#2bc3e1',
-  Vacation: '#d98a06',
-  Suspended: '#e0607e',
-  Absconded: '#e03434',
-  Exited: '#8aa1b1',
-  Other: '#7b5cd6',
-};
-
-/** A white dashboard card with a title, an optional link, and a staggered entrance. */
-function Card({ title, subtitle, icon, link, delay = 0, children, sx }: { title: string; subtitle?: string; icon: ReactNode; link?: { label: string; to: string }; delay?: number; children: ReactNode; sx?: object }) {
+/** A white card with its title, a line under it and an optional link (the shared look, components/designKit). */
+function Card({ title, subtitle, link, children, sx }: { title: string; subtitle?: string; link?: { label: string; to: string }; children: ReactNode; sx?: object }) {
   const navigate = useNavigate();
   return (
-    <Box
-      sx={{
-        bgcolor: '#fff',
-        borderRadius: `${tokens.radiusLg}px`,
-        boxShadow: tokens.shadowSm,
-        p: 2.5,
-        display: 'flex',
-        flexDirection: 'column',
-        animation: `${rise} .55s ${delay}s cubic-bezier(.2,.8,.2,1) both`,
-        transition: 'box-shadow .2s',
-        '&:hover': { boxShadow: tokens.shadowMd },
-        ...sx,
-      }}
-    >
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, mb: 2 }}>
-        <Box sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: '11px', bgcolor: tokens.navy50, color: tokens.navy700, '& svg': { fontSize: 20 } }}>{icon}</Box>
+    <Box component="section" sx={{ ...card, p: 2.5, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, ...sx } as SxProps<Theme>}>
+      <Stack direction="row" sx={{ alignItems: 'flex-start', gap: 1 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 800, color: tokens.navy800 }}>{title}</Typography>
-          {subtitle && <Typography sx={{ fontSize: 12, color: tokens.gray500 }}>{subtitle}</Typography>}
+          <Typography component="h2" sx={{ m: 0, fontSize: 15, fontWeight: 700, color: wf.navy }}>
+            {title}
+          </Typography>
+          {subtitle && <Typography sx={{ fontSize: 12.5, color: wf.textSecondary }}>{subtitle}</Typography>}
         </Box>
         {link && (
-          <Button size="small" endIcon={<ArrowOutwardIcon sx={{ fontSize: '15px !important' }} />} onClick={() => navigate(link.to)} sx={{ fontSize: 12.5 }}>
+          <Button size="small" endIcon={<ArrowOutwardIcon sx={{ fontSize: '15px !important' }} />} onClick={() => navigate(link.to)} sx={{ fontSize: 12.5, color: wf.navy }}>
             {link.label}
           </Button>
         )}
@@ -76,52 +43,61 @@ function Card({ title, subtitle, icon, link, delay = 0, children, sx }: { title:
   );
 }
 
-/** A glass tile on the hero banner. */
-function HeroStat({ label, value, foot, icon, onClick }: { label: string; value: ReactNode; foot?: string; icon: ReactNode; onClick?: () => void }) {
+/** Shares as plain bars: the name, the count and its share; «not set» in grey (missing data to complete, not a category). */
+function ShareBars({ items, total, onClick }: { items: { key: string; label: string; value: number; unknown?: boolean }[]; total: number; onClick?: (key: string) => void }) {
+  const max = Math.max(1, ...items.map((i) => i.value));
+  return (
+    <Stack spacing={1.25}>
+      {items.map((item) => (
+        <Box
+          key={item.key}
+          component={onClick ? ButtonBase : 'div'}
+          onClick={onClick ? () => onClick(item.key) : undefined}
+          sx={{ display: 'block', width: '100%', textAlign: 'start', borderRadius: '6px' }}
+        >
+          <Stack direction="row" sx={{ alignItems: 'baseline', gap: 1, mb: 0.5, fontSize: 13 }}>
+            <Typography noWrap title={item.label} sx={{ flex: 1, fontSize: 13, color: item.unknown ? wf.textSecondary : wf.text, fontStyle: item.unknown ? 'italic' : 'normal' }}>
+              {item.label}
+            </Typography>
+            <Typography sx={{ ...num, fontSize: 13, fontWeight: 700, color: wf.navy } as SxProps<Theme>}>{fmt(item.value)}</Typography>
+            <Typography sx={{ ...num, fontSize: 12, color: wf.textSecondary, minWidth: 34, textAlign: 'end' } as SxProps<Theme>}>{pct(item.value, total)}</Typography>
+          </Stack>
+          <Box sx={{ height: 8, borderRadius: 4, bgcolor: wf.subtle, overflow: 'hidden' }}>
+            <Box sx={{ height: '100%', width: `${(item.value / max) * 100}%`, borderRadius: 4, bgcolor: item.unknown ? '#A3AEB8' : wf.navy }} />
+          </Box>
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+/** One number of the month with its change from the month before: an arrow and words, in a neutral colour (a rise is not «good» by itself). */
+function MonthFigure({ label, value, before, beforeLabel, onClick }: { label: string; value: number; before?: number; beforeLabel?: string; onClick?: () => void }) {
+  const { t } = useTranslation();
+  const delta = before === undefined ? null : value - before;
   return (
     <ButtonBase
       onClick={onClick}
       disabled={!onClick}
-      sx={{
-        display: 'block',
-        textAlign: 'start',
-        p: 2,
-        borderRadius: '16px',
-        bgcolor: 'rgba(255,255,255,.1)',
-        border: '1px solid rgba(255,255,255,.16)',
-        backdropFilter: 'blur(8px)',
-        color: '#fff',
-        transition: 'background-color .2s, transform .2s',
-        '&:hover': onClick ? { bgcolor: 'rgba(255,255,255,.18)', transform: 'translateY(-2px)' } : undefined,
-      }}
+      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', textAlign: 'start', gap: 0.25, p: 1.75, borderRadius: wf.radius, border: `1px solid ${wf.border}`, '&:hover': onClick ? { borderColor: wf.navy } : undefined }}
     >
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 0.75, opacity: 0.85, '& svg': { fontSize: 18 } }}>
-        {icon}
-        <Typography sx={{ fontSize: 12.5 }}>{label}</Typography>
-      </Stack>
-      <Typography sx={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{value}</Typography>
-      {foot && <Typography sx={{ fontSize: 11.5, opacity: 0.75, mt: 0.25 }}>{foot}</Typography>}
+      <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: wf.textSecondary }}>{label}</Typography>
+      <Typography sx={{ ...num, fontSize: 26, fontWeight: 700, color: wf.navy, lineHeight: 1.2 } as SxProps<Theme>}>{fmt(value)}</Typography>
+      {delta !== null && (
+        <Typography sx={{ ...num, fontSize: 12, fontWeight: 600, color: wf.textSecondary } as SxProps<Theme>}>
+          {delta === 0 ? t('home.delta.same', { month: beforeLabel }) : t(delta > 0 ? 'home.delta.up' : 'home.delta.down', { n: fmt(Math.abs(delta)), month: beforeLabel })}
+        </Typography>
+      )}
     </ButtonBase>
   );
 }
 
-/** A coloured number tile (this month's movements). */
-function MoveTile({ label, value, icon, color, onClick }: { label: string; value: number; icon: ReactNode; color: string; onClick?: () => void }) {
-  return (
-    <ButtonBase
-      onClick={onClick}
-      sx={{ display: 'block', textAlign: 'start', p: 1.75, borderRadius: '14px', bgcolor: `${color}12`, border: `1px solid ${color}26`, transition: 'transform .15s', '&:hover': { transform: 'translateY(-2px)' } }}
-    >
-      <Box sx={{ display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: '10px', bgcolor: color, color: '#fff', mb: 1, '& svg': { fontSize: 19 } }}>{icon}</Box>
-      <Typography sx={{ fontSize: 26, fontWeight: 800, color: tokens.navy800, lineHeight: 1.1 }}>
-        <CountUp value={value} />
-      </Typography>
-      <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{label}</Typography>
-    </ButtonBase>
-  );
-}
-
-/** The management dashboard: where the workers are, how they move, the documents waiting, housing and data checks. */
+/**
+ * The home page: where the workers are, how they move, the documents waiting, housing and data checks. Laid out as the
+ * proposal of 2026-10-24 in the system's shared look: a plain header (no coloured band), the figures in white cards,
+ * shares as plain bars, no counting animation (the numbers show as they are) and skeletons while loading. Every figure
+ * comes from its module's dashboard request, as before.
+ */
 export function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -141,22 +117,21 @@ export function HomePage() {
   }, [seeWorkforce, seeOperations, seeHousing]);
 
   const now = new Date();
-  const hour = now.getHours();
-  const greeting = t(hour < 12 ? 'home.morning' : 'home.evening');
+  const greeting = t(now.getHours() < 12 ? 'home.morning' : 'home.evening');
   const gregorian = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   const hijri = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-islamic-umalqura-nu-latn' : 'en-GB-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   const name = (n: NamedCount) => (ar ? n.nameAr : n.nameEn);
-  const monthLabel = (iso: string) =>
-    new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'short', ...(iso.slice(5, 7) === '01' ? { year: '2-digit' } : {}), timeZone: 'UTC' }).format(new Date(iso));
+  const monthLabel = (iso: string, long = false) =>
+    new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: long ? 'long' : 'short', ...(!long && iso.slice(5, 7) === '01' ? { year: '2-digit' } : {}), timeZone: 'UTC' }).format(new Date(iso));
 
   const p = workforce?.placements ?? {};
   const onJob = p.Working ?? 0;
   const available = (p.Housing ?? 0) + (p.New ?? 0);
-  const placementSlices: Slice[] = Object.entries(p)
+  const active = workforce?.active ?? 0;
+  const where = Object.entries(p)
     .filter(([key]) => key !== 'Exited' && key !== 'Absconded')
     .sort((a, b) => b[1] - a[1])
-    .map(([key, value]) => ({ key, label: t(`workforce.placement.${key}`), value, color: placementColors[key] ?? palette[7]! }));
-  const nationalitySlices: Slice[] = (workforce?.nationalities ?? []).map((n, i) => ({ key: n.code ?? `x${i}`, label: name(n), value: n.count, color: palette[i % palette.length]! }));
+    .map(([key, value]) => ({ key, value, color: wf[placementTone[key as Placement] ?? 'neutral'].fg }));
   const occupancy = housing && housing.totals.capacity > 0 ? (housing.totals.occupied / housing.totals.capacity) * 100 : 0;
   const waiting = operations ? [operations.deliveries, operations.returns, operations.transfers].reduce((sum, d) => sum + d.preparing + d.inApproval, 0) : 0;
   const kindIcon = { delivery: <LocalShippingOutlinedIcon />, return: <KeyboardReturnOutlinedIcon />, transfer: <SwapHorizIcon /> };
@@ -168,125 +143,147 @@ export function HomePage() {
     const rtf = new Intl.RelativeTimeFormat(ar ? 'ar' : 'en', { numeric: 'auto' });
     return minutes < 60 ? rtf.format(-minutes, 'minute') : minutes < 1440 ? rtf.format(-Math.round(minutes / 60), 'hour') : rtf.format(-Math.round(minutes / 1440), 'day');
   };
+  const moves = workforce?.moves ?? [];
+  const thisMonth = moves.at(-1);
+  const lastMonth = moves.at(-2);
+  const shares = (list: NamedCount[]) => list.map((x, i) => ({ key: x.code ?? `x${i}`, label: name(x), value: x.count, unknown: x.code === null }));
+  const loadingWorkforce = seeWorkforce && !workforce;
 
   return (
-    <Stack spacing={`${tokens.gap + 4}px`}>
-      {/* Hero: greeting, today's date in both calendars, and the headline numbers. */}
-      <Box
-        sx={{
-          position: 'relative',
-          overflow: 'hidden',
-          borderRadius: '24px',
-          p: { xs: 2.5, md: 3.5 },
-          color: '#fff',
-          background: `linear-gradient(125deg, ${tokens.navy900} 0%, ${tokens.navy700} 45%, ${tokens.teal} 100%)`,
-          boxShadow: tokens.shadowMd,
-          animation: `${rise} .5s cubic-bezier(.2,.8,.2,1) both`,
-        }}
-      >
-        <Box sx={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -160, insetInlineEnd: -80, background: 'radial-gradient(circle, rgba(43,195,225,.35), transparent 70%)', animation: `${float} 9s ease-in-out infinite` }} />
-        <Box sx={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', bottom: -120, insetInlineStart: '30%', background: 'radial-gradient(circle, rgba(255,255,255,.12), transparent 70%)', animation: `${float} 11s ease-in-out infinite reverse` }} />
-        <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ position: 'relative', gap: 3, alignItems: { lg: 'center' } }}>
-          <Box sx={{ flex: '0 0 auto', minWidth: 260 }}>
-            <Typography sx={{ fontSize: 13.5, opacity: 0.8 }}>{greeting}</Typography>
-            <Typography component="h1" sx={{ fontSize: { xs: 24, md: 28 }, fontWeight: 800, lineHeight: 1.25 }}>
-              {me.displayName}
-            </Typography>
-            {me.company && <Typography sx={{ fontSize: 14, opacity: 0.85, mt: 0.5 }}>{companyName(me.company, i18n.language)}</Typography>}
-            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-              <Box sx={{ px: 1.25, py: 0.4, borderRadius: 999, bgcolor: 'rgba(255,255,255,.14)', fontSize: 12.5 }}>{gregorian}</Box>
-              <Box sx={{ px: 1.25, py: 0.4, borderRadius: 999, bgcolor: 'rgba(255,255,255,.14)', fontSize: 12.5 }}>{hijri}</Box>
-            </Stack>
-          </Box>
-          {workforce ? (
-            <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-              <HeroStat label={t('home.stats.active')} value={<CountUp value={workforce.active} />} foot={t('home.stats.activeFoot')} icon={<GroupsOutlinedIcon />} onClick={() => navigate('/workforce/workers')} />
-              <HeroStat
-                label={t('home.stats.onJob')}
-                value={<CountUp value={onJob} />}
-                foot={t('home.stats.share', { percent: workforce.active ? Math.round((onJob / workforce.active) * 100) : 0 })}
-                icon={<EngineeringOutlinedIcon />}
-                onClick={() => navigate('/workforce/workers?status=Working')}
-              />
-              <HeroStat label={t('home.stats.available')} value={<CountUp value={available} />} foot={t('home.stats.availableFoot')} icon={<HotelOutlinedIcon />} onClick={() => navigate('/workforce/workers?status=Housing')} />
-              <HeroStat label={t('home.stats.projects')} value={<CountUp value={workforce.projectsWithWorkers} />} foot={t('home.stats.projectsFoot')} icon={<BusinessCenterOutlinedIcon />} onClick={() => navigate('/commercial/projects')} />
-            </Box>
-          ) : (
-            seeWorkforce && (
-              <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-                {[0, 1, 2, 3].map((i) => (
-                  <Skeleton key={i} variant="rounded" height={104} sx={{ bgcolor: 'rgba(255,255,255,.12)', borderRadius: '16px' }} />
-                ))}
-              </Box>
-            )
-          )}
-        </Stack>
-      </Box>
+    <Stack spacing={2.5}>
+      <Stack direction="row" component="header" sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography component="h1" sx={{ m: 0, fontSize: 23, fontWeight: 700, color: wf.navy, lineHeight: 1.3 }}>
+            {greeting}{ar ? '، ' : ', '}{me.displayName}
+          </Typography>
+          <Typography sx={{ mt: 0.25, fontSize: 13, color: wf.textSecondary }}>
+            {[me.company ? companyName(me.company, i18n.language) : null, gregorian, hijri].filter(Boolean).join(' · ')}
+          </Typography>
+        </Box>
+        {can('operations.delivery.create', true) && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/operations/delivery-orders/new')} sx={{ borderRadius: wf.control, height: 40, bgcolor: wf.navy, boxShadow: 'none', '&:hover': { bgcolor: wf.navyHover, boxShadow: 'none' } }}>
+            {t('operations.delivery.new')}
+          </Button>
+        )}
+      </Stack>
 
       {me.permissions.length === 0 && <Alert severity="info">{t('home.noPermissions')}</Alert>}
 
+      {seeWorkforce && (
+        <Box component="section" aria-label={t('home.figures')} sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+          <KpiCard label={t('home.stats.active')} loading={loadingWorkforce} value={workforce && fmt(active)} sub={t('home.stats.activeFoot')} onClick={() => navigate('/workforce/workers')} />
+          <KpiCard
+            label={t('home.stats.onJob')}
+            loading={loadingWorkforce}
+            value={workforce && fmt(onJob)}
+            sub={t('home.stats.share', { percent: active ? Math.round((onJob / active) * 100) : 0 })}
+            onClick={() => navigate('/workforce/workers?status=Working')}
+          />
+          <KpiCard label={t('home.stats.available')} loading={loadingWorkforce} value={workforce && fmt(available)} sub={t('home.stats.availableFoot')} onClick={() => navigate('/workforce/workers?status=Housing')} />
+          <KpiCard label={t('home.stats.projects')} loading={loadingWorkforce} value={workforce && fmt(workforce.projectsWithWorkers)} sub={t('home.stats.projectsFoot')} onClick={() => navigate('/commercial/projects')} />
+        </Box>
+      )}
+
+      {loadingWorkforce && (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: 2 }}>
+          <Skeleton variant="rounded" height={280} sx={{ borderRadius: wf.radius }} />
+          <Skeleton variant="rounded" height={280} sx={{ borderRadius: wf.radius }} />
+        </Box>
+      )}
+
       {seeWorkforce && workforce && (
         <>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '5fr 7fr' }, gap: `${tokens.gap + 4}px` }}>
-            <Card title={t('home.where.title')} subtitle={t('home.where.subtitle')} icon={<InsightsOutlinedIcon />} link={{ label: t('home.open'), to: '/workforce/workers' }} delay={0.05}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: 'center', gap: 2.5, flex: 1 }}>
-                <Donut data={placementSlices} centerLabel={t('home.where.center')} />
-                <Legend data={placementSlices} onClick={(key) => navigate(`/workforce/workers?status=${key}`)} />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '5fr 7fr' }, gap: 2 }}>
+            <Card title={t('home.where.title')} subtitle={t('home.where.count', { n: fmt(active), subtitle: t('home.where.subtitle') })} link={{ label: t('home.open'), to: '/workforce/workers' }}>
+              <Box
+                role="img"
+                aria-label={where.map((w) => `${t(`workforce.placement.${w.key}`)} ${fmt(w.value)}`).join('، ')}
+                sx={{ display: 'flex', height: 14, borderRadius: 999, overflow: 'hidden', gap: '2px', bgcolor: wf.subtle }}
+              >
+                {active > 0 && where.map((w) => <Box key={w.key} sx={{ width: `${Math.max(0.6, (w.value / active) * 100)}%`, bgcolor: w.color }} />)}
+              </Box>
+              <Stack>
+                {where.map((w) => (
+                  <ButtonBase
+                    key={w.key}
+                    onClick={() => navigate(`/workforce/workers?status=${w.key}`)}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1, px: 0.5, borderTop: `1px solid ${wf.subtle}`, textAlign: 'start', '&:hover': { bgcolor: wf.rowHover } }}
+                  >
+                    <Box component="span" aria-hidden sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: w.color }} />
+                    <Typography sx={{ flex: 1, fontSize: 13.5, color: wf.text }}>{t(`workforce.placement.${w.key}`)}</Typography>
+                    <Typography sx={{ ...num, fontSize: 13.5, fontWeight: 700, color: wf.navy, minWidth: 56, textAlign: 'end' } as SxProps<Theme>}>{fmt(w.value)}</Typography>
+                    <Typography sx={{ ...num, fontSize: 12.5, color: wf.textSecondary, minWidth: 40, textAlign: 'end' } as SxProps<Theme>}>{pct(w.value, active)}</Typography>
+                  </ButtonBase>
+                ))}
               </Stack>
               {(p.Exited ?? 0) + (p.Absconded ?? 0) > 0 && (
-                <Typography sx={{ fontSize: 12, color: tokens.gray500, mt: 1.5 }}>{t('home.where.gone', { exited: p.Exited ?? 0, absconded: p.Absconded ?? 0 })}</Typography>
+                <Typography sx={{ fontSize: 12.5, color: wf.textSecondary }}>{t('home.where.gone', { exited: p.Exited ?? 0, absconded: p.Absconded ?? 0 })}</Typography>
               )}
             </Card>
-            <Card title={t('home.moves.title')} subtitle={t('home.moves.subtitle')} icon={<HistoryOutlinedIcon />} delay={0.1}>
-              <Stack direction="row" sx={{ gap: 2, mb: 1.5 }}>
+            <Card title={t('home.moves.title')} subtitle={t('home.moves.subtitle')}>
+              {thisMonth && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                  <MonthFigure
+                    label={`${t('home.moves.starts')} · ${monthLabel(thisMonth.month, true)}`}
+                    value={thisMonth.workStarts}
+                    before={lastMonth?.workStarts}
+                    beforeLabel={lastMonth && monthLabel(lastMonth.month, true)}
+                  />
+                  <MonthFigure
+                    label={`${t('home.moves.returns')} · ${monthLabel(thisMonth.month, true)}`}
+                    value={thisMonth.returns}
+                    before={lastMonth?.returns}
+                    beforeLabel={lastMonth && monthLabel(lastMonth.month, true)}
+                  />
+                </Box>
+              )}
+              <Stack direction="row" sx={{ gap: 2 }}>
                 {[
-                  { color: tokens.navy700, label: t('home.moves.starts') },
-                  { color: tokens.gold, label: t('home.moves.returns') },
+                  { color: wf.navy, label: t('home.moves.starts') },
+                  { color: wf.gold, label: t('home.moves.returns') },
                 ].map((s) => (
                   <Stack key={s.label} direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
                     <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: s.color }} />
-                    <Typography sx={{ fontSize: 12.5, color: tokens.gray600 }}>{s.label}</Typography>
+                    <Typography sx={{ fontSize: 12.5, color: wf.textSecondary }}>{s.label}</Typography>
                   </Stack>
                 ))}
               </Stack>
               <Columns
-                categories={workforce.moves.map((m) => monthLabel(m.month))}
+                categories={moves.map((m) => monthLabel(m.month))}
                 series={[
-                  { key: 'starts', label: t('home.moves.starts'), color: tokens.navy700 },
-                  { key: 'returns', label: t('home.moves.returns'), color: tokens.gold },
+                  { key: 'starts', label: t('home.moves.starts'), color: wf.navy },
+                  { key: 'returns', label: t('home.moves.returns'), color: wf.gold },
                 ]}
-                values={[workforce.moves.map((m) => m.workStarts), workforce.moves.map((m) => m.returns)]}
+                values={[moves.map((m) => m.workStarts), moves.map((m) => m.returns)]}
               />
             </Card>
           </Box>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: '5fr 4fr 3fr' }, gap: `${tokens.gap + 4}px` }}>
-            <Card title={t('home.projects.title')} subtitle={t('home.projects.subtitle', { count: workforce.projectsWithWorkers })} icon={<BusinessCenterOutlinedIcon />} link={{ label: t('home.open'), to: '/commercial/projects' }} delay={0.15}>
-              <RankedBars items={workforce.projects.map((x) => ({ key: x.code ?? x.nameEn, label: name(x), value: x.count }))} />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 2 }}>
+            <Card title={t('home.projects.title')} subtitle={t('home.projects.subtitle', { count: workforce.projectsWithWorkers })} link={{ label: t('home.open'), to: '/commercial/projects' }}>
+              <ShareBars total={onJob} items={workforce.projects.map((x) => ({ key: x.code ?? x.nameEn, label: name(x), value: x.count }))} />
             </Card>
-            <Card title={t('home.nationalities.title')} subtitle={t('home.nationalities.subtitle')} icon={<PublicOutlinedIcon />} delay={0.2}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: 'center', gap: 2 }}>
-                <Donut data={nationalitySlices} size={150} thickness={20} centerLabel={t('home.nationalities.center')} />
-                <Legend data={nationalitySlices} />
-              </Stack>
+            <Card title={t('home.nationalities.title')} subtitle={t('home.nationalities.subtitle')}>
+              <ShareBars total={active} items={shares(workforce.nationalities)} />
             </Card>
-            <Card title={t('home.professions.title')} subtitle={t('home.professions.subtitle')} icon={<BadgeOutlinedIcon />} delay={0.25} sx={{ gridColumn: { md: '1 / -1', xl: 'auto' } }}>
-              <RankedBars color={tokens.teal} items={workforce.professions.map((x, i) => ({ key: x.code ?? `x${i}`, label: name(x), value: x.count }))} />
+            <Card title={t('home.professions.title')} subtitle={t('home.professions.subtitle')} sx={{ gridColumn: { md: '1 / -1', xl: 'auto' } }}>
+              <ShareBars total={active} items={shares(workforce.professions)} />
             </Card>
           </Box>
         </>
       )}
 
+      {seeOperations && !operations && <Skeleton variant="rounded" height={200} sx={{ borderRadius: wf.radius }} />}
       {seeOperations && operations && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '4fr 3fr 5fr' }, gap: `${tokens.gap + 4}px` }}>
-          <Card title={t('home.month.title')} subtitle={new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' }).format(now)} icon={<InsightsOutlinedIcon />} delay={0.3}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.25 }}>
-              <MoveTile label={t('home.month.delivered')} value={operations.deliveredThisMonth} icon={<LocalShippingOutlinedIcon />} color={tokens.success} onClick={() => navigate('/operations/delivery-orders')} />
-              <MoveTile label={t('home.month.returned')} value={operations.returnedThisMonth} icon={<KeyboardReturnOutlinedIcon />} color={tokens.warning} onClick={() => navigate('/operations/return-orders')} />
-              <MoveTile label={t('home.month.transferred')} value={operations.transferredThisMonth} icon={<SwapHorizIcon />} color={tokens.info} onClick={() => navigate('/operations/transfer-orders')} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '4fr 3fr 5fr' }, gap: 2 }}>
+          <Card title={t('home.month.title')} subtitle={new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' }).format(now)}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.25 }}>
+              <MonthFigure label={t('home.month.delivered')} value={operations.deliveredThisMonth} onClick={() => navigate('/operations/delivery-orders')} />
+              <MonthFigure label={t('home.month.returned')} value={operations.returnedThisMonth} onClick={() => navigate('/operations/return-orders')} />
+              <MonthFigure label={t('home.month.transferred')} value={operations.transferredThisMonth} onClick={() => navigate('/operations/transfer-orders')} />
             </Box>
           </Card>
-          <Card title={t('home.waiting.title')} subtitle={t('home.waiting.subtitle', { count: waiting })} icon={<PendingActionsOutlinedIcon />} delay={0.35}>
+          <Card title={t('home.waiting.title')} subtitle={t('home.waiting.subtitle', { count: waiting })}>
             <Stack spacing={1}>
               {(
                 [
@@ -298,45 +295,49 @@ export function HomePage() {
                 <ButtonBase
                   key={kind}
                   onClick={() => navigate(`/operations/${kindPath[kind]}?status=${kind === 'return' ? 'approval' : 'operations'}`)}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1.25, borderRadius: '12px', bgcolor: tokens.gray50, textAlign: 'start', '&:hover': { bgcolor: tokens.navy50 } }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    p: 1.25,
+                    borderRadius: wf.control,
+                    textAlign: 'start',
+                    border: `1px solid ${open.inApproval > 0 ? '#F1D9A6' : wf.border}`,
+                    bgcolor: open.inApproval > 0 ? wf.warning.bg : wf.surface,
+                    '&:hover': { borderColor: wf.navy },
+                  }}
                 >
-                  <Box sx={{ display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: '10px', bgcolor: '#fff', color: tokens.navy700, boxShadow: tokens.shadowXs, '& svg': { fontSize: 18 } }}>{kindIcon[kind]}</Box>
-                  <Typography sx={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: tokens.navy800 }}>{t(`home.kinds.${kind}`)}</Typography>
+                  <Box sx={{ display: 'grid', placeItems: 'center', color: wf.navy, '& svg': { fontSize: 19 } }}>{kindIcon[kind]}</Box>
+                  <Typography sx={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: wf.navy }}>{t(`home.kinds.${kind}`)}</Typography>
                   <Box sx={{ textAlign: 'center', minWidth: 54 }}>
-                    <Typography sx={{ fontSize: 17, fontWeight: 800, color: tokens.gray600, lineHeight: 1 }}>{open.preparing}</Typography>
-                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('home.waiting.preparing')}</Typography>
+                    <Typography sx={{ ...num, fontSize: 17, fontWeight: 700, color: wf.textSecondary, lineHeight: 1 } as SxProps<Theme>}>{open.preparing}</Typography>
+                    <Typography sx={{ fontSize: 11, color: wf.textSecondary }}>{t('home.waiting.preparing')}</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'center', minWidth: 54 }}>
-                    <Typography sx={{ fontSize: 17, fontWeight: 800, color: open.inApproval > 0 ? tokens.warning : tokens.gray500, lineHeight: 1 }}>{open.inApproval}</Typography>
-                    <Typography sx={{ fontSize: 10.5, color: tokens.gray500 }}>{t('home.waiting.approval')}</Typography>
+                    <Typography sx={{ ...num, fontSize: 17, fontWeight: 700, color: open.inApproval > 0 ? wf.warning.fg : wf.textSecondary, lineHeight: 1 } as SxProps<Theme>}>{open.inApproval}</Typography>
+                    <Typography sx={{ fontSize: 11, color: wf.textSecondary }}>{t('home.waiting.approval')}</Typography>
                   </Box>
                 </ButtonBase>
               ))}
             </Stack>
           </Card>
-          <Card title={t('home.recent.title')} subtitle={t('home.recent.subtitle')} icon={<HistoryOutlinedIcon />} delay={0.4}>
+          <Card title={t('home.recent.title')} subtitle={t('home.recent.subtitle')}>
             {operations.recent.length === 0 ? (
-              <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', color: tokens.gray500, py: 3, gap: 1 }}>
-                <HistoryOutlinedIcon sx={{ fontSize: 34, opacity: 0.6 }} />
-                <Typography sx={{ fontSize: 13 }}>{t('home.recent.empty')}</Typography>
-              </Stack>
+              <Typography sx={{ fontSize: 13, color: wf.textSecondary, py: 3, textAlign: 'center' }}>{t('home.recent.empty')}</Typography>
             ) : (
-              <Stack sx={{ position: 'relative' }}>
-                <Box sx={{ position: 'absolute', top: 12, bottom: 12, insetInlineStart: 16, borderInlineStart: `2px solid ${tokens.gray100}` }} />
+              <Stack>
                 {operations.recent.map((r) => (
                   <ButtonBase
                     key={`${r.kind}-${r.id}`}
                     onClick={() => navigate(`/operations/${kindPath[r.kind]}/${r.id}`)}
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.9, px: 0.25, borderRadius: '10px', textAlign: 'start', position: 'relative', '&:hover': { bgcolor: tokens.gray50 } }}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1, px: 0.5, borderTop: `1px solid ${wf.subtle}`, textAlign: 'start', '&:hover': { bgcolor: wf.rowHover } }}
                   >
-                    <Box sx={{ display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: '50%', bgcolor: '#fff', border: `2px solid ${tokens.navy100}`, color: tokens.navy700, zIndex: 1, '& svg': { fontSize: 16 } }}>
-                      {kindIcon[r.kind]}
-                    </Box>
+                    <Box sx={{ display: 'grid', placeItems: 'center', color: wf.textSecondary, '& svg': { fontSize: 18 } }}>{kindIcon[r.kind]}</Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography noWrap sx={{ fontSize: 13, fontWeight: 700, color: tokens.navy800 }}>
-                        <span dir="ltr">{r.orderNo}</span> · {r.title}
+                      <Typography noWrap sx={{ fontSize: 13, fontWeight: 600, color: wf.navy }}>
+                        <bdi dir="ltr">{r.orderNo}</bdi> · {r.title}
                       </Typography>
-                      <Typography noWrap sx={{ fontSize: 11.5, color: tokens.gray500 }}>
+                      <Typography noWrap sx={{ fontSize: 12, color: wf.textSecondary }}>
                         {statusLabel(r.kind, r.status)} · {r.createdByName} · {ago(r.createdAt)}
                       </Typography>
                     </Box>
@@ -349,12 +350,11 @@ export function HomePage() {
       )}
 
       {(seeHousing || (seeWorkforce && workforce)) && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: `${tokens.gap + 4}px` }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: 2 }}>
           {seeHousing && housing && (
-            <Card title={t('home.housing.title')} subtitle={t('home.housing.subtitle', { count: housing.totals.buildings })} icon={<ApartmentOutlinedIcon />} link={{ label: t('home.open'), to: '/housing' }} delay={0.45}>
+            <Card title={t('home.housing.title')} subtitle={t('home.housing.subtitle', { count: housing.totals.buildings })} link={{ label: t('home.open'), to: '/housing' }}>
               {housing.totals.capacity === 0 ? (
-                <Stack sx={{ alignItems: 'center', py: 3, gap: 1.5, color: tokens.gray500 }}>
-                  <ApartmentOutlinedIcon sx={{ fontSize: 38, opacity: 0.6 }} />
+                <Stack sx={{ alignItems: 'center', py: 3, gap: 1.5, color: wf.textSecondary }}>
                   <Typography sx={{ fontSize: 13 }}>{t('home.housing.empty')}</Typography>
                   <Button variant="outlined" size="small" onClick={() => navigate('/housing')}>
                     {t('housing.newBuilding')}
@@ -362,19 +362,19 @@ export function HomePage() {
                 </Stack>
               ) : (
                 <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: 'center', gap: 3 }}>
-                  <Ring percent={occupancy} size={150} thickness={14} color={occupancy >= 95 ? tokens.danger : occupancy >= 80 ? tokens.warning : tokens.success} label={t('home.housing.occupancy')} />
+                  <Ring percent={occupancy} size={140} thickness={12} color={occupancy >= 95 ? wf.danger.fg : occupancy >= 80 ? wf.warning.fg : wf.navy} label={t('home.housing.occupancy')} />
                   <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.25, width: '100%' }}>
-                    {[
-                      [t('housing.cards.capacity'), housing.totals.capacity, tokens.navy700],
-                      [t('housing.cards.occupied'), housing.totals.occupied, tokens.success],
-                      [t('housing.cards.free'), Math.max(0, housing.totals.capacity - housing.totals.occupied), tokens.info],
-                      [t('housing.cards.withoutRoom'), housing.totals.withoutRoom, housing.totals.withoutRoom > 0 ? tokens.warning : tokens.gray500],
-                    ].map(([label, value, color]) => (
-                      <Box key={label as string} sx={{ p: 1.5, borderRadius: '12px', bgcolor: tokens.gray50, borderInlineStart: `3px solid ${color as string}` }}>
-                        <Typography sx={{ fontSize: 22, fontWeight: 800, color: tokens.navy800, lineHeight: 1.1 }}>
-                          <CountUp value={value as number} />
-                        </Typography>
-                        <Typography sx={{ fontSize: 12, color: tokens.gray600 }}>{label as string}</Typography>
+                    {(
+                      [
+                        [t('housing.cards.capacity'), housing.totals.capacity, false],
+                        [t('housing.cards.occupied'), housing.totals.occupied, false],
+                        [t('housing.cards.free'), Math.max(0, housing.totals.capacity - housing.totals.occupied), false],
+                        [t('housing.cards.withoutRoom'), housing.totals.withoutRoom, housing.totals.withoutRoom > 0],
+                      ] as const
+                    ).map(([label, value, attention]) => (
+                      <Box key={label} sx={{ p: 1.5, borderRadius: wf.control, border: `1px solid ${wf.border}` }}>
+                        <Typography sx={{ ...num, fontSize: 22, fontWeight: 700, color: attention ? wf.warning.fg : wf.navy, lineHeight: 1.1 } as SxProps<Theme>}>{fmt(value)}</Typography>
+                        <Typography sx={{ fontSize: 12, color: wf.textSecondary }}>{label}</Typography>
                       </Box>
                     ))}
                   </Box>
@@ -383,39 +383,37 @@ export function HomePage() {
             </Card>
           )}
           {seeWorkforce && workforce && (
-            <Card title={t('home.quality.title')} subtitle={t('home.quality.subtitle')} icon={<FactCheckOutlinedIcon />} delay={0.5}>
+            <Card title={t('home.quality.title')} subtitle={t('home.quality.subtitle')}>
               <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: 'center', gap: 3 }}>
                 {workforce.checkRate !== null ? (
                   <ButtonBase onClick={() => navigate('/workforce/invoice-check')} sx={{ borderRadius: '50%' }}>
-                    <Ring percent={workforce.checkRate} size={150} thickness={14} color={workforce.checkRate >= 99 ? tokens.success : workforce.checkRate >= 90 ? tokens.teal : tokens.warning} label={t('home.quality.match', { month: workforce.checkMonth ? monthLabel(workforce.checkMonth) : '' })}>
-                      <Typography sx={{ fontSize: 28, fontWeight: 800, color: tokens.navy800 }}>{workforce.checkRate.toFixed(1)}%</Typography>
+                    <Ring percent={workforce.checkRate} size={140} thickness={12} color={workforce.checkRate >= 99 ? wf.success.fg : workforce.checkRate >= 90 ? wf.navy : wf.warning.fg} label={t('home.quality.match', { month: workforce.checkMonth ? monthLabel(workforce.checkMonth) : '' })}>
+                      <Typography sx={{ ...num, fontSize: 26, fontWeight: 700, color: wf.navy } as SxProps<Theme>}>{workforce.checkRate.toFixed(1)}%</Typography>
                     </Ring>
                   </ButtonBase>
                 ) : (
-                  <Ring percent={0} size={150} thickness={14} color={tokens.gray300} label={t('home.quality.noCheck')}>
-                    <Typography sx={{ fontSize: 24, fontWeight: 800, color: tokens.gray500 }}>—</Typography>
+                  <Ring percent={0} size={140} thickness={12} color={wf.border} label={t('home.quality.noCheck')}>
+                    <Typography sx={{ fontSize: 24, fontWeight: 700, color: wf.textSecondary }}>—</Typography>
                   </Ring>
                 )}
-                <Stack spacing={1.25} sx={{ flex: 1, width: '100%' }}>
+                <Stack spacing={1} sx={{ flex: 1, width: '100%' }}>
                   {[
-                    { icon: <RuleOutlinedIcon />, label: t('home.quality.issues'), value: workforce.historyIssues, color: tokens.navy700, to: '/workforce/history-issues' },
-                    { icon: <WarningAmberOutlinedIcon />, label: t('home.quality.iqama30'), value: workforce.iqamaExpiring30, color: tokens.warning, to: undefined, none: workforce.iqamaWithExpiry === 0 },
-                    { icon: <WarningAmberOutlinedIcon />, label: t('home.quality.iqamaExpired'), value: workforce.iqamaExpired, color: tokens.danger, to: undefined, none: workforce.iqamaWithExpiry === 0 },
+                    { icon: <RuleOutlinedIcon />, label: t('home.quality.issues'), value: workforce.historyIssues, tone: wf.navy, to: '/workforce/history-issues' as string | undefined, none: false },
+                    { icon: <WarningAmberOutlinedIcon />, label: t('home.quality.iqama30'), value: workforce.iqamaExpiring30, tone: wf.warning.fg, to: undefined, none: workforce.iqamaWithExpiry === 0 },
+                    { icon: <WarningAmberOutlinedIcon />, label: t('home.quality.iqamaExpired'), value: workforce.iqamaExpired, tone: wf.danger.fg, to: undefined, none: workforce.iqamaWithExpiry === 0 },
                   ].map((item) => (
                     <ButtonBase
                       key={item.label}
                       disabled={!item.to}
                       onClick={() => item.to && navigate(item.to)}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1.25, borderRadius: '12px', bgcolor: tokens.gray50, textAlign: 'start', '&:hover': item.to ? { bgcolor: tokens.navy50 } : undefined }}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1.25, borderRadius: wf.control, border: `1px solid ${wf.border}`, textAlign: 'start', '&:hover': item.to ? { borderColor: wf.navy } : undefined }}
                     >
-                      <Box sx={{ display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: '10px', bgcolor: `${item.color}18`, color: item.color, '& svg': { fontSize: 18 } }}>{item.icon}</Box>
+                      <Box sx={{ display: 'grid', placeItems: 'center', color: item.value > 0 ? item.tone : wf.textSecondary, '& svg': { fontSize: 18 } }}>{item.icon}</Box>
                       <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: 13, color: tokens.gray700 }}>{item.label}</Typography>
-                        {'none' in item && item.none && <Typography sx={{ fontSize: 11, color: tokens.gray500 }}>{t('home.quality.noExpiry')}</Typography>}
+                        <Typography sx={{ fontSize: 13, color: wf.text }}>{item.label}</Typography>
+                        {item.none && <Typography sx={{ fontSize: 11.5, color: wf.textSecondary }}>{t('home.quality.noExpiry')}</Typography>}
                       </Box>
-                      <Typography sx={{ fontSize: 18, fontWeight: 800, color: item.value > 0 ? item.color : tokens.gray500 }}>
-                        {'none' in item && item.none ? '—' : <CountUp value={item.value} />}
-                      </Typography>
+                      <Typography sx={{ ...num, fontSize: 18, fontWeight: 700, color: item.value > 0 && !item.none ? item.tone : wf.textSecondary } as SxProps<Theme>}>{item.none ? '—' : fmt(item.value)}</Typography>
                     </ButtonBase>
                   ))}
                 </Stack>
