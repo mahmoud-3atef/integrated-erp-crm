@@ -139,3 +139,50 @@ C:\Integrated-ERP-CRM\deploy\Deploy-Erp.ps1 -Rollback
 
 في ملف إعدادات السيرفر، أضف `"MfaRequired": false` داخل قسم `Identity`، ثم أعد النشر أو أعد تشغيل مجموعة التطبيقات. يسجل النظام تحذيرًا في السجل عند كل تشغيل ما دام التحقق متوقفًا. لإعادته احذف السطر أو اجعله `true`.
 
+
+## نسخة تيست منفصلة تُفتح من الأجهزة الأخرى (`New-ErpTestSite.ps1`)
+
+موقع ثانٍ على IIS باسم `IntegratedErpTest` يُفتح من أي جهاز على الشبكة. ‏`http://newcrm` (المنفذ 80) يحوّل إلى `https://newcrm` (المنفذ 443).
+
+**ما يُنشئه**
+- قاعدة بيانات `IntegratedErp_Test`: نسخة من قاعدة النظام الحي `IntegratedErp`، مأخوذة بنسخة احتياطية COPY_ONLY، فلا تتأثر نسخ النظام الحي الاحتياطية.
+- مجلداته في `C:\IntegratedErpTest`.
+- مفاتيحه الخاصة: جلسات التيست والنظام الحي لا تختلط.
+- المرفقات منسوخة من النظام الحي.
+
+**الإعدادات**
+- لا مزامنة مع CRM، ولا بريد، ولا ملخص يومي.
+- الدخول بحسابات الدومين كالنظام الحي.
+
+**قبل التشغيل**
+- المنفذان 80 و443 يجب أن يكونا فارغين. إن كان موقع النظام القديم على 80 فأوقفه أولًا.
+
+شغّل في PowerShell كمسؤول:
+
+```powershell
+cd C:\Integrated-ERP-CRM
+```
+
+```powershell
+.\deploy\New-ErpTestSite.ps1
+```
+
+**تحديث كود نسخة التيست لاحقًا**
+
+```powershell
+.\deploy\Deploy-Erp.ps1 -SiteName IntegratedErpTest -Root C:\IntegratedErpTest -HostName newcrm -Port 443 -SkipTests
+```
+
+**نسخ بيانات النظام الحي من جديد**
+
+```powershell
+.\deploy\New-ErpTestSite.ps1 -RefreshData
+```
+
+**إزالة موقع التيست وإرجاع المنفذ 80 للنظام القديم**
+
+يحذف الموقع ومجموعة التطبيقات وقاعدة الجدار الناري، ويُبقي القاعدة والمجلد. بعدها شغّل موقع النظام القديم.
+
+```powershell
+.\deploy\New-ErpTestSite.ps1 -Remove
+```

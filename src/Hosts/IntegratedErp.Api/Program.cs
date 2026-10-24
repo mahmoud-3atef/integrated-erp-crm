@@ -107,6 +107,24 @@ if (args.Length >= 1 && string.Equals(args[0], "create-company", StringCompariso
 }
 
 app.UseExceptionHandler();
+
+// A site also reached over plain HTTP (e.g. a test copy on port 80) sends the browser to its HTTPS address, since the
+// session cookie is HTTPS only. Off unless Platform:HttpsAddress is set (deploy/New-ErpTestSite.ps1 sets it).
+if (app.Configuration["Platform:HttpsAddress"] is { Length: > 0 } httpsAddress)
+{
+    var origin = httpsAddress.TrimEnd('/');
+    app.Use(async (context, next) =>
+    {
+        if (!context.Request.IsHttps)
+        {
+            context.Response.Redirect($"{origin}{context.Request.PathBase}{context.Request.Path}{context.Request.QueryString}");
+            return;
+        }
+
+        await next(context).ConfigureAwait(false);
+    });
+}
+
 app.UseSerilogRequestLogging();
 app.UseSecurityHeaders();
 app.UseStatusCodePages();
