@@ -26,7 +26,8 @@ export const tokens = {
     gray600: '#4a5c6c',
     gray700: '#33444f',
     gray900: '#102633',
-    bg: '#e3e7ec',
+    // The page background (2026-10-24): a soft navy-tinted blue that sets the white cards apart and sits with the navy and gold.
+    bg: '#d6e4f0',
     tint: '#e4f0f6',
     tintStrong: '#cfe3ec',
     border: '#e1ebf1',
