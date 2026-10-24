@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Threading.Channels;
 using IntegratedErp.BuildingBlocks.Context;
@@ -19,9 +20,15 @@ public sealed class LiveChanges
 {
     private readonly Lock _gate = new();
     private readonly List<LiveSubscription> _subscribers = [];
+    private readonly ConcurrentDictionary<(Guid Tenant, string Area), long> _versions = new();
+
+    /// <summary>Raised after every announced change, for work done in the background (e.g. preparing a report again).</summary>
+    public event Action<Guid, string>? Published;
 
     public void Publish(Guid tenantId, string area)
     {
+        _versions.AddOrUpdate((tenantId, area), 1, (_, v) => v + 1);
+        Published?.Invoke(tenantId, area);
         lock (_gate)
         {
             foreach (var subscriber in _subscribers.Where(s => s.TenantId == tenantId))
@@ -30,6 +37,12 @@ public sealed class LiveChanges
             }
         }
     }
+
+    /// <summary>
+    /// How many changes these areas of a company have had since the server started: a cache keeps what it built for a
+    /// version and builds it again only when the version moves (instead of every few minutes).
+    /// </summary>
+    public long Version(Guid tenantId, IEnumerable<string> areas) => areas.Sum(a => _versions.GetValueOrDefault((tenantId, a)));
 
     public LiveSubscription Subscribe(Guid tenantId)
     {
@@ -74,6 +87,16 @@ public sealed class LiveSubscription : IDisposable
         _owner.Remove(this);
         _channel.Writer.TryComplete();
     }
+}
+
+/// <summary>
+/// An entity that names the area its changes are announced under, instead of its module's schema: a finer one (e.g.
+/// «crm_sync.new_invoice», so a report on the old invoices is not rebuilt when a worker is copied), or none when the
+/// save changed nothing anyone reads (a sync run's own log).
+/// </summary>
+public interface ILiveArea
+{
+    string? LiveArea { get; }
 }
 
 /// <summary>
@@ -143,9 +166,10 @@ public sealed class LiveChangesInterceptor(LiveChanges live, ITenantContext tena
         {
             if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted
                 && entry.Entity is not (AuditEntry or OutboxMessage or NumberSequence)
-                && (entry.Entity is ITenantOwned owned ? owned.TenantId : tenant.TenantId) is { } tenantId)
+                && (entry.Entity is ITenantOwned owned ? owned.TenantId : tenant.TenantId) is { } tenantId
+                && (entry.Entity is ILiveArea own ? own.LiveArea : context.Schema) is { } area)
             {
-                _pending.Add((tenantId, context.Schema));
+                _pending.Add((tenantId, area));
             }
         }
     }

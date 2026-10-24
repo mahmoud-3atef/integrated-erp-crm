@@ -20,6 +20,8 @@ public sealed class ReportsModule : IModule
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddMemoryCache();
+        services.AddSingleton<ReportCache>();
+        services.AddHostedService<ReportsWarmup>();
         services.AddOptions<ReportsOptions>().Bind(configuration.GetSection(ReportsOptions.Section));
         services.AddScoped<LegacyInvoices>();
         services.AddScoped<ExecutiveReport>();

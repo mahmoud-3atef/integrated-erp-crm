@@ -3,7 +3,6 @@ using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.Modules.Commercial.Contracts;
 using IntegratedErp.Modules.CrmSync.Contracts;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Reports.Application;
@@ -57,6 +56,9 @@ public sealed class ReportsOptions
     /// </summary>
     public string[] ExcludedProjectCodes { get; set; } = ["PRO00137", "HeadOffice", "PRO00148"];
 
+    /// <summary>Seconds after the server starts before the slow reports are prepared (<see cref="ReportsWarmup"/>); below 0: off.</summary>
+    public int WarmupSeconds { get; set; } = 20;
+
     internal bool IsExcluded(string? code) =>
         code is not null && ExcludedProjectCodes.Any(c => string.Equals(Normalize(c), Normalize(code), StringComparison.Ordinal));
 
@@ -66,9 +68,10 @@ public sealed class ReportsOptions
 /// <summary>
 /// The old system's project invoices during the parallel phase (docs/03-migration-plan/14 §7.1): read from the CRM copy
 /// the sync keeps (never from the CRM itself, never written), without the cancelled ones, the non-project types, the
-/// excluded projects, and those before the financial start. Kept a few minutes per company.
+/// excluded projects, and those before the financial start. Kept per company until the copied invoices change
+/// (<see cref="ReportCache"/>).
 /// </summary>
-internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory projects, ITenantContext tenant, IMemoryCache cache, IOptions<ReportsOptions> options)
+internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory projects, ITenantContext tenant, ReportCache cache, IOptions<ReportsOptions> options)
 {
     internal const int Canceled = 279640007;
     private const int ProjectInvoice = 100000000;
@@ -90,12 +93,11 @@ internal sealed class LegacyInvoices(ICrmStaging staging, IProjectDirectory proj
         [279640008] = ("بانتظار التحصيل", "Awaiting payment"),
     };
 
-    public Task<LegacyFinance> LoadAsync(CancellationToken cancellationToken) =>
-        cache.GetOrCreateAsync($"reports.legacy.{tenant.TenantId}", async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return await ReadAsync(cancellationToken).ConfigureAwait(false);
-        })!;
+    public Task<LegacyFinance> LoadAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = tenant.TenantId ?? Guid.Empty;
+        return cache.GetAsync($"reports.legacy.{tenantId}", tenantId, ReportSources.LegacyInvoices, TimeSpan.FromHours(6), () => ReadAsync(cancellationToken), cancellationToken);
+    }
 
     private async Task<LegacyFinance> ReadAsync(CancellationToken cancellationToken)
     {

@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text.Json;
 using IntegratedErp.BuildingBlocks.Context;
 using IntegratedErp.Modules.CrmSync.Contracts;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace IntegratedErp.Modules.Reports.Application;
 
@@ -24,9 +23,10 @@ internal sealed record LegacyTask(Guid CrmId, string Subject, string Owner, stri
 
 /// <summary>
 /// The old system's tasks during the parallel phase (docs/03-migration-plan/19): read from the CRM copy the sync keeps
-/// (never from the CRM itself, never written), without the integration account's («cit»). Kept a few minutes per company.
+/// (never from the CRM itself, never written), without the integration account's («cit»). Kept per company until the
+/// copied tasks change (<see cref="ReportCache"/>).
 /// </summary>
-internal sealed class LegacyTasks(ICrmStaging staging, ITenantContext tenant, IMemoryCache cache)
+internal sealed class LegacyTasks(ICrmStaging staging, ITenantContext tenant, ReportCache cache)
 {
     private static readonly TimeSpan Riyadh = TimeSpan.FromHours(3);
 
@@ -40,12 +40,11 @@ internal sealed class LegacyTasks(ICrmStaging staging, ITenantContext tenant, IM
         [10113] = "permission",
     };
 
-    public Task<IReadOnlyList<LegacyTask>> LoadAsync(CancellationToken cancellationToken) =>
-        cache.GetOrCreateAsync($"reports.legacy-tasks.{tenant.TenantId}", async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return await ReadAsync(cancellationToken).ConfigureAwait(false);
-        })!;
+    public Task<IReadOnlyList<LegacyTask>> LoadAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = tenant.TenantId ?? Guid.Empty;
+        return cache.GetAsync($"reports.legacy-tasks.{tenantId}", tenantId, ReportSources.LegacyTasks, TimeSpan.FromHours(6), () => ReadAsync(cancellationToken), cancellationToken);
+    }
 
     private async Task<IReadOnlyList<LegacyTask>> ReadAsync(CancellationToken cancellationToken)
     {

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using IntegratedErp.BuildingBlocks.Context;
+using IntegratedErp.BuildingBlocks.Live;
 using IntegratedErp.BuildingBlocks.Time;
 using IntegratedErp.Modules.CrmSync.Contracts;
 using IntegratedErp.Modules.CrmSync.Domain;
@@ -80,7 +81,8 @@ internal sealed class CrmSyncService(
     IOptions<CrmSyncOptions> options,
     ITenantContext tenant,
     ITenantDirectory tenants,
-    CrmSyncSignal signal)
+    CrmSyncSignal signal,
+    LiveChanges live)
 {
     public static readonly Error NotConfigured = Error.Validation("crm_sync_not_configured", "The CRM connection is not configured.");
     public static readonly Error OtherCompany = Error.Validation("crm_sync_other_company", "The CRM's data belongs to another company.");
@@ -305,6 +307,13 @@ internal sealed class CrmSyncService(
 
         state.Succeeded(clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Records marked deleted or removed in bulk are not seen by the save that announces changes: announce them here.
+        if ((deleted > 0 || excluded > 0) && tenant.TenantId is { } tenantId)
+        {
+            live.Publish(tenantId, StagedRecord.LiveAreaOf(entity.Name));
+        }
+
         return new EntitySyncResult(entity.Name, read, inserted, updated, deleted, null, excluded);
     }
 

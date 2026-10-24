@@ -5,7 +5,6 @@ using IntegratedErp.Modules.Commercial.Contracts;
 using IntegratedErp.Modules.Expenses.Contracts;
 using IntegratedErp.Modules.Organization.Contracts;
 using IntegratedErp.Modules.Workforce.Contracts;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace IntegratedErp.Modules.Reports.Application;
@@ -148,7 +147,7 @@ internal sealed class ProfitReport(
     IReferenceData referenceData,
     IProjectDirectory projects,
     ITenantContext tenant,
-    IMemoryCache cache,
+    ReportCache cache,
     IClock clock,
     IOptions<ReportsOptions> options)
 {
@@ -164,11 +163,10 @@ internal sealed class ProfitReport(
     public Task<MonthProfit> MonthAsync(DateOnly month, CancellationToken cancellationToken)
     {
         var first = new DateOnly(month.Year, month.Month, 1);
-        return cache.GetOrCreateAsync($"reports.profit.{tenant.TenantId}.{first:yyyyMM}", async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return await ComputeAsync(first, cancellationToken).ConfigureAwait(false);
-        })!;
+        var tenantId = tenant.TenantId ?? Guid.Empty;
+
+        // Kept until the invoices, the workers' days and costs, or the expenses change; an hour at most (the current month's days move with the date).
+        return cache.GetAsync($"reports.profit.{tenantId}.{first:yyyyMM}", tenantId, ReportSources.Profit, TimeSpan.FromHours(1), () => ComputeAsync(first, cancellationToken), cancellationToken);
     }
 
     private async Task<MonthProfit> ComputeAsync(DateOnly first, CancellationToken cancellationToken)

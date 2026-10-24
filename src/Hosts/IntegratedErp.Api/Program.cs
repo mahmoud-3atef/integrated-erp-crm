@@ -126,6 +126,7 @@ if (app.Configuration["Platform:HttpsAddress"] is { Length: > 0 } httpsAddress)
 }
 
 app.UseSerilogRequestLogging();
+app.UseResponseCompression();
 app.UseSecurityHeaders();
 app.UseStatusCodePages();
 app.UseRateLimiter();

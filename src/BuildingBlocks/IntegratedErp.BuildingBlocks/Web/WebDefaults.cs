@@ -1,7 +1,10 @@
+using System.IO.Compression;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegratedErp.BuildingBlocks.Web;
@@ -19,6 +22,18 @@ public static class WebDefaults
 
         services.AddProblemDetails();
         services.AddExceptionHandler<BadRequestExceptionHandler>();
+
+        // Compressed responses (Brotli, else gzip): a report's JSON is 5–10 times smaller, which is what a page opened
+        // from outside (through the tunnel, on the server's upload) waits for. The fastest level: the CPU stays free.
+        // The live feed (text/event-stream) is not in the list, so its events are never held back.
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+        });
+        services.Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
+        services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
 
         return services;
     }

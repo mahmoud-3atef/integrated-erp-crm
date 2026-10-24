@@ -1,3 +1,4 @@
+using IntegratedErp.BuildingBlocks.Live;
 using IntegratedErp.BuildingBlocks.Persistence;
 using IntegratedErp.SharedKernel;
 
@@ -7,8 +8,12 @@ namespace IntegratedErp.Modules.CrmSync.Domain;
 /// A copy of one CRM record (all its columns as JSON), as last read from the CRM. Never edited by people; the sync
 /// job keeps it current and marks it deleted when a full sync no longer finds it.
 /// </summary>
-public sealed class StagedRecord : ITenantOwned, INotAudited
+public sealed class StagedRecord : ITenantOwned, INotAudited, ILiveArea
 {
+    // Whether this copy's content changed (new, or refreshed with other values): only then is a change announced, under
+    // its entity (e.g. «crm_sync.new_invoice»), so the reports built on it are prepared again.
+    private bool _changed;
+
     private StagedRecord()
     {
         Entity = string.Empty;
@@ -29,7 +34,13 @@ public sealed class StagedRecord : ITenantOwned, INotAudited
         LastSeenRunId = runId;
         FirstSyncedAt = now;
         LastSyncedAt = now;
+        _changed = true;
     }
+
+    string? ILiveArea.LiveArea => _changed ? LiveAreaOf(Entity) : null;
+
+    /// <summary>The area a staged entity's changes are announced under.</summary>
+    public static string LiveAreaOf(string entity) => $"crm_sync.{entity}";
 
     public Guid Id { get; private set; }
 
@@ -76,13 +87,17 @@ public sealed class StagedRecord : ITenantOwned, INotAudited
         PayloadHash = payloadHash;
         LastSyncedAt = now;
         IsDeleted = false;
+        _changed = true;
         return true;
     }
 }
 
 /// <summary>Where the sync of one entity stands: the last change already copied (the next incremental run starts after it).</summary>
-public sealed class SyncState : ITenantOwned
+public sealed class SyncState : ITenantOwned, ILiveArea
 {
+    // The sync's own bookkeeping: nothing anyone reads changes with it.
+    string? ILiveArea.LiveArea => null;
+
     private SyncState()
     {
         Entity = string.Empty;
@@ -162,8 +177,11 @@ public enum SyncRunStatus
 public sealed record EntitySyncResult(string Entity, int Read, int Inserted, int Updated, int Deleted, string? Error, int Excluded = 0);
 
 /// <summary>One run of the sync job: who or what started it, and what each entity did.</summary>
-public sealed class SyncRun : ITenantOwned
+public sealed class SyncRun : ITenantOwned, ILiveArea
 {
+    // The sync's own log: nothing anyone reads changes with it.
+    string? ILiveArea.LiveArea => null;
+
     private SyncRun()
     {
         RequestedBy = string.Empty;
