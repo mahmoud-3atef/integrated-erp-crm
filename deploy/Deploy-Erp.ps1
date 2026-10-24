@@ -22,6 +22,8 @@ param(
     [int] $Port = 8003,
     [string] $SiteName = 'IntegratedErp',
     [string] $Root = 'C:\IntegratedErp',
+    # The address /health is checked on (default https://<HostName>:<Port>), e.g. http://localhost for a site behind a tunnel.
+    [string] $Url,
     [switch] $SkipTests,
     [switch] $Rollback,
     [int] $KeepReleases = 5
@@ -124,7 +126,7 @@ try {
 }
 
 # ---------------------------------------------------------------- Health
-$url = "https://${HostName}:$Port"
+$url = if ($Url) { $Url.TrimEnd('/') } else { "https://${HostName}:$Port" }
 Step "Checking $url/health"
 $healthy = $false
 for ($i = 0; $i -lt 10 -and -not $healthy; $i++) {

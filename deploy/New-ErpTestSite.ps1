@@ -1,32 +1,32 @@
 <#
 .SYNOPSIS
-  A separate TEST copy of Integrated ERP on IIS, reachable from other machines: http://<server> (port 80) sends the
-  browser to https://<server> (port 443). Its own site, app pool, database (a copy of the live one), folders and keys.
-  -Remove takes the site off again (so port 80 can go back to the old system).
+  A separate TEST copy of Integrated ERP on IIS, served on http://localhost:80 for the cloudflared tunnel
+  (crm.carepro-crm.live -> http://localhost:80): its own site, app pool, database (a copy of the live one), folders and
+  keys. -Remove takes the site off again (so port 80 can go back to the old system).
 
 .DESCRIPTION
   Run as administrator in Windows PowerShell 5.1, on the server where Initialize-ErpServer.ps1 already set up the live
   site (IntegratedErp, https://newcrm.jrco.local:8003). The live site, its database and its files are only read.
 
   What it does:
-    1. Checks that ports 80 and 443 are free (stop the old system's site first if it uses port 80).
+    1. Checks that port 80 is free (stop the old system's site first if it uses it).
     2. Folders C:\IntegratedErpTest\{app,releases,config,keys,logs,files} and the app pool IntegratedErpTest.
-    3. The site: HTTPS on 443 with the live site's certificate (it names the server), HTTP on 80 (redirects to HTTPS),
-       and a firewall rule for 80 and 443 on the domain network.
+    3. The site: HTTP on port 80. No firewall port is opened: the tunnel reaches it from this machine, and Cloudflare
+       serves HTTPS to the browser (the session cookie is HTTPS-only, which is why the site is used through the tunnel).
     4. The database IntegratedErp_Test: a COPY_ONLY backup of IntegratedErp restored under the new name (the live
        backups are not affected). -RefreshData copies it again.
     5. Its settings: the live settings with this database, its own folders, no CRM sync, no e-mails, no daily digest,
-       and the HTTP-to-HTTPS address. The AD bind account is copied (secrets.dat).
+       and two-step verification ON (the site faces the internet; -NoMfa turns it off). The AD bind account is copied.
     6. Deploys the current code with Deploy-Erp.ps1 (migrations included).
 
-  Sign-in: the domain accounts, as on the live site. The test copy uses its own keys, so its sessions and the live
-  ones never mix; two-step verification secrets of the live site do not carry over (enrol again if MFA is on).
+  Sign-in: the domain accounts, as on the live site, then the authenticator code (enrolled on the first sign-in: the
+  test copy has its own keys, so its sessions and the live ones never mix).
 
 .EXAMPLE
   cd C:\Integrated-ERP-CRM
   .\deploy\New-ErpTestSite.ps1
   .\deploy\New-ErpTestSite.ps1 -RefreshData      # a fresh copy of the live data
-  .\deploy\New-ErpTestSite.ps1 -Remove           # take the test site off (frees ports 80 and 443)
+  .\deploy\New-ErpTestSite.ps1 -Remove           # take the test site off (frees port 80)
 #>
 [CmdletBinding()]
 param(
@@ -37,16 +37,16 @@ param(
     [string] $SourceRoot = 'C:\IntegratedErp',
     [string] $SourceDatabase = 'IntegratedErp',
     [string] $SqlServer = '.',
-    # The address users type: the server's short name, which the live certificate also names.
-    [string] $HostName = $env:COMPUTERNAME.ToLowerInvariant(),
     [int] $HttpPort = 80,
-    [int] $HttpsPort = 443,
+    # The address people open (the tunnel's), shown at the end.
+    [string] $PublicUrl = 'https://crm.carepro-crm.live',
+    [switch] $NoMfa,
     [switch] $RefreshData,
     [switch] $Remove
 )
 
 $ErrorActionPreference = 'Stop'
-$firewallRule = 'Integrated ERP Test (HTTP, HTTPS)'
+$firewallRule = 'Integrated ERP Test (HTTP, HTTPS)'  # created by an earlier version of this script; removed if present
 
 function Step($text) { Write-Host "`n== $text" -ForegroundColor Cyan }
 function Ok($text) { Write-Host "   OK  $text" -ForegroundColor Green }
@@ -69,7 +69,7 @@ if ($Remove) {
     if (Get-Website -Name $SiteName) {
         Stop-Website -Name $SiteName -ErrorAction SilentlyContinue
         Remove-Website -Name $SiteName
-        Ok 'Site removed (ports 80 and 443 are free)'
+        Ok "Site removed (port $HttpPort is free)"
     }
     if (Test-Path "IIS:\AppPools\$SiteName") {
         Remove-WebAppPool -Name $SiteName
@@ -85,7 +85,7 @@ if ($Remove) {
 Step 'Checking'
 if (-not (Get-Website -Name $SourceSite)) { throw "The live site $SourceSite is not on this server." }
 if (-not (Test-Path "$env:ProgramFiles\IIS\Asp.Net Core Module\V2\aspnetcorev2.dll")) { throw 'The ASP.NET Core Hosting Bundle is not installed.' }
-foreach ($port in $HttpPort, $HttpsPort) {
+foreach ($port in @($HttpPort)) {
     $taken = Get-WebBinding | Where-Object { $_.bindingInformation -match ":${port}:" -and $_.ItemXPath -notmatch "@name='$SiteName'" }
     if ($taken) {
         $owner = ($taken | ForEach-Object { ($_.ItemXPath -split "'")[1] }) -join ', '
@@ -94,7 +94,7 @@ foreach ($port in $HttpPort, $HttpsPort) {
 }
 & sqlcmd -S $SqlServer -E -b -Q "SET NOCOUNT ON; SELECT 1" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Cannot connect to SQL Server '$SqlServer'." }
-Ok "Ports $HttpPort and $HttpsPort are free; SQL Server '$SqlServer'"
+Ok "Port $HttpPort is free; SQL Server '$SqlServer'"
 
 # ---------------------------------------------------------------- Folders and app pool
 Step 'Folders, app pool and permissions'
@@ -127,26 +127,16 @@ foreach ($name in 'config', 'keys') {
 foreach ($name in 'logs', 'files') { & icacls (Join-Path $Root $name) /grant "${poolIdentity}:(OI)(CI)M" | Out-Null }
 Ok "$Root and the pool $SiteName (Production)"
 
-# ---------------------------------------------------------------- Site: HTTPS 443 + HTTP 80
-Step "IIS site https://$HostName (and http://$HostName on port $HttpPort)"
-$liveBinding = Get-WebBinding -Name $SourceSite -Protocol https | Select-Object -First 1
-$thumbprint = $liveBinding.certificateHash
-if (-not $thumbprint) { throw "The live site $SourceSite has no HTTPS certificate to reuse." }
-$certificate = Get-Item "Cert:\LocalMachine\My\$thumbprint"
-if (-not ($certificate.DnsNameList | Where-Object { $_.Unicode -ieq $HostName })) {
-    Note "The certificate does not name '$HostName' (it names: $(($certificate.DnsNameList | ForEach-Object Unicode) -join ', ')). Browsers will warn; pass -HostName with one of those names."
-}
+# ---------------------------------------------------------------- Site: HTTP on port 80, for the tunnel
+Step "IIS site http://localhost:$HttpPort"
 if (-not (Get-Website -Name $SiteName)) {
-    New-Website -Name $SiteName -PhysicalPath (Join-Path $Root 'app') -ApplicationPool $SiteName -Port $HttpsPort -Ssl | Out-Null
+    New-Website -Name $SiteName -PhysicalPath (Join-Path $Root 'app') -ApplicationPool $SiteName -Port $HttpPort | Out-Null
 }
 Get-WebBinding -Name $SiteName | Remove-WebBinding
-New-WebBinding -Name $SiteName -Protocol https -Port $HttpsPort -IPAddress '*'
-(Get-WebBinding -Name $SiteName -Protocol https -Port $HttpsPort).AddSslCertificate($thumbprint, 'My')
 New-WebBinding -Name $SiteName -Protocol http -Port $HttpPort -IPAddress '*'
 Set-ItemProperty "IIS:\Sites\$SiteName" -Name applicationDefaults.preloadEnabled -Value $true
 Get-NetFirewallRule -DisplayName $firewallRule -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-New-NetFirewallRule -DisplayName $firewallRule -Direction Inbound -Protocol TCP -LocalPort $HttpPort, $HttpsPort -Action Allow -Profile Domain | Out-Null
-Ok "Bindings https:$HttpsPort (certificate $thumbprint) and http:$HttpPort; firewall open on the domain network"
+Ok "Binding http:$HttpPort (no firewall port opened: the tunnel connects from this machine)"
 
 # ---------------------------------------------------------------- Database: a copy of the live one
 Step "Database $Database (a copy of $SourceDatabase)"
@@ -209,7 +199,8 @@ Set-Value $live 'Alerts' 'DigestHour' -1
 # Its own folders, and HTTP sent to HTTPS.
 Set-Value $live 'Platform' 'KeysPath' (Join-Path $Root 'keys')
 Set-Value $live 'Platform' 'KeysMachineScope' $true
-Set-Value $live 'Platform' 'HttpsAddress' "https://$HostName"
+# Two-step verification: on unless -NoMfa (the copy faces the internet through the tunnel).
+Set-Value $live 'Identity' 'MfaRequired' (-not $NoMfa)
 Set-Value $live 'Storage' 'Root' (Join-Path $Root 'files')
 Set-Value $live 'Serilog' 'WriteTo' @([pscustomobject]@{ Name = 'File'; Args = [pscustomobject]@{ path = (Join-Path $Root 'logs\erp-.log'); rollingInterval = 'Day'; retainedFileCountLimit = 30; shared = $true } })
 $live | ConvertTo-Json -Depth 8 | Set-Content -Path $settingsPath -Encoding UTF8
@@ -218,13 +209,14 @@ Ok "$settingsPath (from the live settings: $Database, no sync, no e-mails)"
 
 # ---------------------------------------------------------------- Deploy the current code
 Step 'Deploying the current code'
-& (Join-Path $PSScriptRoot 'Deploy-Erp.ps1') -SiteName $SiteName -Root $Root -HostName $HostName -Port $HttpsPort -SkipTests
+& (Join-Path $PSScriptRoot 'Deploy-Erp.ps1') -SiteName $SiteName -Root $Root -Url "http://localhost:$HttpPort" -SkipTests
 Start-Website -Name $SiteName -ErrorAction SilentlyContinue
 
 Step 'Done'
 Write-Host @"
-   From another machine on the network:  http://$HostName   (it opens https://$HostName)
-   Sign in with your domain account, as on the live site.
-   Later updates of the test copy:   .\deploy\Deploy-Erp.ps1 -SiteName $SiteName -Root $Root -HostName $HostName -Port $HttpsPort -SkipTests
+   On this machine:          http://localhost:$HttpPort
+   From outside (tunnel):    $PublicUrl   (cloudflared: $PublicUrl -> http://localhost:$HttpPort)
+   Sign in with your domain account, then the authenticator code$(if ($NoMfa) { ' (off: -NoMfa)' } else { ' (enrolled on the first sign-in)' }).
+   Later updates of the test copy:   .\deploy\Deploy-Erp.ps1 -SiteName $SiteName -Root $Root -Url http://localhost:$HttpPort -SkipTests
    Give port 80 back to the old system:   .\deploy\New-ErpTestSite.ps1 -Remove   (then start the old site)
 "@
