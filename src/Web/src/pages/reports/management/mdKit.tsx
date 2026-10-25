@@ -26,8 +26,12 @@ export const md = {
   label: '#A9BFCC',
   border: 'rgba(255,255,255,.12)',
   track: 'rgba(255,255,255,.1)',
-  glass: 'rgba(255,255,255,.06)',
-  glassHi: 'rgba(255,255,255,.1)',
+  /** A box inside a dark panel (or a panel's flat colour): solid, since the page itself is light (2026-10-25). */
+  glass: '#0E2F48',
+  glassHi: '#153B59',
+  /** The dark panels (tabs, charts, tables) on the system's light page: the night sky's gradient with a faint teal glow. */
+  panel:
+    'radial-gradient(ellipse at 90% -20%, rgba(45,212,191,.14), transparent 55%), radial-gradient(ellipse at 5% 120%, rgba(56,189,248,.12), transparent 55%), linear-gradient(160deg, #0B2C47 0%, #071F33 55%, #04121F 100%)',
   /** The KPI numbers' glowing teal. */
   glow: '#5EEAD4',
   glowShadow: '0 0 18px rgba(45,212,191,.55), 0 0 2px rgba(94,234,212,.6)',
@@ -43,13 +47,13 @@ export const md = {
   coverage: '#12597F',
 };
 
-/** A glass card on the sky: translucent, blurred, with soft edges. */
+/** A dark panel on the light page (a chart, a table, a strip): the night sky's gradient, soft edges. */
 export const glassCard: SxProps<Theme> = {
-  bgcolor: md.glass,
+  background: md.panel,
   border: `1px solid ${md.border}`,
   borderRadius: '18px',
-  backdropFilter: 'blur(14px) saturate(140%)',
-  boxShadow: '0 10px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08)',
+  color: md.ink,
+  boxShadow: '0 10px 26px rgba(4,18,31,.22), inset 0 1px 0 rgba(255,255,255,.08)',
 };
 
 /** Stars as small radial dots at fixed places (the same sky every time), in two layers that twinkle apart. */
@@ -68,10 +72,8 @@ function stars(count: number, seed: number, bright = false) {
     return `radial-gradient(${size}px ${size}px at ${at}, rgba(255,255,255,${alpha.toFixed(2)}) 50%, transparent 100%)`;
   }).join(', ');
 }
-const starsA = stars(110, 7);
-const starsB = stars(70, 23);
-const starsBright = stars(16, 41, true);
-const twinkle = keyframes`0%, 100% { opacity: 1; } 50% { opacity: .35; }`;
+/** The tabs' strip and the KPI band keep a few still stars over the panel's gradient (the night look, on the light page). */
+export const starryPanel = `${stars(8, 41, true)}, ${stars(60, 7)}, ${md.panel}`;
 
 /** The page's own dark theme, so fields, menus, dialogs and tooltips inside it read on the sky. */
 const night = (outer: Theme) =>
@@ -111,30 +113,14 @@ const night = (outer: Theme) =>
     },
   });
 
-/** The night sky the whole page sits on: a navy gradient, two layers of twinkling stars and a faint teal glow. */
+/**
+ * The page's dark theme for its panels, menus, dialogs and tooltips. Since 2026-10-25 the page itself keeps the
+ * system's light background (the user's request): only the tabs, the charts and the tables are dark panels.
+ */
 export function NightSky({ children }: { children: ReactNode }) {
-  const layer = { position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: -1, '@media (prefers-reduced-motion: reduce)': { animation: 'none' } } as const;
   return (
     <ThemeProvider theme={night}>
-      <Box
-        sx={{
-          position: 'relative',
-          isolation: 'isolate',
-          overflow: 'hidden',
-          borderRadius: '20px',
-          p: { xs: 1.25, md: 2.25 },
-          minHeight: 'calc(100dvh - 96px)',
-          color: md.ink,
-          background:
-            'radial-gradient(ellipse at 85% -10%, rgba(45,212,191,.16), transparent 55%), radial-gradient(ellipse at 10% 110%, rgba(56,189,248,.14), transparent 55%), linear-gradient(160deg, #0B2C47 0%, #071F33 45%, #04121F 100%)',
-          boxShadow: '0 18px 40px rgba(4,18,31,.35)',
-        }}
-      >
-        <Box aria-hidden sx={{ ...layer, backgroundImage: starsA, animation: `${twinkle} 5s ease-in-out infinite` }} />
-        <Box aria-hidden sx={{ ...layer, backgroundImage: starsB, animation: `${twinkle} 7s ease-in-out 2.5s infinite` }} />
-        <Box aria-hidden sx={{ ...layer, backgroundImage: starsBright, animation: `${twinkle} 4s ease-in-out 1s infinite` }} />
-        {children}
-      </Box>
+      <Box sx={{ minHeight: 'calc(100dvh - 96px)' }}>{children}</Box>
     </ThemeProvider>
   );
 }
@@ -186,9 +172,9 @@ export function GlassStrip({ children }: { children: ReactNode }) {
         overflow: 'hidden',
         borderRadius: '20px',
         p: { xs: 1.5, md: '6px 16px 16px' },
-        background: 'linear-gradient(125deg, rgba(27,110,143,.28) 0%, rgba(255,255,255,.04) 55%, rgba(45,212,191,.16) 100%)',
+        background: `linear-gradient(125deg, rgba(27,110,143,.28) 0%, rgba(255,255,255,.04) 55%, rgba(45,212,191,.16) 100%), ${starryPanel}`,
+        color: md.ink,
         border: `1px solid ${md.border}`,
-        backdropFilter: 'blur(10px)',
         boxShadow: '0 14px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08)',
       }}
     >
@@ -285,8 +271,7 @@ export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onCli
         color: md.ink,
         borderRadius: '18px',
         p: '22px',
-        background,
-        backdropFilter: 'blur(14px)',
+        background: `${background}, ${md.panel}`,
         boxShadow: '0 14px 30px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1)',
         display: 'flex',
         flexDirection: 'column',
@@ -464,7 +449,7 @@ export function DataTable<T>({ title, badge, rows, columns, excel, empty, page =
     return s ? rows.filter((r) => columns.some((c) => (c.text?.(r) ?? '').toLowerCase().includes(s))) : rows;
   }, [rows, columns, search]);
   return (
-    <Box sx={{ pt: 0.5, minWidth: 0 }}>
+    <Box sx={{ ...(glassCard as object), p: { xs: 1.5, md: '14px 16px' }, minWidth: 0 }}>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
         <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title }}>
           {title}

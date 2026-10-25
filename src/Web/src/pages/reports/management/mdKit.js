@@ -26,8 +26,11 @@ export const md = {
     label: '#A9BFCC',
     border: 'rgba(255,255,255,.12)',
     track: 'rgba(255,255,255,.1)',
-    glass: 'rgba(255,255,255,.06)',
-    glassHi: 'rgba(255,255,255,.1)',
+    /** A box inside a dark panel (or a panel's flat colour): solid, since the page itself is light (2026-10-25). */
+    glass: '#0E2F48',
+    glassHi: '#153B59',
+    /** The dark panels (tabs, charts, tables) on the system's light page: the night sky's gradient with a faint teal glow. */
+    panel: 'radial-gradient(ellipse at 90% -20%, rgba(45,212,191,.14), transparent 55%), radial-gradient(ellipse at 5% 120%, rgba(56,189,248,.12), transparent 55%), linear-gradient(160deg, #0B2C47 0%, #071F33 55%, #04121F 100%)',
     /** The KPI numbers' glowing teal. */
     glow: '#5EEAD4',
     glowShadow: '0 0 18px rgba(45,212,191,.55), 0 0 2px rgba(94,234,212,.6)',
@@ -42,13 +45,13 @@ export const md = {
     gold: '#F3C661',
     coverage: '#12597F',
 };
-/** A glass card on the sky: translucent, blurred, with soft edges. */
+/** A dark panel on the light page (a chart, a table, a strip): the night sky's gradient, soft edges. */
 export const glassCard = {
-    bgcolor: md.glass,
+    background: md.panel,
     border: `1px solid ${md.border}`,
     borderRadius: '18px',
-    backdropFilter: 'blur(14px) saturate(140%)',
-    boxShadow: '0 10px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08)',
+    color: md.ink,
+    boxShadow: '0 10px 26px rgba(4,18,31,.22), inset 0 1px 0 rgba(255,255,255,.08)',
 };
 /** Stars as small radial dots at fixed places (the same sky every time), in two layers that twinkle apart. */
 function stars(count, seed, bright = false) {
@@ -66,10 +69,8 @@ function stars(count, seed, bright = false) {
         return `radial-gradient(${size}px ${size}px at ${at}, rgba(255,255,255,${alpha.toFixed(2)}) 50%, transparent 100%)`;
     }).join(', ');
 }
-const starsA = stars(110, 7);
-const starsB = stars(70, 23);
-const starsBright = stars(16, 41, true);
-const twinkle = keyframes `0%, 100% { opacity: 1; } 50% { opacity: .35; }`;
+/** The tabs' strip and the KPI band keep a few still stars over the panel's gradient (the night look, on the light page). */
+export const starryPanel = `${stars(8, 41, true)}, ${stars(60, 7)}, ${md.panel}`;
 /** The page's own dark theme, so fields, menus, dialogs and tooltips inside it read on the sky. */
 const night = (outer) => createTheme(outer, {
     palette: {
@@ -106,20 +107,12 @@ const night = (outer) => createTheme(outer, {
         },
     },
 });
-/** The night sky the whole page sits on: a navy gradient, two layers of twinkling stars and a faint teal glow. */
+/**
+ * The page's dark theme for its panels, menus, dialogs and tooltips. Since 2026-10-25 the page itself keeps the
+ * system's light background (the user's request): only the tabs, the charts and the tables are dark panels.
+ */
 export function NightSky({ children }) {
-    const layer = { position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: -1, '@media (prefers-reduced-motion: reduce)': { animation: 'none' } };
-    return (_jsx(ThemeProvider, { theme: night, children: _jsxs(Box, { sx: {
-                position: 'relative',
-                isolation: 'isolate',
-                overflow: 'hidden',
-                borderRadius: '20px',
-                p: { xs: 1.25, md: 2.25 },
-                minHeight: 'calc(100dvh - 96px)',
-                color: md.ink,
-                background: 'radial-gradient(ellipse at 85% -10%, rgba(45,212,191,.16), transparent 55%), radial-gradient(ellipse at 10% 110%, rgba(56,189,248,.14), transparent 55%), linear-gradient(160deg, #0B2C47 0%, #071F33 45%, #04121F 100%)',
-                boxShadow: '0 18px 40px rgba(4,18,31,.35)',
-            }, children: [_jsx(Box, { "aria-hidden": true, sx: { ...layer, backgroundImage: starsA, animation: `${twinkle} 5s ease-in-out infinite` } }), _jsx(Box, { "aria-hidden": true, sx: { ...layer, backgroundImage: starsB, animation: `${twinkle} 7s ease-in-out 2.5s infinite` } }), _jsx(Box, { "aria-hidden": true, sx: { ...layer, backgroundImage: starsBright, animation: `${twinkle} 4s ease-in-out 1s infinite` } }), children] }) }));
+    return (_jsx(ThemeProvider, { theme: night, children: _jsx(Box, { sx: { minHeight: 'calc(100dvh - 96px)' }, children: children }) }));
 }
 /** The slices' colours of the old pies, in order. */
 export const slices = ['#1F78C8', '#E8890C', '#2FB344', '#E03434', '#0E7C86', '#0A3C58', '#8A9AA6', '#7C5CBF', '#C2410C', '#0891B2'];
@@ -155,9 +148,9 @@ export function GlassStrip({ children }) {
             overflow: 'hidden',
             borderRadius: '20px',
             p: { xs: 1.5, md: '6px 16px 16px' },
-            background: 'linear-gradient(125deg, rgba(27,110,143,.28) 0%, rgba(255,255,255,.04) 55%, rgba(45,212,191,.16) 100%)',
+            background: `linear-gradient(125deg, rgba(27,110,143,.28) 0%, rgba(255,255,255,.04) 55%, rgba(45,212,191,.16) 100%), ${starryPanel}`,
+            color: md.ink,
             border: `1px solid ${md.border}`,
-            backdropFilter: 'blur(10px)',
             boxShadow: '0 14px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08)',
         }, children: [_jsx(Box, { "aria-hidden": true, sx: { position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -170, insetInlineEnd: -60, background: 'radial-gradient(circle, rgba(45,212,191,.22), transparent 70%)', animation: `${drift} 9s ease-in-out infinite` } }), _jsx(Box, { "aria-hidden": true, sx: { position: 'absolute', width: 260, height: 260, borderRadius: '50%', bottom: -150, insetInlineStart: '28%', background: 'radial-gradient(circle, rgba(56,189,248,.16), transparent 70%)', animation: `${drift} 12s ease-in-out infinite reverse` } }), _jsx(Box, { sx: { position: 'relative' }, children: children })] }));
 }
@@ -215,8 +208,7 @@ export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onCli
             color: md.ink,
             borderRadius: '18px',
             p: '22px',
-            background,
-            backdropFilter: 'blur(14px)',
+            background: `${background}, ${md.panel}`,
             boxShadow: '0 14px 30px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1)',
             display: 'flex',
             flexDirection: 'column',
@@ -289,7 +281,7 @@ export function DataTable({ title, badge, rows, columns, excel, empty, page = 25
         const s = search.trim().toLowerCase();
         return s ? rows.filter((r) => columns.some((c) => (c.text?.(r) ?? '').toLowerCase().includes(s))) : rows;
     }, [rows, columns, search]);
-    return (_jsxs(Box, { sx: { pt: 0.5, minWidth: 0 }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }, children: [_jsx(Typography, { component: "h3", sx: { fontSize: 14.5, fontWeight: 700, color: md.title }, children: title }), _jsx(Box, { sx: { flex: 1 } }), badge && (_jsx(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 11.5, fontWeight: 700, color: md.title, bgcolor: md.glassHi, borderRadius: 999, px: 1.25, py: 0.4, '& svg': { fontSize: 14 } }, children: badge })), excel && (_jsx(Button, { component: "a", href: excel, size: "small", variant: "outlined", startIcon: _jsx(FileDownloadOutlinedIcon, {}), sx: { borderRadius: 999, borderColor: 'rgba(255,255,255,.25)', color: md.greenDeep, fontWeight: 700, height: 30 }, children: t('mgmt.excel') }))] }), filters, _jsx(TextField, { size: "small", placeholder: t('mgmt.searchTable'), value: search, onChange: (e) => (setSearch(e.target.value), setShown(page)), slotProps: { input: { startAdornment: _jsx(InputAdornment, { position: "start", children: _jsx(SearchIcon, { fontSize: "small" }) }) } }, sx: { mb: 1, width: { xs: '100%', sm: 320 }, '& .MuiOutlinedInput-root': { borderRadius: '10px' } } }), _jsx(Box, { sx: { overflowX: 'auto', border: `1px solid ${md.border}`, borderRadius: '12px', bgcolor: 'rgba(4,18,31,.35)' }, children: _jsxs(Box, { component: "table", sx: { width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }, children: [_jsx(Box, { component: "thead", children: _jsx(Box, { component: "tr", children: columns.map((c) => (_jsx(Box, { component: "th", sx: { bgcolor: '#12354F', color: md.title, fontSize: 11, fontWeight: 700, px: 1.5, py: 1.25, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', position: 'sticky', top: 0 }, children: c.label }, c.key))) }) }), _jsxs(Box, { component: "tbody", children: [found.slice(0, shown).map((row, index) => (_jsx(Box, { component: "tr", tabIndex: onRow ? 0 : undefined, onClick: onRow ? () => onRow(row) : undefined, onKeyDown: onRow ? (e) => e.key === 'Enter' && onRow(row) : undefined, sx: { cursor: onRow ? 'pointer' : 'default', '&:nth-of-type(even)': { bgcolor: 'rgba(255,255,255,.03)' }, '&:hover': { bgcolor: md.glassHi }, '&:focus-visible': { outline: `2px solid ${md.glow}`, outlineOffset: -2 } }, children: columns.map((c) => (_jsx(Box, { component: "td", sx: { px: 1.5, py: 1.1, borderTop: `1px solid ${md.border}`, color: md.text, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }, children: c.render(row) }, c.key))) }, index))), found.length === 0 && (_jsx(Box, { component: "tr", children: _jsx(Box, { component: "td", colSpan: columns.length, sx: { textAlign: 'center', color: md.muted, py: 4 }, children: empty }) }))] })] }) }), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 1, flexWrap: 'wrap' }, children: [_jsx(Typography, { sx: { fontSize: 12, color: md.muted }, children: t('mgmt.showing', { shown: Math.min(shown, found.length), total: found.length }) }), shown < found.length && (_jsx(Button, { size: "small", onClick: () => setShown((s) => s + page * 4), sx: { fontWeight: 700, color: md.title }, children: t('mgmt.showMore') }))] })] }));
+    return (_jsxs(Box, { sx: { ...glassCard, p: { xs: 1.5, md: '14px 16px' }, minWidth: 0 }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }, children: [_jsx(Typography, { component: "h3", sx: { fontSize: 14.5, fontWeight: 700, color: md.title }, children: title }), _jsx(Box, { sx: { flex: 1 } }), badge && (_jsx(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 11.5, fontWeight: 700, color: md.title, bgcolor: md.glassHi, borderRadius: 999, px: 1.25, py: 0.4, '& svg': { fontSize: 14 } }, children: badge })), excel && (_jsx(Button, { component: "a", href: excel, size: "small", variant: "outlined", startIcon: _jsx(FileDownloadOutlinedIcon, {}), sx: { borderRadius: 999, borderColor: 'rgba(255,255,255,.25)', color: md.greenDeep, fontWeight: 700, height: 30 }, children: t('mgmt.excel') }))] }), filters, _jsx(TextField, { size: "small", placeholder: t('mgmt.searchTable'), value: search, onChange: (e) => (setSearch(e.target.value), setShown(page)), slotProps: { input: { startAdornment: _jsx(InputAdornment, { position: "start", children: _jsx(SearchIcon, { fontSize: "small" }) }) } }, sx: { mb: 1, width: { xs: '100%', sm: 320 }, '& .MuiOutlinedInput-root': { borderRadius: '10px' } } }), _jsx(Box, { sx: { overflowX: 'auto', border: `1px solid ${md.border}`, borderRadius: '12px', bgcolor: 'rgba(4,18,31,.35)' }, children: _jsxs(Box, { component: "table", sx: { width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }, children: [_jsx(Box, { component: "thead", children: _jsx(Box, { component: "tr", children: columns.map((c) => (_jsx(Box, { component: "th", sx: { bgcolor: '#12354F', color: md.title, fontSize: 11, fontWeight: 700, px: 1.5, py: 1.25, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', position: 'sticky', top: 0 }, children: c.label }, c.key))) }) }), _jsxs(Box, { component: "tbody", children: [found.slice(0, shown).map((row, index) => (_jsx(Box, { component: "tr", tabIndex: onRow ? 0 : undefined, onClick: onRow ? () => onRow(row) : undefined, onKeyDown: onRow ? (e) => e.key === 'Enter' && onRow(row) : undefined, sx: { cursor: onRow ? 'pointer' : 'default', '&:nth-of-type(even)': { bgcolor: 'rgba(255,255,255,.03)' }, '&:hover': { bgcolor: md.glassHi }, '&:focus-visible': { outline: `2px solid ${md.glow}`, outlineOffset: -2 } }, children: columns.map((c) => (_jsx(Box, { component: "td", sx: { px: 1.5, py: 1.1, borderTop: `1px solid ${md.border}`, color: md.text, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }, children: c.render(row) }, c.key))) }, index))), found.length === 0 && (_jsx(Box, { component: "tr", children: _jsx(Box, { component: "td", colSpan: columns.length, sx: { textAlign: 'center', color: md.muted, py: 4 }, children: empty }) }))] })] }) }), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 1, flexWrap: 'wrap' }, children: [_jsx(Typography, { sx: { fontSize: 12, color: md.muted }, children: t('mgmt.showing', { shown: Math.min(shown, found.length), total: found.length }) }), shown < found.length && (_jsx(Button, { size: "small", onClick: () => setShown((s) => s + page * 4), sx: { fontWeight: 700, color: md.title }, children: t('mgmt.showMore') }))] })] }));
 }
 /** A small rounded status pill (the old «exec-pill»). */
 export function Pill({ color, children }) {

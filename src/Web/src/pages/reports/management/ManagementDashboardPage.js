@@ -15,7 +15,7 @@ import { DateField } from '../../../components/DateField';
 import { LiveProvider, useFreshKey, useLiveTick } from '../../../components/live';
 import { presetRange } from '../reportKit';
 import { FinanceTab } from './FinanceTab';
-import { md, NightSky } from './mdKit';
+import { md, NightSky, starryPanel } from './mdKit';
 import { OverviewTab } from './OverviewTab';
 import { TasksTab } from './TasksTab';
 // As the old page did, finance (and housing) open from the first month the reports read invoices (Reports:FinanceFrom)
@@ -75,9 +75,8 @@ export function ManagementDashboardPage() {
                     p: '6px 8px',
                     mb: 1.75,
                     borderRadius: '16px',
-                    bgcolor: md.glass,
+                    background: starryPanel,
                     border: `1px solid ${md.border}`,
-                    backdropFilter: 'blur(14px) saturate(160%)',
                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25)',
                 }, children: [_jsx(Stack, { direction: "row", role: "tablist", "aria-label": t('mgmt.sections'), sx: { gap: 1, flexWrap: 'wrap' }, children: shown.map((x) => {
                             const active = tab === x.key;
