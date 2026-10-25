@@ -6642,6 +6642,12 @@
         "share": "Work / housing share",
         "first": "First work"
       }
+    },
+    "period": {
+      "label": "Period",
+      "month": "This month",
+      "last": "Last month",
+      "custom": "Custom"
     }
   },
   "statusValues": {
