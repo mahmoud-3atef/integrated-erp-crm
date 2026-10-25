@@ -17,7 +17,7 @@ import { managementApi } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
 import { ArrivalsPane } from './ArrivalsPane';
-import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard } from './mdKit';
+import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, mdLight } from './mdKit';
 /** «نظرة عامة»: the six cards, then the project deliveries and the housing entries (docs/03-migration-plan/19). */
 export function OverviewTab({ from, to, overview }) {
     const { t } = useTranslation();
@@ -74,7 +74,7 @@ function DeliveryPane({ from, to }) {
     const rows = useMemo(() => (data?.rows ?? []).filter((r) => (!filter.manager || (r.manager ?? '—') === filter.manager) && (!filter.project || (r.project ?? '—') === filter.project)), [data, filter]);
     const columns = [
         { key: 'no', label: t('mgmt.col.no'), render: (r) => _jsx("bdi", { children: r.workerNo }), text: (r) => r.workerNo },
-        { key: 'name', label: t('mgmt.col.worker'), render: (r) => _jsx(Typography, { component: "span", sx: { fontSize: 12.5, fontWeight: 700, color: md.ink }, children: _jsx("bdi", { children: r.name }) }), text: (r) => r.name },
+        { key: 'name', label: t('mgmt.col.worker'), render: (r) => _jsx(Typography, { component: "span", sx: { fontSize: 12.5, fontWeight: 700, color: mdLight.title }, children: _jsx("bdi", { children: r.name }) }), text: (r) => r.name },
         { key: 'project', label: t('mgmt.col.project'), render: (r) => _jsx("bdi", { children: r.project ?? '—' }), text: (r) => r.project ?? '' },
         { key: 'price', label: t('mgmt.col.price'), render: (r) => (r.price === null ? '—' : f.m(r.price)), align: 'end' },
         { key: 'manager', label: t('mgmt.col.manager'), render: (r) => _jsx("bdi", { children: r.manager ?? '—' }), text: (r) => r.manager ?? '' },
@@ -108,7 +108,7 @@ function HousingPane({ from, to }) {
     const rows = useMemo(() => (data?.rows ?? []).filter((r) => (!filter.project || (r.project ?? '—') === filter.project) && (!filter.entry || r.entry === filter.entry) && (!filter.reason || (r.entry === 'ReturnedWorker' && r.reason === filter.reason))), [data, filter]);
     const reason = (key) => t(`operations.return.reasons.${key}`, { defaultValue: key });
     const columns = [
-        { key: 'name', label: t('mgmt.col.worker'), render: (r) => _jsx(Typography, { component: "span", sx: { fontSize: 12.5, fontWeight: 700, color: md.ink }, children: _jsx("bdi", { children: r.name }) }), text: (r) => r.name },
+        { key: 'name', label: t('mgmt.col.worker'), render: (r) => _jsx(Typography, { component: "span", sx: { fontSize: 12.5, fontWeight: 700, color: mdLight.title }, children: _jsx("bdi", { children: r.name }) }), text: (r) => r.name },
         { key: 'no', label: t('mgmt.col.no'), render: (r) => _jsx("bdi", { children: r.workerNo }), text: (r) => r.workerNo },
         { key: 'project', label: t('mgmt.col.project'), render: (r) => _jsx("bdi", { children: r.project ?? '—' }), text: (r) => r.project ?? '' },
         { key: 'manager', label: t('mgmt.col.manager'), render: (r) => _jsx("bdi", { children: r.manager ?? '—' }), text: (r) => r.manager ?? '' },

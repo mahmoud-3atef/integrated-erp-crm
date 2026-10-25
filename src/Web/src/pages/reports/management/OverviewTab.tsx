@@ -17,7 +17,7 @@ import type { Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
 import { ArrivalsPane } from './ArrivalsPane';
-import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column } from './mdKit';
+import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column, mdLight } from './mdKit';
 
 type Inner = 'delivery' | 'housing' | 'arrivals';
 
@@ -138,7 +138,7 @@ function DeliveryPane({ from, to }: { from: string; to: string }) {
   const rows = useMemo(() => (data?.rows ?? []).filter((r) => (!filter.manager || (r.manager ?? '—') === filter.manager) && (!filter.project || (r.project ?? '—') === filter.project)), [data, filter]);
   const columns: Column<StartRow>[] = [
     { key: 'no', label: t('mgmt.col.no'), render: (r) => <bdi>{r.workerNo}</bdi>, text: (r) => r.workerNo },
-    { key: 'name', label: t('mgmt.col.worker'), render: (r) => <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink }}><bdi>{r.name}</bdi></Typography>, text: (r) => r.name },
+    { key: 'name', label: t('mgmt.col.worker'), render: (r) => <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title }}><bdi>{r.name}</bdi></Typography>, text: (r) => r.name },
     { key: 'project', label: t('mgmt.col.project'), render: (r) => <bdi>{r.project ?? '—'}</bdi>, text: (r) => r.project ?? '' },
     { key: 'price', label: t('mgmt.col.price'), render: (r) => (r.price === null ? '—' : f.m(r.price)), align: 'end' },
     { key: 'manager', label: t('mgmt.col.manager'), render: (r) => <bdi>{r.manager ?? '—'}</bdi>, text: (r) => r.manager ?? '' },
@@ -200,7 +200,7 @@ function HousingPane({ from, to }: { from: string; to: string }) {
   );
   const reason = (key: string) => t(`operations.return.reasons.${key}`, { defaultValue: key });
   const columns: Column<EntryRow>[] = [
-    { key: 'name', label: t('mgmt.col.worker'), render: (r) => <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink }}><bdi>{r.name}</bdi></Typography>, text: (r) => r.name },
+    { key: 'name', label: t('mgmt.col.worker'), render: (r) => <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title }}><bdi>{r.name}</bdi></Typography>, text: (r) => r.name },
     { key: 'no', label: t('mgmt.col.no'), render: (r) => <bdi>{r.workerNo}</bdi>, text: (r) => r.workerNo },
     { key: 'project', label: t('mgmt.col.project'), render: (r) => <bdi>{r.project ?? '—'}</bdi>, text: (r) => r.project ?? '' },
     { key: 'manager', label: t('mgmt.col.manager'), render: (r) => <bdi>{r.manager ?? '—'}</bdi>, text: (r) => r.manager ?? '' },

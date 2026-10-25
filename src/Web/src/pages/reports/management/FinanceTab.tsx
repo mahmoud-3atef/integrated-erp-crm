@@ -20,7 +20,7 @@ import { managementApi } from '../../../api/management';
 import type { Finance, InvoiceRow, MonthMoney, Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, finCard, md, Pill, useNumbers, type Column } from './mdKit';
+import { DataTable, Donut, finCard, md, Pill, useNumbers, type Column, mdLight } from './mdKit';
 
 /** «المالية»: the old finance tab — its banner, five cards, the monthly billing against collection, statuses, debt ages, debtors, managers, coverage, invoices. */
 export function FinanceTab({ from, to, overview }: { from: string; to: string; overview: Overview | null }) {
@@ -459,7 +459,7 @@ function InvoicesTable({ rows, excel }: { rows: InvoiceRow[]; excel: string }) {
       { key: 'workers', label: t('mgmt.col.workers'), render: (r) => f.n(r.workers), align: 'center' },
       { key: 'total', label: t('mgmt.col.total'), render: (r) => f.m(r.total), align: 'end' },
       { key: 'collected', label: t('mgmt.col.collected'), render: (r) => f.m(r.collected), align: 'end' },
-      { key: 'remaining', label: t('mgmt.col.remaining'), render: (r) => <Box component="b" sx={{ color: r.remaining > 0.01 ? md.red : md.greenDeep }}>{f.m(r.remaining)}</Box>, align: 'end' },
+      { key: 'remaining', label: t('mgmt.col.remaining'), render: (r) => <Box component="b" sx={{ color: r.remaining > 0.01 ? mdLight.red : mdLight.green }}>{f.m(r.remaining)}</Box>, align: 'end' },
       { key: 'status', label: t('mgmt.col.status'), render: (r) => (i18n.language === 'ar' ? r.statusAr : r.statusEn), text: (r) => r.statusAr + r.statusEn },
       { key: 'to', label: t('mgmt.col.periodEnd'), render: (r) => <bdi>{r.to.slice(0, 10)}</bdi> },
       { key: 'age', label: t('mgmt.col.age'), render: (r) => f.n(r.ageDays), align: 'center' },

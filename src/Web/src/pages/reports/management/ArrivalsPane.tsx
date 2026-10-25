@@ -13,7 +13,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi, type ArrivalStatus, type NewArrivals, type NewWorker } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard, type Column } from './mdKit';
+import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard, type Column, mdLight } from './mdKit';
 
 const statusLook: Record<ArrivalStatus, { color: string; bg: string }> = {
   working: { color: md.teal, bg: md.glassHi },
@@ -65,7 +65,7 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
     () => [
       { key: 'arrived', label: t('mgmt.arrivals.col.arrived'), render: (r) => <bdi>{r.arrivedOn}</bdi> },
       { key: 'no', label: t('mgmt.col.no'), render: (r) => <bdi>{r.workerNo}</bdi>, text: (r) => r.workerNo },
-      { key: 'name', label: t('mgmt.col.worker'), render: (r) => <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink }}><bdi>{r.name}</bdi></Typography>, text: (r) => r.name },
+      { key: 'name', label: t('mgmt.col.worker'), render: (r) => <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title }}><bdi>{r.name}</bdi></Typography>, text: (r) => r.name },
       { key: 'supplier', label: t('mgmt.arrivals.col.supplier'), render: (r) => <bdi>{r.supplier ?? t('mgmt.arrivals.noSupplier')}</bdi>, text: (r) => r.supplier ?? '' },
       { key: 'status', label: t('mgmt.col.status'), render: (r) => <Pill {...statusLook[r.status]}>{t(`mgmt.arrivals.status.${r.status}`)}</Pill> },
       { key: 'project', label: t('mgmt.arrivals.col.project'), render: (r) => <bdi>{r.project ?? '—'}</bdi>, text: (r) => r.project ?? '' },
@@ -75,11 +75,11 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
         label: t('mgmt.arrivals.col.share'),
         render: (r) => (
           <Box title={t('mgmt.arrivals.shareHint', { work: r.workDays, housing: r.housingDays })} sx={{ minWidth: 120 }}>
-            <Stack direction="row" sx={{ height: 6, borderRadius: 999, overflow: 'hidden', bgcolor: md.track }}>
+            <Stack direction="row" sx={{ height: 6, borderRadius: 999, overflow: 'hidden', bgcolor: mdLight.track }}>
               <Box sx={{ width: `${r.workShare}%`, bgcolor: md.teal }} />
               <Box sx={{ width: `${r.housingShare}%`, bgcolor: md.amber }} />
             </Stack>
-            <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.arrivals.shareText', { work: f.n(Math.round(r.workShare)), housing: f.n(Math.round(r.housingShare)) })}</Typography>
+            <Typography sx={{ fontSize: 10.5, color: mdLight.muted }}>{t('mgmt.arrivals.shareText', { work: f.n(Math.round(r.workShare)), housing: f.n(Math.round(r.housingShare)) })}</Typography>
           </Box>
         ),
       },
@@ -90,7 +90,7 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
           r.firstWorkOn ? (
             <>
               <bdi>{r.firstWorkOn}</bdi>
-              <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.arrivals.after', { count: r.daysToFirstWork ?? 0 })}</Typography>
+              <Typography sx={{ fontSize: 10.5, color: mdLight.muted }}>{t('mgmt.arrivals.after', { count: r.daysToFirstWork ?? 0 })}</Typography>
             </>
           ) : (
             <Pill color={md.red} bg="#FDEEEE">{t('mgmt.arrivals.notYet')}</Pill>

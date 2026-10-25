@@ -11,7 +11,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi, type TaskRow, type TaskStatus, type Tasks, type TaskType } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers, type Column } from './mdKit';
+import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers, type Column, mdLight } from './mdKit';
 
 type StatusFilter = 'pending' | TaskStatus | 'all';
 
@@ -81,11 +81,11 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
         label: t('mgmt.tasks.col.task'),
         render: (r) => (
           <Box sx={{ minWidth: 0, maxWidth: 320, whiteSpace: 'normal' }}>
-            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title }}>
               <bdi>{r.subject || '—'}</bdi>
             </Typography>
             {r.regarding && (
-              <Typography sx={{ fontSize: 11, color: md.muted, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography sx={{ fontSize: 11, color: mdLight.muted, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <LinkOutlinedIcon sx={{ fontSize: 13 }} />
                 <bdi>{r.regarding}</bdi>
               </Typography>
@@ -102,7 +102,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
         render: (r) => (
           <>
             <bdi>{r.createdOn ?? '—'}</bdi>
-            <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.tasks.since', { count: r.ageDays })}</Typography>
+            <Typography sx={{ fontSize: 10.5, color: mdLight.muted }}>{t('mgmt.tasks.since', { count: r.ageDays })}</Typography>
           </>
         ),
       },

@@ -3,7 +3,7 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { Box, Button, createTheme, InputAdornment, Stack, TextField, ThemeProvider, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@emotion/react';
-import { useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCountUp } from '../../../components/charts';
 /**
@@ -45,7 +45,23 @@ export const md = {
     gold: '#F3C661',
     coverage: '#12597F',
 };
-/** A dark panel on the light page (a chart, a table, a strip): the night sky's gradient, soft edges. */
+/** The colours of a white table (2026-10-25: the tables are white on the white page). */
+export const mdLight = {
+    title: '#0F2747',
+    text: '#334155',
+    muted: '#64748B',
+    border: '#E2E8F0',
+    head: '#14263D',
+    stripe: '#F8FAFC',
+    hover: '#EEF4FA',
+    track: '#E2E8F0',
+    red: '#B42318',
+    green: '#16734B',
+};
+/** Whether a part sits in a white table (pills and cells pick their colours from it). */
+const OnWhite = createContext(false);
+export const useOnWhite = () => useContext(OnWhite);
+/** A dark panel on the page (a chart, a strip): the night sky's gradient, soft edges. */
 export const glassCard = {
     background: md.panel,
     border: `1px solid ${md.border}`,
@@ -71,6 +87,8 @@ function stars(count, seed, bright = false) {
 }
 /** The tabs' strip and the KPI band keep a few still stars over the panel's gradient (the night look, on the light page). */
 export const starryPanel = `${stars(8, 41, true)}, ${stars(60, 7)}, ${md.panel}`;
+/** The white tables keep a light theme for their search field, menus and buttons. */
+const light = (outer) => createTheme(outer, { palette: { mode: 'light', text: { primary: mdLight.text, secondary: mdLight.muted }, background: { paper: '#fff' }, divider: mdLight.border } });
 /** The page's own dark theme, so fields, menus, dialogs and tooltips inside it read on the sky. */
 const night = (outer) => createTheme(outer, {
     palette: {
@@ -108,11 +126,11 @@ const night = (outer) => createTheme(outer, {
     },
 });
 /**
- * The page's dark theme for its panels, menus, dialogs and tooltips. Since 2026-10-25 the page itself keeps the
- * system's light background (the user's request): only the tabs, the charts and the tables are dark panels.
+ * The page's dark theme for its panels, menus, dialogs and tooltips. Since 2026-10-25 the page is white (the user's
+ * request): the tabs, the KPI band and the charts are dark panels, and the tables are white.
  */
 export function NightSky({ children }) {
-    return (_jsx(ThemeProvider, { theme: night, children: _jsx(Box, { sx: { minHeight: 'calc(100dvh - 96px)' }, children: children }) }));
+    return (_jsx(ThemeProvider, { theme: night, children: _jsx(Box, { sx: { minHeight: 'calc(100dvh - 96px)', bgcolor: '#fff', borderRadius: '20px', p: { xs: 1.25, md: 2 }, boxShadow: '0 1px 2px rgba(20,38,61,.06)' }, children: children }) }));
 }
 /** The slices' colours of the old pies, in order. */
 export const slices = ['#1F78C8', '#E8890C', '#2FB344', '#E03434', '#0E7C86', '#0A3C58', '#8A9AA6', '#7C5CBF', '#C2410C', '#0891B2'];
@@ -281,10 +299,22 @@ export function DataTable({ title, badge, rows, columns, excel, empty, page = 25
         const s = search.trim().toLowerCase();
         return s ? rows.filter((r) => columns.some((c) => (c.text?.(r) ?? '').toLowerCase().includes(s))) : rows;
     }, [rows, columns, search]);
-    return (_jsxs(Box, { sx: { ...glassCard, p: { xs: 1.5, md: '14px 16px' }, minWidth: 0 }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }, children: [_jsx(Typography, { component: "h3", sx: { fontSize: 14.5, fontWeight: 700, color: md.title }, children: title }), _jsx(Box, { sx: { flex: 1 } }), badge && (_jsx(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 11.5, fontWeight: 700, color: md.title, bgcolor: md.glassHi, borderRadius: 999, px: 1.25, py: 0.4, '& svg': { fontSize: 14 } }, children: badge })), excel && (_jsx(Button, { component: "a", href: excel, size: "small", variant: "outlined", startIcon: _jsx(FileDownloadOutlinedIcon, {}), sx: { borderRadius: 999, borderColor: 'rgba(255,255,255,.25)', color: md.greenDeep, fontWeight: 700, height: 30 }, children: t('mgmt.excel') }))] }), filters, _jsx(TextField, { size: "small", placeholder: t('mgmt.searchTable'), value: search, onChange: (e) => (setSearch(e.target.value), setShown(page)), slotProps: { input: { startAdornment: _jsx(InputAdornment, { position: "start", children: _jsx(SearchIcon, { fontSize: "small" }) }) } }, sx: { mb: 1, width: { xs: '100%', sm: 320 }, '& .MuiOutlinedInput-root': { borderRadius: '10px' } } }), _jsx(Box, { sx: { overflowX: 'auto', border: `1px solid ${md.border}`, borderRadius: '12px', bgcolor: 'rgba(4,18,31,.35)' }, children: _jsxs(Box, { component: "table", sx: { width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }, children: [_jsx(Box, { component: "thead", children: _jsx(Box, { component: "tr", children: columns.map((c) => (_jsx(Box, { component: "th", sx: { bgcolor: '#12354F', color: md.title, fontSize: 11, fontWeight: 700, px: 1.5, py: 1.25, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', position: 'sticky', top: 0 }, children: c.label }, c.key))) }) }), _jsxs(Box, { component: "tbody", children: [found.slice(0, shown).map((row, index) => (_jsx(Box, { component: "tr", tabIndex: onRow ? 0 : undefined, onClick: onRow ? () => onRow(row) : undefined, onKeyDown: onRow ? (e) => e.key === 'Enter' && onRow(row) : undefined, sx: { cursor: onRow ? 'pointer' : 'default', '&:nth-of-type(even)': { bgcolor: 'rgba(255,255,255,.03)' }, '&:hover': { bgcolor: md.glassHi }, '&:focus-visible': { outline: `2px solid ${md.glow}`, outlineOffset: -2 } }, children: columns.map((c) => (_jsx(Box, { component: "td", sx: { px: 1.5, py: 1.1, borderTop: `1px solid ${md.border}`, color: md.text, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }, children: c.render(row) }, c.key))) }, index))), found.length === 0 && (_jsx(Box, { component: "tr", children: _jsx(Box, { component: "td", colSpan: columns.length, sx: { textAlign: 'center', color: md.muted, py: 4 }, children: empty }) }))] })] }) }), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 1, flexWrap: 'wrap' }, children: [_jsx(Typography, { sx: { fontSize: 12, color: md.muted }, children: t('mgmt.showing', { shown: Math.min(shown, found.length), total: found.length }) }), shown < found.length && (_jsx(Button, { size: "small", onClick: () => setShown((s) => s + page * 4), sx: { fontWeight: 700, color: md.title }, children: t('mgmt.showMore') }))] })] }));
+    return (_jsx(ThemeProvider, { theme: light, children: _jsx(OnWhite.Provider, { value: true, children: _jsxs(Box, { sx: { bgcolor: '#fff', border: `1px solid ${mdLight.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(20,38,61,.05), 0 8px 22px rgba(20,38,61,.06)', p: { xs: 1.5, md: '14px 16px' }, minWidth: 0, color: mdLight.text }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }, children: [_jsx(Typography, { component: "h3", sx: { fontSize: 14.5, fontWeight: 700, color: mdLight.title }, children: title }), _jsx(Box, { sx: { flex: 1 } }), badge && (_jsx(Box, { component: "span", sx: { display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 11.5, fontWeight: 700, color: mdLight.title, bgcolor: mdLight.stripe, border: `1px solid ${mdLight.border}`, borderRadius: 999, px: 1.25, py: 0.4, '& svg': { fontSize: 14 } }, children: badge })), excel && (_jsx(Button, { component: "a", href: excel, size: "small", variant: "outlined", startIcon: _jsx(FileDownloadOutlinedIcon, {}), sx: { borderRadius: 999, borderColor: mdLight.border, color: mdLight.green, fontWeight: 700, height: 30 }, children: t('mgmt.excel') }))] }), filters, _jsx(TextField, { size: "small", placeholder: t('mgmt.searchTable'), value: search, onChange: (e) => (setSearch(e.target.value), setShown(page)), slotProps: { input: { startAdornment: _jsx(InputAdornment, { position: "start", children: _jsx(SearchIcon, { fontSize: "small" }) }) } }, sx: { mb: 1, width: { xs: '100%', sm: 320 }, '& .MuiOutlinedInput-root': { borderRadius: '10px' } } }), _jsx(Box, { sx: { overflowX: 'auto', border: `1px solid ${mdLight.border}`, borderRadius: '12px', bgcolor: '#fff' }, children: _jsxs(Box, { component: "table", sx: { width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }, children: [_jsx(Box, { component: "thead", children: _jsx(Box, { component: "tr", children: columns.map((c) => (_jsx(Box, { component: "th", sx: { bgcolor: mdLight.head, color: '#fff', fontSize: 11, fontWeight: 700, px: 1.5, py: 1.25, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', position: 'sticky', top: 0 }, children: c.label }, c.key))) }) }), _jsxs(Box, { component: "tbody", children: [found.slice(0, shown).map((row, index) => (_jsx(Box, { component: "tr", tabIndex: onRow ? 0 : undefined, onClick: onRow ? () => onRow(row) : undefined, onKeyDown: onRow ? (e) => e.key === 'Enter' && onRow(row) : undefined, sx: { cursor: onRow ? 'pointer' : 'default', '&:nth-of-type(even)': { bgcolor: mdLight.stripe }, '&:hover': { bgcolor: mdLight.hover }, '&:focus-visible': { outline: `2px solid ${mdLight.head}`, outlineOffset: -2 } }, children: columns.map((c) => (_jsx(Box, { component: "td", sx: { px: 1.5, py: 1.1, borderTop: `1px solid ${mdLight.border}`, color: mdLight.text, textAlign: c.align ?? 'start', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }, children: c.render(row) }, c.key))) }, index))), found.length === 0 && (_jsx(Box, { component: "tr", children: _jsx(Box, { component: "td", colSpan: columns.length, sx: { textAlign: 'center', color: mdLight.muted, py: 4 }, children: empty }) }))] })] }) }), _jsxs(Stack, { direction: "row", sx: { alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 1, flexWrap: 'wrap' }, children: [_jsx(Typography, { sx: { fontSize: 12, color: mdLight.muted }, children: t('mgmt.showing', { shown: Math.min(shown, found.length), total: found.length }) }), shown < found.length && (_jsx(Button, { size: "small", onClick: () => setShown((s) => s + page * 4), sx: { fontWeight: 700, color: mdLight.title }, children: t('mgmt.showMore') }))] })] }) }) }));
 }
 /** A small rounded status pill (the old «exec-pill»). */
 export function Pill({ color, children }) {
-    // The status colour as a soft tint and edge, the text light enough to read on the sky.
-    return (_jsx(Box, { component: "span", sx: { display: 'inline-block', borderRadius: 999, px: 1.1, py: 0.2, fontSize: 11.5, fontWeight: 700, color: md.ink, bgcolor: `color-mix(in srgb, ${color} 30%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 60%, transparent)`, whiteSpace: 'nowrap' }, children: children }));
+    // The status colour as a soft tint and edge; the text light on a dark panel, the status colour (darkened) on a white table.
+    const white = useOnWhite();
+    return (_jsx(Box, { component: "span", sx: {
+            display: 'inline-block',
+            borderRadius: 999,
+            px: 1.1,
+            py: 0.2,
+            fontSize: 11.5,
+            fontWeight: 700,
+            color: white ? `color-mix(in srgb, ${color} 70%, #000)` : md.ink,
+            bgcolor: `color-mix(in srgb, ${color} ${white ? 14 : 30}%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${color} ${white ? 40 : 60}%, transparent)`,
+            whiteSpace: 'nowrap',
+        }, children: children }));
 }

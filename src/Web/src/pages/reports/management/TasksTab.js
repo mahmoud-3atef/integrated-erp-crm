@@ -12,7 +12,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers } from './mdKit';
+import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers, mdLight } from './mdKit';
 const typeLook = {
     invoice: { color: md.teal, bg: md.glassHi },
     deliver: { color: '#1F78C8', bg: md.glassHi },
@@ -64,7 +64,7 @@ export function TasksTab({ from, to }) {
         {
             key: 'task',
             label: t('mgmt.tasks.col.task'),
-            render: (r) => (_jsxs(Box, { sx: { minWidth: 0, maxWidth: 320, whiteSpace: 'normal' }, children: [_jsx(Typography, { sx: { fontSize: 12.5, fontWeight: 700, color: md.ink }, children: _jsx("bdi", { children: r.subject || '—' }) }), r.regarding && (_jsxs(Typography, { sx: { fontSize: 11, color: md.muted, display: 'flex', alignItems: 'center', gap: 0.5 }, children: [_jsx(LinkOutlinedIcon, { sx: { fontSize: 13 } }), _jsx("bdi", { children: r.regarding })] }))] })),
+            render: (r) => (_jsxs(Box, { sx: { minWidth: 0, maxWidth: 320, whiteSpace: 'normal' }, children: [_jsx(Typography, { sx: { fontSize: 12.5, fontWeight: 700, color: mdLight.title }, children: _jsx("bdi", { children: r.subject || '—' }) }), r.regarding && (_jsxs(Typography, { sx: { fontSize: 11, color: mdLight.muted, display: 'flex', alignItems: 'center', gap: 0.5 }, children: [_jsx(LinkOutlinedIcon, { sx: { fontSize: 13 } }), _jsx("bdi", { children: r.regarding })] }))] })),
             text: (r) => `${r.subject} ${r.regarding ?? ''}`,
         },
         { key: 'owner', label: t('mgmt.tasks.col.owner'), render: (r) => _jsx("bdi", { children: r.owner }), text: (r) => r.owner },
@@ -72,7 +72,7 @@ export function TasksTab({ from, to }) {
         {
             key: 'created',
             label: t('mgmt.tasks.col.created'),
-            render: (r) => (_jsxs(_Fragment, { children: [_jsx("bdi", { children: r.createdOn ?? '—' }), _jsx(Typography, { sx: { fontSize: 10.5, color: md.muted }, children: t('mgmt.tasks.since', { count: r.ageDays }) })] })),
+            render: (r) => (_jsxs(_Fragment, { children: [_jsx("bdi", { children: r.createdOn ?? '—' }), _jsx(Typography, { sx: { fontSize: 10.5, color: mdLight.muted }, children: t('mgmt.tasks.since', { count: r.ageDays }) })] })),
         },
         {
             key: 'due',

@@ -14,7 +14,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard } from './mdKit';
+import { DataTable, Donut, HeroTotal, md, Pill, useNumbers, VisualCard, mdLight } from './mdKit';
 const statusLook = {
     working: { color: md.teal, bg: md.glassHi },
     housing: { color: md.amberDeep, bg: md.glassHi },
@@ -54,7 +54,7 @@ export function ArrivalsPane({ from, to }) {
     const columns = useMemo(() => [
         { key: 'arrived', label: t('mgmt.arrivals.col.arrived'), render: (r) => _jsx("bdi", { children: r.arrivedOn }) },
         { key: 'no', label: t('mgmt.col.no'), render: (r) => _jsx("bdi", { children: r.workerNo }), text: (r) => r.workerNo },
-        { key: 'name', label: t('mgmt.col.worker'), render: (r) => _jsx(Typography, { component: "span", sx: { fontSize: 12.5, fontWeight: 700, color: md.ink }, children: _jsx("bdi", { children: r.name }) }), text: (r) => r.name },
+        { key: 'name', label: t('mgmt.col.worker'), render: (r) => _jsx(Typography, { component: "span", sx: { fontSize: 12.5, fontWeight: 700, color: mdLight.title }, children: _jsx("bdi", { children: r.name }) }), text: (r) => r.name },
         { key: 'supplier', label: t('mgmt.arrivals.col.supplier'), render: (r) => _jsx("bdi", { children: r.supplier ?? t('mgmt.arrivals.noSupplier') }), text: (r) => r.supplier ?? '' },
         { key: 'status', label: t('mgmt.col.status'), render: (r) => _jsx(Pill, { ...statusLook[r.status], children: t(`mgmt.arrivals.status.${r.status}`) }) },
         { key: 'project', label: t('mgmt.arrivals.col.project'), render: (r) => _jsx("bdi", { children: r.project ?? '—' }), text: (r) => r.project ?? '' },
@@ -62,12 +62,12 @@ export function ArrivalsPane({ from, to }) {
         {
             key: 'share',
             label: t('mgmt.arrivals.col.share'),
-            render: (r) => (_jsxs(Box, { title: t('mgmt.arrivals.shareHint', { work: r.workDays, housing: r.housingDays }), sx: { minWidth: 120 }, children: [_jsxs(Stack, { direction: "row", sx: { height: 6, borderRadius: 999, overflow: 'hidden', bgcolor: md.track }, children: [_jsx(Box, { sx: { width: `${r.workShare}%`, bgcolor: md.teal } }), _jsx(Box, { sx: { width: `${r.housingShare}%`, bgcolor: md.amber } })] }), _jsx(Typography, { sx: { fontSize: 10.5, color: md.muted }, children: t('mgmt.arrivals.shareText', { work: f.n(Math.round(r.workShare)), housing: f.n(Math.round(r.housingShare)) }) })] })),
+            render: (r) => (_jsxs(Box, { title: t('mgmt.arrivals.shareHint', { work: r.workDays, housing: r.housingDays }), sx: { minWidth: 120 }, children: [_jsxs(Stack, { direction: "row", sx: { height: 6, borderRadius: 999, overflow: 'hidden', bgcolor: mdLight.track }, children: [_jsx(Box, { sx: { width: `${r.workShare}%`, bgcolor: md.teal } }), _jsx(Box, { sx: { width: `${r.housingShare}%`, bgcolor: md.amber } })] }), _jsx(Typography, { sx: { fontSize: 10.5, color: mdLight.muted }, children: t('mgmt.arrivals.shareText', { work: f.n(Math.round(r.workShare)), housing: f.n(Math.round(r.housingShare)) }) })] })),
         },
         {
             key: 'first',
             label: t('mgmt.arrivals.col.first'),
-            render: (r) => r.firstWorkOn ? (_jsxs(_Fragment, { children: [_jsx("bdi", { children: r.firstWorkOn }), _jsx(Typography, { sx: { fontSize: 10.5, color: md.muted }, children: t('mgmt.arrivals.after', { count: r.daysToFirstWork ?? 0 }) })] })) : (_jsx(Pill, { color: md.red, bg: "#FDEEEE", children: t('mgmt.arrivals.notYet') })),
+            render: (r) => r.firstWorkOn ? (_jsxs(_Fragment, { children: [_jsx("bdi", { children: r.firstWorkOn }), _jsx(Typography, { sx: { fontSize: 10.5, color: mdLight.muted }, children: t('mgmt.arrivals.after', { count: r.daysToFirstWork ?? 0 }) })] })) : (_jsx(Pill, { color: md.red, bg: "#FDEEEE", children: t('mgmt.arrivals.notYet') })),
         },
     ], [t, f]);
     if (error)
