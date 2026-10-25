@@ -30,10 +30,45 @@ internal static class WorkforceEndpoints
 
         MapShowcase(group);
         MapCosts(group);
+        MapEdits(group);
 
         group.MapGet("/history/issues", async (string? code, string? search, Guid? workerId, int? page, int? pageSize, HistoryQueries queries, CancellationToken ct) =>
                 Results.Ok(await queries.IssuesAsync(code, search, workerId, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+    }
+
+    /// <summary>Changing a worker's file (2026-10-25): the data, the salary directly, or a salary change through approval.</summary>
+    private static void MapEdits(RouteGroupBuilder group)
+    {
+        group.MapGet("/edit-options", async (WorkerEditService service, CancellationToken ct) => Results.Ok(await service.OptionsAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+        group.MapPut("/workers/{id:guid}/data", async (Guid id, WorkerDataInput input, WorkerEditService service, CancellationToken ct) =>
+                Http(await service.EditAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersEdit, companyWide: true);
+        group.MapPut("/workers/{id:guid}/salary", async (Guid id, SalaryInput input, WorkerEditService service, CancellationToken ct) =>
+                Http(await service.SetSalaryAsync(id, input, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersSalaryEdit, companyWide: true);
+        group.MapPost("/workers/{id:guid}/salary-changes", async (Guid id, SalaryChangeInput input, WorkerEditService service, CancellationToken ct) =>
+            {
+                var created = await service.RequestSalaryChangeAsync(id, input, ct).ConfigureAwait(false);
+                return created.IsSuccess ? Results.Ok(new { id = created.Value }) : Http(Result.Failure(created.Error));
+            })
+            .RequirePermission(WorkforcePermissions.SalaryChangesRequest, companyWide: true);
+
+        // A salary change shows salaries: those who see salaries, ask for a change or approve one.
+        group.MapGet("/workers/{id:guid}/salary-changes", async (Guid id, WorkerEditService service, IPermissionService permissions, CancellationToken ct) =>
+                await SeesChangesAsync(permissions, ct).ConfigureAwait(false) ? Results.Ok(await service.ChangesAsync(id, ct).ConfigureAwait(false)) : Results.Forbid())
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+        group.MapGet("/salary-changes/{id:guid}", async (Guid id, WorkerEditService service, IPermissionService permissions, CancellationToken ct) =>
+                !await SeesChangesAsync(permissions, ct).ConfigureAwait(false) ? Results.Forbid()
+                : await service.ChangeAsync(id, ct).ConfigureAwait(false) is { } change ? Results.Ok(change) : Results.NotFound())
+            .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+    }
+
+    private static async Task<bool> SeesChangesAsync(IPermissionService permissions, CancellationToken ct)
+    {
+        var mine = await permissions.GetCurrentAsync(ct).ConfigureAwait(false);
+        return mine.Has(WorkforcePermissions.WorkersSalary) || mine.Has(WorkforcePermissions.SalaryChangesRequest) || mine.Has(WorkforcePermissions.SalaryChangesApprove);
     }
 
     /// <summary>The suppliers' worker costs (docs/03-migration-plan/16): packages, cards, an Excel round trip.</summary>

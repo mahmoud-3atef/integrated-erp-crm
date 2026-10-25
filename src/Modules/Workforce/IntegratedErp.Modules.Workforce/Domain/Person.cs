@@ -52,6 +52,18 @@ public sealed class Person : ITenantOwned
         MaritalStatus = maritalStatus;
     }
 
+    /// <summary>The names and nationality changed here (the CRM link of the nationality is dropped: it was chosen here).</summary>
+    public void Edit(string nameEn, string? nameAr, string? nationalityCode)
+    {
+        NameEn = nameEn;
+        NameAr = nameAr;
+        if (NationalityCode != nationalityCode)
+        {
+            NationalityCode = nationalityCode;
+            NationalityCrmId = null;
+        }
+    }
+
     /// <summary>The nationality mapping changed (e.g. a CRM value was linked or merged by hand).</summary>
     public void Remap(string? nationalityCode) => NationalityCode = nationalityCode;
 

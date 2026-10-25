@@ -13,11 +13,11 @@ const salaryKeys = ['basic', 'housing', 'food', 'transport', 'mobile', 'project'
 const salaryLabel = { basic: 'basic', housing: 'housing', food: 'food', transport: 'transport', mobile: 'mobileAllowance', project: 'project', other: 'other' };
 const emptySalary = { basic: 0, housing: 0, food: 0, transport: 0, mobile: 0, project: 0, other: 0 };
 const nz = (v) => (v.trim() === '' ? null : v.trim());
-function Frame({ open, title, busy, error, onClose, onSave, saveDisabled, children }) {
+export function Frame({ open, title, busy, error, onClose, onSave, saveDisabled, children }) {
     const { t } = useTranslation();
     return (_jsxs(Dialog, { open: open, onClose: busy ? undefined : onClose, fullWidth: true, maxWidth: "sm", slotProps: { paper: { sx: { borderRadius: '18px' } } }, children: [_jsx(DialogTitle, { sx: { fontWeight: 800 }, children: title }), _jsx(DialogContent, { children: _jsxs(Stack, { sx: { gap: 2, pt: 1 }, children: [_jsx(ErrorMessage, { messageKey: error }), children] }) }), _jsxs(DialogActions, { sx: { px: 3, pb: 2 }, children: [_jsx(Button, { onClick: onClose, disabled: busy, children: t('common.cancel') }), _jsx(Button, { variant: "contained", onClick: onSave, disabled: busy || saveDisabled, children: t('common.save') })] })] }));
 }
-function useSave(onDone) {
+export function useSave(onDone) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     const run = async (work) => {

@@ -42,6 +42,7 @@ import { ceoApi } from '../../api/reports';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { FieldBox, FieldSection } from '../../components/FieldSection';
+import { SalaryChangesList, WorkerDataDialog, WorkerSalaryDialog } from './WorkerEditDialogs';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { WorkerActions, periodDays } from './WorkerActions';
 import { WorkerInvoices } from './WorkerInvoices';
@@ -78,10 +79,15 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [sent, setSent] = useState(0);
+  const [editing, setEditing] = useState<'data' | 'salary' | 'request' | null>(null);
+  const [version, setVersion] = useState(0);
   const ar = i18n.language === 'ar';
 
   useEffect(() => {
     workforceApi.get(kind, id!).then(setWorker).catch((failure: unknown) => setError(errorKey(failure)));
+  }, [kind, id, version]);
+
+  useEffect(() => {
     if (kind === 'Worker') {
       profileApi
         .get(id!)
@@ -147,6 +153,21 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const lastPrice = (periods ?? []).find((p) => p.kind === 'Work' && p.totalPrice !== null)?.totalPrice ?? null;
   const iqamaEnds = worker.identifiers.find((i) => i.type === 'Iqama' && i.isCurrent)?.expiresOn ?? null;
   const since = (worker.arrivedOn ?? worker.crmCreatedAt)?.slice(0, 10) ?? null;
+  // Each part of the file has its own permission (the user's request, 2026-10-25); a staff file stays read-only here.
+  const canEditData = !staff && can('workforce.workers.edit', true);
+  const canEditSalary = !staff && !!w.salary && can('workforce.workers.salary_edit', true);
+  const canRequestSalary = !staff && !!w.salary && can('workforce.salary_changes.request', true);
+  const editButton = (onClick: () => void, label = t('workforce.edit.action')) => (
+    <Button size="small" variant="outlined" onClick={onClick} sx={{ borderRadius: 99, height: 30, borderColor: tokens.border, color: tokens.navy800, fontWeight: 600, bgcolor: '#fff' }}>
+      {label}
+    </Button>
+  );
+  const dataActions = canEditData ? editButton(() => setEditing('data')) : undefined;
+  const edited = (changeId?: string) => {
+    setEditing(null);
+    setVersion((n) => n + 1);
+    if (changeId) navigate(`/workforce/salary-changes/${changeId}`);
+  };
 
   return (
     <Box>
@@ -321,7 +342,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
         ) : tab === 'info' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5, alignItems: 'start' }}>
             <Stack spacing={2.5}>
-              <FieldSection title={t('workforce.sections.basic')} icon={<BadgeOutlinedIcon />}>
+              <FieldSection title={t('workforce.sections.basic')} icon={<BadgeOutlinedIcon />} actions={dataActions}>
                 <FieldBox label={t(staff ? 'workforce.field.employeeNo' : 'workforce.col.number')} icon={<TagOutlinedIcon />}>
                   <span dir="ltr">{w.workerNo}</span>
                 </FieldBox>
@@ -357,7 +378,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
                   </FieldBox>
                 </FieldSection>
               ) : (
-                <FieldSection title={t('workforce.sections.job')} icon={<AccountTreeOutlinedIcon />}>
+                <FieldSection title={t('workforce.sections.job')} icon={<AccountTreeOutlinedIcon />} actions={dataActions}>
                   <FieldBox label={t('workforce.col.profession')} icon={<WorkOutlineOutlinedIcon />}>
                     {(ar ? w.professionAr : w.professionEn) ?? '—'}
                   </FieldBox>
@@ -387,7 +408,19 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
             </Stack>
 
             <Stack spacing={2.5}>
-              <FieldSection title={t('workforce.sections.salary')} icon={<PaidOutlinedIcon />} tone="green">
+              <FieldSection
+                title={t('workforce.sections.salary')}
+                icon={<PaidOutlinedIcon />}
+                tone="green"
+                actions={
+                  canEditSalary || canRequestSalary ? (
+                    <>
+                      {canRequestSalary && editButton(() => setEditing('request'), t('workforce.edit.requestAction'))}
+                      {canEditSalary && editButton(() => setEditing('salary'))}
+                    </>
+                  ) : undefined
+                }
+              >
                 {w.salary ? (
                   <>
                     <FieldBox label={t('workforce.salary.basic')} icon={<PaidOutlinedIcon />}>{money(w.salary.basic)}</FieldBox>
@@ -403,13 +436,14 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
                     <FieldBox label={t('workforce.salary.total')} icon={<WalletOutlinedIcon />} highlight wide>
                       {money(w.salary.total)}
                     </FieldBox>
+                    {!staff && <SalaryChangesList workerId={w.id} version={version} />}
                   </>
                 ) : (
                   <Typography sx={{ gridColumn: '1 / -1', fontSize: 13, color: tokens.gray500 }}>{t('workforce.noSalaryPermission')}</Typography>
                 )}
               </FieldSection>
 
-              <FieldSection title={t('workforce.sections.contract')} icon={<DescriptionOutlinedIcon />} tone="sky">
+              <FieldSection title={t('workforce.sections.contract')} icon={<DescriptionOutlinedIcon />} tone="sky" actions={dataActions}>
                 <FieldBox label={t('workforce.field.contractStart')} icon={<EventAvailableOutlinedIcon />}>{date(worker.contract.startsOn)}</FieldBox>
                 <FieldBox label={t('workforce.field.contractMonths')} icon={<HourglassBottomOutlinedIcon />}>
                   {worker.contract.months ?? '—'}
@@ -418,7 +452,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
                 <FieldBox label={t('workforce.field.contractEnd')} icon={<EventBusyOutlinedIcon />}>{date(worker.contract.endsOn)}</FieldBox>
               </FieldSection>
 
-              <FieldSection title={t('workforce.sections.leave')} icon={<BeachAccessOutlinedIcon />} tone="sky">
+              <FieldSection title={t('workforce.sections.leave')} icon={<BeachAccessOutlinedIcon />} tone="sky" actions={dataActions}>
                 <FieldBox label={t('workforce.leave.annual')} icon={<FlightLandOutlinedIcon />}>{days(worker.leave.annualDays)}</FieldBox>
                 <FieldBox label={t('workforce.leave.balance')} icon={<WalletOutlinedIcon />}>{days(worker.leave.balance)}</FieldBox>
                 <FieldBox label={t('workforce.leave.oldConsumed')} icon={<HistoryOutlinedIcon />}>{days(worker.leave.oldConsumed)}</FieldBox>
@@ -433,9 +467,13 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
 
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mt: 2.5, fontSize: 12.5, color: tokens.gray500 }}>
           <InfoOutlinedIcon sx={{ fontSize: 16 }} />
-          {t('workforce.readOnly')}
+          {t(canEditData || canEditSalary ? 'workforce.edit.syncNote' : 'workforce.readOnly')}
         </Stack>
       </Box>
+      {editing === 'data' && <WorkerDataDialog worker={worker} onClose={() => setEditing(null)} onSaved={() => edited()} />}
+      {(editing === 'salary' || editing === 'request') && w.salary && (
+        <WorkerSalaryDialog workerId={w.id} salary={w.salary} request={editing === 'request'} onClose={() => setEditing(null)} onSaved={edited} />
+      )}
       {acting && <ActionDialog workerId={w.id} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
     </Box>
   );

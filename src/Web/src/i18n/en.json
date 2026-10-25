@@ -607,7 +607,16 @@
     "validation_bulk_too_many": "More than 300 users at once; split the list.",
     "validation_bulk_file_unreadable": "The file is not an Excel file with a «User Name» column.",
     "conflict_timesheet_invoiced": "This timesheet's invoice was sent for approval or issued: the timesheet can no longer change.",
-    "validation_approval_return_target": "The approval can only return to a stage it has already passed."
+    "validation_approval_return_target": "The approval can only return to a stage it has already passed.",
+    "not_found_workforce_worker": "Worker not found.",
+    "not_found_workforce_salary_change": "Salary change not found.",
+    "validation_workforce_name": "Enter the English name (300 characters at most).",
+    "validation_workforce_unknown_code": "Choose the nationality and the professions from their lists.",
+    "validation_workforce_iqama_taken": "Another person already has this iqama number.",
+    "validation_workforce_contract": "The contract's end cannot be before its start, and its months must be above zero.",
+    "validation_workforce_salary": "No salary part can be below zero.",
+    "validation_workforce_salary_change_fields": "Give a new salary different from the current one (no part below zero) and a reason of 1000 characters at most.",
+    "validation_workforce_salary_change_open": "This worker already has a salary change in approval."
   },
   "menu": {
     "label": "Main menu",
@@ -1659,6 +1668,33 @@
       "retry": "Retry",
       "noResults": "No results match the search or the filter.",
       "pageTotal": "Page total · {{count}}"
+    },
+    "edit": {
+      "action": "Edit",
+      "requestAction": "Request a change",
+      "dataTitle": "Edit the worker's data",
+      "salaryTitle": "Edit the salary",
+      "requestTitle": "Request a salary change",
+      "requestHint": "The request goes through approval; the worker's salary changes only after the final approval.",
+      "syncNote": "In the parallel phase the old system is the source: if the worker's record changes there, its values come back after the next sync.",
+      "nameEn": "Name in English",
+      "nameAr": "Name in Arabic",
+      "projectNote": "The project, the status and the work days come from the delivery, return and transfer orders and are not edited here.",
+      "effectiveFrom": "Effective from",
+      "reason": "Reason",
+      "changes": "Salary change requests",
+      "changeTitle": "Salary change",
+      "requestedBy": "Requested by {{by}}",
+      "difference": "Difference",
+      "part": "Item",
+      "before": "Before",
+      "after": "After",
+      "status": {
+        "InApproval": "In approval",
+        "Applied": "Applied",
+        "Returned": "Returned",
+        "Rejected": "Rejected"
+      }
     }
   },
   "commercial": {

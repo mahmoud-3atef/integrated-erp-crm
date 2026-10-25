@@ -42,6 +42,44 @@ internal sealed class WorkforceDbContext(DbContextOptions<WorkforceDbContext> op
     public DbSet<SupplierCostPackage> CostPackages => Set<SupplierCostPackage>();
 
     public DbSet<WorkerCostCard> CostCards => Set<WorkerCostCard>();
+
+    public DbSet<WorkerSalaryChange> SalaryChanges => Set<WorkerSalaryChange>();
+}
+
+internal sealed class WorkerSalaryChangeConfiguration : IEntityTypeConfiguration<WorkerSalaryChange>
+{
+    public void Configure(EntityTypeBuilder<WorkerSalaryChange> builder)
+    {
+        builder.ToTable("salary_change");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+        builder.Property(c => c.ChangeNo).HasMaxLength(30).IsRequired();
+        builder.Property(c => c.WorkerNo).HasMaxLength(50).IsRequired();
+        builder.Property(c => c.WorkerName).HasMaxLength(Person.NameMaxLength).IsRequired();
+        builder.Property(c => c.Reason).HasMaxLength(WorkerSalaryChange.ReasonMaxLength);
+        builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(c => c.RequestedBy).HasMaxLength(200).IsRequired();
+        builder.Property(c => c.LastComment).HasMaxLength(2000);
+        builder.HasOne<Worker>().WithMany().HasForeignKey(c => c.WorkerId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(c => new { c.TenantId, c.ChangeNo }).IsUnique();
+        builder.HasIndex(c => new { c.TenantId, c.WorkerId });
+        Salaries(builder, nameof(WorkerSalaryChange.OldSalary), "old");
+        Salaries(builder, nameof(WorkerSalaryChange.NewSalary), "new");
+    }
+
+    private static void Salaries(EntityTypeBuilder<WorkerSalaryChange> builder, string property, string prefix) =>
+        builder.ComplexProperty<Salary>(property, s =>
+        {
+            s.Property(x => x.Basic).HasColumnName($"{prefix}_basic");
+            s.Property(x => x.Housing).HasColumnName($"{prefix}_housing");
+            s.Property(x => x.Food).HasColumnName($"{prefix}_food");
+            s.Property(x => x.Transport).HasColumnName($"{prefix}_transport");
+            s.Property(x => x.Overtime).HasColumnName($"{prefix}_overtime");
+            s.Property(x => x.Other).HasColumnName($"{prefix}_other");
+            s.Property(x => x.Project).HasColumnName($"{prefix}_project");
+            s.Property(x => x.Hardship).HasColumnName($"{prefix}_hardship");
+            s.Property(x => x.Total).HasColumnName($"{prefix}_total");
+        });
 }
 
 internal sealed class SupplierCostPackageConfiguration : IEntityTypeConfiguration<SupplierCostPackage>

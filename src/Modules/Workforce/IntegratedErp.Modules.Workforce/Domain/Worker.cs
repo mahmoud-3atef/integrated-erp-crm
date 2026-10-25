@@ -193,7 +193,44 @@ public sealed class Worker : ITenantOwned
         ProfessionCode = professionCode;
         IqamaProfessionCode = iqamaProfessionCode;
     }
+
+    /// <summary>
+    /// The file's data changed here by someone allowed to (the user's request, 2026-10-25). In the parallel phase the
+    /// old system wins: the next change of the CRM record brings its values back (the user's decision).
+    /// </summary>
+    public void Edit(WorkerEdit e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        ProfessionCode = e.ProfessionCode;
+        IqamaProfessionCode = e.IqamaProfessionCode;
+        Sponsor = e.Sponsor;
+        RecruitmentAgent = e.RecruitmentAgent;
+        ArrivedOn = e.ArrivedOn;
+        Contract = e.Contract;
+        Leave = e.Leave;
+    }
+
+    /// <summary>A new salary (directly, or from an approved salary change); the total is the sum of its parts.</summary>
+    public void SetSalary(Salary salary)
+    {
+        ArgumentNullException.ThrowIfNull(salary);
+        Salary = Totalled(salary);
+    }
+
+    /// <summary>The salary with its total recomputed from the parts.</summary>
+    public static Salary Totalled(Salary s) =>
+        s with { Total = s.Basic + s.Housing + s.Food + s.Transport + s.Overtime + s.Other + s.Project + s.Hardship };
 }
+
+/// <summary>The worker's data that can be changed here (not the project, the status or the dates of movements: the period ledger keeps those).</summary>
+public sealed record WorkerEdit(
+    string? ProfessionCode,
+    string? IqamaProfessionCode,
+    string? Sponsor,
+    string? RecruitmentAgent,
+    DateOnly? ArrivedOn,
+    ContractTerms Contract,
+    LeaveBalance Leave);
 
 /// <summary>A worker's data as read from the CRM, applied in one go.</summary>
 public sealed record WorkerSnapshot(

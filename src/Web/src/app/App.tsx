@@ -65,6 +65,7 @@ import { CustomerDetailPage } from '../pages/commercial/CustomerDetailPage';
 import { CustomersPage } from '../pages/commercial/CustomersPage';
 import { PricesPage } from '../pages/commercial/PricesPage';
 import { ProjectDetailPage } from '../pages/commercial/ProjectDetailPage';
+import { SalaryChangePage } from '../pages/workforce/WorkerEditDialogs';
 import { ProjectsPage } from '../pages/commercial/ProjectsPage';
 import { WorkerDetailPage } from '../pages/workforce/WorkerDetailPage';
 import { ShowroomPage } from '../pages/operations/showroom/ShowroomPage';
@@ -138,6 +139,7 @@ export function App() {
                 <Route path="/workforce/staff/:id" element={<WorkerDetailPage kind="Staff" />} />
                 <Route path="/commercial/projects" element={<ProjectsPage />} />
                 <Route path="/commercial/projects/:id" element={<ProjectDetailPage />} />
+                <Route path="/workforce/salary-changes/:id" element={<SalaryChangePage />} />
                 <Route path="/commercial/customers" element={<CustomersPage />} />
                 <Route path="/commercial/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/commercial/prices" element={<PricesPage />} />

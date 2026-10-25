@@ -1286,6 +1286,191 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                     b.ToTable("worker_profile", "workforce");
                 });
 
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerSalaryChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ChangeNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("change_no");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("LastComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_comment");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("requested_at");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("requested_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("worker_id");
+
+                    b.Property<string>("WorkerName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("worker_name");
+
+                    b.Property<string>("WorkerNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("worker_no");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "NewSalary", "IntegratedErp.Modules.Workforce.Domain.WorkerSalaryChange.NewSalary#Salary", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("Basic")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_basic");
+
+                            b1.Property<decimal>("Food")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_food");
+
+                            b1.Property<decimal>("Hardship")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_hardship");
+
+                            b1.Property<decimal>("Housing")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_housing");
+
+                            b1.Property<decimal>("Other")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_other");
+
+                            b1.Property<decimal>("Overtime")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_overtime");
+
+                            b1.Property<decimal>("Project")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_project");
+
+                            b1.Property<decimal>("Total")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_total");
+
+                            b1.Property<decimal>("Transport")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("new_transport");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "OldSalary", "IntegratedErp.Modules.Workforce.Domain.WorkerSalaryChange.OldSalary#Salary", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("Basic")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_basic");
+
+                            b1.Property<decimal>("Food")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_food");
+
+                            b1.Property<decimal>("Hardship")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_hardship");
+
+                            b1.Property<decimal>("Housing")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_housing");
+
+                            b1.Property<decimal>("Other")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_other");
+
+                            b1.Property<decimal>("Overtime")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_overtime");
+
+                            b1.Property<decimal>("Project")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_project");
+
+                            b1.Property<decimal>("Total")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_total");
+
+                            b1.Property<decimal>("Transport")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("old_transport");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_salary_change");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_salary_change_tenant_id");
+
+                    b.HasIndex("WorkerId")
+                        .HasDatabaseName("ix_salary_change_worker_id");
+
+                    b.HasIndex("TenantId", "ChangeNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_salary_change_tenant_id_change_no");
+
+                    b.HasIndex("TenantId", "WorkerId")
+                        .HasDatabaseName("ix_salary_change_tenant_id_worker_id");
+
+                    b.ToTable("salary_change", "workforce");
+                });
+
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkforceImport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1347,6 +1532,16 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_worker_period_worker_worker_id");
+                });
+
+            modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.WorkerSalaryChange", b =>
+                {
+                    b.HasOne("IntegratedErp.Modules.Workforce.Domain.Worker", null)
+                        .WithMany()
+                        .HasForeignKey("WorkerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_salary_change_worker_worker_id");
                 });
 
             modelBuilder.Entity("IntegratedErp.Modules.Workforce.Domain.Person", b =>

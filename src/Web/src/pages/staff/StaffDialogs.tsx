@@ -15,7 +15,7 @@ const salaryLabel: Record<keyof SalaryValues, string> = { basic: 'basic', housin
 const emptySalary: SalaryValues = { basic: 0, housing: 0, food: 0, transport: 0, mobile: 0, project: 0, other: 0 };
 const nz = (v: string) => (v.trim() === '' ? null : v.trim());
 
-function Frame({ open, title, busy, error, onClose, onSave, saveDisabled, children }: { open: boolean; title: string; busy: boolean; error: string | null; onClose: () => void; onSave: () => void; saveDisabled?: boolean; children: ReactNode }) {
+export function Frame({ open, title, busy, error, onClose, onSave, saveDisabled, children }: { open: boolean; title: string; busy: boolean; error: string | null; onClose: () => void; onSave: () => void; saveDisabled?: boolean; children: ReactNode }) {
   const { t } = useTranslation();
   return (
     <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: '18px' } } }}>
@@ -38,7 +38,7 @@ function Frame({ open, title, busy, error, onClose, onSave, saveDisabled, childr
   );
 }
 
-function useSave(onDone: () => void) {
+export function useSave(onDone: () => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = async (work: () => Promise<unknown>) => {

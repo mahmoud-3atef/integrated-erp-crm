@@ -44,7 +44,11 @@ public sealed record WorkerDetailDto(
     LeaveBalance Leave,
     DateTimeOffset? CrmCreatedAt,
     bool RemovedInCrm,
-    IReadOnlyList<IdentifierDto> Identifiers);
+    IReadOnlyList<IdentifierDto> Identifiers,
+    string? NameAr = null,
+    string? NationalityCode = null,
+    string? ProfessionCode = null,
+    string? IqamaProfessionCode = null);
 
 /// <summary>A list of one kind: workers and company staff are separate lists with separate permissions.</summary>
 public sealed record WorkerFilter(WorkerKind Kind, string? Search, string? Placement, string? Sort, bool Descending, int Page, int PageSize);
@@ -143,7 +147,11 @@ internal sealed class WorkerQueries(WorkforceDbContext db, IReferenceData refere
             worker.CrmCreatedAt,
             worker.RemovedInCrm,
             person.Identifiers.OrderBy(i => i.Type).ThenByDescending(i => i.IsCurrent)
-                .Select(i => new IdentifierDto(i.Type.ToString(), i.Number, i.ExpiresOn, i.IsCurrent)).ToList());
+                .Select(i => new IdentifierDto(i.Type.ToString(), i.Number, i.ExpiresOn, i.IsCurrent)).ToList(),
+            person.NameAr,
+            person.NationalityCode,
+            worker.ProfessionCode,
+            worker.IqamaProfessionCode);
     }
 
     /// <summary>

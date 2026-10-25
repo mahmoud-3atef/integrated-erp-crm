@@ -607,7 +607,16 @@
     "validation_bulk_too_many": "أكثر من 300 مستخدم في المرة الواحدة؛ قسّم القائمة.",
     "validation_bulk_file_unreadable": "الملف ليس ملف Excel فيه عمود «User Name».",
     "conflict_timesheet_invoiced": "أُرسلت فاتورة هذا التحضير للاعتماد أو صدرت: لا يُعدَّل التحضير بعد ذلك.",
-    "validation_approval_return_target": "لا يعود التعميد إلا إلى مرحلة مرّ بها."
+    "validation_approval_return_target": "لا يعود التعميد إلا إلى مرحلة مرّ بها.",
+    "not_found_workforce_worker": "العامل غير موجود.",
+    "not_found_workforce_salary_change": "طلب تعديل الراتب غير موجود.",
+    "validation_workforce_name": "أدخل الاسم بالإنجليزية (300 حرف على الأكثر).",
+    "validation_workforce_unknown_code": "اختر الجنسية والمهنة من قوائمها.",
+    "validation_workforce_iqama_taken": "رقم الإقامة هذا مسجّل لشخص آخر.",
+    "validation_workforce_contract": "لا يكون نهاية العقد قبل بدايته، وعدد الأشهر أكبر من صفر.",
+    "validation_workforce_salary": "لا يكون أي بند من بنود الراتب أقل من صفر.",
+    "validation_workforce_salary_change_fields": "أدخل راتبًا جديدًا يختلف عن الحالي (دون بنود سالبة) وسببًا لا يتجاوز 1000 حرف.",
+    "validation_workforce_salary_change_open": "لهذا العامل طلب تعديل راتب قيد الاعتماد بالفعل."
   },
   "menu": {
     "label": "القائمة الرئيسية",
@@ -1659,6 +1668,33 @@
       "retry": "إعادة المحاولة",
       "noResults": "لا نتائج تطابق البحث أو التصفية.",
       "pageTotal": "إجمالي الصفحة · {{count}}"
+    },
+    "edit": {
+      "action": "تعديل",
+      "requestAction": "طلب تعديل",
+      "dataTitle": "تعديل بيانات العامل",
+      "salaryTitle": "تعديل الراتب",
+      "requestTitle": "طلب تعديل راتب",
+      "requestHint": "يمرّ الطلب بدورة الاعتماد، ولا يتغيّر راتب العامل إلا بعد الاعتماد النهائي.",
+      "syncNote": "في المرحلة الموازية يبقى النظام القديم هو الأصل: إذا تغيّر سجل العامل هناك، تعود قيمه بعد المزامنة التالية.",
+      "nameEn": "الاسم بالإنجليزية",
+      "nameAr": "الاسم بالعربية",
+      "projectNote": "المشروع والحالة وأيام العمل تأتي من أوامر التسليم والرجيع والنقل، ولا تُعدَّل من هنا.",
+      "effectiveFrom": "تاريخ السريان",
+      "reason": "سبب التعديل",
+      "changes": "طلبات تعديل الراتب",
+      "changeTitle": "تعديل راتب",
+      "requestedBy": "طلبه {{by}}",
+      "difference": "الفرق",
+      "part": "البند",
+      "before": "قبل",
+      "after": "بعد",
+      "status": {
+        "InApproval": "قيد الاعتماد",
+        "Applied": "مطبَّق",
+        "Returned": "مُعاد",
+        "Rejected": "مرفوض"
+      }
     }
   },
   "commercial": {

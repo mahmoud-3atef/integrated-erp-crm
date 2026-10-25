@@ -1,5 +1,7 @@
-// Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). Read-only in the parallel phase.
+// Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). A worker's data and salary can be changed by
+// those allowed to (2026-10-25); in the parallel phase the old system's next change of the record brings its values back.
 import { request } from './auth';
+import type { ApprovalStatus } from './workflow';
 
 export type Placement = 'Working' | 'New' | 'Housing' | 'Vacation' | 'Suspended' | 'Exited' | 'Absconded' | 'Other' | 'Inactive';
 export type WorkerKind = 'Worker' | 'Staff';
@@ -68,6 +70,58 @@ export interface WorkerDetail {
   crmCreatedAt: string | null;
   removedInCrm: boolean;
   identifiers: Identifier[];
+  nameAr: string | null;
+  nationalityCode: string | null;
+  professionCode: string | null;
+  iqamaProfessionCode: string | null;
+}
+
+/** A worker's data as the edit form sends it (src/Modules/Workforce/.../Application/WorkerEditService.cs). */
+export interface WorkerDataInput {
+  nameEn: string;
+  nameAr: string | null;
+  iqama: string | null;
+  iqamaExpiresOn: string | null;
+  nationalityCode: string | null;
+  arrivedOn: string | null;
+  professionCode: string | null;
+  iqamaProfessionCode: string | null;
+  sponsor: string | null;
+  recruitmentAgent: string | null;
+  contractStartsOn: string | null;
+  contractMonths: number | null;
+  contractEndsOn: string | null;
+  annualLeaveDays: number | null;
+  leaveBalance: number | null;
+  leaveConsumed: number | null;
+  leaveOldConsumed: number | null;
+  leaveRemaining: number | null;
+}
+
+export type SalaryInput = Omit<Salary, 'total'>;
+
+export interface EditOption {
+  code: string;
+  nameAr: string;
+  nameEn: string;
+}
+
+export interface SalaryChange {
+  id: string;
+  changeNo: string;
+  workerId: string;
+  workerNo: string;
+  workerName: string;
+  oldSalary: Salary;
+  newSalary: Salary;
+  effectiveFrom: string;
+  reason: string | null;
+  status: 'InApproval' | 'Applied' | 'Returned' | 'Rejected';
+  requestedBy: string;
+  requestedAt: string;
+  endedAt: string | null;
+  lastComment: string | null;
+  approval?: ApprovalStatus | null;
 }
 
 export interface WorkerQuery {
@@ -109,6 +163,13 @@ export const workforceApi = {
     return request<HistoryIssueList>('GET', `${base}/history/issues?${params.toString()}`);
   },
   periods: (kind: WorkerKind, id: string) => request<WorkerPeriod[]>('GET', `${base}/${kindPath(kind)}/${id}/periods`),
+  editOptions: () => request<{ nationalities: EditOption[]; professions: EditOption[] }>('GET', `${base}/edit-options`),
+  saveData: (id: string, input: WorkerDataInput) => request<void>('PUT', `${base}/workers/${id}/data`, input),
+  saveSalary: (id: string, input: SalaryInput) => request<void>('PUT', `${base}/workers/${id}/salary`, input),
+  requestSalaryChange: (id: string, input: { salary: SalaryInput; effectiveFrom: string; reason: string | null }) =>
+    request<{ id: string }>('POST', `${base}/workers/${id}/salary-changes`, input),
+  salaryChanges: (id: string) => request<SalaryChange[]>('GET', `${base}/workers/${id}/salary-changes`),
+  salaryChange: (id: string) => request<SalaryChange>('GET', `${base}/salary-changes/${id}`),
 };
 
 /** A period of the worker's timeline (period ledger): endsOn is the first day after it (null while open). */

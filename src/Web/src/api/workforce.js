@@ -1,4 +1,5 @@
-// Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). Read-only in the parallel phase.
+// Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). A worker's data and salary can be changed by
+// those allowed to (2026-10-25); in the parallel phase the old system's next change of the record brings its values back.
 import { request } from './auth';
 const base = '/api/v1/workforce';
 /** Workers and company staff are separate lists (and permissions) on the server. */
@@ -38,6 +39,12 @@ export const workforceApi = {
         return request('GET', `${base}/history/issues?${params.toString()}`);
     },
     periods: (kind, id) => request('GET', `${base}/${kindPath(kind)}/${id}/periods`),
+    editOptions: () => request('GET', `${base}/edit-options`),
+    saveData: (id, input) => request('PUT', `${base}/workers/${id}/data`, input),
+    saveSalary: (id, input) => request('PUT', `${base}/workers/${id}/salary`, input),
+    requestSalaryChange: (id, input) => request('POST', `${base}/workers/${id}/salary-changes`, input),
+    salaryChanges: (id) => request('GET', `${base}/workers/${id}/salary-changes`),
+    salaryChange: (id) => request('GET', `${base}/salary-changes/${id}`),
 };
 export const historyIssueCodes = ['SameDay', 'Gap', 'EndBeforeStart', 'EndAfterNext', 'WorkWithoutPrice', 'ReturnWithoutWork', 'OnJobWithoutWorkStart', 'StatusMismatch', 'ProjectMismatch'];
 export const invoiceCheckResults = ['Match', 'DaysDiff', 'PriceDiff', 'DaysAndPriceDiff', 'NotInLedger', 'NotInvoiced', 'ProjectNotInvoiced'];

@@ -15,14 +15,16 @@ const sectionTones: Record<SectionTone, { border: string; icon: string; soft: st
  * A titled group of fields as in the portal's forms (.cp-sections fieldset.cp-box): a coloured border with the title
  * and an icon square sitting on it, and the fields in two columns.
  */
-export function FieldSection({ title, icon, tone = 'teal', columns = 2, children }: { title: string; icon: ReactNode; tone?: SectionTone; columns?: 1 | 2; children: ReactNode }) {
+export function FieldSection({ title, icon, tone = 'teal', columns = 2, actions, children }: { title: string; icon: ReactNode; tone?: SectionTone; columns?: 1 | 2; actions?: ReactNode; children: ReactNode }) {
   const look = sectionTones[tone];
   const inline = useContext(InlineFields);
   return (
     <Box
       component="fieldset"
-      sx={{ m: 0, minWidth: 0, border: `1.5px solid ${look.border}`, borderRadius: `${tokens.radiusLg}px`, p: '20px 18px 14px', bgcolor: '#fff' }}
+      sx={{ position: 'relative', m: 0, minWidth: 0, border: `1.5px solid ${look.border}`, borderRadius: `${tokens.radiusLg}px`, p: '20px 18px 14px', bgcolor: '#fff' }}
     >
+      {/* «تعديل» and the like sit on the border, across from the title. */}
+      {actions && <Box sx={{ position: 'absolute', top: -17, insetInlineEnd: 16, display: 'flex', gap: 0.75, bgcolor: '#fff', px: 0.75 }}>{actions}</Box>}
       <Box component="legend" sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, mx: 0.5 }}>
         <Box aria-hidden sx={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: '8px', bgcolor: look.icon, color: '#fff', '& svg': { fontSize: 17 } }}>
           {icon}
