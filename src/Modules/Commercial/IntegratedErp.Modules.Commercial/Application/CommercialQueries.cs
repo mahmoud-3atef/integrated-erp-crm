@@ -106,15 +106,17 @@ internal sealed class CommercialQueries(CommercialDbContext db, IWorkforceDirect
         return new ProjectListDto(list.Count, totals, list.Skip(Math.Max(0, filter.Page - 1) * pageSize).Take(pageSize).ToList());
     }
 
+    /// <summary>A project by its id, or by the old system's id (a worker's periods copied from the CRM know only that one).</summary>
     public async Task<ProjectDetailDto?> ProjectAsync(Guid id, CancellationToken cancellationToken)
     {
-        var project = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
+        var project = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false)
+            ?? await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.CrmId == id, cancellationToken).ConfigureAwait(false);
         if (project is null)
         {
             return null;
         }
 
-        var row = (await ProjectRowsAsync(id, cancellationToken).ConfigureAwait(false)).Single();
+        var row = (await ProjectRowsAsync(project.Id, cancellationToken).ConfigureAwait(false)).Single();
         var contract = await db.Contracts.AsNoTracking().FirstAsync(c => c.Id == project.ContractId, cancellationToken).ConfigureAwait(false);
         var workers = await workforce.OnProjectAsync(project.CrmId, cancellationToken).ConfigureAwait(false);
         return new ProjectDetailDto(

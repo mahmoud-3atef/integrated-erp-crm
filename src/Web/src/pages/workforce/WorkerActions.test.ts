@@ -4,7 +4,7 @@ import { documentOf, lateDays, periodDays } from './WorkerActions';
 
 const period = (p: Partial<WorkerPeriod>): WorkerPeriod => ({
   id: 'p', kind: 'Work', projectId: null, projectName: 'P', startsOn: '2026-09-13', endsOn: '2026-09-20', sourceType: 'empwork', sourceId: 'crm-1', sourceNo: 'SW1',
-  closedByNo: null, packageNo: null, salary: null, serviceFee: null, housing: null, transport: null, totalPrice: null, isSpecialPrice: false, paySalary: false, fromOldSystem: true,
+  closedByNo: null, packageNo: null, salary: null, serviceFee: null, housing: null, transport: null, totalPrice: null, isSpecialPrice: false, paySalary: false, fromOldSystem: true, projectCrmId: null,
   ...p,
 });
 const doc = (d: Partial<WorkerDocument>): WorkerDocument => ({ type: 'delivery_order', id: 'd', no: 'DO-1', status: 'Delivered', crmId: null, workStartNo: null, reason: null, createdByName: null, createdAt: null, ...d });

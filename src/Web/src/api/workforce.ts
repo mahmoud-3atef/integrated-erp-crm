@@ -134,6 +134,8 @@ export interface WorkerPeriod {
   paySalary: boolean;
   /** Derived from the old system's movements (not recorded here). */
   fromOldSystem: boolean;
+  /** The project's id in the old system (periods copied from the CRM have only this one). */
+  projectCrmId: string | null;
 }
 
 export const historyIssueCodes = ['SameDay', 'Gap', 'EndBeforeStart', 'EndAfterNext', 'WorkWithoutPrice', 'ReturnWithoutWork', 'OnJobWithoutWorkStart', 'StatusMismatch', 'ProjectMismatch'] as const;

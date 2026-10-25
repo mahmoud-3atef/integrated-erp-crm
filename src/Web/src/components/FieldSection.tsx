@@ -37,10 +37,11 @@ export function FieldSection({ title, icon, tone = 'teal', columns = 2, children
 }
 
 /**
- * Inside, every field shows its label beside its value instead of above it (the worker file, the user's request of
- * 2026-10-25: «اسم الحقل جمب القيمة … عشان نقلل المسافات»). Other pages keep the label above.
+ * Every field shows its icon and label beside its value instead of above it (the user's request of 2026-10-25: «اسم
+ * الحقل جمب القيمة … عشان نقلل المسافات», first on the worker file, then on every form). A provider with false brings the
+ * label back above the value.
  */
-export const InlineFields = createContext(false);
+export const InlineFields = createContext(true);
 
 /**
  * One field as in the portal (.cp-sec-field): an icon square, a small grey label, and the value in a soft box.

@@ -29,19 +29,19 @@ import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
-import { Alert, Box, Button, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Box, Button, LinearProgress, Link, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../../app/session';
 import { ActionDialog } from '../operations/movements/ActionDialog';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { workforceApi, type WorkerDetail, type WorkerKind, type WorkerPeriod } from '../../api/workforce';
 import { photoUrl, profileApi } from '../../api/showroom';
 import { ceoApi } from '../../api/reports';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { FieldBox, FieldSection, InlineFields } from '../../components/FieldSection';
+import { FieldBox, FieldSection } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { WorkerActions, periodDays } from './WorkerActions';
 import { WorkerInvoices } from './WorkerInvoices';
@@ -135,6 +135,9 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
   const days = (value: number | null) => (value === null ? '—' : <>{value.toLocaleString('en-US')}{unit(t('workforce.days'))}</>);
   const staff = kind === 'Staff';
   const working = w.placement === 'Working' && !staff;
+  // The project of the open work period, to open its page from the header.
+  const openWork = (periods ?? []).find((p) => p.kind === 'Work' && p.endsOn === null);
+  const currentProjectId = openWork?.projectId ?? openWork?.projectCrmId ?? null;
   const flip = { transform: i18n.dir() === 'rtl' ? 'scaleX(-1)' : 'none' };
   const tally = (kinds: string[]) => (periods ?? []).filter((p) => kinds.includes(p.kind)).reduce((sum, p) => sum + periodDays(p), 0);
   const projectDays = tally(['Work', 'ClientVacation']);
@@ -158,7 +161,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
       <Box sx={{ display: 'grid', gap: `${tokens.gap}px`, gridTemplateColumns: { xs: '1fr', lg: staff ? '1fr' : 'minmax(0, 1fr) 380px' }, mb: `${tokens.gap}px` }}>
         <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 2.75 } }}>
           <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' }, flexWrap: 'wrap' }}>
-            <Stack direction="row" sx={{ gap: 2, alignItems: 'center', flex: '1 1 320px', minWidth: 0 }}>
+            <Stack direction="row" sx={{ gap: 2, alignItems: 'center', flex: { md: '1 1 320px' }, minWidth: 0 }}>
               <Box sx={{ flex: '0 0 auto', borderRadius: '50%', boxShadow: `0 0 0 4px ${tokens.navy50}` }}>
                 {photo ? (
                   <Box component="img" src={photo} alt="" sx={{ display: 'block', width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center 20%' }} />
@@ -230,18 +233,28 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           <Box component="dl" sx={{ m: 0, mt: 1.75, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' }, gap: 1 }}>
             {working && (
               <Fact wide icon={<AccountTreeOutlinedIcon />} label={t('workforce.currentProject')}>
-                {w.projectName ?? '—'}
-                {w.projectJoinedOn && (
-                  <Box component="span" sx={{ fontSize: 12, fontWeight: 500, color: tokens.gray600, marginInlineStart: 1 }}>
-                    · {t('workforce.startedOn')} <b>{date(w.projectJoinedOn)}</b>
-                    {w.workDays !== null && (
-                      <>
-                        {' · '}
-                        <b>{w.workDays}</b> {t('workforce.workDaysSuffix')}
-                      </>
-                    )}
-                  </Box>
-                )}
+                {/* The project in gold, opening its page; the start date and the days at the end of the line. */}
+                <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                  {currentProjectId ? (
+                    <Link component={RouterLink} to={`/commercial/projects/${currentProjectId}`} underline="hover" sx={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: '#9A6B12' }}>
+                      {w.projectName ?? '—'}
+                    </Link>
+                  ) : (
+                    <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: '#9A6B12' }}>
+                      {w.projectName ?? '—'}
+                    </Box>
+                  )}
+                  {w.projectJoinedOn && (
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.35, borderRadius: 99, bgcolor: '#e6eefb', color: '#1d4f91', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      {t('workforce.startedOn')} <b>{date(w.projectJoinedOn)}</b>
+                    </Box>
+                  )}
+                  {w.workDays !== null && (
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.35, borderRadius: 99, bgcolor: '#e6f4ec', color: '#16734b', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      <b>{w.workDays}</b> {t('workforce.workDaysSuffix')}
+                    </Box>
+                  )}
+                </Stack>
               </Fact>
             )}
             {staff && (
@@ -283,7 +296,6 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
         )}
       </Box>
 
-      <InlineFields.Provider value>
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
         <PillTabs<Tab>
           value={tab}
@@ -424,7 +436,6 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           {t('workforce.readOnly')}
         </Stack>
       </Box>
-      </InlineFields.Provider>
       {acting && <ActionDialog workerId={w.id} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
     </Box>
   );
@@ -482,9 +493,9 @@ function Overview({ usage, projectDays, housingDays, projects, profit, loading }
           <Typography sx={{ mt: 0.5, fontSize: 12.5, opacity: 0.85 }}>{t('workforce.overview.usageHint')}</Typography>
         </Box>
       </Stack>
-      <Stack sx={{ gap: 0.9, mt: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.9, mt: 2 }}>
         {rows.map((r) => (
-          <Stack key={r.label} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', bgcolor: 'rgba(255,255,255,.1)', borderRadius: '10px', px: 1.5, py: 0.9, fontSize: 13, '& svg': { fontSize: 17, opacity: 0.85 } }}>
+          <Stack key={r.label} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, bgcolor: 'rgba(255,255,255,.1)', borderRadius: '10px', px: 1.25, py: 0.8, fontSize: 12.5, '& svg': { fontSize: 16, opacity: 0.85 } }}>
             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
               {r.icon}
               {r.label}
@@ -494,7 +505,7 @@ function Overview({ usage, projectDays, housingDays, projects, profit, loading }
             </Box>
           </Stack>
         ))}
-      </Stack>
+      </Box>
     </Box>
   );
 }

@@ -18,10 +18,11 @@ export function FieldSection({ title, icon, tone = 'teal', columns = 2, children
     return (_jsxs(Box, { component: "fieldset", sx: { m: 0, minWidth: 0, border: `1.5px solid ${look.border}`, borderRadius: `${tokens.radiusLg}px`, p: '20px 18px 14px', bgcolor: '#fff' }, children: [_jsxs(Box, { component: "legend", sx: { display: 'flex', alignItems: 'center', gap: 1, px: 1, mx: 0.5 }, children: [_jsx(Box, { "aria-hidden": true, sx: { display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: '8px', bgcolor: look.icon, color: '#fff', '& svg': { fontSize: 17 } }, children: icon }), _jsx(Typography, { component: "span", sx: { fontWeight: 800, fontSize: 14.5, color: tokens.navy800 }, children: title })] }), _jsx(Box, { sx: { display: 'grid', gridTemplateColumns: inline ? (columns === 2 ? 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' : '1fr') : { xs: '1fr', md: columns === 2 ? '1fr 1fr' : '1fr' }, gap: inline ? '10px 18px' : '14px 18px' }, children: children })] }));
 }
 /**
- * Inside, every field shows its label beside its value instead of above it (the worker file, the user's request of
- * 2026-10-25: «اسم الحقل جمب القيمة … عشان نقلل المسافات»). Other pages keep the label above.
+ * Every field shows its icon and label beside its value instead of above it (the user's request of 2026-10-25: «اسم
+ * الحقل جمب القيمة … عشان نقلل المسافات», first on the worker file, then on every form). A provider with false brings the
+ * label back above the value.
  */
-export const InlineFields = createContext(false);
+export const InlineFields = createContext(true);
 /**
  * One field as in the portal (.cp-sec-field): an icon square, a small grey label, and the value in a soft box.
  * <paramref name="wide"/> spans both columns; <paramref name="highlight"/> is for totals (larger, tinted).

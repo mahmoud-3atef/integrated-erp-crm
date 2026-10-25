@@ -64,18 +64,29 @@ export function ProjectDetailPage() {
     const [tab, setTab] = useState(() => (params.get('tab') === 'packages' ? 'packages' : 'workers'));
     const [error, setError] = useState(null);
     useEffect(() => {
-        commercialApi.project(id).then(setProject).catch((failure) => setError(errorKey(failure)));
-    }, [id]);
+        commercialApi
+            .project(id)
+            .then((loaded) => {
+            // Opened by the old system's id (from a worker's file): continue on the project's own address.
+            if (loaded.summary.id !== id)
+                navigate(`/commercial/projects/${loaded.summary.id}`, { replace: true });
+            else
+                setProject(loaded);
+        })
+            .catch((failure) => setError(errorKey(failure)));
+    }, [id, navigate]);
+    // The prices and the timesheet settings once the project is known by its own id.
+    const known = project?.summary.id === id;
     useEffect(() => {
-        if (canPrices) {
+        if (canPrices && known) {
             commercialApi.projectPrices(id).then(setPrices).catch((failure) => setError(errorKey(failure)));
         }
-    }, [id, canPrices, reload]);
+    }, [id, known, canPrices, reload]);
     useEffect(() => {
-        if (id && seeBilling) {
+        if (id && known && seeBilling) {
             billingApi.settings(id).then(setBilling).catch(() => setBilling(null));
         }
-    }, [id, seeBilling, billingReload]);
+    }, [id, known, seeBilling, billingReload]);
     const toggle = async (row) => {
         try {
             await commercialApi.setPackageActive(row.id, !row.isActive);
