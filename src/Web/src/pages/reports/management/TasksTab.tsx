@@ -11,7 +11,7 @@ import { errorKey } from '../../../api/auth';
 import { managementApi, type TaskRow, type TaskStatus, type Tasks, type TaskType } from '../../../api/management';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, finCard, md, Pill, Rolling, useNumbers, type Column, mdLight } from './mdKit';
+import { DataTable, Donut, finCard, heroCard, md, mdLight, mw, Pill, Rolling, useNumbers, WhiteArea, type Column } from './mdKit';
 
 type StatusFilter = 'pending' | TaskStatus | 'all';
 
@@ -141,6 +141,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
   const typeTop = Math.max(1, ...data.byType.map((x) => x.total));
 
   return (
+    <WhiteArea>
     <Stack sx={{ gap: 2 }}>
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))', lg: 'repeat(5, minmax(0,1fr))' } }}>
         <TaskKpi color={md.teal} icon={<ChecklistOutlinedIcon />} label={t('mgmt.tasks.total')} value={<Rolling value={data.total} />} foot={t('mgmt.inPeriod')} onClick={() => (setStatus('all'), setOwner(null))} />
@@ -165,7 +166,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
       </Box>
 
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 290px' }, alignItems: 'start' }}>
-        <Box sx={finCard}>
+        <Box sx={{ minWidth: 0 }}>
           <DataTable
             title={owner ? t('mgmt.tasks.ofOwner', { name: owner }) : t('mgmt.tasks.all')}
             badge={t('mgmt.tasks.shown', { count: rows.length })}
@@ -198,14 +199,14 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
               </Stack>
             }
           />
-          <Typography sx={{ fontSize: 11, color: md.muted, mt: 1 }}>{t('mgmt.tasks.listNote', { count: 300 })}</Typography>
+          <Typography sx={{ fontSize: 11, color: mw.muted, mt: 1 }}>{t('mgmt.tasks.listNote', { count: 300 })}</Typography>
         </Box>
 
         <Box sx={finCard}>
-          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title }}>
+          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: mw.title }}>
             {t('mgmt.tasks.staff')}
           </Typography>
-          <Typography sx={{ fontSize: 11.5, color: md.muted, mb: 1 }}>{t('mgmt.tasks.staffHint')}</Typography>
+          <Typography sx={{ fontSize: 11.5, color: mw.muted, mb: 1 }}>{t('mgmt.tasks.staffHint')}</Typography>
           <TextField size="small" fullWidth placeholder={t('mgmt.tasks.staffSearch')} value={ownerSearch} onChange={(e) => setOwnerSearch(e.target.value)} sx={{ mb: 1, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
           <Stack sx={{ gap: 1, maxHeight: 640, overflowY: 'auto', scrollbarWidth: 'thin', pe: 0.5 }}>
             {owners.map((o) => {
@@ -220,29 +221,29 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
                     p: 1.25,
                     borderRadius: '12px',
                     textAlign: 'start',
-                    border: `1px solid ${owner === o.name ? md.navy : md.border}`,
-                    boxShadow: `inset -3px 0 0 ${late ? md.red : o.open ? md.blue : md.green}`,
-                    bgcolor: owner === o.name ? md.glassHi : md.glass,
+                    border: `1px solid ${owner === o.name ? mw.navy : mw.border}`,
+                    boxShadow: `inset -3px 0 0 ${late ? mw.red : o.open ? mw.blue : mw.green}`,
+                    bgcolor: owner === o.name ? mw.glassHi : mw.glass,
                   }}
                 >
-                  <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: md.navy, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, flex: '0 0 auto' }}>
+                  <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: mw.navy, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, flex: '0 0 auto' }}>
                     <bdi>{Array.from(o.name.trim())[0]?.toUpperCase() ?? '—'}</bdi>
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mw.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <bdi>{o.name}</bdi>
                     </Typography>
-                    <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.tasks.ownerSub', { total: o.total, completion: f.p(o.completionRate), onTime: f.p(o.onTimeRate) })}</Typography>
-                    <Stack direction="row" sx={{ height: 5, borderRadius: 999, overflow: 'hidden', bgcolor: md.track, my: 0.5 }}>
-                      <Box sx={{ width: `${(o.completed / Math.max(1, o.total)) * 100}%`, bgcolor: md.green }} />
-                      <Box sx={{ width: `${((o.open - o.overdue) / Math.max(1, o.total)) * 100}%`, bgcolor: md.blue }} />
-                      <Box sx={{ width: `${(o.overdue / Math.max(1, o.total)) * 100}%`, bgcolor: md.red }} />
+                    <Typography sx={{ fontSize: 10.5, color: mw.muted }}>{t('mgmt.tasks.ownerSub', { total: o.total, completion: f.p(o.completionRate), onTime: f.p(o.onTimeRate) })}</Typography>
+                    <Stack direction="row" sx={{ height: 5, borderRadius: 999, overflow: 'hidden', bgcolor: mw.track, my: 0.5 }}>
+                      <Box sx={{ width: `${(o.completed / Math.max(1, o.total)) * 100}%`, bgcolor: mw.green }} />
+                      <Box sx={{ width: `${((o.open - o.overdue) / Math.max(1, o.total)) * 100}%`, bgcolor: mw.blue }} />
+                      <Box sx={{ width: `${(o.overdue / Math.max(1, o.total)) * 100}%`, bgcolor: mw.red }} />
                     </Stack>
-                    {o.open > 0 && <Typography sx={{ fontSize: 10.5, color: late ? md.red : md.muted }}>{t('mgmt.tasks.oldest', { count: o.oldestPendingDays })}</Typography>}
+                    {o.open > 0 && <Typography sx={{ fontSize: 10.5, color: late ? mw.red : mw.muted }}>{t('mgmt.tasks.oldest', { count: o.oldestPendingDays })}</Typography>}
                   </Box>
                   <Box sx={{ textAlign: 'center', flex: '0 0 auto' }}>
-                    <Typography sx={{ fontSize: 18, fontWeight: 700, color: late ? md.red : o.open ? md.blue : md.green }}>{o.open}</Typography>
-                    {late ? <Pill {...statusLook.late}>{t('mgmt.tasks.lateCount', { count: o.overdue })}</Pill> : <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.tasks.pending')}</Typography>}
+                    <Typography sx={{ fontSize: 18, fontWeight: 700, color: late ? mw.red : o.open ? mw.blue : mw.green }}>{o.open}</Typography>
+                    {late ? <Pill {...statusLook.late}>{t('mgmt.tasks.lateCount', { count: o.overdue })}</Pill> : <Typography sx={{ fontSize: 10.5, color: mw.muted }}>{t('mgmt.tasks.pending')}</Typography>}
                   </Box>
                 </ButtonBase>
               );
@@ -253,24 +254,24 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
 
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.4fr) minmax(0, 1fr)' } }}>
         <Box sx={finCard}>
-          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title, mb: 1.5 }}>
+          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: mw.title, mb: 1.5 }}>
             {t('mgmt.tasks.byType')}
           </Typography>
           <Stack sx={{ gap: 1 }}>
             {data.byType.map((x) => (
               <ButtonBase key={x.type} onClick={() => (setType(x.type), setStatus('all'))} sx={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr) 64px', gap: 1.25, alignItems: 'center', textAlign: 'start', borderRadius: '8px', p: 0.5 }}>
-                <Typography sx={{ fontSize: 12.5, color: md.text }}>{t(`mgmt.tasks.type.${x.type}`)}</Typography>
-                <Stack direction="row" sx={{ height: 10, borderRadius: 999, overflow: 'hidden', bgcolor: md.track }}>
-                  <Box sx={{ width: `${(x.done / typeTop) * 100}%`, bgcolor: md.green }} />
+                <Typography sx={{ fontSize: 12.5, color: mw.text }}>{t(`mgmt.tasks.type.${x.type}`)}</Typography>
+                <Stack direction="row" sx={{ height: 10, borderRadius: 999, overflow: 'hidden', bgcolor: mw.track }}>
+                  <Box sx={{ width: `${(x.done / typeTop) * 100}%`, bgcolor: mw.green }} />
                   <Box sx={{ width: `${(x.open / typeTop) * 100}%`, bgcolor: '#E8890C' }} />
                 </Stack>
-                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, textAlign: 'end' }}>{f.n(x.total)}</Typography>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mw.ink, textAlign: 'end' }}>{f.n(x.total)}</Typography>
               </ButtonBase>
             ))}
           </Stack>
-          <Stack direction="row" sx={{ gap: 2, mt: 1.25, fontSize: 11.5, color: md.muted }}>
+          <Stack direction="row" sx={{ gap: 2, mt: 1.25, fontSize: 11.5, color: mw.muted }}>
             <span>
-              <Box component="span" sx={{ color: md.green }}>■</Box> {t('mgmt.tasks.status.done')}
+              <Box component="span" sx={{ color: mw.green }}>■</Box> {t('mgmt.tasks.status.done')}
             </span>
             <span>
               <Box component="span" sx={{ color: '#E8890C' }}>■</Box> {t('mgmt.tasks.pending')}
@@ -278,7 +279,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
           </Stack>
         </Box>
         <Box sx={finCard}>
-          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title, mb: 1.5 }}>
+          <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: mw.title, mb: 1.5 }}>
             {t('mgmt.tasks.statuses')}
           </Typography>
           <Donut
@@ -287,7 +288,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
               { key: 'open', label: t('mgmt.tasks.status.open'), value: data.open - data.overdue },
               { key: 'late', label: t('mgmt.tasks.status.late'), value: data.overdue },
             ]}
-            colors={[md.green, md.blue, md.red]}
+            colors={[mw.green, mw.blue, mw.red]}
           />
         </Box>
       </Box>
@@ -295,7 +296,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
       <Dialog open={!!shown} onClose={() => setShown(null)} maxWidth="sm" fullWidth aria-labelledby="task-title">
         {shown && (
           <>
-            <DialogTitle id="task-title" sx={{ fontWeight: 700, color: md.title }}>
+            <DialogTitle id="task-title" sx={{ fontWeight: 700, color: mw.title }}>
               <bdi>{shown.subject || '—'}</bdi>
             </DialogTitle>
             <DialogContent dividers>
@@ -321,7 +322,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
                     <bdi>{shown.doneOn}</bdi>
                   </Fact>
                 )}
-                <Typography sx={{ fontSize: 12, color: md.muted, mt: 0.5 }}>{t('mgmt.tasks.viewOnly')}</Typography>
+                <Typography sx={{ fontSize: 12, color: mw.muted, mt: 0.5 }}>{t('mgmt.tasks.viewOnly')}</Typography>
               </Stack>
             </DialogContent>
             <DialogActions>
@@ -333,6 +334,7 @@ export function TasksTab({ from, to }: { from: string; to: string }) {
         )}
       </Dialog>
     </Stack>
+    </WhiteArea>
   );
 }
 
@@ -343,15 +345,15 @@ function Timing({ row }: { row: TaskRow }) {
       ? statusLook.late
       : row.timing === 'doneOnTime'
         ? statusLook.done
-        : { color: md.muted, bg: md.glassHi };
+        : { color: mw.muted, bg: mw.glassHi };
   return <Pill {...look}>{t(`mgmt.tasks.timing.${row.timing}`, { count: row.timingDays })}</Pill>;
 }
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-      <Typography sx={{ fontSize: 12.5, color: md.muted, minWidth: 120 }}>{label}</Typography>
-      <Box sx={{ fontSize: 13.5, fontWeight: 600, color: md.ink }}>{children}</Box>
+      <Typography sx={{ fontSize: 12.5, color: mw.muted, minWidth: 120 }}>{label}</Typography>
+      <Box sx={{ fontSize: 13.5, fontWeight: 600, color: mw.ink }}>{children}</Box>
     </Stack>
   );
 }
@@ -360,7 +362,7 @@ function Chip({ active, onClick, dot, children }: { active: boolean; onClick: ()
   return (
     <ButtonBase
       onClick={onClick}
-      sx={{ gap: 0.75, px: 1.5, py: 0.6, borderRadius: 999, fontSize: 12, fontWeight: 700, color: active ? '#fff' : md.text, bgcolor: active ? md.navy : md.glassHi, border: `1px solid ${active ? md.navy : md.border}` }}
+      sx={{ gap: 0.75, px: 1.5, py: 0.6, borderRadius: 999, fontSize: 12, fontWeight: 700, color: active ? '#fff' : mw.text, bgcolor: active ? mw.navy : mw.glassHi, border: `1px solid ${active ? mw.navy : mw.border}` }}
     >
       {dot && <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: dot }} />}
       {children}
@@ -373,7 +375,7 @@ function TaskKpi({ color, icon, label, value, foot, footColor, valueColor, onCli
     <ButtonBase
       onClick={onClick}
       disabled={!onClick}
-      sx={{ justifyContent: 'flex-start', gap: 1.5, p: '12px 14px', borderRadius: '12px', bgcolor: md.glass, border: `1px solid ${md.border}`, boxShadow: `inset 0 3px 0 ${color}, 0 4px 14px rgba(10,60,88,.07)`, textAlign: 'start' }}
+      sx={{ justifyContent: 'flex-start', gap: 1.5, p: '12px 14px', borderRadius: '12px', background: heroCard, color: md.ink, border: `1px solid ${md.border}`, boxShadow: `inset 0 3px 0 ${color}, 0 10px 26px rgba(4,18,31,.22)`, textAlign: 'start' }}
     >
       <Box aria-hidden sx={{ width: 42, height: 42, borderRadius: '50%', bgcolor: color, color: '#fff', display: 'grid', placeItems: 'center', flex: '0 0 auto', '& svg': { fontSize: 21 } }}>
         {icon}

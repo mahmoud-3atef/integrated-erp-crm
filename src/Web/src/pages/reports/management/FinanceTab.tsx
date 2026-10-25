@@ -20,7 +20,7 @@ import { managementApi } from '../../../api/management';
 import type { Finance, InvoiceRow, MonthMoney, Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
-import { DataTable, Donut, finCard, md, Pill, useNumbers, type Column, mdLight } from './mdKit';
+import { DataTable, Donut, finCard, heroCard, md, mdLight, mw, Pill, useNumbers, WhiteArea, type Column } from './mdKit';
 
 /** «المالية»: the old finance tab — its banner, five cards, the monthly billing against collection, statuses, debt ages, debtors, managers, coverage, invoices. */
 export function FinanceTab({ from, to, overview }: { from: string; to: string; overview: Overview | null }) {
@@ -64,28 +64,30 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
   const covTotal = cov ? cov.full + cov.partial + cov.missing : 0;
 
   return (
+    <WhiteArea>
     <Stack sx={{ gap: 2 }}>
       <Box
         sx={{
           borderRadius: '18px',
           p: '14px 18px',
-          color: '#fff',
-          background: 'linear-gradient(135deg, #0A3C58 0%, #0E5F73 55%, #0E7C86 100%)',
-          boxShadow: '0 10px 26px rgba(14,124,134,.25)',
+          color: mw.title,
+          bgcolor: '#fff',
+          border: `1px solid ${mdLight.border}`,
+          boxShadow: '0 1px 2px rgba(20,38,61,.06), 0 6px 18px rgba(20,38,61,.06)',
           display: 'flex',
           alignItems: 'center',
           gap: 2,
           flexWrap: 'wrap',
         }}
       >
-        <Box aria-hidden sx={{ width: 42, height: 42, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,.16)', '& svg': { fontSize: 22 } }}>
+        <Box aria-hidden sx={{ width: 42, height: 42, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: '#E6F4F5', color: mw.teal, '& svg': { fontSize: 22 } }}>
           <PieChartOutlineOutlinedIcon />
         </Box>
         <Box sx={{ minWidth: 0, flex: '1 1 260px' }}>
           <Typography component="h2" sx={{ fontSize: 16, fontWeight: 700 }}>
             {t('mgmt.fin.title')}
           </Typography>
-          <Typography sx={{ fontSize: 12, opacity: 0.82 }}>{t('mgmt.fin.subtitle')}</Typography>
+          <Typography sx={{ fontSize: 12, color: mw.muted }}>{t('mgmt.fin.subtitle')}</Typography>
         </Box>
         <TextField
           select
@@ -93,7 +95,7 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
           value={project}
           onChange={(e) => setProject(e.target.value)}
           slotProps={{ select: { displayEmpty: true } }}
-          sx={{ minWidth: 260, '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,.14)', color: '#fff', borderRadius: '10px', '& fieldset': { borderColor: 'rgba(255,255,255,.35)' } }, '& svg': { color: '#fff' } }}
+          sx={{ minWidth: 260, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
         >
           <MenuItem value="">{t('mgmt.fin.allProjects')}</MenuItem>
           {projects.map((p) => (
@@ -102,7 +104,7 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
             </MenuItem>
           ))}
         </TextField>
-        <Button component={RouterLink} to="/billing/invoices" startIcon={<ReceiptLongOutlinedIcon />} sx={{ bgcolor: md.glass, color: md.title, fontWeight: 700, borderRadius: '10px', px: 1.75, '&:hover': { bgcolor: md.glassHi } }}>
+        <Button component={RouterLink} to="/billing/invoices" startIcon={<ReceiptLongOutlinedIcon />} sx={{ bgcolor: mw.navy, color: '#fff', fontWeight: 700, borderRadius: '10px', px: 1.75, '&:hover': { bgcolor: '#203B5C' } }}>
           {t('mgmt.fin.monthly')}
         </Button>
       </Box>
@@ -172,22 +174,22 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
                 {data.debtors.slice(0, 12).map((d, index) => {
                   const top = data.debtors[0]?.outstanding || 1;
                   return (
-                    <Stack key={d.projectCrmId ?? d.name} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1, borderRadius: '12px', '&:hover': { bgcolor: md.glassHi } }}>
-                      <Box sx={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: md.red, bgcolor: md.glassHi, flex: '0 0 auto' }}>{index + 1}</Box>
+                    <Stack key={d.projectCrmId ?? d.name} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1, borderRadius: '12px', '&:hover': { bgcolor: mw.glassHi } }}>
+                      <Box sx={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: mw.red, bgcolor: mw.glassHi, flex: '0 0 auto' }}>{index + 1}</Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: md.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: mw.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           <bdi>{d.name}</bdi>
                         </Typography>
-                        <Typography sx={{ fontSize: 11, color: md.muted }}>
+                        <Typography sx={{ fontSize: 11, color: mw.muted }}>
                           <bdi>{d.manager ?? '—'}</bdi> · {t('mgmt.fin.openSince', { count: d.openInvoices, days: d.oldestDays })}
                         </Typography>
-                        <Box sx={{ mt: 0.5, height: 4, borderRadius: 999, bgcolor: md.track }}>
+                        <Box sx={{ mt: 0.5, height: 4, borderRadius: 999, bgcolor: mw.track }}>
                           <Box sx={{ height: '100%', width: `${(d.outstanding / top) * 100}%`, borderRadius: 999, background: 'linear-gradient(90deg, #E8890C, #E03434)' }} />
                         </Box>
                       </Box>
                       <Box sx={{ textAlign: 'end', flex: '0 0 auto' }}>
-                        <Typography sx={{ fontSize: 14, fontWeight: 700, color: md.red, fontVariantNumeric: 'tabular-nums' }}>{f.n(d.outstanding)}</Typography>
-                        <Typography sx={{ fontSize: 11, color: md.muted }}>{t('mgmt.fin.collectedPct', { rate: f.n(Math.round(d.rate)) })}</Typography>
+                        <Typography sx={{ fontSize: 14, fontWeight: 700, color: mw.red, fontVariantNumeric: 'tabular-nums' }}>{f.n(d.outstanding)}</Typography>
+                        <Typography sx={{ fontSize: 11, color: mw.muted }}>{t('mgmt.fin.collectedPct', { rate: f.n(Math.round(d.rate)) })}</Typography>
                       </Box>
                     </Stack>
                   );
@@ -205,25 +207,25 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
               ) : (
                 <>
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1, mb: 1.5 }}>
-                    <CovStat color={md.greenDeep} value={cov.full} label={t('mgmt.fin.covFull')} />
-                    <CovStat color={md.amberDeep} value={cov.partial} label={t('mgmt.fin.covPartial')} />
-                    <CovStat color={md.red} value={cov.missing} label={t('mgmt.fin.covMissing')} />
+                    <CovStat color={mw.greenDeep} value={cov.full} label={t('mgmt.fin.covFull')} />
+                    <CovStat color={mw.amberDeep} value={cov.partial} label={t('mgmt.fin.covPartial')} />
+                    <CovStat color={mw.red} value={cov.missing} label={t('mgmt.fin.covMissing')} />
                   </Box>
                   <Stack sx={{ gap: 0.5, maxHeight: 300, overflowY: 'auto', scrollbarWidth: 'thin' }}>
                     {cov.gaps.map((g) => (
-                      <Stack key={g.projectCrmId} direction="row" sx={{ alignItems: 'center', gap: 1, py: 0.75, borderBottom: `1px solid ${md.border}` }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: g.hasInvoice ? md.amberDeep : md.red, flex: '0 0 auto' }} />
+                      <Stack key={g.projectCrmId} direction="row" sx={{ alignItems: 'center', gap: 1, py: 0.75, borderBottom: `1px solid ${mw.border}` }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: g.hasInvoice ? mw.amberDeep : mw.red, flex: '0 0 auto' }} />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mw.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <bdi>{g.name}</bdi>
                           </Typography>
-                          <Typography sx={{ fontSize: 11, color: md.muted }}>
+                          <Typography sx={{ fontSize: 11, color: mw.muted }}>
                             <bdi>{g.manager ?? '—'}</bdi>
                           </Typography>
                         </Box>
                         <Box sx={{ textAlign: 'end' }}>
-                          <Typography sx={{ fontSize: 14, fontWeight: 700, color: md.red }}>{f.n(g.worked - g.invoiced)}</Typography>
-                          <Typography sx={{ fontSize: 10.5, color: md.muted }}>{g.hasInvoice ? t('mgmt.fin.notInvoicedOf', { worked: g.worked }) : t('mgmt.fin.noInvoice')}</Typography>
+                          <Typography sx={{ fontSize: 14, fontWeight: 700, color: mw.red }}>{f.n(g.worked - g.invoiced)}</Typography>
+                          <Typography sx={{ fontSize: 10.5, color: mw.muted }}>{g.hasInvoice ? t('mgmt.fin.notInvoicedOf', { worked: g.worked }) : t('mgmt.fin.noInvoice')}</Typography>
                         </Box>
                       </Stack>
                     ))}
@@ -235,22 +237,22 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
               <CardHead icon={<PersonOutlineIcon />} title={t('mgmt.fin.byManager')} hint={t('mgmt.fin.byManagerHint')} />
               <Stack sx={{ gap: 1, maxHeight: 420, overflowY: 'auto', scrollbarWidth: 'thin', pe: 0.5 }}>
                 {data.managers.map((m) => (
-                  <Stack key={m.manager} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1.25, borderRadius: '12px', bgcolor: md.glassHi, border: `1px solid ${md.border}` }}>
-                    <Box sx={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', bgcolor: md.navy, flex: '0 0 auto' }}>
+                  <Stack key={m.manager} direction="row" sx={{ gap: 1.25, alignItems: 'center', p: 1.25, borderRadius: '12px', bgcolor: mw.glassHi, border: `1px solid ${mw.border}` }}>
+                    <Box sx={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', bgcolor: mw.navy, flex: '0 0 auto' }}>
                       <bdi>{Array.from(m.manager.trim())[0]?.toUpperCase() ?? '—'}</bdi>
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: md.ink }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: mw.ink }}>
                         <bdi>{m.manager}</bdi>
                       </Typography>
-                      <Typography sx={{ fontSize: 11, color: md.muted }}>{t('mgmt.fin.managerSub', { projects: m.projects, invoices: m.invoices, invoiced: f.n(m.invoiced) })}</Typography>
-                      <Box sx={{ mt: 0.5, height: 4, borderRadius: 999, bgcolor: md.track }}>
-                        <Box sx={{ height: '100%', width: `${Math.min(100, m.rate)}%`, borderRadius: 999, bgcolor: md.greenDeep }} />
+                      <Typography sx={{ fontSize: 11, color: mw.muted }}>{t('mgmt.fin.managerSub', { projects: m.projects, invoices: m.invoices, invoiced: f.n(m.invoiced) })}</Typography>
+                      <Box sx={{ mt: 0.5, height: 4, borderRadius: 999, bgcolor: mw.track }}>
+                        <Box sx={{ height: '100%', width: `${Math.min(100, m.rate)}%`, borderRadius: 999, bgcolor: mw.greenDeep }} />
                       </Box>
                     </Box>
                     <Box sx={{ textAlign: 'end', flex: '0 0 auto' }}>
-                      <Pill color="#fff" bg={m.rate >= 50 ? md.greenDeep : md.red}>{`${f.n(Math.round(m.rate))}%`}</Pill>
-                      <Typography sx={{ fontSize: 11, color: md.muted, mt: 0.5 }}>{t('mgmt.fin.remainingShort', { amount: f.n(m.outstanding) })}</Typography>
+                      <Pill color={m.rate >= 50 ? mw.greenDeep : mw.red}>{`${f.n(Math.round(m.rate))}%`}</Pill>
+                      <Typography sx={{ fontSize: 11, color: mw.muted, mt: 0.5 }}>{t('mgmt.fin.remainingShort', { amount: f.n(m.outstanding) })}</Typography>
                     </Box>
                   </Stack>
                 ))}
@@ -263,11 +265,11 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
               fullWidth
               onClick={() => setShowInvoices((s) => !s)}
               endIcon={<ExpandMoreIcon sx={{ transform: showInvoices ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />}
-              sx={{ justifyContent: 'space-between', color: md.title, fontWeight: 700, fontSize: 14 }}
+              sx={{ justifyContent: 'space-between', color: mw.title, fontWeight: 700, fontSize: 14 }}
             >
               <span>
                 {t('mgmt.fin.invoices')}{' '}
-                <Box component="small" sx={{ color: md.muted, fontWeight: 400 }}>
+                <Box component="small" sx={{ color: mw.muted, fontWeight: 400 }}>
                   {t('mgmt.fin.latest', { count: Math.min(250, data.invoicesTotal) })}
                 </Box>
               </span>
@@ -279,6 +281,7 @@ export function FinanceTab({ from, to, overview }: { from: string; to: string; o
         </>
       )}
     </Stack>
+    </WhiteArea>
   );
 }
 
@@ -288,11 +291,11 @@ const monthName = (key: string, lang: string) =>
 function CardHead({ icon, title, hint }: { icon: ReactNode; title: string; hint?: string }) {
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-      <Box sx={{ color: md.teal, display: 'flex', '& svg': { fontSize: 19 } }}>{icon}</Box>
-      <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: md.title }}>
+      <Box sx={{ color: mw.teal, display: 'flex', '& svg': { fontSize: 19 } }}>{icon}</Box>
+      <Typography component="h3" sx={{ fontSize: 14.5, fontWeight: 700, color: mw.title }}>
         {title}
       </Typography>
-      {hint && <Typography sx={{ fontSize: 11.5, color: md.muted, marginInlineStart: 'auto' }}>{hint}</Typography>}
+      {hint && <Typography sx={{ fontSize: 11.5, color: mw.muted, marginInlineStart: 'auto' }}>{hint}</Typography>}
     </Stack>
   );
 }
@@ -301,7 +304,7 @@ function CardHead({ icon, title, hint }: { icon: ReactNode; title: string; hint?
 function FinKpi({ color, icon, label, value, unit, valueColor, children }: { color: string; icon: ReactNode; label: string; value: string; unit?: string; valueColor?: string; children?: ReactNode }) {
   const { t } = useTranslation();
   return (
-    <Box sx={{ bgcolor: md.glass, border: `1px solid ${md.border}`, borderTop: `4px solid ${color}`, borderRadius: '18px', boxShadow: '0 4px 14px rgba(10,60,88,.07)', p: '16px 18px', minWidth: 0 }}>
+    <Box sx={{ background: heroCard, color: md.ink, border: `1px solid ${md.border}`, borderTop: `4px solid ${color}`, borderRadius: '18px', boxShadow: '0 10px 26px rgba(4,18,31,.22)', p: '16px 18px', minWidth: 0 }}>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1 }}>
         <Box aria-hidden sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color, bgcolor: `${color}1A`, '& svg': { fontSize: 18 } }}>
           {icon}
@@ -331,7 +334,7 @@ function CovStat({ color, value, label }: { color: string; value: number; label:
   return (
     <Box sx={{ borderRadius: '12px', bgcolor: `${color}12`, p: 1, textAlign: 'center' }}>
       <Typography sx={{ fontSize: 20, fontWeight: 700, color }}>{value}</Typography>
-      <Typography sx={{ fontSize: 11.5, color: md.text }}>{label}</Typography>
+      <Typography sx={{ fontSize: 11.5, color: mw.text }}>{label}</Typography>
     </Box>
   );
 }
@@ -351,7 +354,7 @@ function Aging({ data }: { data: Finance }) {
   const total = data.aging.reduce((s, a) => s + a.amount, 0);
   return (
     <>
-      <Stack direction="row" sx={{ height: 10, borderRadius: 999, overflow: 'hidden', bgcolor: md.track, mb: 1.5 }}>
+      <Stack direction="row" sx={{ height: 10, borderRadius: 999, overflow: 'hidden', bgcolor: mw.track, mb: 1.5 }}>
         {data.aging.map((a) => (
           <Box key={a.bucket} sx={{ width: total ? `${(a.amount / total) * 100}%` : 0, bgcolor: agingLook[a.bucket - 1]?.color }} />
         ))}
@@ -360,14 +363,14 @@ function Aging({ data }: { data: Finance }) {
         {data.aging.map((a) => {
           const look = agingLook[a.bucket - 1]!;
           return (
-            <Stack key={a.bucket} direction="row" sx={{ alignItems: 'center', gap: 1, p: 1, borderRadius: '10px', bgcolor: md.glassHi, borderInlineStart: `3px solid ${look.color}` }}>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: md.ink, minWidth: 92 }}>{t(`mgmt.fin.bucket.${a.bucket}`)}</Typography>
+            <Stack key={a.bucket} direction="row" sx={{ alignItems: 'center', gap: 1, p: 1, borderRadius: '10px', bgcolor: mw.glassHi, borderInlineStart: `3px solid ${look.color}` }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: mw.ink, minWidth: 92 }}>{t(`mgmt.fin.bucket.${a.bucket}`)}</Typography>
               <Pill color={look.color} bg={`${look.color}1A`}>
                 {t(`mgmt.fin.age.${look.key}`)}
               </Pill>
               <Box sx={{ flex: 1 }} />
-              <Typography sx={{ fontSize: 11.5, color: md.muted }}>{t('mgmt.fin.invoicesCount', { count: a.count })}</Typography>
-              <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: md.ink, minWidth: 90, textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>{f.n(a.amount)}</Typography>
+              <Typography sx={{ fontSize: 11.5, color: mw.muted }}>{t('mgmt.fin.invoicesCount', { count: a.count })}</Typography>
+              <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: mw.ink, minWidth: 90, textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>{f.n(a.amount)}</Typography>
               <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: look.color, minWidth: 48, textAlign: 'end' }}>{`${f.p(a.percent)}%`}</Typography>
             </Stack>
           );
@@ -397,20 +400,20 @@ function MoneyChart({ months }: { months: MonthMoney[] }) {
   const line = months.map((m, i) => (m.rate === null ? null : `${x(i)},${yr(m.rate)}`)).filter(Boolean).join(' ');
   return (
     <Box>
-      <Stack direction="row" sx={{ gap: 2, mb: 1, fontSize: 11.5, color: md.muted }}>
-        <Legend color={md.teal} text={t('mgmt.fin.legendInvoiced')} />
-        <Legend color={md.green} text={t('mgmt.fin.legendCollected')} />
+      <Stack direction="row" sx={{ gap: 2, mb: 1, fontSize: 11.5, color: mw.muted }}>
+        <Legend color={mw.teal} text={t('mgmt.fin.legendInvoiced')} />
+        <Legend color={mw.green} text={t('mgmt.fin.legendCollected')} />
         <Legend color="#E8890C" text={t('mgmt.fin.legendRate')} line />
       </Stack>
       <Box dir="ltr">
         <svg viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={t('mgmt.fin.trend')}>
           {[0, 0.25, 0.5, 0.75, 1].map((p) => (
             <g key={p}>
-              <line x1={pad.side} x2={w - pad.side} y1={y(max * p)} y2={y(max * p)} stroke={md.border} />
-              <text x={pad.side - 6} y={y(max * p) + 4} textAnchor="end" fontSize="10" fill={md.muted}>
+              <line x1={pad.side} x2={w - pad.side} y1={y(max * p)} y2={y(max * p)} stroke={mw.border} />
+              <text x={pad.side - 6} y={y(max * p) + 4} textAnchor="end" fontSize="10" fill={mw.muted}>
                 {f.n(Math.round((max * p) / 1e5) / 10)}M
               </text>
-              <text x={w - pad.side + 6} y={yr(100 * p) + 4} fontSize="10" fill={md.muted}>
+              <text x={w - pad.side + 6} y={yr(100 * p) + 4} fontSize="10" fill={mw.muted}>
                 {100 * p}%
               </text>
             </g>
@@ -419,13 +422,13 @@ function MoneyChart({ months }: { months: MonthMoney[] }) {
             const bw = Math.min(28, slot / 3);
             return (
               <g key={m.month}>
-                <rect x={x(i) - bw - 3} y={y(m.invoiced)} width={bw} height={Math.max(0, y(0) - y(m.invoiced))} rx="3" fill={md.teal}>
+                <rect x={x(i) - bw - 3} y={y(m.invoiced)} width={bw} height={Math.max(0, y(0) - y(m.invoiced))} rx="3" fill={mw.teal}>
                   <title>{`${label(m.month)} · ${f.n(m.invoiced)}`}</title>
                 </rect>
-                <rect x={x(i) + 3} y={y(m.collected)} width={bw} height={Math.max(0, y(0) - y(m.collected))} rx="3" fill={md.green}>
+                <rect x={x(i) + 3} y={y(m.collected)} width={bw} height={Math.max(0, y(0) - y(m.collected))} rx="3" fill={mw.green}>
                   <title>{`${label(m.month)} · ${f.n(m.collected)}`}</title>
                 </rect>
-                <text x={x(i)} y={h - 10} textAnchor="middle" fontSize="10.5" fill={md.text}>
+                <text x={x(i)} y={h - 10} textAnchor="middle" fontSize="10.5" fill={mw.text}>
                   {label(m.month)}
                 </text>
               </g>

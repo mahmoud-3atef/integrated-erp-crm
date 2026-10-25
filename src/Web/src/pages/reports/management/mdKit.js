@@ -57,6 +57,29 @@ export const mdLight = {
     red: '#B42318',
     green: '#16734B',
 };
+/** The dashboard's tones for what sits on white (the finance and tasks tabs' cards, 2026-10-25): md's keys, darkened. */
+export const mw = {
+    ...md,
+    navy: '#14263D',
+    ink: '#0F2747',
+    title: '#0F2747',
+    text: '#334155',
+    muted: '#64748B',
+    label: '#64748B',
+    border: '#E2E8F0',
+    track: '#E2E8F0',
+    glass: '#F8FAFC',
+    glassHi: '#EEF4FA',
+    glow: '#0E7C86',
+    glowShadow: 'none',
+    teal: '#0E7C86',
+    blue: '#1F78C8',
+    green: '#16A34A',
+    greenDeep: '#16734B',
+    amber: '#D97706',
+    amberDeep: '#B45309',
+    red: '#B42318',
+};
 /** Whether a part sits in a white table (pills and cells pick their colours from it). */
 const OnWhite = createContext(false);
 export const useOnWhite = () => useContext(OnWhite);
@@ -87,7 +110,35 @@ function stars(count, seed, bright = false) {
 /** The tabs' strip and the KPI band keep a few still stars over the panel's gradient (the night look, on the light page). */
 export const starryPanel = `${stars(8, 41, true)}, ${stars(60, 7)}, ${md.panel}`;
 /** The white tables keep a light theme for their search field, menus and buttons. */
-const light = (outer) => createTheme(outer, { palette: { mode: 'light', text: { primary: mdLight.text, secondary: mdLight.muted }, background: { paper: '#fff' }, divider: mdLight.border } });
+const light = (outer) => createTheme(outer, {
+    palette: { mode: 'light', primary: { main: '#14263D', contrastText: '#fff' }, text: { primary: mdLight.text, secondary: mdLight.muted }, background: { paper: '#fff' }, divider: mdLight.border },
+    // The night theme's dark fields, menus and tooltips undone (this theme is built on top of it).
+    components: {
+        MuiOutlinedInput: {
+            styleOverrides: {
+                root: {
+                    backgroundColor: '#fff',
+                    color: mdLight.title,
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#94A3B8' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#14263D' },
+                },
+            },
+        },
+        MuiInputLabel: { styleOverrides: { root: { color: mdLight.muted, '&.Mui-focused': { color: '#14263D' } } } },
+        MuiIconButton: { styleOverrides: { root: { color: mdLight.muted, '&:hover': { backgroundColor: '#F1F5F9' } } } },
+        MuiPaper: { styleOverrides: { root: { backgroundImage: 'none', backgroundColor: '#fff', color: mdLight.text } } },
+        MuiDialogTitle: { styleOverrides: { root: { color: mdLight.title } } },
+        MuiTableCell: { styleOverrides: { root: { borderBottomColor: mdLight.border }, body: { color: mdLight.text } } },
+        MuiTooltip: { styleOverrides: { tooltip: { backgroundColor: '#14263D', border: 0 } } },
+        MuiButton: {
+            styleOverrides: {
+                outlined: { backgroundColor: '#fff', borderColor: '#CBD5E1', boxShadow: 'none', '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#94A3B8' } },
+                text: { color: '#14263D' },
+            },
+        },
+    },
+});
 /** A part of the white page that is not a dark panel (the period's fields and button): the light theme. */
 export function LightArea({ children }) {
     return _jsx(ThemeProvider, { theme: light, children: children });
@@ -138,7 +189,12 @@ export function NightSky({ children }) {
 /** The slices' colours of the old pies, in order. */
 export const slices = ['#1F78C8', '#E8890C', '#2FB344', '#E03434', '#0E7C86', '#0A3C58', '#8A9AA6', '#7C5CBF', '#C2410C', '#0891B2'];
 export const panel = { ...glassCard, p: { xs: 1.5, md: '14px' }, minWidth: 0 };
-export const finCard = { ...glassCard, p: '18px', minWidth: 0 };
+/** A finance or tasks card: white since 2026-10-25 (its contents in the on-white tones, inside a WhiteArea). */
+export const finCard = { bgcolor: '#fff', border: `1px solid ${mdLight.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(20,38,61,.05), 0 8px 22px rgba(20,38,61,.06)', color: mdLight.text, p: '18px', minWidth: 0 };
+/** A tab on the white page: the light theme, and white for the pills and charts in it (its KPI cards set their own dark colours). */
+export function WhiteArea({ children }) {
+    return (_jsx(ThemeProvider, { theme: light, children: _jsx(OnWhite.Provider, { value: true, children: children }) }));
+}
 /** Numbers as the old page wrote them: whole or with two decimals, Latin digits. */
 export function useNumbers() {
     return useMemo(() => {
@@ -209,7 +265,9 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick }) {
                 }, children: icon }), _jsxs(Box, { sx: { px: 2, pt: 2.25, pb: 1.25, pe: '84px', minWidth: 0, flex: 1 }, children: [_jsx(Typography, { sx: { fontSize: 12.5, color: md.label }, children: label }), _jsxs(Typography, { component: "div", sx: { fontSize: { xs: 26, md: 32 }, fontWeight: 700, color: md.glow, textShadow: md.glowShadow, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }, children: [_jsx("bdi", { children: value }), unit && (_jsx(Box, { component: "small", sx: { fontSize: 12, fontWeight: 500, color: md.muted, textShadow: 'none', marginInlineStart: 0.5 }, children: unit }))] })] }), _jsx(Box, { sx: { borderTop: `1px solid ${md.border}`, px: 2, py: 1.25, fontSize: 12.5, fontWeight: 600, color: md.text }, children: foot })] }));
 }
 /** The navy glow of «عمالة باشرت مشاريع» (HeroTotal), over the night panel; the KPI cards share it (2026-10-25). */
-const heroNavy = 'radial-gradient(circle at 12% 110%, rgba(45,212,191,.22) 0, transparent 55%), radial-gradient(circle at 95% -10%, rgba(56,189,248,.18) 0, transparent 45%), linear-gradient(140deg, rgba(27,110,143,.35) 0%, rgba(255,255,255,.05) 100%)';
+export const heroNavy = 'radial-gradient(circle at 12% 110%, rgba(45,212,191,.22) 0, transparent 55%), radial-gradient(circle at 95% -10%, rgba(56,189,248,.18) 0, transparent 45%), linear-gradient(140deg, rgba(27,110,143,.35) 0%, rgba(255,255,255,.05) 100%)';
+/** The dark KPI cards' background (the overview's, «عمالة باشرت مشاريع»'s), for the other tabs' cards too. */
+export const heroCard = `${heroNavy}, ${md.panel}`;
 /** The big card of a sub-tab: its total on a dark gradient, the number in gold (it resets the table's filter). */
 export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onClick }) {
     const background = {
