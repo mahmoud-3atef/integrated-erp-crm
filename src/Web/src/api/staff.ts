@@ -320,6 +320,46 @@ export interface ActionInput {
   newContractEndsOn: string | null;
 }
 
+/** One new employee (form or sheet row): the lists hold an id or code, or (from a sheet) the typed text. */
+export interface NewEmployee {
+  nameEn: string | null;
+  nameAr: string | null;
+  nationality: string | null;
+  idNumber: string | null;
+  hireDate: string | null;
+  probationDays: number | null;
+  legalEntity: string | null;
+  department: string | null;
+  position: string | null;
+  basic: number | null;
+  housing: number | null;
+  food: number | null;
+  transport: number | null;
+  mobile: number | null;
+  project: number | null;
+  other: number | null;
+  mobileNumber: string | null;
+  email: string | null;
+}
+
+export interface CheckedEmployeeRow {
+  row: number;
+  input: NewEmployee;
+  issues: { field: string; code: string }[];
+}
+
+export interface NewEmployeeOptions {
+  nationalities: { id: string; nameAr: string; nameEn: string }[];
+  legalEntities: { id: string; nameAr: string; nameEn: string }[];
+  departments: { id: string; nameAr: string; nameEn: string; positions: { id: string; jobTitleAr: string; jobTitleEn: string; free: number }[] }[];
+  nextNumber: string;
+}
+
+export interface CreateEmployeesResult {
+  created: { id: string; employeeNo: string; name: string }[];
+  rows: CheckedEmployeeRow[];
+}
+
 const base = '/api/v1/staff';
 
 const qs = (q: StaffQuery) => {
@@ -331,6 +371,15 @@ const qs = (q: StaffQuery) => {
 };
 
 export const staffApi = {
+  newOptions: () => request<NewEmployeeOptions>('GET', `${base}/employees/new/options`),
+  newTemplateUrl: `${base}/employees/new/template`,
+  readNew: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return upload<CheckedEmployeeRow[]>(`${base}/employees/new/read`, form);
+  },
+  checkNew: (rows: NewEmployee[]) => request<CheckedEmployeeRow[]>('POST', `${base}/employees/new/check`, rows),
+  createNew: (rows: NewEmployee[]) => request<CreateEmployeesResult>('POST', `${base}/employees/new`, rows),
   employees: (q: StaffQuery) => request<StaffPage>('GET', `${base}/employees?${qs(q)}`),
   kpis: () => request<StaffKpis>('GET', `${base}/employees/kpis`),
   userLinks: () => request<{ userId: string; employeeId: string; nameAr: string; nameEn: string }[]>('GET', `${base}/user-links`),

@@ -37,6 +37,32 @@ internal static class StaffEndpoints
                 await service.HireAsync(input, ct).ConfigureAwait(false) is var result && result.IsSuccess ? Results.Ok(new { id = result.Value }) : Problem(result.Error))
             .RequirePermission(StaffPermissions.Manage, companyWide: true);
 
+        // Adding employees (2026-10-25): one from the form, or many from a sheet that is read and checked before anything is created.
+        group.MapGet("/employees/new/options", async (StaffCreateService service, CancellationToken ct) => Results.Ok(await service.OptionsAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+        group.MapGet("/employees/new/template", async (StaffCreateService service, CancellationToken ct) =>
+                Results.File(await service.TemplateAsync(ct).ConfigureAwait(false), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "new-employees.xlsx"))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+        group.MapPost("/employees/new/read", async (HttpRequest request, StaffCreateService service, CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType || (await request.ReadFormAsync(ct).ConfigureAwait(false)).Files is not { Count: > 0 } files)
+                {
+                    return Results.Problem("Upload an Excel file.", statusCode: StatusCodes.Status400BadRequest, title: "validation.excel_file");
+                }
+
+                await using var stream = files[0].OpenReadStream();
+                var result = await service.ReadAsync(stream, ct).ConfigureAwait(false);
+                return result.IsSuccess ? Results.Ok(result.Value) : Problem(result.Error);
+            })
+            .DisableAntiforgery()
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+        group.MapPost("/employees/new/check", async (NewEmployeeInput[] rows, StaffCreateService service, CancellationToken ct) =>
+                rows.Length is 0 or > StaffCreateService.MaxRows ? Problem(Domain.StaffErrors.TooManyRows) : Results.Ok(await service.CheckAsync(rows, ct).ConfigureAwait(false)))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+        group.MapPost("/employees/new", async (NewEmployeeInput[] rows, StaffCreateService service, CancellationToken ct) =>
+                await service.CreateAsync(rows, ct).ConfigureAwait(false) is var result && result.IsSuccess ? Results.Ok(result.Value) : Problem(result.Error))
+            .RequirePermission(StaffPermissions.Manage, companyWide: true);
+
         group.MapPost("/employees/import", async (StaffService service, CancellationToken ct) => Results.Ok(await service.ImportAsync(ct).ConfigureAwait(false)))
             .RequirePermission(StaffPermissions.Manage, companyWide: true);
 

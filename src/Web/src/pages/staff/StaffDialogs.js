@@ -47,25 +47,6 @@ function positionsOf(departments, departmentId, language, t) {
         .filter((p) => p.isActive)
         .map((p) => ({ id: p.id, label: t('staff.dialogs.positionLabel', { title: language === 'ar' ? p.jobTitleAr : p.jobTitleEn, taken: p.occupants.length, seats: p.seats }) }));
 }
-export function HireDialog({ open, departments, onClose, onSaved }) {
-    const { t, i18n } = useTranslation();
-    const entities = useLegalEntities();
-    const [nameAr, setNameAr] = useState('');
-    const [nameEn, setNameEn] = useState('');
-    const [hireDate, setHireDate] = useState(new Date().toISOString().slice(0, 10));
-    const [probation, setProbation] = useState(90);
-    const [entity, setEntity] = useState('');
-    const [department, setDepartment] = useState('');
-    const [position, setPosition] = useState('');
-    const [salary, setSalary] = useState(emptySalary);
-    const [created, setCreated] = useState(null);
-    const { busy, error, run } = useSave(() => created && onSaved(created));
-    useEffect(() => {
-        if (created)
-            onSaved(created);
-    }, [created, onSaved]);
-    return (_jsxs(Frame, { open: open, title: t('staff.dialogs.hire'), busy: busy, error: error, onClose: onClose, saveDisabled: !nameAr.trim() && !nameEn.trim(), onSave: () => void run(async () => setCreated((await staffApi.hire({ nameAr: nz(nameAr), nameEn: nameEn.trim() || nameAr.trim(), hireDate, probationDays: probation, legalEntityId: entity || null, departmentId: department || null, positionId: position || null, salary })).id)), children: [_jsxs(Stack, { direction: "row", sx: { gap: 1.5 }, children: [_jsx(TextField, { label: t('staff.profile.fields.nameAr'), value: nameAr, onChange: (e) => setNameAr(e.target.value), fullWidth: true }), _jsx(TextField, { label: t('staff.profile.fields.nameEn'), value: nameEn, onChange: (e) => setNameEn(e.target.value), fullWidth: true })] }), _jsxs(Stack, { direction: "row", sx: { gap: 1.5 }, children: [_jsx(DateField, { label: t('staff.profile.fields.hireDate'), value: hireDate, onChange: (e) => setHireDate(e.target.value), slotProps: { inputLabel: { shrink: true } }, fullWidth: true }), _jsx(TextField, { type: "number", label: t('staff.dialogs.probationDays'), value: probation, onChange: (e) => setProbation(Number(e.target.value)), fullWidth: true })] }), _jsxs(TextField, { select: true, label: t('staff.profile.fields.legalEntity'), value: entity, onChange: (e) => setEntity(e.target.value), slotProps: { select: { displayEmpty: true }, inputLabel: { shrink: true } }, children: [_jsx(MenuItem, { value: "", children: t('staff.dialogs.noEntity') }), entities.map((e) => (_jsx(MenuItem, { value: e.id, children: localName(e, i18n.language) }, e.id)))] }), _jsxs(Stack, { direction: "row", sx: { gap: 1.5 }, children: [_jsxs(TextField, { select: true, label: t('staff.profile.fields.department'), value: department, onChange: (e) => (setDepartment(e.target.value), setPosition('')), fullWidth: true, slotProps: { select: { displayEmpty: true }, inputLabel: { shrink: true } }, children: [_jsx(MenuItem, { value: "", children: t('staff.dialogs.noDepartment') }), departments.map((d) => (_jsx(MenuItem, { value: d.id, children: i18n.language === 'ar' ? d.nameAr : d.nameEn }, d.id)))] }), _jsxs(TextField, { select: true, label: t('staff.profile.fields.position'), value: position, onChange: (e) => setPosition(e.target.value), fullWidth: true, disabled: !department, slotProps: { select: { displayEmpty: true }, inputLabel: { shrink: true } }, children: [_jsx(MenuItem, { value: "", children: t('staff.dialogs.noPosition') }), positionsOf(departments, department, i18n.language, t).map((p) => (_jsx(MenuItem, { value: p.id, children: p.label }, p.id)))] })] }), _jsx(SalaryFields, { value: salary, onChange: setSalary })] }));
-}
 export function PersonalDialog({ profile, onClose, onSaved }) {
     const { t, i18n } = useTranslation();
     const [v, setV] = useState({

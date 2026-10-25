@@ -17,7 +17,7 @@ import { HrAvatar, HrEmptyState, HrScope, hr } from '../../components/hr/Hr';
 import { useCommercialFormat } from '../commercial/ProjectsPage';
 import { useLegalEntities } from '../payroll/RunDialogs';
 import { card, wf } from '../workforce/workforceUi';
-import { HireDialog } from './StaffDialogs';
+import { AddStaffDialog } from './AddStaffDialog';
 import { BulkUpdateDialog } from './BulkUpdateDialog';
 import { daysUntil, StaffStatusBadge } from './staff';
 
@@ -284,15 +284,15 @@ export function StaffDirectoryPage({ creating = false }: { creating?: boolean } 
           </>
         )}
       </Box>
-      <HireDialog
-        open={hire}
-        departments={departments}
-        onClose={() => {
-          setHire(false);
-          if (creating) navigate('/hr/employees');
-        }}
-        onSaved={(id) => navigate(`/hr/employees/${id}`)}
-      />
+      {hire && (
+        <AddStaffDialog
+          onClose={() => {
+            setHire(false);
+            if (creating) navigate('/hr/employees');
+          }}
+          onCreated={() => setVersion((v) => v + 1)}
+        />
+      )}
       {bulk && (
         <BulkUpdateDialog
           onClose={() => setBulk(false)}

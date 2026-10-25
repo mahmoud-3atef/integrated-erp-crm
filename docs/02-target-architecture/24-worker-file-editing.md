@@ -87,3 +87,24 @@ How it works:
   5. «اعتماد وإنشاء» (`POST /workers/new`) is enabled only when every row is clean. It checks everything again, then creates all the rows or none, in one transaction.
 - **What is created:** a worker created here is marked `CreatedHere`, and its CRM id is its own id, so the sync never finds, changes or removes it. Its status is «new» until a delivery order places it.
 - **Migration:** `WorkerCreatedHere` adds the column `created_here`.
+
+## Adding employees (2026-10-25)
+
+The user asked for the same on the staff page, with an employee's own data. An employee has no sponsor and no border number. What matters is the profession (the position's job title), the nationality, the salary, the department and the position.
+
+- **Permission:** `staff.manage` (the same as the former «موظف جديد», whose dialog this replaces).
+- **Required:** each of these is required:
+  - the name;
+  - the nationality, from its list;
+  - the hire date;
+  - the commercial registration;
+  - the department;
+  - the position: one of the department's, with a free seat, counting the rows above it in the same sheet;
+  - the basic salary, above zero.
+- **Optional:** the Arabic name, the ID or iqama number (refused if another current employee holds it, or if it is repeated in the sheet), the probation days (90 by default, 0 to 180), the allowances, the mobile number and the email.
+- **The template:** drop-down lists for the nationality, the registration, the department and the job title. Its hidden «القوائم» sheet lists each department's positions with their free seats.
+- **The flow:** the same as for workers:
+  1. Read the sheet and check it (`/api/v1/staff/employees/new/read`).
+  2. Fix the rows in the table, or in the sheet uploaded again (`…/new/check`).
+  3. «اعتماد وإنشاء» (`POST …/employees/new`) creates all the rows or none.
+- **Numbers:** they follow the «staff» sequence (Settings › Numbering), skipping any number already held.

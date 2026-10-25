@@ -692,6 +692,8 @@ public static class StaffErrors
     public static readonly Error ActionNotEditable = Error.Conflict("staff_action_not_editable", "Only a draft or returned action can be sent.");
     public static readonly Error ActionOpen = Error.Conflict("staff_action_open", "The employee already has an action in approval.");
     public static readonly Error Iban = Error.Validation("staff_iban", "The IBAN is not valid: a Saudi IBAN is SA and 22 digits.");
+    public static readonly Error Sheet = Error.Validation("staff_sheet", "Upload the new employees' sheet (the template, with at least one row).");
+    public static readonly Error TooManyRows = Error.Validation("staff_too_many_rows", "Add between 1 and 500 employees at a time.");
     public static readonly Error SalaryDate = Error.Validation("staff_salary_date", "A salary change takes effect after the current salary's date.");
 }
 

@@ -618,7 +618,9 @@
     "validation_workforce_salary_change_fields": "Give a new salary different from the current one (no part below zero) and a reason of 1000 characters at most.",
     "validation_workforce_salary_change_open": "This worker already has a salary change in approval.",
     "validation_workforce_sheet": "Upload the new workers' sheet (the template, with at least one row).",
-    "validation_workforce_too_many_rows": "Add between 1 and 500 workers at a time."
+    "validation_workforce_too_many_rows": "Add between 1 and 500 workers at a time.",
+    "validation_staff_sheet": "Upload the new employees' sheet (the template, with at least one row).",
+    "validation_staff_too_many_rows": "Add between 1 and 500 employees at a time."
   },
   "menu": {
     "label": "Main menu",
@@ -3854,6 +3856,48 @@
         "bad_iban": "The IBAN is not valid.",
         "bad_date": "The date is not valid (write 2026-10-01).",
         "too_long": "The value is longer than allowed."
+      }
+    },
+    "create": {
+      "title": "Add employees",
+      "one": "One employee",
+      "sheet": "Many from Excel",
+      "save": "Add the employee",
+      "numberHint": "The employee gets the next employee number (expected {{number}}) on save.",
+      "step1Hint": "The template has drop-down lists for the nationality, registration, department and position; pick from them instead of typing. The hidden «القوائم» sheet shows each department's positions and free seats.",
+      "positionLabel": "{{title}} ({{free}} free)",
+      "typed": "The typed value «{{value}}» is not in the list; pick from the list.",
+      "done": "{{count}} employees added.",
+      "fields": {
+        "nameEn": "Name in English",
+        "nameAr": "Name in Arabic",
+        "nationality": "Nationality",
+        "idNumber": "ID / iqama number",
+        "hireDate": "Hire date",
+        "probationDays": "Probation days",
+        "legalEntity": "Commercial registration",
+        "department": "Department",
+        "position": "Position (job title)",
+        "basic": "Basic salary",
+        "housing": "Housing allowance",
+        "food": "Food allowance",
+        "transport": "Transport allowance",
+        "mobile": "Mobile allowance",
+        "project": "Fixed / project allowance",
+        "other": "Other allowances",
+        "mobileNumber": "Mobile",
+        "email": "Email"
+      },
+      "issues": {
+        "required": "required",
+        "unknown": "not in the list",
+        "too_long": "too long",
+        "taken": "already belongs to another employee",
+        "duplicate": "repeated in the sheet",
+        "amount": "invalid value",
+        "full": "no free seat in this position",
+        "other_department": "the position belongs to another department",
+        "invalid": "not valid"
       }
     }
   },

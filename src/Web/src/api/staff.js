@@ -12,6 +12,15 @@ const qs = (q) => {
     return p.toString();
 };
 export const staffApi = {
+    newOptions: () => request('GET', `${base}/employees/new/options`),
+    newTemplateUrl: `${base}/employees/new/template`,
+    readNew: (file) => {
+        const form = new FormData();
+        form.append('file', file);
+        return upload(`${base}/employees/new/read`, form);
+    },
+    checkNew: (rows) => request('POST', `${base}/employees/new/check`, rows),
+    createNew: (rows) => request('POST', `${base}/employees/new`, rows),
     employees: (q) => request('GET', `${base}/employees?${qs(q)}`),
     kpis: () => request('GET', `${base}/employees/kpis`),
     userLinks: () => request('GET', `${base}/user-links`),

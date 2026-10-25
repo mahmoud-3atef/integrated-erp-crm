@@ -28,6 +28,7 @@ public sealed class StaffModule : IModule
     {
         services.AddModuleDbContext<StaffDbContext>(configuration, StaffDbContext.SchemaName);
         services.AddScoped<StaffService>();
+        services.AddScoped<StaffCreateService>();
         services.AddScoped<StructureService>();
         services.AddScoped<StaffQueries>();
         services.AddScoped<StaffDirectory>();
