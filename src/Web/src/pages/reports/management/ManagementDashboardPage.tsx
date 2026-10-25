@@ -15,7 +15,7 @@ import { DateField } from '../../../components/DateField';
 import { LiveProvider, useFreshKey, useLiveTick } from '../../../components/live';
 import { presetRange } from '../reportKit';
 import { FinanceTab } from './FinanceTab';
-import { md, NightSky, starryPanel } from './mdKit';
+import { LightArea, md, NightSky, tabPill } from './mdKit';
 import { OverviewTab } from './OverviewTab';
 import { TasksTab } from './TasksTab';
 
@@ -82,12 +82,7 @@ export function ManagementDashboardPage() {
           gap: 1,
           alignItems: { md: 'center' },
           justifyContent: 'space-between',
-          p: '6px 8px',
           mb: 1.75,
-          borderRadius: '16px',
-          background: starryPanel,
-          border: `1px solid ${md.border}`,
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25)',
         }}
       >
         <Stack direction="row" role="tablist" aria-label={t('mgmt.sections')} sx={{ gap: 1, flexWrap: 'wrap' }}>
@@ -112,24 +107,9 @@ export function ManagementDashboardPage() {
                     setPeriod(next);
                   }
                 }}
-                sx={{
-                  gap: 0.75,
-                  minHeight: 40,
-                  ps: 0.75,
-                  pe: 1.75,
-                  borderRadius: '14px',
-                  textAlign: 'start',
-                  color: active ? '#fff' : md.text,
-                  bgcolor: active ? `color-mix(in srgb, ${x.color} 55%, transparent)` : 'rgba(255,255,255,.05)',
-                  border: `1px solid ${active ? x.color : md.border}`,
-                  backdropFilter: 'blur(10px) saturate(150%)',
-                  boxShadow: active ? `0 0 22px color-mix(in srgb, ${x.color} 45%, transparent), inset 0 1px 0 rgba(255,255,255,.2)` : 'inset 0 1px 0 rgba(255,255,255,.06)',
-                  transition: 'background-color .2s, box-shadow .2s',
-                  '&:hover': { bgcolor: active ? `color-mix(in srgb, ${x.color} 65%, transparent)` : md.glassHi },
-                  '&:focus-visible': { outline: `2px solid ${x.color}`, outlineOffset: 2 },
-                }}
+                sx={{ ...(tabPill(x.color, active) as object), textAlign: 'start' }}
               >
-                <Box aria-hidden sx={{ width: 26, height: 26, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 19 } }}>
+                <Box aria-hidden sx={{ width: 22, height: 22, display: 'grid', placeItems: 'center', color: 'inherit', '& svg': { fontSize: 19 } }}>
                   {x.icon}
                 </Box>
                 <Box>
@@ -139,13 +119,15 @@ export function ManagementDashboardPage() {
             );
           })}
         </Stack>
+        <LightArea>
         <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <DateField pickOnly label={t('mgmt.from')} value={draft[0]} onChange={(e) => setDraft(([, b]) => [e.target.value, b])} size="small" sx={{ width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } }} />
           <DateField pickOnly label={t('mgmt.to')} value={draft[1]} onChange={(e) => setDraft(([a]) => [a, e.target.value])} size="small" sx={{ width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } }} />
-          <Button variant="contained" disableElevation disabled={!valid} onClick={() => (setDefaulted(false), setPeriod(draft))} sx={{ borderRadius: '999px', px: 2.25, height: 34, bgcolor: md.glow, color: md.sky, fontWeight: 700, boxShadow: '0 0 18px rgba(45,212,191,.4)', '&:hover': { bgcolor: '#7FF0DE' } }}>
+          <Button variant="contained" disableElevation disabled={!valid} onClick={() => (setDefaulted(false), setPeriod(draft))} sx={{ borderRadius: '999px', px: 2.25, height: 36, bgcolor: '#14263D', color: '#fff', fontWeight: 700, boxShadow: 'none', '&:hover': { bgcolor: '#203B5C' } }}>
             {t('mgmt.refresh')}
           </Button>
         </Stack>
+        </LightArea>
       </Stack>
 
       <ErrorMessage messageKey={error} />

@@ -2,7 +2,6 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { Box, Button, createTheme, InputAdornment, Stack, TextField, ThemeProvider, Tooltip, Typography } from '@mui/material';
-import { keyframes } from '@emotion/react';
 import { createContext, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCountUp } from '../../../components/charts';
@@ -89,6 +88,29 @@ function stars(count, seed, bright = false) {
 export const starryPanel = `${stars(8, 41, true)}, ${stars(60, 7)}, ${md.panel}`;
 /** The white tables keep a light theme for their search field, menus and buttons. */
 const light = (outer) => createTheme(outer, { palette: { mode: 'light', text: { primary: mdLight.text, secondary: mdLight.muted }, background: { paper: '#fff' }, divider: mdLight.border } });
+/** A part of the white page that is not a dark panel (the period's fields and button): the light theme. */
+export function LightArea({ children }) {
+    return _jsx(ThemeProvider, { theme: light, children: children });
+}
+/**
+ * A tab as a coloured pill under its name (the user's request, 2026-10-25): its own colour, deepened so white reads on
+ * it; the chosen one gold with navy text.
+ */
+export function tabPill(color, active) {
+    return {
+        gap: 0.75,
+        minHeight: 38,
+        px: 1.75,
+        borderRadius: '12px',
+        fontWeight: 700,
+        color: active ? '#14263D' : '#fff',
+        bgcolor: active ? '#C5A059' : `color-mix(in srgb, ${color} 72%, #0B2C47)`,
+        boxShadow: active ? '0 4px 14px rgba(197,160,89,.45)' : '0 2px 6px rgba(11,44,71,.18)',
+        transition: 'background-color .2s, box-shadow .2s, transform .15s',
+        '&:hover': { transform: 'translateY(-1px)', bgcolor: active ? '#D2B06D' : `color-mix(in srgb, ${color} 85%, #0B2C47)` },
+        '&:focus-visible': { outline: '2px solid #C5A059', outlineOffset: 2 },
+    };
+}
 /** The page's own dark theme, so fields, menus, dialogs and tooltips inside it read on the sky. */
 const night = (outer) => createTheme(outer, {
     palette: {
@@ -155,22 +177,17 @@ export function Rolling({ value, decimals = 0 }) {
     const shown = useCountUp(Math.round(value * scale)) / scale;
     return _jsx(_Fragment, { children: new Intl.NumberFormat('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(shown) });
 }
-const drift = keyframes `0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-18px, 14px); }`;
 /**
  * The six cards' strip (the user's trial, 2026-10-22): a navy gradient with slow glows, as the home page's, and the
  * cards on it as translucent glass.
  */
 export function GlassStrip({ children }) {
-    return (_jsxs(Box, { sx: {
+    return (_jsx(Box, { sx: {
             position: 'relative',
             overflow: 'hidden',
             borderRadius: '20px',
-            p: { xs: 1.5, md: '6px 16px 16px' },
-            background: `linear-gradient(125deg, rgba(27,110,143,.28) 0%, rgba(255,255,255,.04) 55%, rgba(45,212,191,.16) 100%), ${starryPanel}`,
-            color: md.ink,
-            border: `1px solid ${md.border}`,
-            boxShadow: '0 14px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08)',
-        }, children: [_jsx(Box, { "aria-hidden": true, sx: { position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -170, insetInlineEnd: -60, background: 'radial-gradient(circle, rgba(45,212,191,.22), transparent 70%)', animation: `${drift} 9s ease-in-out infinite` } }), _jsx(Box, { "aria-hidden": true, sx: { position: 'absolute', width: 260, height: 260, borderRadius: '50%', bottom: -150, insetInlineStart: '28%', background: 'radial-gradient(circle, rgba(56,189,248,.16), transparent 70%)', animation: `${drift} 12s ease-in-out infinite reverse` } }), _jsx(Box, { sx: { position: 'relative' }, children: children })] }));
+            p: 0,
+        }, children: _jsx(Box, { sx: { position: 'relative' }, children: children }) }));
 }
 /**
  * One of the six cards: its colour's line on top, a round icon standing out of its corner, a foot. `glass`: a
@@ -184,17 +201,16 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass 
             cursor: onClick ? 'pointer' : 'default',
             p: 0,
             mt: '14px',
-            background: glass ? 'rgba(255,255,255,.08)' : md.glass,
-            border: `1px solid ${glass ? 'rgba(255,255,255,.18)' : md.border}`,
+            background: glass ? starryPanel : md.panel,
+            border: `1px solid ${md.border}`,
             borderRadius: '16px',
-            backdropFilter: 'blur(12px) saturate(140%)',
             color: md.ink,
             boxShadow: `inset 0 3px 0 ${color}, inset 0 1px 0 rgba(255,255,255,.12), 0 10px 26px rgba(0,0,0,.25)`,
             display: 'flex',
             flexDirection: 'column',
             minWidth: 0,
             transition: 'transform .15s, box-shadow .15s',
-            '&:hover': onClick ? { transform: 'translateY(-2px)', bgcolor: md.glassHi } : { bgcolor: md.glassHi },
+            '&:hover': onClick ? { transform: 'translateY(-2px)', filter: 'brightness(1.12)' } : { filter: 'brightness(1.12)' },
             '&:focus-visible': { outline: `2px solid ${color}`, outlineOffset: 2 },
         }, children: [_jsx(Box, { "aria-hidden": true, sx: {
                     position: 'absolute',

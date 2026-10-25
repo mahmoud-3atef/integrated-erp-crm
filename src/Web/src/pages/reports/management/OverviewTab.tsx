@@ -17,7 +17,7 @@ import type { Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
 import { ArrivalsPane } from './ArrivalsPane';
-import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column, mdLight } from './mdKit';
+import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, tabPill, Unknown, useNumbers, VisualCard, type Column, mdLight } from './mdKit';
 
 type Inner = 'delivery' | 'housing' | 'arrivals';
 
@@ -63,25 +63,16 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
       </Box>
       </GlassStrip>
 
-      <Box sx={{ bgcolor: md.glass, border: `1px solid ${md.border}`, borderRadius: '18px', boxShadow: '0 1px 2px rgba(10,60,88,.05), 0 10px 26px rgba(10,60,88,.07)', p: { xs: 1.5, md: '14px' }, minWidth: 0 }}>
-        <Stack direction="row" role="tablist" sx={{ gap: 3, borderBottom: `1px solid ${md.border}`, mb: 2, px: 1, overflowX: 'auto' }}>
+      {/* On the white page (2026-10-25): the sub-tabs as coloured pills, the chosen one gold; only the cards are dark. */}
+      <Box sx={{ minWidth: 0 }}>
+        <Stack direction="row" role="tablist" sx={{ gap: 1, mb: 2, overflowX: 'auto', pb: 0.5 }}>
           {(['delivery', 'housing', 'arrivals'] as Inner[]).map((key) => (
             <ButtonBase
               key={key}
               role="tab"
               aria-selected={inner === key}
               onClick={() => setInner(key)}
-              sx={{
-                font: 'inherit',
-                fontSize: 14,
-                fontWeight: 700,
-                pt: 0.75,
-                pb: 1.5,
-                px: 0.25,
-                whiteSpace: 'nowrap',
-                color: inner === key ? md.navy : md.muted,
-                boxShadow: inner === key ? `inset 0 -3px 0 ${md.navy}` : 'none',
-              }}
+              sx={{ ...(tabPill({ delivery: md.teal, housing: md.brown, arrivals: md.blue }[key], inner === key) as object), font: 'inherit', fontSize: 13.5, whiteSpace: 'nowrap' }}
             >
               {t(`mgmt.inner.${key}`)}
             </ButtonBase>

@@ -15,7 +15,7 @@ import { DateField } from '../../../components/DateField';
 import { LiveProvider, useFreshKey, useLiveTick } from '../../../components/live';
 import { presetRange } from '../reportKit';
 import { FinanceTab } from './FinanceTab';
-import { md, NightSky, starryPanel } from './mdKit';
+import { LightArea, md, NightSky, tabPill } from './mdKit';
 import { OverviewTab } from './OverviewTab';
 import { TasksTab } from './TasksTab';
 // As the old page did, finance (and housing) open from the first month the reports read invoices (Reports:FinanceFrom)
@@ -72,12 +72,7 @@ export function ManagementDashboardPage() {
                     gap: 1,
                     alignItems: { md: 'center' },
                     justifyContent: 'space-between',
-                    p: '6px 8px',
                     mb: 1.75,
-                    borderRadius: '16px',
-                    background: starryPanel,
-                    border: `1px solid ${md.border}`,
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25)',
                 }, children: [_jsx(Stack, { direction: "row", role: "tablist", "aria-label": t('mgmt.sections'), sx: { gap: 1, flexWrap: 'wrap' }, children: shown.map((x) => {
                             const active = tab === x.key;
                             return (_jsxs(ButtonBase, { role: "tab", "aria-selected": active, onClick: () => {
@@ -93,21 +88,6 @@ export function ManagementDashboardPage() {
                                         setDraft(next);
                                         setPeriod(next);
                                     }
-                                }, sx: {
-                                    gap: 0.75,
-                                    minHeight: 40,
-                                    ps: 0.75,
-                                    pe: 1.75,
-                                    borderRadius: '14px',
-                                    textAlign: 'start',
-                                    color: active ? '#fff' : md.text,
-                                    bgcolor: active ? `color-mix(in srgb, ${x.color} 55%, transparent)` : 'rgba(255,255,255,.05)',
-                                    border: `1px solid ${active ? x.color : md.border}`,
-                                    backdropFilter: 'blur(10px) saturate(150%)',
-                                    boxShadow: active ? `0 0 22px color-mix(in srgb, ${x.color} 45%, transparent), inset 0 1px 0 rgba(255,255,255,.2)` : 'inset 0 1px 0 rgba(255,255,255,.06)',
-                                    transition: 'background-color .2s, box-shadow .2s',
-                                    '&:hover': { bgcolor: active ? `color-mix(in srgb, ${x.color} 65%, transparent)` : md.glassHi },
-                                    '&:focus-visible': { outline: `2px solid ${x.color}`, outlineOffset: 2 },
-                                }, children: [_jsx(Box, { "aria-hidden": true, sx: { width: 26, height: 26, display: 'grid', placeItems: 'center', color: active ? '#fff' : x.color, '& svg': { fontSize: 19 } }, children: x.icon }), _jsx(Box, { children: _jsx(Typography, { title: t(`mgmt.tab.${x.key}Hint`), sx: { fontSize: 13.5, fontWeight: 700, lineHeight: 1.3 }, children: t(`mgmt.tab.${x.key}`) }) })] }, x.key));
-                        }) }), _jsxs(Stack, { direction: "row", sx: { gap: 1, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx(DateField, { pickOnly: true, label: t('mgmt.from'), value: draft[0], onChange: (e) => setDraft(([, b]) => [e.target.value, b]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(DateField, { pickOnly: true, label: t('mgmt.to'), value: draft[1], onChange: (e) => setDraft(([a]) => [a, e.target.value]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(Button, { variant: "contained", disableElevation: true, disabled: !valid, onClick: () => (setDefaulted(false), setPeriod(draft)), sx: { borderRadius: '999px', px: 2.25, height: 34, bgcolor: md.glow, color: md.sky, fontWeight: 700, boxShadow: '0 0 18px rgba(45,212,191,.4)', '&:hover': { bgcolor: '#7FF0DE' } }, children: t('mgmt.refresh') })] })] }), _jsx(ErrorMessage, { messageKey: error }), _jsxs(LiveProvider, { tick: tick, children: [tab === 'overview' && _jsx(OverviewTab, { from: period[0], to: period[1], overview: overview }), tab === 'finance' && finance && _jsx(FinanceTab, { from: period[0], to: period[1], overview: overview }), tab === 'tasks' && _jsx(TasksTab, { from: period[0], to: period[1] })] })] }));
+                                }, sx: { ...tabPill(x.color, active), textAlign: 'start' }, children: [_jsx(Box, { "aria-hidden": true, sx: { width: 22, height: 22, display: 'grid', placeItems: 'center', color: 'inherit', '& svg': { fontSize: 19 } }, children: x.icon }), _jsx(Box, { children: _jsx(Typography, { title: t(`mgmt.tab.${x.key}Hint`), sx: { fontSize: 13.5, fontWeight: 700, lineHeight: 1.3 }, children: t(`mgmt.tab.${x.key}`) }) })] }, x.key));
+                        }) }), _jsx(LightArea, { children: _jsxs(Stack, { direction: "row", sx: { gap: 1, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx(DateField, { pickOnly: true, label: t('mgmt.from'), value: draft[0], onChange: (e) => setDraft(([, b]) => [e.target.value, b]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(DateField, { pickOnly: true, label: t('mgmt.to'), value: draft[1], onChange: (e) => setDraft(([a]) => [a, e.target.value]), size: "small", sx: { width: 160, '& .MuiOutlinedInput-root': { borderRadius: '999px' } } }), _jsx(Button, { variant: "contained", disableElevation: true, disabled: !valid, onClick: () => (setDefaulted(false), setPeriod(draft)), sx: { borderRadius: '999px', px: 2.25, height: 36, bgcolor: '#14263D', color: '#fff', fontWeight: 700, boxShadow: 'none', '&:hover': { bgcolor: '#203B5C' } }, children: t('mgmt.refresh') })] }) })] }), _jsx(ErrorMessage, { messageKey: error }), _jsxs(LiveProvider, { tick: tick, children: [tab === 'overview' && _jsx(OverviewTab, { from: period[0], to: period[1], overview: overview }), tab === 'finance' && finance && _jsx(FinanceTab, { from: period[0], to: period[1], overview: overview }), tab === 'tasks' && _jsx(TasksTab, { from: period[0], to: period[1] })] })] }));
 }
