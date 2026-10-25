@@ -341,24 +341,30 @@ export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onCli
 }
 
 /** A white card with a navy title (the old «overview-visual-card»). */
+/** A chart's card: white since 2026-10-25 (the user's request), its chart and legend in the white table's colours. */
 export function VisualCard({ title, hint, icon, action, children, sx }: { title: string; hint?: string; icon?: ReactNode; action?: ReactNode; children: ReactNode; sx?: SxProps<Theme> }) {
   return (
-    <Box sx={{ ...(glassCard as object), borderRadius: '16px', p: '14px 16px', minWidth: 0, ...(sx as object) }}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1.25, minWidth: 0 }}>
-        {icon && <Box sx={{ color: md.title, display: 'flex', '& svg': { fontSize: 18 } }}>{icon}</Box>}
-        <Typography component="h3" sx={{ fontSize: 14, fontWeight: 700, color: md.title }}>
-          {title}
-        </Typography>
-        {hint && <Typography sx={{ fontSize: 11.5, color: md.muted, marginInlineStart: 'auto' }}>{hint}</Typography>}
-        {action && <Box sx={{ marginInlineStart: hint ? 1 : 'auto' }}>{action}</Box>}
-      </Stack>
-      {children}
-    </Box>
+    <ThemeProvider theme={light}>
+      <OnWhite.Provider value>
+        <Box sx={{ bgcolor: '#fff', border: `1px solid ${mdLight.border}`, borderRadius: '16px', boxShadow: '0 1px 2px rgba(20,38,61,.05), 0 8px 22px rgba(20,38,61,.06)', color: mdLight.text, p: '14px 16px', minWidth: 0, ...(sx as object) }}>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1.25, minWidth: 0 }}>
+            {icon && <Box sx={{ color: mdLight.title, display: 'flex', '& svg': { fontSize: 18 } }}>{icon}</Box>}
+            <Typography component="h3" sx={{ fontSize: 14, fontWeight: 700, color: mdLight.title }}>
+              {title}
+            </Typography>
+            {hint && <Typography sx={{ fontSize: 11.5, color: mdLight.muted, marginInlineStart: 'auto' }}>{hint}</Typography>}
+            {action && <Box sx={{ marginInlineStart: hint ? 1 : 'auto' }}>{action}</Box>}
+          </Stack>
+          {children}
+        </Box>
+      </OnWhite.Provider>
+    </ThemeProvider>
   );
 }
 
 /** A pie as a ring with its legend; clicking a legend line narrows the table to it. */
 export function Donut({ items, selected, onSelect, center, size = 112, colors = slices }: { items: { key: string; label: string; value: number }[]; selected?: string | null; onSelect?: (key: string) => void; center?: ReactNode; size?: number; colors?: string[] }) {
+  const white = useOnWhite();
   const total = items.reduce((s, i) => s + i.value, 0);
   const r = 15.915;
   let offset = 0;
@@ -378,9 +384,9 @@ export function Donut({ items, selected, onSelect, center, size = 112, colors = 
               gap: 1,
               font: 'inherit',
               fontSize: 12.5,
-              color: md.text,
+              color: white ? mdLight.text : md.text,
               border: 0,
-              bgcolor: selected === item.key ? md.glassHi : 'transparent',
+              bgcolor: selected === item.key ? (white ? mdLight.hover : md.glassHi) : 'transparent',
               borderRadius: '8px',
               py: 0.6,
               px: 0.75,
@@ -392,7 +398,7 @@ export function Donut({ items, selected, onSelect, center, size = 112, colors = 
             <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.label}>
               <bdi>{item.label}</bdi>
             </Box>
-            <Box component="strong" sx={{ color: md.ink, fontVariantNumeric: 'tabular-nums' }}>
+            <Box component="strong" sx={{ color: white ? mdLight.title : md.ink, fontVariantNumeric: 'tabular-nums' }}>
               {item.value}
             </Box>
           </Box>
@@ -400,7 +406,7 @@ export function Donut({ items, selected, onSelect, center, size = 112, colors = 
       </Box>
       <Box sx={{ position: 'relative', width: size, height: size, flex: '0 0 auto' }}>
         <svg viewBox="0 0 42 42" width={size} height={size} role="img" aria-hidden>
-          <circle cx="21" cy="21" r={r} fill="none" stroke={md.track} strokeWidth="7" />
+          <circle cx="21" cy="21" r={r} fill="none" stroke={white ? mdLight.track : md.track} strokeWidth="7" />
           {total > 0 &&
             items.map((item, index) => {
               const part = (item.value / total) * 100;
@@ -429,6 +435,7 @@ export function Donut({ items, selected, onSelect, center, size = 112, colors = 
 
 /** Ranked bars (the old «server-bar-chart»): label, a thin rounded track, the count. */
 export function BarList({ items, fill = 'linear-gradient(135deg, #22B8E6 0%, #1F5FC2 100%)', selected, onSelect, max = 280 }: { items: { key: string; label: string; value: number; hint?: string }[]; fill?: string; selected?: string | null; onSelect?: (key: string) => void; max?: number }) {
+  const white = useOnWhite();
   const top = Math.max(1, ...items.map((i) => i.value));
   return (
     <Box sx={{ maxHeight: max, overflowY: 'auto', scrollbarWidth: 'thin', pe: 0.5 }}>
@@ -446,9 +453,9 @@ export function BarList({ items, fill = 'linear-gradient(135deg, #22B8E6 0%, #1F
             gap: 1.25,
             font: 'inherit',
             fontSize: 12.5,
-            color: md.text,
+            color: white ? mdLight.text : md.text,
             border: 0,
-            bgcolor: selected === item.key ? md.glassHi : 'transparent',
+            bgcolor: selected === item.key ? (white ? mdLight.hover : md.glassHi) : 'transparent',
             borderRadius: '8px',
             py: 0.7,
             px: 0.75,
@@ -459,10 +466,10 @@ export function BarList({ items, fill = 'linear-gradient(135deg, #22B8E6 0%, #1F
           <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.label}>
             <bdi>{item.label}</bdi>
           </Box>
-          <Box sx={{ height: 8, borderRadius: 999, bgcolor: md.track, overflow: 'hidden' }}>
+          <Box sx={{ height: 8, borderRadius: 999, bgcolor: white ? mdLight.track : md.track, overflow: 'hidden' }}>
             <Box sx={{ height: '100%', width: `${(item.value / top) * 100}%`, borderRadius: 999, background: fill, marginInlineStart: 'auto' }} />
           </Box>
-          <Box component="strong" sx={{ color: md.ink, fontVariantNumeric: 'tabular-nums', textAlign: 'end' }}>
+          <Box component="strong" sx={{ color: white ? mdLight.title : md.ink, fontVariantNumeric: 'tabular-nums', textAlign: 'end' }}>
             {item.value}
           </Box>
         </Box>

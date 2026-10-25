@@ -144,7 +144,7 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
 
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0,1fr))' } }}>
         <VisualCard title={t('mgmt.arrivals.bySupplier')} icon={<LocalShippingOutlinedIcon />} hint={t('mgmt.arrivals.clickToFilter')}>
-          <Stack direction="row" sx={{ gap: 1.5, fontSize: 11.5, color: md.muted, mb: 1, flexWrap: 'wrap' }}>
+          <Stack direction="row" sx={{ gap: 1.5, fontSize: 11.5, color: mdLight.muted, mb: 1, flexWrap: 'wrap' }}>
             {(['working', 'housing', 'vacation'] as ArrivalStatus[]).map((s) => (
               <span key={s}>
                 <Box component="span" sx={{ color: statusLook[s].color }}>■</Box> {t(`mgmt.arrivals.status.${s}`)}
@@ -156,19 +156,19 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
               <ButtonBase
                 key={s.supplier}
                 onClick={() => setFilter((x) => ({ supplier: x.supplier === s.supplier ? undefined : s.supplier }))}
-                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 120px) minmax(0,1fr) 36px 58px', gap: 1, alignItems: 'center', p: 0.6, borderRadius: '8px', textAlign: 'start', bgcolor: filter.supplier === s.supplier ? md.glassHi : 'transparent' }}
+                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 120px) minmax(0,1fr) 36px 58px', gap: 1, alignItems: 'center', p: 0.6, borderRadius: '8px', textAlign: 'start', bgcolor: filter.supplier === s.supplier ? mdLight.hover : 'transparent' }}
               >
-                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <bdi>{s.supplier === '—' ? t('mgmt.arrivals.noSupplier') : s.supplier}</bdi>
                 </Typography>
-                <Stack direction="row" sx={{ height: 10, borderRadius: 999, overflow: 'hidden', bgcolor: md.track, width: `${(s.total / supplierTop) * 100}%`, minWidth: 8 }}>
+                <Stack direction="row" sx={{ height: 10, borderRadius: 999, overflow: 'hidden', bgcolor: mdLight.track, width: `${(s.total / supplierTop) * 100}%`, minWidth: 8 }}>
                   <Box sx={{ flex: s.working, bgcolor: statusLook.working.color }} />
                   <Box sx={{ flex: s.housing, bgcolor: statusLook.housing.color }} />
                   <Box sx={{ flex: s.vacation, bgcolor: statusLook.vacation.color }} />
-                  <Box sx={{ flex: s.other, bgcolor: 'rgba(255,255,255,.28)' }} />
+                  <Box sx={{ flex: s.other, bgcolor: '#CBD5E1' }} />
                 </Stack>
-                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, textAlign: 'end' }}>{s.total}</Typography>
-                <Typography sx={{ fontSize: 11, color: md.teal, fontWeight: 700 }}>{t('mgmt.arrivals.workPct', { rate: f.n(s.workShare) })}</Typography>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title, textAlign: 'end' }}>{s.total}</Typography>
+                <Typography sx={{ fontSize: 11, color: '#0E7C86', fontWeight: 700 }}>{t('mgmt.arrivals.workPct', { rate: f.n(s.workShare) })}</Typography>
               </ButtonBase>
             ))}
           </Stack>
@@ -176,29 +176,29 @@ export function ArrivalsPane({ from, to }: { from: string; to: string }) {
         <VisualCard title={t('mgmt.arrivals.statuses')} hint={t('mgmt.arrivals.clickToFilter')}>
           <Donut
             items={data.byStatus.map((s) => ({ key: s.key, label: t(`mgmt.arrivals.status.${s.key}`), value: s.count }))}
-            colors={data.byStatus.map((s) => statusLook[s.key as ArrivalStatus]?.color ?? md.muted)}
+            colors={data.byStatus.map((s) => statusLook[s.key as ArrivalStatus]?.color ?? mdLight.muted)}
             selected={filter.status}
             onSelect={(key) => setFilter((x) => ({ status: x.status === key ? undefined : (key as ArrivalStatus) }))}
             center={
               <Box>
-                <Typography sx={{ fontSize: 20, fontWeight: 700, color: md.title, lineHeight: 1 }}>{f.n(data.total)}</Typography>
-                <Typography sx={{ fontSize: 10.5, color: md.muted }}>{t('mgmt.unit.worker')}</Typography>
+                <Typography sx={{ fontSize: 20, fontWeight: 700, color: mdLight.title, lineHeight: 1 }}>{f.n(data.total)}</Typography>
+                <Typography sx={{ fontSize: 10.5, color: mdLight.muted }}>{t('mgmt.unit.worker')}</Typography>
               </Box>
             }
           />
-          <Typography component="h4" sx={{ fontSize: 13, fontWeight: 700, color: md.title, mt: 1.5, mb: 0.75 }}>
+          <Typography component="h4" sx={{ fontSize: 13, fontWeight: 700, color: mdLight.title, mt: 1.5, mb: 0.75 }}>
             {t('mgmt.arrivals.byMonth')}
           </Typography>
           <Stack sx={{ gap: 0.5 }}>
             {data.byMonth.map((m) => (
               <Box key={m.month} sx={{ display: 'grid', gridTemplateColumns: '64px minmax(0,1fr) 40px', gap: 1, alignItems: 'center' }}>
-                <Typography sx={{ fontSize: 12, color: md.text }}>
+                <Typography sx={{ fontSize: 12, color: mdLight.text }}>
                   <bdi>{m.month}</bdi>
                 </Typography>
-                <Box sx={{ height: 7, borderRadius: 999, bgcolor: md.track }}>
+                <Box sx={{ height: 7, borderRadius: 999, bgcolor: mdLight.track }}>
                   <Box sx={{ height: '100%', width: `${(m.count / monthTop) * 100}%`, borderRadius: 999, background: 'linear-gradient(135deg, #22B8E6 0%, #1F5FC2 100%)' }} />
                 </Box>
-                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: md.ink, textAlign: 'end' }}>{m.count}</Typography>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: mdLight.title, textAlign: 'end' }}>{m.count}</Typography>
               </Box>
             ))}
           </Stack>

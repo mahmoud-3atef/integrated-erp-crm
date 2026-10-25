@@ -256,11 +256,13 @@ export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onCli
         }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, fontSize: 14, fontWeight: 700 }, children: [_jsx(Box, { "aria-hidden": true, sx: { width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: md.gold, color: '#072D43', '& svg': { fontSize: 20 } }, children: icon }), label] }), _jsxs(Box, { sx: { fontSize: 52, fontWeight: 700, lineHeight: 1.1, color: md.glow, textShadow: md.glowShadow, fontVariantNumeric: 'tabular-nums' }, children: [_jsx("bdi", { children: value }), _jsx(Box, { component: "small", sx: { fontSize: 16, fontWeight: 600, color: md.text, textShadow: 'none', marginInlineStart: 1 }, children: unit })] }), _jsx(Typography, { sx: { fontSize: 12, opacity: 0.82 }, children: note })] }));
 }
 /** A white card with a navy title (the old «overview-visual-card»). */
+/** A chart's card: white since 2026-10-25 (the user's request), its chart and legend in the white table's colours. */
 export function VisualCard({ title, hint, icon, action, children, sx }) {
-    return (_jsxs(Box, { sx: { ...glassCard, borderRadius: '16px', p: '14px 16px', minWidth: 0, ...sx }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, mb: 1.25, minWidth: 0 }, children: [icon && _jsx(Box, { sx: { color: md.title, display: 'flex', '& svg': { fontSize: 18 } }, children: icon }), _jsx(Typography, { component: "h3", sx: { fontSize: 14, fontWeight: 700, color: md.title }, children: title }), hint && _jsx(Typography, { sx: { fontSize: 11.5, color: md.muted, marginInlineStart: 'auto' }, children: hint }), action && _jsx(Box, { sx: { marginInlineStart: hint ? 1 : 'auto' }, children: action })] }), children] }));
+    return (_jsx(ThemeProvider, { theme: light, children: _jsx(OnWhite.Provider, { value: true, children: _jsxs(Box, { sx: { bgcolor: '#fff', border: `1px solid ${mdLight.border}`, borderRadius: '16px', boxShadow: '0 1px 2px rgba(20,38,61,.05), 0 8px 22px rgba(20,38,61,.06)', color: mdLight.text, p: '14px 16px', minWidth: 0, ...sx }, children: [_jsxs(Stack, { direction: "row", sx: { alignItems: 'center', gap: 1, mb: 1.25, minWidth: 0 }, children: [icon && _jsx(Box, { sx: { color: mdLight.title, display: 'flex', '& svg': { fontSize: 18 } }, children: icon }), _jsx(Typography, { component: "h3", sx: { fontSize: 14, fontWeight: 700, color: mdLight.title }, children: title }), hint && _jsx(Typography, { sx: { fontSize: 11.5, color: mdLight.muted, marginInlineStart: 'auto' }, children: hint }), action && _jsx(Box, { sx: { marginInlineStart: hint ? 1 : 'auto' }, children: action })] }), children] }) }) }));
 }
 /** A pie as a ring with its legend; clicking a legend line narrows the table to it. */
 export function Donut({ items, selected, onSelect, center, size = 112, colors = slices }) {
+    const white = useOnWhite();
     const total = items.reduce((s, i) => s + i.value, 0);
     const r = 15.915;
     let offset = 0;
@@ -271,15 +273,15 @@ export function Donut({ items, selected, onSelect, center, size = 112, colors = 
                         gap: 1,
                         font: 'inherit',
                         fontSize: 12.5,
-                        color: md.text,
+                        color: white ? mdLight.text : md.text,
                         border: 0,
-                        bgcolor: selected === item.key ? md.glassHi : 'transparent',
+                        bgcolor: selected === item.key ? (white ? mdLight.hover : md.glassHi) : 'transparent',
                         borderRadius: '8px',
                         py: 0.6,
                         px: 0.75,
                         cursor: onSelect ? 'pointer' : 'default',
                         textAlign: 'start',
-                    }, children: [_jsx(Box, { sx: { width: 10, height: 10, borderRadius: '3px', flex: '0 0 auto', bgcolor: colors[index % colors.length] } }), _jsx(Box, { component: "span", sx: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: item.label, children: _jsx("bdi", { children: item.label }) }), _jsx(Box, { component: "strong", sx: { color: md.ink, fontVariantNumeric: 'tabular-nums' }, children: item.value })] }, item.key))) }), _jsxs(Box, { sx: { position: 'relative', width: size, height: size, flex: '0 0 auto' }, children: [_jsxs("svg", { viewBox: "0 0 42 42", width: size, height: size, role: "img", "aria-hidden": true, children: [_jsx("circle", { cx: "21", cy: "21", r: r, fill: "none", stroke: md.track, strokeWidth: "7" }), total > 0 &&
+                    }, children: [_jsx(Box, { sx: { width: 10, height: 10, borderRadius: '3px', flex: '0 0 auto', bgcolor: colors[index % colors.length] } }), _jsx(Box, { component: "span", sx: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: item.label, children: _jsx("bdi", { children: item.label }) }), _jsx(Box, { component: "strong", sx: { color: white ? mdLight.title : md.ink, fontVariantNumeric: 'tabular-nums' }, children: item.value })] }, item.key))) }), _jsxs(Box, { sx: { position: 'relative', width: size, height: size, flex: '0 0 auto' }, children: [_jsxs("svg", { viewBox: "0 0 42 42", width: size, height: size, role: "img", "aria-hidden": true, children: [_jsx("circle", { cx: "21", cy: "21", r: r, fill: "none", stroke: white ? mdLight.track : md.track, strokeWidth: "7" }), total > 0 &&
                                 items.map((item, index) => {
                                     const part = (item.value / total) * 100;
                                     const el = (_jsx("circle", { cx: "21", cy: "21", r: r, fill: "none", stroke: colors[index % colors.length], strokeWidth: selected === item.key ? 8.5 : 7, strokeDasharray: `${part} ${100 - part}`, strokeDashoffset: 25 - offset }, item.key));
@@ -289,6 +291,7 @@ export function Donut({ items, selected, onSelect, center, size = 112, colors = 
 }
 /** Ranked bars (the old «server-bar-chart»): label, a thin rounded track, the count. */
 export function BarList({ items, fill = 'linear-gradient(135deg, #22B8E6 0%, #1F5FC2 100%)', selected, onSelect, max = 280 }) {
+    const white = useOnWhite();
     const top = Math.max(1, ...items.map((i) => i.value));
     return (_jsx(Box, { sx: { maxHeight: max, overflowY: 'auto', scrollbarWidth: 'thin', pe: 0.5 }, children: items.map((item) => (_jsxs(Box, { component: onSelect ? 'button' : 'div', type: onSelect ? 'button' : undefined, onClick: onSelect ? () => onSelect(item.key) : undefined, sx: {
                 width: '100%',
@@ -298,15 +301,15 @@ export function BarList({ items, fill = 'linear-gradient(135deg, #22B8E6 0%, #1F
                 gap: 1.25,
                 font: 'inherit',
                 fontSize: 12.5,
-                color: md.text,
+                color: white ? mdLight.text : md.text,
                 border: 0,
-                bgcolor: selected === item.key ? md.glassHi : 'transparent',
+                bgcolor: selected === item.key ? (white ? mdLight.hover : md.glassHi) : 'transparent',
                 borderRadius: '8px',
                 py: 0.7,
                 px: 0.75,
                 cursor: onSelect ? 'pointer' : 'default',
                 textAlign: 'start',
-            }, children: [_jsx(Box, { component: "span", sx: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: item.label, children: _jsx("bdi", { children: item.label }) }), _jsx(Box, { sx: { height: 8, borderRadius: 999, bgcolor: md.track, overflow: 'hidden' }, children: _jsx(Box, { sx: { height: '100%', width: `${(item.value / top) * 100}%`, borderRadius: 999, background: fill, marginInlineStart: 'auto' } }) }), _jsx(Box, { component: "strong", sx: { color: md.ink, fontVariantNumeric: 'tabular-nums', textAlign: 'end' }, children: item.value })] }, item.key))) }));
+            }, children: [_jsx(Box, { component: "span", sx: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: item.label, children: _jsx("bdi", { children: item.label }) }), _jsx(Box, { sx: { height: 8, borderRadius: 999, bgcolor: white ? mdLight.track : md.track, overflow: 'hidden' }, children: _jsx(Box, { sx: { height: '100%', width: `${(item.value / top) * 100}%`, borderRadius: 999, background: fill, marginInlineStart: 'auto' } }) }), _jsx(Box, { component: "strong", sx: { color: white ? mdLight.title : md.ink, fontVariantNumeric: 'tabular-nums', textAlign: 'end' }, children: item.value })] }, item.key))) }));
 }
 /** The old «exec-table»: a navy header, a search box, Excel, and the rows a page at a time. */
 export function DataTable({ title, badge, rows, columns, excel, empty, page = 25, filters, onRow }) {
