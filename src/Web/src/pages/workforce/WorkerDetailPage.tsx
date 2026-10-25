@@ -41,7 +41,7 @@ import { photoUrl, profileApi } from '../../api/showroom';
 import { ceoApi } from '../../api/reports';
 import { tokens } from '../../app/theme';
 import { ErrorMessage } from '../../auth/AuthLayout';
-import { FieldBox, FieldSection } from '../../components/FieldSection';
+import { FieldBox, FieldSection, InlineFields } from '../../components/FieldSection';
 import { Badge, Initials, PillTabs } from '../../components/ui';
 import { WorkerActions, periodDays } from './WorkerActions';
 import { WorkerInvoices } from './WorkerInvoices';
@@ -157,8 +157,8 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
       {/* The hero (.cp-ed-hero) and the overview (.cp-ed-summary) */}
       <Box sx={{ display: 'grid', gap: `${tokens.gap}px`, gridTemplateColumns: { xs: '1fr', lg: staff ? '1fr' : 'minmax(0, 1fr) 380px' }, mb: `${tokens.gap}px` }}>
         <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: { xs: 2, md: 2.75 } }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' } }}>
-            <Stack direction="row" sx={{ gap: 2, alignItems: 'center', flex: 1, minWidth: 0 }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} sx={{ gap: 2, alignItems: { md: 'center' }, flexWrap: 'wrap' }}>
+            <Stack direction="row" sx={{ gap: 2, alignItems: 'center', flex: '1 1 320px', minWidth: 0 }}>
               <Box sx={{ flex: '0 0 auto', borderRadius: '50%', boxShadow: `0 0 0 4px ${tokens.navy50}` }}>
                 {photo ? (
                   <Box component="img" src={photo} alt="" sx={{ display: 'block', width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center 20%' }} />
@@ -167,8 +167,8 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
                 )}
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Typography component="h1" dir="ltr" sx={{ fontSize: 22, fontWeight: 700, color: tokens.navy800, lineHeight: 1.3, textAlign: 'start', overflowWrap: 'anywhere' }}>
-                  {w.name}
+                <Typography component="h1" sx={{ fontSize: 22, fontWeight: 700, color: tokens.navy800, lineHeight: 1.3, textAlign: 'start', overflowWrap: 'break-word' }}>
+                  <bdi>{w.name}</bdi>
                 </Typography>
                 <Stack direction="row" sx={{ flexWrap: 'wrap', gap: '4px 16px', mt: 0.25, fontSize: 12.5, color: tokens.gray600, '& svg': { fontSize: 15, color: tokens.navy400, verticalAlign: 'middle', marginInlineEnd: 0.4 } }}>
                   <span>
@@ -227,7 +227,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
             <Typography sx={{ mt: 1, fontSize: 12, color: tokens.gray500 }}>{t('workforce.fromLedger', { status: (ar ? w.crmStatusAr : w.crmStatusEn) ?? '—' })}</Typography>
           )}
 
-          <Box component="dl" sx={{ m: 0, mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.25 }}>
+          <Box component="dl" sx={{ m: 0, mt: 1.75, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' }, gap: 1 }}>
             {working && (
               <Fact wide icon={<AccountTreeOutlinedIcon />} label={t('workforce.currentProject')}>
                 {w.projectName ?? '—'}
@@ -283,6 +283,7 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
         )}
       </Box>
 
+      <InlineFields.Provider value>
       <Box sx={{ bgcolor: '#fff', borderRadius: `${tokens.radiusLg}px`, boxShadow: tokens.shadowSm, p: 2.5 }}>
         <PillTabs<Tab>
           value={tab}
@@ -423,19 +424,21 @@ export function WorkerDetailPage({ kind }: { kind: WorkerKind }) {
           {t('workforce.readOnly')}
         </Stack>
       </Box>
+      </InlineFields.Provider>
       {acting && <ActionDialog workerId={w.id} onClose={() => setActing(false)} onSent={() => setSent((n) => n + 1)} />}
     </Box>
   );
 }
 
+/** One fact of the hero on one line: the icon and its name, then the value (the user's request of 2026-10-25, a shorter header). */
 function Fact({ icon, label, children, wide }: { icon: ReactNode; label: string; children: ReactNode; wide?: boolean }) {
   return (
-    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, p: '10px 14px', borderRadius: `${tokens.radius}px`, bgcolor: wide ? tokens.navy50 : tokens.gray50, minWidth: 0 }}>
-      <Typography component="dt" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 12, color: tokens.gray500, mb: 0.25, '& svg': { fontSize: 16, color: tokens.navy400 } }}>
+    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, display: 'flex', alignItems: 'baseline', gap: 1, p: '7px 12px', borderRadius: `${tokens.radius}px`, bgcolor: wide ? tokens.navy50 : tokens.gray50, minWidth: 0 }}>
+      <Typography component="dt" sx={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', alignSelf: 'center', gap: 0.75, fontSize: 12, color: tokens.gray500, whiteSpace: 'nowrap', '& svg': { fontSize: 16, color: tokens.navy400 } }}>
         {icon}
         {label}
       </Typography>
-      <Box component="dd" sx={{ m: 0, fontSize: wide ? 15 : 14, fontWeight: 600, color: tokens.navy800, overflowWrap: 'anywhere' }}>
+      <Box component="dd" sx={{ m: 0, flex: 1, minWidth: 0, fontSize: wide ? 14.5 : 13.5, fontWeight: 600, color: tokens.navy800, overflowWrap: 'anywhere' }}>
         {children}
       </Box>
     </Box>

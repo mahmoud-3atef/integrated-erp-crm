@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { Box, Typography } from '@mui/material';
+import { createContext, useContext } from 'react';
 import { tokens } from '../app/theme';
 const sectionTones = {
     teal: { border: tokens.teal, icon: tokens.navy700, soft: tokens.navy50 },
@@ -13,19 +14,28 @@ const sectionTones = {
  */
 export function FieldSection({ title, icon, tone = 'teal', columns = 2, children }) {
     const look = sectionTones[tone];
-    return (_jsxs(Box, { component: "fieldset", sx: { m: 0, minWidth: 0, border: `1.5px solid ${look.border}`, borderRadius: `${tokens.radiusLg}px`, p: '20px 18px 14px', bgcolor: '#fff' }, children: [_jsxs(Box, { component: "legend", sx: { display: 'flex', alignItems: 'center', gap: 1, px: 1, mx: 0.5 }, children: [_jsx(Box, { "aria-hidden": true, sx: { display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: '8px', bgcolor: look.icon, color: '#fff', '& svg': { fontSize: 17 } }, children: icon }), _jsx(Typography, { component: "span", sx: { fontWeight: 800, fontSize: 14.5, color: tokens.navy800 }, children: title })] }), _jsx(Box, { sx: { display: 'grid', gridTemplateColumns: { xs: '1fr', md: columns === 2 ? '1fr 1fr' : '1fr' }, gap: '14px 18px' }, children: children })] }));
+    const inline = useContext(InlineFields);
+    return (_jsxs(Box, { component: "fieldset", sx: { m: 0, minWidth: 0, border: `1.5px solid ${look.border}`, borderRadius: `${tokens.radiusLg}px`, p: '20px 18px 14px', bgcolor: '#fff' }, children: [_jsxs(Box, { component: "legend", sx: { display: 'flex', alignItems: 'center', gap: 1, px: 1, mx: 0.5 }, children: [_jsx(Box, { "aria-hidden": true, sx: { display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: '8px', bgcolor: look.icon, color: '#fff', '& svg': { fontSize: 17 } }, children: icon }), _jsx(Typography, { component: "span", sx: { fontWeight: 800, fontSize: 14.5, color: tokens.navy800 }, children: title })] }), _jsx(Box, { sx: { display: 'grid', gridTemplateColumns: inline ? (columns === 2 ? 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' : '1fr') : { xs: '1fr', md: columns === 2 ? '1fr 1fr' : '1fr' }, gap: inline ? '10px 18px' : '14px 18px' }, children: children })] }));
 }
+/**
+ * Inside, every field shows its label beside its value instead of above it (the worker file, the user's request of
+ * 2026-10-25: «اسم الحقل جمب القيمة … عشان نقلل المسافات»). Other pages keep the label above.
+ */
+export const InlineFields = createContext(false);
 /**
  * One field as in the portal (.cp-sec-field): an icon square, a small grey label, and the value in a soft box.
  * <paramref name="wide"/> spans both columns; <paramref name="highlight"/> is for totals (larger, tinted).
  */
 export function FieldBox({ label, icon, children, wide, highlight, multiline, required, input }) {
-    return (_jsxs(Box, { sx: { display: 'flex', gap: 1.25, alignItems: 'flex-start', gridColumn: wide ? '1 / -1' : undefined, minWidth: 0 }, children: [_jsx(Box, { "aria-hidden": true, sx: { flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 34, height: 34, mt: '18px', borderRadius: '10px', bgcolor: tokens.navy50, color: tokens.navy700, '& svg': { fontSize: 18 } }, children: icon }), _jsxs(Box, { sx: { flex: 1, minWidth: 0 }, children: [_jsxs(Typography, { component: input ? 'label' : 'p', sx: { display: 'block', fontSize: 11.5, color: '#7b8a98', fontWeight: 600, mb: 0.5 }, children: [label, required && _jsx(Box, { component: "span", sx: { color: tokens.danger }, children: " *" })] }), input ? (_jsx(Box, { sx: inputLook, children: children })) : (_jsx(Box, { sx: {
-                            minHeight: 38,
+    const inline = useContext(InlineFields);
+    return (_jsxs(Box, { sx: { display: 'flex', gap: inline ? 1 : 1.25, alignItems: inline && !multiline ? 'center' : 'flex-start', gridColumn: wide ? '1 / -1' : undefined, minWidth: 0 }, children: [_jsx(Box, { "aria-hidden": true, sx: { flex: '0 0 auto', display: 'grid', placeItems: 'center', width: inline ? 30 : 34, height: inline ? 30 : 34, mt: inline ? (multiline ? '4px' : 0) : '18px', borderRadius: '10px', bgcolor: tokens.navy50, color: tokens.navy700, '& svg': { fontSize: inline ? 16 : 18 } }, children: icon }), _jsxs(Box, { sx: inline ? { flex: 1, minWidth: 0, display: 'flex', alignItems: multiline ? 'flex-start' : 'center', gap: 1.25 } : { flex: 1, minWidth: 0 }, children: [_jsxs(Typography, { component: input ? 'label' : 'p', sx: inline ? { flex: '0 0 104px', fontSize: 12, color: '#7b8a98', fontWeight: 600, lineHeight: 1.35, mt: multiline ? 1 : 0 } : { display: 'block', fontSize: 11.5, color: '#7b8a98', fontWeight: 600, mb: 0.5 }, children: [label, required && _jsx(Box, { component: "span", sx: { color: tokens.danger }, children: " *" })] }), input ? (_jsx(Box, { sx: { ...inputLook, flex: 1, minWidth: 0 }, children: children })) : (_jsx(Box, { sx: {
+                            flex: 1,
+                            minWidth: 0,
+                            minHeight: inline ? 34 : 38,
                             display: 'flex',
                             alignItems: multiline ? 'flex-start' : 'center',
                             px: 1.5,
-                            py: 0.9,
+                            py: inline ? 0.6 : 0.9,
                             border: '1px solid #e1e8ee',
                             borderRadius: '10px',
                             bgcolor: highlight ? '#e9f7ef' : '#f6f8fa',
