@@ -134,8 +134,8 @@ export function StaffProfilePage() {
                 {name.trim().charAt(0).toUpperCase()}
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Typography component="h1" sx={{ fontSize: 22, fontWeight: 700, color: tokens.navy800, lineHeight: 1.3 }}>
-                  {name}
+                <Typography component="h1" sx={{ fontSize: 22, fontWeight: 700, color: tokens.navy800, lineHeight: 1.3, textAlign: 'start', overflowWrap: 'break-word' }}>
+                  <bdi>{name}</bdi>
                 </Typography>
                 <Stack direction="row" sx={{ gap: 2, flexWrap: 'wrap', color: tokens.gray600, fontSize: 12.5, mt: 0.25, '& svg': { fontSize: 15, color: tokens.navy400, verticalAlign: 'middle', marginInlineEnd: 0.4 } }}>
                   <span>
@@ -178,7 +178,7 @@ export function StaffProfilePage() {
               )}
             </Stack>
           </Stack>
-          <Box component="dl" sx={{ m: 0, mt: 2, display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' } }}>
+          <Box component="dl" sx={{ m: 0, mt: 1.75, display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' } }}>
             <Fact wide icon={<ApartmentOutlinedIcon />} label={t('staff.profile.department')} value={named(p.department)} />
             <Fact icon={<WorkOutlineIcon />} label={t('staff.profile.jobTitle')} value={p.jobTitle ? `${named(p.jobTitle)}${p.grade ? ` · ${p.grade}` : ''}` : '—'} />
             <Fact icon={<FlagOutlinedIcon />} label={t('staff.profile.nationality')} value={(ar ? p.nationalityAr : p.nationalityEn) ?? '—'} />
@@ -284,14 +284,15 @@ export function StaffProfilePage() {
   );
 }
 
+/** One fact of the hero on one line: the icon and its name, then the value (as the worker file, 2026-10-25). */
 function Fact({ icon, label, value, wide, warn }: { icon: ReactNode; label: string; value: ReactNode; wide?: boolean; warn?: boolean }) {
   return (
-    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, bgcolor: wide ? tokens.navy50 : tokens.gray50, borderRadius: `${tokens.radius}px`, px: 1.75, py: 1.25 }}>
-      <Typography component="dt" sx={{ fontSize: 12, color: tokens.gray500, display: 'flex', gap: 0.6, alignItems: 'center', '& svg': { fontSize: 15, color: tokens.navy400 } }}>
+    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, display: 'flex', alignItems: 'baseline', gap: 1, bgcolor: wide ? tokens.navy50 : tokens.gray50, borderRadius: `${tokens.radius}px`, p: '7px 12px', minWidth: 0 }}>
+      <Typography component="dt" sx={{ flex: '0 0 auto', alignSelf: 'center', fontSize: 12, color: tokens.gray500, display: 'flex', gap: 0.75, alignItems: 'center', whiteSpace: 'nowrap', '& svg': { fontSize: 16, color: tokens.navy400 } }}>
         {icon}
         {label}
       </Typography>
-      <Typography component="dd" sx={{ m: 0, mt: 0.4, fontWeight: 700, color: warn ? '#b45309' : tokens.navy800, fontSize: wide ? 15 : 13.5 }}>
+      <Typography component="dd" sx={{ m: 0, flex: 1, minWidth: 0, fontWeight: 700, color: warn ? '#b45309' : tokens.navy800, fontSize: wide ? 14.5 : 13.5, overflowWrap: 'anywhere' }}>
         {value}
       </Typography>
     </Box>
@@ -347,26 +348,24 @@ function Section({ title, icon, onEdit, editLabel, boxTone = 'navy', children }:
           </Button>
         </Box>
       )}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, columnGap: 2.25, rowGap: 0.25, '--field-tone': main, '--field-soft': boxTone === 'green' ? tone.greenSoft : boxTone === 'sky' ? tone.skySoft : tone.navySoft }}>{children}</Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', columnGap: 2.25, rowGap: 0.25, '--field-tone': main, '--field-soft': boxTone === 'green' ? tone.greenSoft : boxTone === 'sky' ? tone.skySoft : tone.navySoft }}>{children}</Box>
     </Box>
   );
 }
 
-/** The old screen's field: a coloured icon, the label, and the value in a quiet box. */
+/** A field on one line, as every form (2026-10-25): a coloured icon, the label beside it, then the value in a quiet box. */
 function Field({ icon, label, value, wide, unit }: { icon: ReactNode; label: string; value: ReactNode; wide?: boolean; unit?: string }) {
   return (
-    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, display: 'grid', gridTemplateColumns: '34px minmax(0, 1fr)', gap: 1.25, alignItems: 'end', py: 0.75 }}>
-      <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: 'var(--field-soft)', color: 'var(--field-tone)', display: 'grid', placeItems: 'center', '& svg': { fontSize: 17 } }}>{icon}</Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 12, color: tokens.gray500, mb: 0.6 }}>{label}</Typography>
-        <Box sx={{ border: '1px solid #dfe8ef', borderRadius: '10px', px: 1.5, py: 0.9, fontWeight: 700, color: tokens.navy800, textAlign: 'center', bgcolor: '#fbfcfd', fontSize: 13.5, fontVariantNumeric: 'tabular-nums', minHeight: 38, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {value}
-          {unit && (
-            <Box component="small" sx={{ color: tokens.gray500, fontWeight: 500, fontSize: 11, marginInlineStart: 0.5 }}>
-              {unit}
-            </Box>
-          )}
-        </Box>
+    <Box sx={{ gridColumn: wide ? '1 / -1' : undefined, display: 'flex', alignItems: 'center', gap: 1, py: 0.6, minWidth: 0 }}>
+      <Box sx={{ flex: '0 0 auto', width: 30, height: 30, borderRadius: '10px', bgcolor: 'var(--field-soft)', color: 'var(--field-tone)', display: 'grid', placeItems: 'center', '& svg': { fontSize: 16 } }}>{icon}</Box>
+      <Typography sx={{ flex: '0 0 104px', fontSize: 12, color: tokens.gray500, lineHeight: 1.35 }}>{label}</Typography>
+      <Box sx={{ flex: 1, minWidth: 0, border: '1px solid #dfe8ef', borderRadius: '10px', px: 1.5, py: 0.6, fontWeight: 700, color: tokens.navy800, bgcolor: '#fbfcfd', fontSize: 13.5, fontVariantNumeric: 'tabular-nums', minHeight: 34, display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {value}
+        {unit && (
+          <Box component="small" sx={{ color: tokens.gray500, fontWeight: 500, fontSize: 11, marginInlineStart: 0.5 }}>
+            {unit}
+          </Box>
+        )}
       </Box>
     </Box>
   );
