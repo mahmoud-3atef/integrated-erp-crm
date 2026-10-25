@@ -17,7 +17,7 @@ import type { Overview } from '../../../api/reports';
 import { ErrorMessage } from '../../../auth/AuthLayout';
 import { useFreshKey, useLive } from '../../../components/live';
 import { ArrivalsPane } from './ArrivalsPane';
-import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, tabPill, Unknown, useNumbers, VisualCard, type Column, mdLight } from './mdKit';
+import { BarList, DataTable, Donut, GlassStrip, HeroTotal, KpiCard, md, Pill, Rolling, Unknown, useNumbers, VisualCard, type Column, mdLight } from './mdKit';
 
 type Inner = 'delivery' | 'housing' | 'arrivals';
 
@@ -63,16 +63,16 @@ export function OverviewTab({ from, to, overview }: { from: string; to: string; 
       </Box>
       </GlassStrip>
 
-      {/* On the white page (2026-10-25): the sub-tabs as coloured pills, the chosen one gold; only the cards are dark. */}
+      {/* On the white page (2026-10-25): the sub-tabs on a white bar like the top one (the chosen one navy); only the cards are dark. */}
       <Box sx={{ minWidth: 0 }}>
-        <Stack direction="row" role="tablist" sx={{ gap: 1, mb: 2, overflowX: 'auto', pb: 0.5 }}>
+        <Stack direction="row" role="tablist" sx={{ display: 'inline-flex', maxWidth: '100%', bgcolor: '#fff', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(20,38,61,.06)', p: 0.5, gap: 0.5, mb: 2, overflowX: 'auto' }}>
           {(['delivery', 'housing', 'arrivals'] as Inner[]).map((key) => (
             <ButtonBase
               key={key}
               role="tab"
               aria-selected={inner === key}
               onClick={() => setInner(key)}
-              sx={{ ...(tabPill({ delivery: md.teal, housing: md.brown, arrivals: md.blue }[key], inner === key) as object), font: 'inherit', fontSize: 13.5, whiteSpace: 'nowrap' }}
+              sx={{ font: 'inherit', px: 2, py: 0.9, borderRadius: '10px', fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', color: inner === key ? '#fff' : '#4a5c6c', bgcolor: inner === key ? '#14263D' : 'transparent', '&:hover': { bgcolor: inner === key ? '#14263D' : '#F1F5F9' } }}
             >
               {t(`mgmt.inner.${key}`)}
             </ButtonBase>

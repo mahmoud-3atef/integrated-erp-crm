@@ -92,25 +92,6 @@ const light = (outer) => createTheme(outer, { palette: { mode: 'light', text: { 
 export function LightArea({ children }) {
     return _jsx(ThemeProvider, { theme: light, children: children });
 }
-/**
- * A tab as a coloured pill under its name (the user's request, 2026-10-25): its own colour, deepened so white reads on
- * it; the chosen one gold with navy text.
- */
-export function tabPill(color, active) {
-    return {
-        gap: 0.75,
-        minHeight: 38,
-        px: 1.75,
-        borderRadius: '12px',
-        fontWeight: 700,
-        color: active ? '#14263D' : '#fff',
-        bgcolor: active ? '#C5A059' : `color-mix(in srgb, ${color} 72%, #0B2C47)`,
-        boxShadow: active ? '0 4px 14px rgba(197,160,89,.45)' : '0 2px 6px rgba(11,44,71,.18)',
-        transition: 'background-color .2s, box-shadow .2s, transform .15s',
-        '&:hover': { transform: 'translateY(-1px)', bgcolor: active ? '#D2B06D' : `color-mix(in srgb, ${color} 85%, #0B2C47)` },
-        '&:focus-visible': { outline: '2px solid #C5A059', outlineOffset: 2 },
-    };
-}
 /** The page's own dark theme, so fields, menus, dialogs and tooltips inside it read on the sky. */
 const night = (outer) => createTheme(outer, {
     palette: {
