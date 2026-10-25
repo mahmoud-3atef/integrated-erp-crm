@@ -193,7 +193,7 @@ export function GlassStrip({ children }) {
  * One of the six cards: its colour's line on top, a round icon standing out of its corner, a foot. `glass`: a
  * translucent card on the navy strip, in white.
  */
-export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass }) {
+export function KpiCard({ color, icon, label, value, unit, foot, onClick }) {
     return (_jsxs(Box, { component: onClick ? 'button' : 'div', type: onClick ? 'button' : undefined, onClick: onClick, sx: {
             position: 'relative',
             textAlign: 'start',
@@ -201,7 +201,7 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass 
             cursor: onClick ? 'pointer' : 'default',
             p: 0,
             mt: '14px',
-            background: glass ? starryPanel : md.panel,
+            background: `${heroNavy}, ${md.panel}`,
             border: `1px solid ${md.border}`,
             borderRadius: '16px',
             color: md.ink,
@@ -227,10 +227,12 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass 
                     '& svg': { fontSize: 24 },
                 }, children: icon }), _jsxs(Box, { sx: { px: 2, pt: 2.25, pb: 1.25, pe: '84px', minWidth: 0, flex: 1 }, children: [_jsx(Typography, { sx: { fontSize: 12.5, color: md.label }, children: label }), _jsxs(Typography, { component: "div", sx: { fontSize: { xs: 26, md: 32 }, fontWeight: 700, color: md.glow, textShadow: md.glowShadow, lineHeight: 1.25, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }, children: [_jsx("bdi", { children: value }), unit && (_jsx(Box, { component: "small", sx: { fontSize: 12, fontWeight: 500, color: md.muted, textShadow: 'none', marginInlineStart: 0.5 }, children: unit }))] })] }), _jsx(Box, { sx: { borderTop: `1px solid ${md.border}`, px: 2, py: 1.25, fontSize: 12.5, fontWeight: 600, color: md.text }, children: foot })] }));
 }
+/** The navy glow of «عمالة باشرت مشاريع» (HeroTotal), over the night panel; the KPI cards share it (2026-10-25). */
+const heroNavy = 'radial-gradient(circle at 12% 110%, rgba(45,212,191,.22) 0, transparent 55%), radial-gradient(circle at 95% -10%, rgba(56,189,248,.18) 0, transparent 45%), linear-gradient(140deg, rgba(27,110,143,.35) 0%, rgba(255,255,255,.05) 100%)';
 /** The big card of a sub-tab: its total on a dark gradient, the number in gold (it resets the table's filter). */
 export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onClick }) {
     const background = {
-        navy: 'radial-gradient(circle at 12% 110%, rgba(45,212,191,.22) 0, transparent 55%), radial-gradient(circle at 95% -10%, rgba(56,189,248,.18) 0, transparent 45%), linear-gradient(140deg, rgba(27,110,143,.35) 0%, rgba(255,255,255,.05) 100%)',
+        navy: heroNavy,
         housing: 'radial-gradient(circle at 12% 110%, rgba(243,198,97,.22) 0, transparent 60%), linear-gradient(140deg, rgba(44,197,201,.28) 0%, rgba(255,255,255,.05) 100%)',
         blue: 'radial-gradient(circle at 12% 110%, rgba(56,189,248,.24) 0, transparent 55%), linear-gradient(140deg, rgba(31,120,200,.32) 0%, rgba(255,255,255,.05) 100%)',
     }[tone];

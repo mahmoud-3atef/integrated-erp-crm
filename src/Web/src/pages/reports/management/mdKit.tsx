@@ -227,7 +227,7 @@ export function GlassStrip({ children }: { children: ReactNode }) {
  * One of the six cards: its colour's line on top, a round icon standing out of its corner, a foot. `glass`: a
  * translucent card on the navy strip, in white.
  */
-export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass }: { color: string; icon: ReactNode; label: string; value: ReactNode; unit?: string; foot: ReactNode; onClick?: () => void; glass?: boolean }) {
+export function KpiCard({ color, icon, label, value, unit, foot, onClick }: { color: string; icon: ReactNode; label: string; value: ReactNode; unit?: string; foot: ReactNode; onClick?: () => void; glass?: boolean }) {
   return (
     <Box
       component={onClick ? 'button' : 'div'}
@@ -240,7 +240,7 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass 
         cursor: onClick ? 'pointer' : 'default',
         p: 0,
         mt: '14px',
-        background: glass ? starryPanel : md.panel,
+        background: `${heroNavy}, ${md.panel}`,
         border: `1px solid ${md.border}`,
         borderRadius: '16px',
         color: md.ink,
@@ -288,10 +288,14 @@ export function KpiCard({ color, icon, label, value, unit, foot, onClick, glass 
   );
 }
 
+/** The navy glow of «عمالة باشرت مشاريع» (HeroTotal), over the night panel; the KPI cards share it (2026-10-25). */
+const heroNavy =
+  'radial-gradient(circle at 12% 110%, rgba(45,212,191,.22) 0, transparent 55%), radial-gradient(circle at 95% -10%, rgba(56,189,248,.18) 0, transparent 45%), linear-gradient(140deg, rgba(27,110,143,.35) 0%, rgba(255,255,255,.05) 100%)';
+
 /** The big card of a sub-tab: its total on a dark gradient, the number in gold (it resets the table's filter). */
 export function HeroTotal({ icon, label, value, unit, note, tone = 'navy', onClick }: { icon: ReactNode; label: string; value: ReactNode; unit: string; note: string; tone?: 'navy' | 'housing' | 'blue'; onClick?: () => void }) {
   const background = {
-    navy: 'radial-gradient(circle at 12% 110%, rgba(45,212,191,.22) 0, transparent 55%), radial-gradient(circle at 95% -10%, rgba(56,189,248,.18) 0, transparent 45%), linear-gradient(140deg, rgba(27,110,143,.35) 0%, rgba(255,255,255,.05) 100%)',
+    navy: heroNavy,
     housing: 'radial-gradient(circle at 12% 110%, rgba(243,198,97,.22) 0, transparent 60%), linear-gradient(140deg, rgba(44,197,201,.28) 0%, rgba(255,255,255,.05) 100%)',
     blue: 'radial-gradient(circle at 12% 110%, rgba(56,189,248,.24) 0, transparent 55%), linear-gradient(140deg, rgba(31,120,200,.32) 0%, rgba(255,255,255,.05) 100%)',
   }[tone];
