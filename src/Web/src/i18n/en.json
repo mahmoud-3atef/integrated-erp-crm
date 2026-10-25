@@ -616,7 +616,9 @@
     "validation_workforce_contract": "The contract's end cannot be before its start, and its months must be above zero.",
     "validation_workforce_salary": "No salary part can be below zero.",
     "validation_workforce_salary_change_fields": "Give a new salary different from the current one (no part below zero) and a reason of 1000 characters at most.",
-    "validation_workforce_salary_change_open": "This worker already has a salary change in approval."
+    "validation_workforce_salary_change_open": "This worker already has a salary change in approval.",
+    "validation_workforce_sheet": "Upload the new workers' sheet (the template, with at least one row).",
+    "validation_workforce_too_many_rows": "Add between 1 and 500 workers at a time."
   },
   "menu": {
     "label": "Main menu",
@@ -1694,6 +1696,68 @@
         "Applied": "Applied",
         "Returned": "Returned",
         "Rejected": "Rejected"
+      }
+    },
+    "create": {
+      "title": "Add workers",
+      "one": "One worker",
+      "sheet": "Many from Excel",
+      "save": "Add the worker",
+      "numberHint": "The worker gets the old system's next number (expected {{number}}) on save. Workers added here are for testing until the old system is closed.",
+      "identityHint": "The iqama or the border number is required (at least one).",
+      "supplierCost": "Supplier cost (the worker is on a supplier's sponsorship)",
+      "step1": "1) Download and fill the template, 2) upload it to be checked, 3) fix the notes, then approve",
+      "step1Hint": "The template has drop-down lists for the nationality, profession, supplier and method; pick from them instead of typing.",
+      "template": "Download the template",
+      "upload": "Upload to check",
+      "uploadAgain": "Upload a corrected sheet",
+      "summaryOk": "All rows are clean ({{total}}). You can approve now.",
+      "summaryWrong": "{{wrong}} of {{total}} rows have notes: fix them in the table and «Check again», or fix the sheet and upload it again.",
+      "notes": "Notes",
+      "rowOk": "Clean",
+      "fixInSheet": "(fix it in the sheet)",
+      "typed": "The typed value «{{value}}» is not in the list; pick from the list.",
+      "companySponsor": "Company sponsorship",
+      "check": "Check again",
+      "fixFirst": "Fix the notes and «Check again» before approving.",
+      "approve": "Approve and create ({{count}})",
+      "done": "{{count}} workers added.",
+      "methods": {
+        "MonthlyFixed": "Monthly, fixed",
+        "ByWorkingDays": "By working days"
+      },
+      "fields": {
+        "nameEn": "Name in English",
+        "nameAr": "Name in Arabic",
+        "nationality": "Nationality",
+        "profession": "Profession",
+        "iqamaProfession": "Iqama profession",
+        "sponsor": "Supplier / sponsor",
+        "iqama": "Iqama number",
+        "iqamaExpiresOn": "Iqama expiry",
+        "borderNumber": "Border number",
+        "passport": "Passport number",
+        "arrivedOn": "Arrival date",
+        "recruitmentAgent": "Recruitment agent",
+        "agent": "Recruitment agent",
+        "basic": "Basic salary",
+        "housing": "Housing allowance",
+        "food": "Food allowance",
+        "transport": "Transport allowance",
+        "other": "Other allowances",
+        "cost": "Supplier monthly cost",
+        "method": "Cost method"
+      },
+      "issues": {
+        "required": "required",
+        "unknown": "not in the list",
+        "too_long": "too long",
+        "identity_required": "enter the iqama or the border number",
+        "taken": "already belongs to another person",
+        "duplicate": "repeated in the sheet",
+        "future": "cannot be in the future",
+        "amount": "invalid amount",
+        "cost_required": "required for a worker on a supplier's sponsorship"
       }
     }
   },

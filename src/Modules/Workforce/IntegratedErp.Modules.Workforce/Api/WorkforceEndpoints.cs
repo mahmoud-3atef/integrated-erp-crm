@@ -31,6 +31,7 @@ internal static class WorkforceEndpoints
         MapShowcase(group);
         MapCosts(group);
         MapEdits(group);
+        MapCreate(group);
 
         group.MapGet("/history/issues", async (string? code, string? search, Guid? workerId, int? page, int? pageSize, HistoryQueries queries, CancellationToken ct) =>
                 Results.Ok(await queries.IssuesAsync(code, search, workerId, page ?? 1, pageSize ?? 50, ct).ConfigureAwait(false)))
@@ -63,6 +64,38 @@ internal static class WorkforceEndpoints
                 !await SeesChangesAsync(permissions, ct).ConfigureAwait(false) ? Results.Forbid()
                 : await service.ChangeAsync(id, ct).ConfigureAwait(false) is { } change ? Results.Ok(change) : Results.NotFound())
             .RequirePermission(WorkforcePermissions.WorkersView, companyWide: true);
+    }
+
+    /// <summary>Adding workers (2026-10-25): one from the form, or many from a sheet that is read and checked before anything is created.</summary>
+    private static void MapCreate(RouteGroupBuilder group)
+    {
+        group.MapGet("/workers/new/options", async (WorkerCreateService service, CancellationToken ct) => Results.Ok(await service.OptionsAsync(ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersCreate, companyWide: true);
+        group.MapGet("/workers/new/template", async (WorkerCreateService service, CancellationToken ct) =>
+                Results.File(await service.TemplateAsync(ct).ConfigureAwait(false), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "new-workers.xlsx"))
+            .RequirePermission(WorkforcePermissions.WorkersCreate, companyWide: true);
+        group.MapPost("/workers/new/read", async (HttpRequest request, WorkerCreateService service, CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType || (await request.ReadFormAsync(ct).ConfigureAwait(false)).Files is not { Count: > 0 } files)
+                {
+                    return Results.Problem("Upload an Excel file.", statusCode: StatusCodes.Status400BadRequest, title: "validation.excel_file");
+                }
+
+                await using var stream = files[0].OpenReadStream();
+                var result = await service.ReadAsync(stream, ct).ConfigureAwait(false);
+                return result.IsSuccess ? Results.Ok(result.Value) : Http(result);
+            })
+            .DisableAntiforgery()
+            .RequirePermission(WorkforcePermissions.WorkersCreate, companyWide: true);
+        group.MapPost("/workers/new/check", async (NewWorkerInput[] rows, WorkerCreateService service, CancellationToken ct) =>
+                rows.Length is 0 or > WorkerCreateService.MaxRows ? Http(Result.Failure(WorkforceErrors.TooManyRows)) : Results.Ok(await service.CheckAsync(rows, ct).ConfigureAwait(false)))
+            .RequirePermission(WorkforcePermissions.WorkersCreate, companyWide: true);
+        group.MapPost("/workers/new", async (NewWorkerInput[] rows, WorkerCreateService service, CancellationToken ct) =>
+            {
+                var result = await service.CreateAsync(rows, ct).ConfigureAwait(false);
+                return result.IsSuccess ? Results.Ok(result.Value) : Http(result);
+            })
+            .RequirePermission(WorkforcePermissions.WorkersCreate, companyWide: true);
     }
 
     private static async Task<bool> SeesChangesAsync(IPermissionService permissions, CancellationToken ct)

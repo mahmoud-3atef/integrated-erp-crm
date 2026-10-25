@@ -1,6 +1,6 @@
 // Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). A worker's data and salary can be changed by
 // those allowed to (2026-10-25); in the parallel phase the old system's next change of the record brings its values back.
-import { request } from './auth';
+import { request, upload } from './auth';
 const base = '/api/v1/workforce';
 /** Workers and company staff are separate lists (and permissions) on the server. */
 export const kindPath = (kind) => (kind === 'Staff' ? 'staff' : 'workers');
@@ -39,6 +39,15 @@ export const workforceApi = {
         return request('GET', `${base}/history/issues?${params.toString()}`);
     },
     periods: (kind, id) => request('GET', `${base}/${kindPath(kind)}/${id}/periods`),
+    newOptions: () => request('GET', `${base}/workers/new/options`),
+    newTemplateUrl: `${base}/workers/new/template`,
+    readNew: (file) => {
+        const form = new FormData();
+        form.append('file', file);
+        return upload(`${base}/workers/new/read`, form);
+    },
+    checkNew: (rows) => request('POST', `${base}/workers/new/check`, rows),
+    createNew: (rows) => request('POST', `${base}/workers/new`, rows),
     editOptions: () => request('GET', `${base}/edit-options`),
     saveData: (id, input) => request('PUT', `${base}/workers/${id}/data`, input),
     saveSalary: (id, input) => request('PUT', `${base}/workers/${id}/salary`, input),

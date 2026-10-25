@@ -55,3 +55,35 @@ Notes:
 
 - **Migration:** `WorkerSalaryChange` adds the table `workforce.salary_change` with its row-level security policy. `Deploy-Erp.ps1` applies it.
 - **Roles:** the four new permissions are given to roles from the roles page.
+
+## Adding workers (2026-10-25)
+
+The user asked to add one worker or many. The lists are picked rather than typed, and a sheet is checked before anything is created.
+
+The user's decisions:
+- **Numbers:** new workers take the old system's series (`BSS{N:6}`), after the highest number already used. The workers added now are tests only. At the switchover, the last old number is set as the start (Settings › Numbering, sequence «الرقم الوظيفي للعمالة»), and the old system closes.
+- **Required:**
+  - the English name;
+  - the nationality and the profession (from their lists);
+  - the supplier or sponsor;
+  - the iqama number or the border number;
+  - the arrival date;
+  - for a worker not on the company's sponsorship (any sponsor other than «Care-Pro …»), the supplier's monthly cost. It becomes the worker's cost card, effective from the arrival date and not before 2025-01-01.
+
+How it works:
+- **Permission:** `workforce.workers.create` («إضافة عمالة»).
+- **Where:** a button on the workers list opens the dialog.
+- **One worker:** a form whose nationality, professions, supplier and cost method are drop-downs. The supplier's cost appears when the supplier is not the company.
+- **Many from Excel:**
+  1. Download the template (`GET /workers/new/template`). Its drop-down lists come from the system's lists, and the identity columns are text.
+  2. Upload it (`POST /workers/new/read`). Every row is checked, and nothing is created.
+  3. The table shows each wrong value on its row:
+     - a typed nationality that is not in the list, with what was typed shown;
+     - a missing cost;
+     - an iqama that belongs to someone else, or that is repeated in the sheet;
+     - a missing identity number;
+     - an arrival date in the future.
+  4. Fix it in the table and press «فحص مرة أخرى» (`POST /workers/new/check`), or fix the sheet and upload it again.
+  5. «اعتماد وإنشاء» (`POST /workers/new`) is enabled only when every row is clean. It checks everything again, then creates all the rows or none, in one transaction.
+- **What is created:** a worker created here is marked `CreatedHere`, and its CRM id is its own id, so the sync never finds, changes or removes it. Its status is «new» until a delivery order places it.
+- **Migration:** `WorkerCreatedHere` adds the column `created_here`.

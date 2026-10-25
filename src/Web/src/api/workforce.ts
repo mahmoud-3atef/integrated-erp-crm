@@ -1,6 +1,6 @@
 // Workers and staff (src/Modules/Workforce/.../Api/WorkforceEndpoints.cs). A worker's data and salary can be changed by
 // those allowed to (2026-10-25); in the parallel phase the old system's next change of the record brings its values back.
-import { request } from './auth';
+import { request, upload } from './auth';
 import type { ApprovalStatus } from './workflow';
 
 export type Placement = 'Working' | 'New' | 'Housing' | 'Vacation' | 'Suspended' | 'Exited' | 'Absconded' | 'Other' | 'Inactive';
@@ -106,6 +106,53 @@ export interface EditOption {
   nameEn: string;
 }
 
+/** One new worker (form or sheet row); the lists may hold a code or, from a sheet, the typed text. */
+export interface NewWorker {
+  nameEn: string | null;
+  nameAr: string | null;
+  nationality: string | null;
+  profession: string | null;
+  iqamaProfession: string | null;
+  sponsor: string | null;
+  iqama: string | null;
+  iqamaExpiresOn: string | null;
+  borderNumber: string | null;
+  passport: string | null;
+  arrivedOn: string | null;
+  recruitmentAgent: string | null;
+  basic: number | null;
+  housing: number | null;
+  food: number | null;
+  transport: number | null;
+  other: number | null;
+  supplierMonthlyCost: number | null;
+  costMethod: string | null;
+}
+
+export interface RowIssue {
+  field: string;
+  code: string;
+}
+
+export interface CheckedRow {
+  row: number;
+  input: NewWorker;
+  isSupplier: boolean;
+  issues: RowIssue[];
+}
+
+export interface CreateOptions {
+  nationalities: EditOption[];
+  professions: EditOption[];
+  sponsors: string[];
+  nextNumber: string;
+}
+
+export interface CreateResult {
+  created: { id: string; workerNo: string; name: string }[];
+  rows: CheckedRow[];
+}
+
 export interface SalaryChange {
   id: string;
   changeNo: string;
@@ -163,6 +210,15 @@ export const workforceApi = {
     return request<HistoryIssueList>('GET', `${base}/history/issues?${params.toString()}`);
   },
   periods: (kind: WorkerKind, id: string) => request<WorkerPeriod[]>('GET', `${base}/${kindPath(kind)}/${id}/periods`),
+  newOptions: () => request<CreateOptions>('GET', `${base}/workers/new/options`),
+  newTemplateUrl: `${base}/workers/new/template`,
+  readNew: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return upload<CheckedRow[]>(`${base}/workers/new/read`, form);
+  },
+  checkNew: (rows: NewWorker[]) => request<CheckedRow[]>('POST', `${base}/workers/new/check`, rows),
+  createNew: (rows: NewWorker[]) => request<CreateResult>('POST', `${base}/workers/new`, rows),
   editOptions: () => request<{ nationalities: EditOption[]; professions: EditOption[] }>('GET', `${base}/edit-options`),
   saveData: (id: string, input: WorkerDataInput) => request<void>('PUT', `${base}/workers/${id}/data`, input),
   saveSalary: (id: string, input: SalaryInput) => request<void>('PUT', `${base}/workers/${id}/salary`, input),

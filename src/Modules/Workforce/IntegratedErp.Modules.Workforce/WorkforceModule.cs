@@ -22,6 +22,9 @@ namespace IntegratedErp.Modules.Workforce;
 /// </summary>
 public sealed class WorkforceModule : IModule
 {
+    /// <summary>New workers' numbers: the old system's series (BSS002873…), after the highest number already used.</summary>
+    public const string WorkerSequence = "worker";
+
     /// <summary>The worker salary changes' numbers (SAL-2026-00001).</summary>
     public const string SalaryChangeSequence = "workforce_salary_change";
 
@@ -50,12 +53,13 @@ public sealed class WorkforceModule : IModule
         services.AddScoped<WorkerShowcaseService>();
         services.AddScoped<WorkerCostService>();
         services.AddScoped<WorkerEditService>();
+        services.AddScoped<WorkerCreateService>();
         services.AddScoped<IntegratedErp.Modules.Workflow.Contracts.IApprovalRecordAdapter, WorkerSalaryChangeAdapter>();
         services.AddScoped<IWorkerCosts>(sp => sp.GetRequiredService<WorkerCostService>());
         services.AddScoped<IWorkerShowcase>(sp => sp.GetRequiredService<WorkerShowcaseService>());
         services.AddReferenceLists(WorkforceReferenceLists.All);
         services.AddNumberSequences(
-            new NumberSequenceDefinition("worker", WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للعمالة", "Worker numbers", "BSS{N:6}", NumberReset.Never, InUse: false),
+            new NumberSequenceDefinition(WorkerSequence, WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "الرقم الوظيفي للعمالة", "Worker numbers", "BSS{N:6}", NumberReset.Never),
             new NumberSequenceDefinition(SalaryChangeSequence, WorkforceDbContext.SchemaName, "العمالة والموظفون", "Workforce", "طلبات تعديل رواتب العمالة", "Worker salary changes", "SAL-{YYYY}-{N:5}", NumberReset.Yearly));
         services.AddOptions<WorkforceOptions>().Bind(configuration.GetSection(WorkforceOptions.Section));
         services.AddPermissions(WorkforcePermissions.All);
@@ -77,6 +81,7 @@ internal static class WorkforcePermissions
 
     // Changing a worker's file here (2026-10-25), each part with its own permission.
     public const string WorkersEdit = "workforce.workers.edit";
+    public const string WorkersCreate = "workforce.workers.create";
     public const string WorkersSalaryEdit = "workforce.workers.salary_edit";
     public const string SalaryChangesRequest = "workforce.salary_changes.request";
     public const string SalaryChangesApprove = "workforce.salary_changes.approve";
@@ -96,6 +101,7 @@ internal static class WorkforcePermissions
         new(ProfileEdit, WorkersAr, WorkersEn, "تعديل الملف التسويقي للعامل وصوره", "Edit a worker's marketing profile and photos"),
         new(CostsView, WorkersAr, WorkersEn, "عرض تكلفة عمالة الموردين", "View the suppliers' worker costs"),
         new(CostsManage, WorkersAr, WorkersEn, "إدخال تكلفة عمالة الموردين وباقاتها", "Enter the suppliers' worker costs and packages"),
+        new(WorkersCreate, WorkersAr, WorkersEn, "إضافة عمالة (عامل واحد أو مجموعة من ملف Excel)", "Add workers (one, or many from an Excel sheet)"),
         new(WorkersEdit, WorkersAr, WorkersEn, "تعديل بيانات العامل (الهوية والوظيفة والعقد والإجازات)", "Edit a worker's data (identity, job, contract and leave)"),
         new(WorkersSalaryEdit, WorkersAr, WorkersEn, "تعديل راتب العامل مباشرة", "Edit a worker's salary directly"),
         new(SalaryChangesRequest, WorkersAr, WorkersEn, "طلب تعديل راتب عامل (يمر بالاعتماد)", "Request a worker salary change (goes through approval)"),

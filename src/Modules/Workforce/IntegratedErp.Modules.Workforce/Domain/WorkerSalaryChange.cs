@@ -123,5 +123,7 @@ public static class WorkforceErrors
     public static readonly Error Contract = Error.Validation("workforce_contract", "The contract's end cannot be before its start, and its months must be above zero.");
     public static readonly Error Salary = Error.Validation("workforce_salary", "No salary part can be below zero.");
     public static readonly Error SalaryChangeFields = Error.Validation("workforce_salary_change_fields", "Give a new salary different from the current one (no part below zero) and a reason of 1000 characters at most.");
+    public static readonly Error Sheet = Error.Validation("workforce_sheet", "Upload the new workers' sheet (the template, with at least one row).");
+    public static readonly Error TooManyRows = Error.Validation("workforce_too_many_rows", "Add between 1 and 500 workers at a time.");
     public static readonly Error SalaryChangeOpen = Error.Validation("workforce_salary_change_open", "This worker already has a salary change in approval.");
 }

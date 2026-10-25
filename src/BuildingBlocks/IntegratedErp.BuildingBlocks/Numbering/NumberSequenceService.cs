@@ -120,7 +120,8 @@ public sealed class NumberSequenceService(ITenantContext tenant, NumberingCatalo
     /// The next document number of a declared sequence, as the company set it (pattern, reset, number to start from)
     /// or by its default. Inside the transaction that saves the document, like the counters below.
     /// </summary>
-    public async Task<string> NextNumberAsync(ModuleDbContext db, string key, DateOnly date, CancellationToken cancellationToken)
+    /// <param name="minimum">Never below this value (e.g. after the numbers the old system already gave).</param>
+    public async Task<string> NextNumberAsync(ModuleDbContext db, string key, DateOnly date, CancellationToken cancellationToken, long minimum = 1)
     {
         var definition = catalog.Find(key) ?? throw new InvalidOperationException($"Number sequence '{key}' is not declared.");
         NumberingRule? rule = null;
@@ -131,7 +132,7 @@ public sealed class NumberSequenceService(ITenantContext tenant, NumberingCatalo
 
         var pattern = rule?.Pattern ?? definition.DefaultPattern;
         var reset = rule?.Reset ?? definition.DefaultReset;
-        var value = await NextAsync(db, new NumberRequest(key, Period: NumberingExtensions.Period(reset, date)), rule?.StartAt ?? 1, cancellationToken)
+        var value = await NextAsync(db, new NumberRequest(key, Period: NumberingExtensions.Period(reset, date)), Math.Max(rule?.StartAt ?? 1, minimum), cancellationToken)
             .ConfigureAwait(false);
         return DocumentNumberFormat.Format(pattern, value, date);
     }

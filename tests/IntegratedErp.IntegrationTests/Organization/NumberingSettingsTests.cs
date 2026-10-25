@@ -29,7 +29,7 @@ public sealed class NumberingSettingsTests(TestDatabase database)
             var service = scope.ServiceProvider.GetRequiredService<NumberingService>();
             var row = (await service.ListAsync(default)).Single(n => n.Key == "price_package");
             Assert.Equal(("PKG-{N:5}", 2L, "PKG-00002", false), (row.Pattern, row.NextValue, row.NextNumber, row.Customized));
-            Assert.Contains(await service.ListAsync(default), n => n.Key == "worker" && !n.InUse);
+            Assert.Contains(await service.ListAsync(default), n => n.Key == "worker" && n.InUse); // new workers are added here since 2026-10-25
 
             // A yearly counter needs the year in the pattern, or numbers would repeat.
             Assert.Equal("validation.numbering_pattern_year", (await service.UpdateAsync("price_package", new NumberingInput("PK-{N:4}", NumberReset.Yearly, 1), default)).Error.Code);

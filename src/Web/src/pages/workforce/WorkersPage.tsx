@@ -1,3 +1,4 @@
+import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import {
@@ -27,10 +28,12 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorKey } from '../../api/auth';
 import { kindPath, workforceApi, type Placement, type WorkerKind, type WorkerList, type WorkerQuery } from '../../api/workforce';
+import { useSession } from '../../app/session';
 import { ErrorMessage } from '../../auth/AuthLayout';
 import { ColumnsButton, useHiddenColumns } from '../../components/hr/ColumnsMenu';
 import { Initials } from '../../components/ui';
 import { placementCards } from '../../components/workforce/placement';
+import { AddWorkersDialog } from './AddWorkersDialog';
 import { card, StatusPill, wf } from './workforceUi';
 
 type Sort = NonNullable<WorkerQuery['sort']>;
@@ -70,6 +73,8 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const { can } = useSession();
+  const [adding, setAdding] = useState(false);
   const { shown, toggle } = useHiddenColumns<Column>(`erp.cols.${k}`, optional);
 
   useEffect(() => setText(search), [search]);
@@ -164,6 +169,11 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
             shown={shown}
             toggle={toggle}
           />
+          {!staff && can('workforce.workers.create', true) && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAdding(true)} sx={{ borderRadius: wf.control, height: 40, bgcolor: wf.navy, boxShadow: 'none', '&:hover': { bgcolor: wf.navyHover } }}>
+              {t('workforce.create.title')}
+            </Button>
+          )}
           <Box sx={{ textAlign: 'end' }}>
             <Typography sx={{ fontSize: 12, color: wf.textSecondary, lineHeight: 1.2 }}>{t(`workforce.ui.total.${k}`)}</Typography>
             <Typography sx={{ fontSize: 18, fontWeight: 600, color: wf.navy, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{data ? data.total.toLocaleString('en-US') : '—'}</Typography>
@@ -355,6 +365,7 @@ export function WorkersPage({ kind }: { kind: WorkerKind }) {
           labelDisplayedRows={({ from, to, count }) => t('workforce.rows', { from, to, count })}
         />
       </Box>
+      {adding && <AddWorkersDialog onClose={() => setAdding(false)} onCreated={() => setAttempt((n) => n + 1)} />}
     </Box>
   );
 }

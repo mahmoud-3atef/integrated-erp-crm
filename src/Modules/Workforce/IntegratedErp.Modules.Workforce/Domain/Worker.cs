@@ -145,6 +145,22 @@ public sealed class Worker : ITenantOwned
     public bool RemovedInCrm { get; private set; }
 
     /// <summary>
+    /// Added in this system (2026-10-25), not copied from the CRM: its <see cref="CrmId"/> is its own id, so the sync never
+    /// finds, changes or removes it.
+    /// </summary>
+    public bool CreatedHere { get; private set; }
+
+    /// <summary>A new worker added here (status «new» until a delivery order puts them on a project).</summary>
+    public static Worker CreateHere(Guid personId, WorkerSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var id = Guid.CreateVersion7();
+        var worker = new Worker(personId, id) { Id = id, CreatedHere = true };
+        worker.Update(snapshot);
+        return worker;
+    }
+
+    /// <summary>
     /// Puts a worker the old system has on the job on an inactive project (see <see cref="Placement.Inactive"/>) out
     /// of the counts, or back when their project changes. Returns whether the placement changed.
     /// </summary>

@@ -720,6 +720,10 @@ namespace IntegratedErp.Modules.Workforce.Infrastructure.Migrations
                         .HasColumnType("date")
                         .HasColumnName("arrived_on");
 
+                    b.Property<bool>("CreatedHere")
+                        .HasColumnType("bit")
+                        .HasColumnName("created_here");
+
                     b.Property<DateTimeOffset?>("CrmCreatedAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("crm_created_at");
